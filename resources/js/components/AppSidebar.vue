@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 
 import {
     BookOpen,
@@ -29,89 +29,74 @@ import {
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
+interface MenuLink {
+    id: number;
+    menu_id: number;
+    name: string;
+    icon: string | null;
+    order: number;
+    route: string | null;
+    url: string;
+    permission_id: number | null;
+}
 
-    {
-        title: 'Zoo Management',
-        icon: PawPrint,
+interface Menu {
+    id: number;
+    icon: string | null;
+    name: string;
+    order: number;
+    route: string | null;
+    url: string | null;
+    is_submenu: boolean;
+    links: MenuLink[];
+}
 
-        children: [
-            {
-                title: 'Species',
-                href: '#',
-            },
-            {
-                title: 'Animals',
-                href: '#',
-            },
-            {
-                title: 'Habitats',
-                href: '#',
-            },
-            {
-                title: 'Cards',
-                href: '#',
-            },
-        ],
-    },
+const page = usePage();
 
-    {
-        title: 'Operations',
-        icon: Ticket,
+const menus = page.props.menus as Menu[];
 
-        children: [
-            {
-                title: 'Tickets',
-                href: '#',
-            },
-            {
-                title: 'Donations',
-                href: '#',
-            },
-            {
-                title: 'Diplomas',
-                href: '#',
-            },
-        ],
-    },
+const icons = {
+    LayoutGrid,
+    PawPrint,
+    Ticket,
+    Users,
+    Settings,
+    BookOpen,
+    FolderGit2,
+};
 
-    {
-        title: 'Users',
-        icon: Users,
+function getIcon(icon: string | null) {
+    if (!icon) {
+        return LayoutGrid;
+    }
 
-        children: [
-            {
-                title: 'Users',
-                href: '#',
-            },
-            {
-                title: 'Roles',
-                href: '#',
-            },
-            {
-                title: 'Permissions',
-                href: '#',
-            },
-        ],
-    },
+    return icons[icon as keyof typeof icons] ?? LayoutGrid;
+}
 
-    {
-        title: 'Configuration',
-        icon: Settings,
+const mainNavItems: NavItem[] = menus.map((menu) => {
 
-        children: [
-            {
-                title: 'Settings',
-                href: '#',
-            },
-        ],
-    },
-];
+    if (menu.is_submenu) {
+
+        return {
+            title: menu.name,
+            icon: getIcon(menu.icon),
+
+            children: menu.links.map((link) => ({
+                title: link.name,
+                href: link.url,
+                icon: link.icon
+                    ? getIcon(link.icon)
+                    : undefined,
+            })),
+        };
+    }
+
+    return {
+        title: menu.name,
+        href: menu.url ?? '#',
+        icon: getIcon(menu.icon),
+    };
+});
 
 const footerNavItems: NavItem[] = [
     {
@@ -131,7 +116,6 @@ const footerNavItems: NavItem[] = [
 <template>
     <Sidebar collapsible="icon" variant="inset">
 
-        <!-- Header -->
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
@@ -147,12 +131,10 @@ const footerNavItems: NavItem[] = [
             </SidebarMenu>
         </SidebarHeader>
 
-        <!-- Main navigation -->
         <SidebarContent>
             <NavMain :items="mainNavItems" />
         </SidebarContent>
 
-        <!-- Footer -->
         <SidebarFooter>
             <NavFooter :items="footerNavItems" />
 

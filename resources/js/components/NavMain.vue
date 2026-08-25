@@ -173,7 +173,7 @@ const closeSearch = () => {
                 <input
                     v-model="search"
                     type="text"
-                    placeholder="Search menu..."
+                    placeholder="Buscar ..."
                     class="h-9 w-full rounded-md border border-sidebar-border bg-sidebar-accent/30 pl-9 pr-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-sidebar-ring focus:ring-1 focus:ring-sidebar-ring"
                 />
 
@@ -218,7 +218,7 @@ const closeSearch = () => {
                 >
 
                     <div class="mb-2 text-sm font-semibold">
-                        Search menu
+                        Buscar
                     </div>
 
                     <div class="relative">
@@ -230,7 +230,7 @@ const closeSearch = () => {
                         <input
                             v-model="search"
                             type="text"
-                            placeholder="Search..."
+                            placeholder="Buscar..."
                             class="h-9 w-full rounded-md border border-input bg-background pl-9 pr-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
                         />
 
@@ -327,7 +327,7 @@ const closeSearch = () => {
                             v-if="search && !filteredItems.length"
                             class="px-2 py-6 text-center text-sm text-muted-foreground"
                         >
-                            No results found.
+                            Sin resultados.
                         </div>
 
                     </div>
@@ -525,7 +525,7 @@ const closeSearch = () => {
                 v-if="search && !filteredItems.length"
                 class="px-2 py-6 text-center text-sm text-muted-foreground"
             >
-                Sín resultados.
+                Sin resultados.
             </div>
 
         </SidebarMenu>
