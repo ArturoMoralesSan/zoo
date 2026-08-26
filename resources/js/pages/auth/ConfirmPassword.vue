@@ -1,73 +1,51 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import InputError from '@/components/InputError.vue';
-import PasswordInput from '@/components/PasswordInput.vue';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
-import { store } from '@/routes/password/confirm';
-/* @chisel-passkeys */
-import {
-    index as confirmOptions,
-    store as confirmStore,
-} from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyConfirmationController';
-import PasskeyVerify from '@/components/PasskeyVerify.vue';
-/* @end-chisel-passkeys */
+import { Eye, EyeOff } from '@lucide/vue';
+import { ref, useTemplateRef } from 'vue';
+import type { HTMLAttributes } from 'vue';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
-defineOptions({
-    layout: {
-        title: 'Confirm password',
-        description:
-            'This is a secure area of the application. Please confirm your password before continuing.',
-    },
+defineOptions({ inheritAttrs: false });
+
+const props = defineProps<{
+    class?: HTMLAttributes['class'];
+}>();
+
+const showPassword = ref(false);
+const inputRef = useTemplateRef('inputRef');
+
+defineExpose({
+    $el: inputRef,
+    focus: () => inputRef.value?.$el?.focus(),
 });
 </script>
 
 <template>
-    <Head title="Confirm password" />
+    <div class="relative">
+        <Input
+            ref="inputRef"
+            :type="showPassword ? 'text' : 'password'"
+            :class="cn('pr-10', props.class)"
+            v-bind="$attrs"
+        />
 
-    <!-- @chisel-passkeys -->
-    <PasskeyVerify
-        :routes="{
-            options: confirmOptions(),
-            submit: confirmStore(),
-        }"
-        label="Confirm with passkey"
-        loading-label="Confirming..."
-        separator="Or confirm with password"
-    />
-    <!-- @end-chisel-passkeys -->
-
-    <Form
-        v-bind="store.form()"
-        reset-on-success
-        v-slot="{ errors, processing }"
-    >
-        <div class="space-y-6">
-            <div class="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <PasswordInput
-                    id="password"
-                    name="password"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="current-password"
-                    autofocus
-                />
-
-                <InputError :message="errors.password" />
-            </div>
-
-            <div class="flex items-center">
-                <Button
-                    class="w-full"
-                    :disabled="processing"
-                    data-test="confirm-password-button"
-                >
-                    <Spinner v-if="processing" />
-                    Confirm password
-                </Button>
-            </div>
-        </div>
-    </Form>
+        <button
+            type="button"
+            @click="showPassword = !showPassword"
+            :class="
+                cn(
+                    'absolute inset-y-0 right-0 flex items-center rounded-r-md px-3 text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none',
+                )
+            "
+            :aria-label="
+                showPassword
+                    ? 'Ocultar contraseña'
+                    : 'Mostrar contraseña'
+            "
+            :tabindex="-1"
+        >
+            <EyeOff v-if="showPassword" class="size-4" />
+            <Eye v-else class="size-4" />
+        </button>
+    </div>
 </template>
