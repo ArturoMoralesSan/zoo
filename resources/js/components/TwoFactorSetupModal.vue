@@ -46,26 +46,27 @@ const pinInputContainerRef = useTemplateRef('pinInputContainerRef');
 const modalConfig = computed<TwoFactorConfigContent>(() => {
     if (props.twoFactorEnabled) {
         return {
-            title: 'Two-factor authentication enabled',
+            title: 'Autenticación de dos factores activada',
             description:
-                'Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.',
-            buttonText: 'Close',
+                'La autenticación de dos factores está activada. Escanea el código QR o introduce la clave de configuración en tu aplicación de autenticación.',
+            buttonText: 'Cerrar',
         };
     }
 
     if (showVerificationStep.value) {
         return {
-            title: 'Verify authentication code',
-            description: 'Enter the 6-digit code from your authenticator app',
-            buttonText: 'Continue',
+            title: 'Verificar código de autenticación',
+            description:
+                'Introduce el código de 6 dígitos de tu aplicación de autenticación',
+            buttonText: 'Continuar',
         };
     }
 
     return {
-        title: 'Enable two-factor authentication',
+        title: 'Activar autenticación de dos factores',
         description:
-            'To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app',
-        buttonText: 'Continue',
+            'Para terminar de activar la autenticación de dos factores, escanea el código QR o introduce la clave de configuración en tu aplicación de autenticación.',
+        buttonText: 'Continuar',
     };
 });
 
@@ -128,6 +129,7 @@ watch(
                                 class="border-r border-border last:border-r-0"
                             />
                         </div>
+
                         <div
                             class="absolute inset-0 grid grid-rows-5 opacity-50"
                         >
@@ -137,12 +139,15 @@ watch(
                                 class="border-b border-border last:border-b-0"
                             />
                         </div>
+
                         <ScanLine
                             class="relative z-20 size-6 text-foreground"
                         />
                     </div>
                 </div>
+
                 <DialogTitle>{{ modalConfig.title }}</DialogTitle>
+
                 <DialogDescription class="text-center">
                     {{ modalConfig.description }}
                 </DialogDescription>
@@ -153,6 +158,7 @@ watch(
             >
                 <template v-if="!showVerificationStep">
                     <AlertError v-if="errors?.length" :errors="errors" />
+
                     <template v-else>
                         <div
                             class="relative mx-auto flex max-w-md items-center overflow-hidden"
@@ -166,6 +172,7 @@ watch(
                                 >
                                     <Spinner class="size-6" />
                                 </div>
+
                                 <div
                                     v-else
                                     class="relative z-10 overflow-hidden border p-5"
@@ -185,7 +192,10 @@ watch(
                         </div>
 
                         <div class="flex w-full items-center space-x-5">
-                            <Button class="w-full" @click="handleModalNextStep">
+                            <Button
+                                class="w-full"
+                                @click="handleModalNextStep"
+                            >
                                 {{ modalConfig.buttonText }}
                             </Button>
                         </div>
@@ -196,9 +206,10 @@ watch(
                             <div
                                 class="absolute inset-0 top-1/2 h-px w-full bg-border"
                             />
-                            <span class="relative bg-card px-2 py-1"
-                                >or, enter the code manually</span
-                            >
+
+                            <span class="relative bg-card px-2 py-1">
+                                o introduce el código manualmente
+                            </span>
                         </div>
 
                         <div
@@ -213,6 +224,7 @@ watch(
                                 >
                                     <Spinner />
                                 </div>
+
                                 <template v-else>
                                     <input
                                         type="text"
@@ -220,6 +232,7 @@ watch(
                                         :value="manualSetupKey"
                                         class="h-full w-full bg-background p-3 text-foreground"
                                     />
+
                                     <button
                                         @click="copy(manualSetupKey || '')"
                                         class="relative block h-auto border-l border-border px-3 hover:bg-muted"
@@ -228,6 +241,7 @@ watch(
                                             v-if="copied"
                                             class="w-4 text-green-500"
                                         />
+
                                         <Copy v-else class="w-4" />
                                     </button>
                                 </template>
@@ -245,7 +259,12 @@ watch(
                         @success="isOpen = false"
                         v-slot="{ errors, processing }"
                     >
-                        <input type="hidden" name="code" :value="code" />
+                        <input
+                            type="hidden"
+                            name="code"
+                            :value="code"
+                        />
+
                         <div
                             ref="pinInputContainerRef"
                             class="relative w-full space-y-3"
@@ -268,6 +287,7 @@ watch(
                                         />
                                     </InputOTPGroup>
                                 </InputOTP>
+
                                 <InputError :message="errors?.code" />
                             </div>
 
@@ -279,14 +299,17 @@ watch(
                                     @click="showVerificationStep = false"
                                     :disabled="processing"
                                 >
-                                    Back
+                                    Regresar
                                 </Button>
+
                                 <Button
                                     type="submit"
                                     class="w-auto flex-1"
-                                    :disabled="processing || code.length < 6"
+                                    :disabled="
+                                        processing || code.length < 6
+                                    "
                                 >
-                                    Confirm
+                                    Confirmar
                                 </Button>
                             </div>
                         </div>

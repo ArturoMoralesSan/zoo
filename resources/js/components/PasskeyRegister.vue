@@ -61,11 +61,15 @@ const handleCancel = () => {
 
 <template>
     <div v-if="!isSupported" class="text-sm text-muted-foreground">
-        Passkeys are not supported in this browser.
+        Las claves de acceso no son compatibles con este navegador.
     </div>
 
-    <Button v-else-if="!showForm" variant="outline" @click="showForm = true">
-        Add passkey
+    <Button
+        v-else-if="!showForm"
+        variant="outline"
+        @click="showForm = true"
+    >
+        Agregar clave de acceso
     </Button>
 
     <form
@@ -74,28 +78,39 @@ const handleCancel = () => {
         class="space-y-4 rounded-lg border border-border bg-muted/50 p-4"
     >
         <div class="grid gap-2">
-            <Label for="passkey-name">Passkey name</Label>
+            <Label for="passkey-name">Nombre de la clave de acceso</Label>
+
             <Input
                 id="passkey-name"
                 type="text"
                 v-model="name"
-                placeholder="e.g., MacBook Pro, iPhone"
+                placeholder="Ej. MacBook Pro, iPhone"
                 class="mt-1 block w-full border-foreground/20"
                 autofocus
             />
+
             <p class="text-xs text-muted-foreground">
-                A name helps you identify this passkey later.
+                Un nombre te ayudará a identificar esta clave de acceso más
+                adelante.
             </p>
         </div>
 
         <InputError v-if="error" :message="error" />
 
         <div class="flex gap-2">
-            <Button type="submit" :disabled="isLoading || !name.trim()">
-                {{ isLoading ? 'Registering...' : 'Register passkey' }}
+            <Button
+                type="submit"
+                :disabled="isLoading || !name.trim()"
+            >
+                {{ isLoading ? 'Registrando...' : 'Registrar clave de acceso' }}
             </Button>
-            <Button type="button" variant="ghost" @click="handleCancel">
-                Cancel
+
+            <Button
+                type="button"
+                variant="ghost"
+                @click="handleCancel"
+            >
+                Cancelar
             </Button>
         </div>
     </form>

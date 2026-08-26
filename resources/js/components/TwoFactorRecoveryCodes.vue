@@ -42,24 +42,36 @@ onMounted(async () => {
     <Card class="w-full">
         <CardHeader>
             <CardTitle class="flex gap-3">
-                <LockKeyhole class="size-4" />2FA recovery codes
+                <LockKeyhole class="size-4" />
+                Códigos de recuperación de autenticación de dos factores
             </CardTitle>
+
             <CardDescription>
-                Recovery codes let you regain access if you lose your 2FA
-                device. Store them in a secure password manager.
+                Los códigos de recuperación te permiten recuperar el acceso
+                si pierdes tu dispositivo de autenticación de dos factores.
+                Guárdalos en un administrador de contraseñas seguro.
             </CardDescription>
         </CardHeader>
+
         <CardContent>
             <div
                 class="flex flex-col gap-3 select-none sm:flex-row sm:items-center sm:justify-between"
             >
-                <Button @click="toggleRecoveryCodesVisibility" class="w-fit">
+                <Button
+                    @click="toggleRecoveryCodesVisibility"
+                    class="w-fit"
+                >
                     <component
                         :is="isRecoveryCodesVisible ? EyeOff : Eye"
                         class="size-4"
                     />
-                    {{ isRecoveryCodesVisible ? 'Hide' : 'View' }} recovery
-                    codes
+
+                    {{
+                        isRecoveryCodesVisible
+                            ? 'Ocultar'
+                            : 'Ver'
+                    }}
+                    códigos de recuperación
                 </Button>
 
                 <Form
@@ -75,10 +87,12 @@ onMounted(async () => {
                         type="submit"
                         :disabled="processing"
                     >
-                        <RefreshCw /> Regenerate codes
+                        <RefreshCw />
+                        Regenerar códigos
                     </Button>
                 </Form>
             </div>
+
             <div
                 :class="[
                     'relative overflow-hidden transition-all duration-300',
@@ -90,18 +104,23 @@ onMounted(async () => {
                 <div v-if="errors?.length" class="mt-6">
                     <AlertError :errors="errors" />
                 </div>
+
                 <div v-else class="mt-3 space-y-3">
                     <div
                         ref="recoveryCodeSectionRef"
                         class="grid gap-1 rounded-lg bg-muted p-4 font-mono text-sm"
                     >
-                        <div v-if="!recoveryCodesList.length" class="space-y-2">
+                        <div
+                            v-if="!recoveryCodesList.length"
+                            class="space-y-2"
+                        >
                             <div
                                 v-for="n in 8"
                                 :key="n"
                                 class="h-4 animate-pulse rounded bg-muted-foreground/20"
                             ></div>
                         </div>
+
                         <div
                             v-else
                             v-for="(code, index) in recoveryCodesList"
@@ -110,11 +129,15 @@ onMounted(async () => {
                             {{ code }}
                         </div>
                     </div>
+
                     <p class="text-xs text-muted-foreground select-none">
-                        Each recovery code can be used once to access your
-                        account and will be removed after use. If you need more,
-                        click
-                        <span class="font-bold">Regenerate codes</span> above.
+                        Cada código de recuperación puede utilizarse una sola
+                        vez para acceder a tu cuenta y se eliminará después de
+                        utilizarlo. Si necesitas nuevos códigos, haz clic en
+                        <span class="font-bold">
+                            Regenerar códigos
+                        </span>
+                        arriba.
                     </p>
                 </div>
             </div>
