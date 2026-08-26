@@ -21,8 +21,9 @@ Route::middleware(['auth', 'verified'])
         |--------------------------------------------------------------------------
         */
 
-        Route::inertia('dashboard', 'Dashboard')->name('dashboard')->middleware('permission:view.dashboard');
-
+        Route::inertia('dashboard', 'Dashboard')
+            ->name('dashboard')
+            ->middleware('permission:view.dashboard');
 
     });
 

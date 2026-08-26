@@ -26,7 +26,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-import { dashboard } from '@/routes';
+import admin from "@/routes/admin";
 import type { NavItem } from '@/types';
 
 interface MenuLink {
@@ -123,7 +123,7 @@ const footerNavItems: NavItem[] = [
                         size="lg"
                         as-child
                     >
-                        <Link :href="dashboard()">
+                        <Link :href="admin.dashboard()">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>

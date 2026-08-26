@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
-import { dashboard } from '@/routes';
-
+import admin from "@/routes/admin";
 defineOptions({
     layout: {
         breadcrumbs: [
             {
                 title: 'Dashboard',
-                href: dashboard(),
+                href: admin.dashboard(),
             },
         ],
     },
