@@ -10,20 +10,51 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Roles
-        $admin = Role::firstOrCreate(['name' => 'admin']);
-        $staff = Role::firstOrCreate(['name' => 'staff']);
-        $visitor = Role::firstOrCreate(['name' => 'visitor']);
+        /*
+        |--------------------------------------------------------------------------
+        | Roles
+        |--------------------------------------------------------------------------
+        */
 
-        // Permissions
+        $admin = Role::firstOrCreate([
+            'name' => 'admin',
+            'guard_name' => 'web',
+        ]);
+
+        $staff = Role::firstOrCreate([
+            'name' => 'staff',
+            'guard_name' => 'web',
+        ]);
+
+        $visitor = Role::firstOrCreate([
+            'name' => 'visitor',
+            'guard_name' => 'web',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Permissions
+        |--------------------------------------------------------------------------
+        */
+
         $permissions = [
+
+            // Dashboard
+            'view.dashboard',
+
             // Users
             'users.view',
             'users.create',
             'users.edit',
             'users.delete',
 
-            // Species
+            // Roles
+            'roles.view',
+
+            // Permissions
+            'permissions.view',
+
+            // Species / Zoo
             'species.view',
             'species.create',
             'species.edit',
@@ -63,40 +94,70 @@ class RolesAndPermissionsSeeder extends Seeder
             // Points
             'points.view',
             'points.edit',
+
+            // Settings
+            'settings.view',
         ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Crear permisos
+        |--------------------------------------------------------------------------
+        */
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate([
                 'name' => $permission,
+                'guard_name' => 'web',
             ]);
         }
 
-        // Admin has all permissions
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN
+        |--------------------------------------------------------------------------
+        |
+        | Admin tiene todos los permisos.
+        |
+        */
+
         $admin->syncPermissions($permissions);
 
-        // Staff permissions
+        /*
+        |--------------------------------------------------------------------------
+        | STAFF
+        |--------------------------------------------------------------------------
+        |
+        | Staff puede:
+        |
+        | - Ver Dashboard
+        | - Ver Usuarios
+        | - Administrar el Zoo / Species
+        |
+        */
+
         $staff->syncPermissions([
+            'view.dashboard',
+
+            // Users
             'users.view',
 
+            // Zoo / Species
             'species.view',
-
-            'cards.view',
-
-            'tickets.view',
-            'tickets.validate',
-
-            'donations.view',
-
-            'diplomas.view',
-            'diplomas.edit',
-
-            'map.view',
-
-            'events.view',
-
-            'points.view',
+            'species.create',
+            'species.edit',
+            'species.delete',
         ]);
 
-        // Visitors do not require administrative permissions.
+        /*
+        |--------------------------------------------------------------------------
+        | VISITOR
+        |--------------------------------------------------------------------------
+        |
+        | Visitor no tiene permisos administrativos.
+        |
+        */
+
+        $visitor->syncPermissions([]);
     }
 }

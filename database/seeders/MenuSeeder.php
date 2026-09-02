@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Menu;
 use App\Models\Link;
-use Spatie\Permission\Models\Permission;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
 
 class MenuSeeder extends Seeder
 {
@@ -17,14 +17,13 @@ class MenuSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        $dashboard = Menu::create([
+        Menu::create([
             'name' => 'Dashboard',
             'icon' => 'layout-dashboard',
             'order' => 1,
-            'route' => 'dashboard',
+            'route' => 'admin.dashboard',
             'is_submenu' => false,
         ]);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -46,7 +45,7 @@ class MenuSeeder extends Seeder
             'paw-print',
             1,
             'species.index',
-            'view.species'
+            'species.view'
         );
 
         $this->createLink(
@@ -55,7 +54,7 @@ class MenuSeeder extends Seeder
             'layers',
             2,
             'cards.index',
-            'view.cards'
+            'cards.view'
         );
 
         $this->createLink(
@@ -64,7 +63,7 @@ class MenuSeeder extends Seeder
             'ticket',
             3,
             'tickets.index',
-            'view.tickets'
+            'tickets.view'
         );
 
         $this->createLink(
@@ -73,7 +72,7 @@ class MenuSeeder extends Seeder
             'heart-handshake',
             4,
             'donations.index',
-            'view.donations'
+            'donations.view'
         );
 
         $this->createLink(
@@ -82,13 +81,12 @@ class MenuSeeder extends Seeder
             'award',
             5,
             'diplomas.index',
-            'view.diplomas'
+            'diplomas.view'
         );
-
 
         /*
         |--------------------------------------------------------------------------
-        | Users
+        | Users / ACL
         |--------------------------------------------------------------------------
         */
 
@@ -106,7 +104,7 @@ class MenuSeeder extends Seeder
             'user',
             1,
             'users.index',
-            'view.users'
+            'users.view'
         );
 
         $this->createLink(
@@ -115,7 +113,7 @@ class MenuSeeder extends Seeder
             'shield',
             2,
             'roles.index',
-            'view.roles'
+            'roles.view'
         );
 
         $this->createLink(
@@ -124,9 +122,8 @@ class MenuSeeder extends Seeder
             'key-round',
             3,
             'permissions.index',
-            'view.permissions'
+            'permissions.view'
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -148,10 +145,9 @@ class MenuSeeder extends Seeder
             'settings',
             1,
             'settings.index',
-            'view.settings'
+            'settings.view'
         );
     }
-
 
     /**
      * Create menu link with permission.

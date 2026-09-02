@@ -31,32 +31,35 @@ class MenuComposer
         return $menus
             ->map(function ($menu) use ($user, $isSuperAdmin) {
 
+                /*
+                |--------------------------------------------------------------------------
+                | SUBMENÚ
+                |--------------------------------------------------------------------------
+                */
                 if ($menu->is_submenu) {
 
                     if (!$isSuperAdmin) {
-
                         $menu->links = $menu->links
                             ->filter(function ($link) use ($user) {
 
+                                // Sin permiso = visible
                                 if (!$link->permission_id) {
                                     return true;
                                 }
 
+                                // Con permiso = verificar Spatie
                                 return $link->permission
-                                    && $user->can(
-                                        $link->permission->name
-                                    );
+                                    && $user->can($link->permission->name);
                             })
                             ->values();
                     }
 
-                    
+                    // Si después del filtro no tiene links, ocultar menú
                     if ($menu->links->isEmpty()) {
                         return null;
                     }
 
-                    
-
+                    // Generar URLs
                     $menu->links->each(function ($link) {
 
                         if (
@@ -70,7 +73,11 @@ class MenuComposer
                     });
                 }
 
-
+                /*
+                |--------------------------------------------------------------------------
+                | MENÚ SIMPLE
+                |--------------------------------------------------------------------------
+                */
                 if (!$menu->is_submenu) {
 
                     if (
