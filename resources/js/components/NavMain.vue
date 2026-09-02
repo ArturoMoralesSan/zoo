@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import {
     ChevronDown,
     Search,
@@ -15,7 +15,6 @@ import {
 
 import {
     SidebarGroup,
-    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
@@ -34,6 +33,7 @@ const props = defineProps<{
 
 const { isMobile, state } = useSidebar();
 const { isCurrentUrl } = useCurrentUrl();
+const page = usePage();
 
 const openMenus = ref<Record<string, boolean>>({});
 const search = ref('');
@@ -41,7 +41,49 @@ const searchOpen = ref(false);
 
 /*
 |--------------------------------------------------------------------------
-| Filter menu
+| URL ACTIVA
+|--------------------------------------------------------------------------
+|
+| Detecta tanto la ruta exacta como las rutas hijas.
+|
+| Ejemplo:
+|
+| /admin/users
+| /admin/users/create
+| /admin/users/1/edit
+|
+| Todas se consideran parte de Users.
+|
+|--------------------------------------------------------------------------
+*/
+
+const isActiveUrl = (
+    href: string | null | undefined,
+): boolean => {
+    if (!href || href === '#') {
+        return false;
+    }
+
+    const currentPath = page.url.split('?')[0];
+
+    try {
+        const menuPath = new URL(
+            href,
+            window.location.origin,
+        ).pathname;
+
+        return (
+            currentPath === menuPath ||
+            currentPath.startsWith(`${menuPath}/`)
+        );
+    } catch {
+        return isCurrentUrl(href);
+    }
+};
+
+/*
+|--------------------------------------------------------------------------
+| FILTER MENU
 |--------------------------------------------------------------------------
 */
 
@@ -58,15 +100,33 @@ const filteredItems = computed<NavItem[]>(() => {
                 .toLowerCase()
                 .includes(term);
 
+            /*
+            |--------------------------------------------------------------------------
+            | MENÚ SIN HIJOS
+            |--------------------------------------------------------------------------
+            */
+
             if (!item.children?.length) {
                 return itemMatches ? item : null;
             }
 
-            const matchingChildren = item.children.filter((child) =>
-                child.title.toLowerCase().includes(term),
+            /*
+            |--------------------------------------------------------------------------
+            | MENÚ CON HIJOS
+            |--------------------------------------------------------------------------
+            */
+
+            const matchingChildren = item.children.filter(
+                (child) =>
+                    child.title
+                        .toLowerCase()
+                        .includes(term),
             );
 
-            if (itemMatches || matchingChildren.length) {
+            if (
+                itemMatches ||
+                matchingChildren.length
+            ) {
                 return {
                     ...item,
                     children: itemMatches
@@ -77,32 +137,46 @@ const filteredItems = computed<NavItem[]>(() => {
 
             return null;
         })
-        .filter((item): item is NavItem => item !== null);
+        .filter(
+            (item): item is NavItem =>
+                item !== null,
+        );
 });
 
 /*
 |--------------------------------------------------------------------------
-| Toggle submenu
+| TOGGLE SUBMENU
 |--------------------------------------------------------------------------
 */
 
 const toggleMenu = (title: string) => {
-    openMenus.value[title] = !openMenus.value[title];
+    openMenus.value[title] =
+        !openMenus.value[title];
 };
 
 /*
 |--------------------------------------------------------------------------
-| Active child
+| ACTIVE CHILD
+|--------------------------------------------------------------------------
+|
+| Comprueba si alguno de los hijos pertenece a la
+| ruta actual.
+|
 |--------------------------------------------------------------------------
 */
 
-const hasActiveChild = (item: NavItem): boolean => {
-    if (!item.children) {
+const hasActiveChild = (
+    item: NavItem,
+): boolean => {
+    if (!item.children?.length) {
         return false;
     }
 
     return item.children.some((child) => {
-        if (child.href && isCurrentUrl(child.href)) {
+        if (
+            child.href &&
+            isActiveUrl(child.href)
+        ) {
             return true;
         }
 
@@ -112,24 +186,51 @@ const hasActiveChild = (item: NavItem): boolean => {
 
 /*
 |--------------------------------------------------------------------------
-| Menu open state
+| MENU OPEN STATE
+|--------------------------------------------------------------------------
+|
+| Si un hijo está activo, el menú se abre automáticamente.
+|
 |--------------------------------------------------------------------------
 */
 
-const isMenuOpen = (item: NavItem): boolean => {
+const isMenuOpen = (
+    item: NavItem,
+): boolean => {
+    /*
+    |--------------------------------------------------------------------------
+    | Durante una búsqueda mostramos los resultados abiertos.
+    |--------------------------------------------------------------------------
+    */
+
     if (search.value.trim()) {
         return true;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Si alguno de los hijos está activo, mantener abierto.
+    |--------------------------------------------------------------------------
+    */
+
+    if (hasActiveChild(item)) {
+        return true;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Si el usuario lo abrió manualmente, mantenerlo abierto.
+    |--------------------------------------------------------------------------
+    */
+
     return Boolean(
-        openMenus.value[item.title] ||
-        hasActiveChild(item),
+        openMenus.value[item.title],
     );
 };
 
 /*
 |--------------------------------------------------------------------------
-| Clear search
+| CLEAR SEARCH
 |--------------------------------------------------------------------------
 */
 
@@ -139,7 +240,7 @@ const clearSearch = () => {
 
 /*
 |--------------------------------------------------------------------------
-| Close collapsed search
+| CLOSE SEARCH
 |--------------------------------------------------------------------------
 */
 
@@ -157,7 +258,10 @@ const closeSearch = () => {
         <!-- ========================================================= -->
 
         <div
-            v-if="state !== 'collapsed' || isMobile"
+            v-if="
+                state !== 'collapsed' ||
+                isMobile
+            "
             class="mb-2"
         >
             <div class="relative">
@@ -185,7 +289,6 @@ const closeSearch = () => {
             </div>
         </div>
 
-
         <!-- ========================================================= -->
         <!-- SEARCH - COLLAPSED -->
         <!-- ========================================================= -->
@@ -194,7 +297,9 @@ const closeSearch = () => {
             v-else
             class="mb-2"
         >
-            <DropdownMenu v-model:open="searchOpen">
+            <DropdownMenu
+                v-model:open="searchOpen"
+            >
 
                 <DropdownMenuTrigger as-child>
 
@@ -213,7 +318,9 @@ const closeSearch = () => {
                     class="w-72 rounded-lg p-3"
                 >
 
-                    <div class="mb-2 text-sm font-semibold">
+                    <div
+                        class="mb-2 text-sm font-semibold"
+                    >
                         Buscar
                     </div>
 
@@ -241,22 +348,29 @@ const closeSearch = () => {
 
                     </div>
 
-                    <div class="mt-2 max-h-80 overflow-y-auto">
+                    <div
+                        class="mt-2 max-h-80 overflow-y-auto"
+                    >
 
                         <template
                             v-for="item in filteredItems"
                             :key="item.title"
                         >
 
-                            <!-- Normal result -->
+                            <!-- ================================================= -->
+                            <!-- NORMAL SEARCH RESULT -->
+                            <!-- ================================================= -->
 
                             <Link
-                                v-if="!item.children?.length && item.href"
+                                v-if="
+                                    !item.children?.length &&
+                                    item.href
+                                "
                                 :href="item.href"
                                 class="flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
                                 :class="{
                                     'bg-accent text-accent-foreground':
-                                        isCurrentUrl(item.href),
+                                        isActiveUrl(item.href),
                                 }"
                                 @click="closeSearch"
                             >
@@ -273,11 +387,14 @@ const closeSearch = () => {
 
                             </Link>
 
-
-                            <!-- Parent result -->
+                            <!-- ================================================= -->
+                            <!-- PARENT SEARCH RESULT -->
+                            <!-- ================================================= -->
 
                             <div
-                                v-else-if="item.children?.length"
+                                v-else-if="
+                                    item.children?.length
+                                "
                                 class="mb-1"
                             >
 
@@ -290,12 +407,14 @@ const closeSearch = () => {
                                 <Link
                                     v-for="child in item.children"
                                     :key="child.title"
-                                    :href="child.href ?? '#'"
+                                    :href="
+                                        child.href ?? '#'
+                                    "
                                     class="flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
                                     :class="{
                                         'bg-accent text-accent-foreground':
                                             child.href &&
-                                            isCurrentUrl(child.href),
+                                            isActiveUrl(child.href),
                                     }"
                                     @click="closeSearch"
                                 >
@@ -316,11 +435,15 @@ const closeSearch = () => {
 
                         </template>
 
-
-                        <!-- No results -->
+                        <!-- ================================================= -->
+                        <!-- NO SEARCH RESULTS -->
+                        <!-- ================================================= -->
 
                         <div
-                            v-if="search && !filteredItems.length"
+                            v-if="
+                                search &&
+                                !filteredItems.length
+                            "
                             class="px-2 py-6 text-center text-sm text-muted-foreground"
                         >
                             Sin resultados.
@@ -332,7 +455,6 @@ const closeSearch = () => {
 
             </DropdownMenu>
         </div>
-
 
         <!-- ========================================================= -->
         <!-- MAIN MENU -->
@@ -349,12 +471,16 @@ const closeSearch = () => {
                 <!-- NORMAL MENU -->
                 <!-- ================================================= -->
 
-                <template v-if="!item.children?.length">
+                <template
+                    v-if="!item.children?.length"
+                >
 
                     <SidebarMenuButton
                         v-if="item.href"
                         as-child
-                        :is-active="isCurrentUrl(item.href)"
+                        :is-active="
+                            isActiveUrl(item.href)
+                        "
                         :tooltip="item.title"
                     >
 
@@ -375,23 +501,30 @@ const closeSearch = () => {
 
                 </template>
 
-
                 <!-- ================================================= -->
                 <!-- MENU WITH SUBMENU -->
                 <!-- ================================================= -->
 
                 <template v-else>
 
-                    <!-- COLLAPSED -->
+                    <!-- ================================================= -->
+                    <!-- COLLAPSED SIDEBAR -->
+                    <!-- ================================================= -->
 
                     <DropdownMenu
-                        v-if="state === 'collapsed' && !isMobile"
+                        v-if="
+                            state === 'collapsed' &&
+                            !isMobile
+                        "
                     >
 
                         <DropdownMenuTrigger as-child>
 
                             <SidebarMenuButton
-                                :is-active="hasActiveChild(item)"
+                                :is-active="
+                                    hasActiveChild(item)
+                                "
+                                :tooltip="item.title"
                             >
 
                                 <component
@@ -416,17 +549,21 @@ const closeSearch = () => {
                                 {{ item.title }}
                             </div>
 
-                            <div class="my-1 h-px bg-border" />
+                            <div
+                                class="my-1 h-px bg-border"
+                            />
 
                             <Link
                                 v-for="child in item.children"
                                 :key="child.title"
-                                :href="child.href ?? '#'"
+                                :href="
+                                    child.href ?? '#'
+                                "
                                 class="flex items-center gap-2 rounded-md px-2 py-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
                                 :class="{
                                     'bg-accent text-accent-foreground':
                                         child.href &&
-                                        isCurrentUrl(child.href),
+                                        isActiveUrl(child.href),
                                 }"
                             >
 
@@ -446,14 +583,19 @@ const closeSearch = () => {
 
                     </DropdownMenu>
 
-
-                    <!-- EXPANDED -->
+                    <!-- ================================================= -->
+                    <!-- EXPANDED SIDEBAR -->
+                    <!-- ================================================= -->
 
                     <template v-else>
 
                         <SidebarMenuButton
-                            :is-active="hasActiveChild(item)"
-                            @click="toggleMenu(item.title)"
+                            :is-active="
+                                hasActiveChild(item)
+                            "
+                            @click="
+                                toggleMenu(item.title)
+                            "
                         >
 
                             <component
@@ -468,14 +610,17 @@ const closeSearch = () => {
                             <ChevronDown
                                 class="ml-auto size-4 transition-transform duration-200"
                                 :class="{
-                                    'rotate-180': isMenuOpen(item),
+                                    'rotate-180':
+                                        isMenuOpen(item),
                                 }"
                             />
 
                         </SidebarMenuButton>
 
                         <SidebarMenuSub
-                            v-show="isMenuOpen(item)"
+                            v-show="
+                                isMenuOpen(item)
+                            "
                         >
 
                             <SidebarMenuSubItem
@@ -486,10 +631,16 @@ const closeSearch = () => {
                                 <SidebarMenuSubButton
                                     v-if="child.href"
                                     as-child
-                                    :is-active="isCurrentUrl(child.href)"
+                                    :is-active="
+                                        isActiveUrl(
+                                            child.href,
+                                        )
+                                    "
                                 >
 
-                                    <Link :href="child.href">
+                                    <Link
+                                        :href="child.href"
+                                    >
 
                                         <component
                                             v-if="child.icon"
@@ -514,11 +665,15 @@ const closeSearch = () => {
 
             </SidebarMenuItem>
 
-
+            <!-- ===================================================== -->
             <!-- NO RESULTS -->
+            <!-- ===================================================== -->
 
             <div
-                v-if="search && !filteredItems.length"
+                v-if="
+                    search &&
+                    !filteredItems.length
+                "
                 class="px-2 py-6 text-center text-sm text-muted-foreground"
             >
                 Sin resultados.
