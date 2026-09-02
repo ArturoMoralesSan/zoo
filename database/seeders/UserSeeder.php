@@ -17,6 +17,11 @@ class UserSeeder extends Seeder
             'guard_name' => 'web',
         ]);
 
+        $superadmin = Role::firstOrCreate([
+            'name' => 'SuperAdmin',
+            'guard_name' => 'web',
+        ]);
+
         $staff = Role::firstOrCreate([
             'name' => 'staff',
             'guard_name' => 'web',
@@ -35,15 +40,15 @@ class UserSeeder extends Seeder
 
         $adminUser = User::updateOrCreate(
             [
-                'email' => 'admin@zooapp.com',
+                'email' => 'ramon.morales41@gmail.com',
             ],
             [
-                'name' => 'Administrador',
-                'password' => Hash::make('Admin12345'),
+                'name' => 'Super Administrador',
+                'password' => Hash::make('12345678'),
             ]
         );
 
-        $adminUser->syncRoles([$admin]);
+        $adminUser->syncRoles([$superadmin]);
 
         /*
         |--------------------------------------------------------------------------

@@ -44,7 +44,7 @@ class MenuSeeder extends Seeder
             'Species',
             'paw-print',
             1,
-            'species.index',
+            'admin.species.index',
             'species.view'
         );
 
@@ -53,7 +53,7 @@ class MenuSeeder extends Seeder
             'Cards',
             'layers',
             2,
-            'cards.index',
+            'admin.cards.index',
             'cards.view'
         );
 
@@ -62,7 +62,7 @@ class MenuSeeder extends Seeder
             'Tickets',
             'ticket',
             3,
-            'tickets.index',
+            'admin.tickets.index',
             'tickets.view'
         );
 
@@ -71,7 +71,7 @@ class MenuSeeder extends Seeder
             'Donations',
             'heart-handshake',
             4,
-            'donations.index',
+            'admin.donations.index',
             'donations.view'
         );
 
@@ -80,7 +80,7 @@ class MenuSeeder extends Seeder
             'Diplomas',
             'award',
             5,
-            'diplomas.index',
+            'admin.diplomas.index',
             'diplomas.view'
         );
 
@@ -103,7 +103,7 @@ class MenuSeeder extends Seeder
             'Users',
             'user',
             1,
-            'users.index',
+            'admin.users.index',
             'users.view'
         );
 
@@ -112,7 +112,7 @@ class MenuSeeder extends Seeder
             'Roles',
             'shield',
             2,
-            'roles.index',
+            'admin.roles.index',
             'roles.view'
         );
 
@@ -121,7 +121,7 @@ class MenuSeeder extends Seeder
             'Permissions',
             'key-round',
             3,
-            'permissions.index',
+            'admin.permissions.index',
             'permissions.view'
         );
 
@@ -144,7 +144,7 @@ class MenuSeeder extends Seeder
             'Settings',
             'settings',
             1,
-            'settings.index',
+            'admin.settings.index',
             'settings.view'
         );
     }
