@@ -24,7 +24,7 @@ const submit = () => {
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
             <div
-                class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
                 <div>
                     <h1 class="text-2xl font-semibold">
@@ -38,26 +38,26 @@ const submit = () => {
 
                 <Link
                     :href="admin.speciesTags.index().url"
-                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
-                    Cancelar
+                    Regresar
                 </Link>
             </div>
         </div>
 
         <!-- Formulario -->
         <div
-            class="relative flex-1 rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
             <form
+                class="space-y-6"
                 @submit.prevent="submit"
-                class="space-y-8"
             >
                 <!-- Nombre -->
-                <div class="max-w-2xl">
+                <div class="space-y-2">
                     <label
                         for="name"
-                        class="mb-2 block text-sm font-medium"
+                        class="text-sm font-medium"
                     >
                         Nombre de la etiqueta
                     </label>
@@ -70,38 +70,59 @@ const submit = () => {
                         class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
 
-                    <p class="mt-2 text-xs text-muted-foreground">
+                    <p class="text-xs text-muted-foreground">
                         El slug se generará automáticamente.
                     </p>
 
                     <p
                         v-if="form.errors.name"
-                        class="mt-2 text-sm text-red-500"
+                        class="text-sm text-red-500"
                     >
                         {{ form.errors.name }}
                     </p>
                 </div>
 
                 <!-- Estado -->
-                <div>
-                    <label class="flex cursor-pointer items-center gap-3">
+                <div class="space-y-2">
+                    <label class="text-sm font-medium">
+                        Estado
+                    </label>
+
+                    <div
+                        class="flex items-center justify-between rounded-lg border border-sidebar-border p-4"
+                    >
+                        <div>
+                            <p class="text-sm font-medium">
+                                Etiqueta activa
+                            </p>
+
+                            <p class="text-xs text-muted-foreground">
+                                Determina si la etiqueta estará disponible para las especies.
+                            </p>
+                        </div>
+
                         <input
                             v-model="form.is_active"
                             type="checkbox"
                             class="h-4 w-4 rounded border-sidebar-border"
                         />
+                    </div>
 
-                        <span class="text-sm font-medium">
-                            Etiqueta activa
-                        </span>
-                    </label>
+                    <p
+                        v-if="form.errors.is_active"
+                        class="text-sm text-red-500"
+                    >
+                        {{ form.errors.is_active }}
+                    </p>
                 </div>
 
                 <!-- Botones -->
-                <div class="flex items-center gap-3 pt-2">
+                <div
+                    class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
+                >
                     <Link
                         :href="admin.speciesTags.index().url"
-                        class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
                         Cancelar
                     </Link>
@@ -109,7 +130,7 @@ const submit = () => {
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {{
                             form.processing

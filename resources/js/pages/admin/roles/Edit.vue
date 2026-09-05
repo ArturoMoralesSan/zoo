@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
+
 import admin from '@/routes/admin';
 
 interface Permission {
@@ -22,7 +23,7 @@ const props = defineProps<{
 const form = useForm({
     name: props.role.name,
     permissions: props.role.permissions.map(
-        (permission) => permission.name
+        (permission) => permission.name,
     ),
 });
 
@@ -53,15 +54,17 @@ const togglePermission = (permission: string) => {
 };
 
 const toggleGroup = (permissions: Permission[]) => {
-    const names = permissions.map((permission) => permission.name);
+    const names = permissions.map(
+        (permission) => permission.name,
+    );
 
     const allSelected = names.every((name) =>
-        form.permissions.includes(name)
+        form.permissions.includes(name),
     );
 
     if (allSelected) {
         form.permissions = form.permissions.filter(
-            (permission) => !names.includes(permission)
+            (permission) => !names.includes(permission),
         );
     } else {
         names.forEach((name) => {
@@ -73,7 +76,11 @@ const toggleGroup = (permissions: Permission[]) => {
 };
 
 const submit = () => {
-    form.put(admin.roles.update(props.role.id).url);
+    form.put(
+        admin.roles.update(
+            props.role.id,
+        ).url,
+    );
 };
 </script>
 
@@ -88,40 +95,44 @@ const submit = () => {
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
             <div
-                class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
                 <div>
                     <h1 class="text-2xl font-semibold">
                         Editar rol
                     </h1>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
+                    <p
+                        class="mt-1 text-sm text-muted-foreground"
+                    >
                         Modifica el nombre y los permisos del rol.
                     </p>
                 </div>
 
                 <Link
-                    :href="admin.roles.index().url"
-                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                    :href="
+                        admin.roles.index().url
+                    "
+                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
-                    Cancelar
+                    Regresar
                 </Link>
             </div>
         </div>
 
         <!-- Formulario -->
         <div
-            class="relative flex-1 rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
             <form
+                class="space-y-6"
                 @submit.prevent="submit"
-                class="space-y-8"
             >
                 <!-- Nombre -->
-                <div class="max-w-2xl">
+                <div class="space-y-2">
                     <label
                         for="name"
-                        class="mb-2 block text-sm font-medium"
+                        class="text-sm font-medium"
                     >
                         Nombre del rol
                     </label>
@@ -131,19 +142,20 @@ const submit = () => {
                         v-model="form.name"
                         type="text"
                         :disabled="role.name === 'admin'"
+                        placeholder="Ejemplo: editor"
                         class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                     />
 
                     <p
                         v-if="role.name === 'admin'"
-                        class="mt-2 text-xs text-muted-foreground"
+                        class="text-xs text-muted-foreground"
                     >
                         El rol admin está protegido.
                     </p>
 
                     <p
                         v-if="form.errors.name"
-                        class="mt-2 text-sm text-red-500"
+                        class="text-sm text-red-500"
                     >
                         {{ form.errors.name }}
                     </p>
@@ -156,14 +168,21 @@ const submit = () => {
                             Permisos
                         </h2>
 
-                        <p class="mt-1 text-sm text-muted-foreground">
+                        <p
+                            class="mt-1 text-sm text-muted-foreground"
+                        >
                             Selecciona las acciones disponibles para este rol.
                         </p>
                     </div>
 
-                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div
+                        class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+                    >
                         <div
-                            v-for="(permissions, module) in groupedPermissions()"
+                            v-for="(
+                                permissions,
+                                module
+                            ) in groupedPermissions()"
                             :key="module"
                             class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
                         >
@@ -180,7 +199,11 @@ const submit = () => {
                                 <button
                                     type="button"
                                     class="text-xs text-primary hover:underline"
-                                    @click="toggleGroup(permissions)"
+                                    @click="
+                                        toggleGroup(
+                                            permissions,
+                                        )
+                                    "
                                 >
                                     Seleccionar
                                 </button>
@@ -197,13 +220,13 @@ const submit = () => {
                                         type="checkbox"
                                         :checked="
                                             form.permissions.includes(
-                                                permission.name
+                                                permission.name,
                                             )
                                         "
                                         class="h-4 w-4 rounded border-sidebar-border"
                                         @change="
                                             togglePermission(
-                                                permission.name
+                                                permission.name,
                                             )
                                         "
                                     />
@@ -224,11 +247,15 @@ const submit = () => {
                     </p>
                 </div>
 
-                <!-- Botones -->
-                <div class="flex items-center gap-3 pt-2">
+                <!-- Acciones -->
+                <div
+                    class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
+                >
                     <Link
-                        :href="admin.roles.index().url"
-                        class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        :href="
+                            admin.roles.index().url
+                        "
+                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
                         Cancelar
                     </Link>
@@ -236,7 +263,7 @@ const submit = () => {
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {{
                             form.processing

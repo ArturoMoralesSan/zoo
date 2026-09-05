@@ -24,13 +24,16 @@ const submit = () => {
 <template>
     <Head title="Editar permiso" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-
+    <div
+        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+    >
         <!-- Encabezado -->
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
-            <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div
+                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+            >
                 <div>
                     <h1 class="text-2xl font-semibold">
                         Editar permiso
@@ -43,27 +46,26 @@ const submit = () => {
 
                 <Link
                     :href="admin.permissions.index().url"
-                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
-                    Cancelar
+                    Regresar
                 </Link>
             </div>
         </div>
 
         <!-- Formulario -->
         <div
-            class="relative flex-1 rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
             <form
+                class="space-y-6"
                 @submit.prevent="submit"
-                class="max-w-2xl space-y-6"
             >
-
                 <!-- Nombre -->
-                <div>
+                <div class="space-y-2">
                     <label
                         for="name"
-                        class="mb-2 block text-sm font-medium"
+                        class="text-sm font-medium"
                     >
                         Nombre del permiso
                     </label>
@@ -76,24 +78,24 @@ const submit = () => {
                         class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
 
-                    <p class="mt-2 text-xs text-muted-foreground">
+                    <p class="text-xs text-muted-foreground">
                         Utiliza el formato módulo.acción, por ejemplo:
                         <strong>users.view</strong>
                     </p>
 
                     <p
                         v-if="form.errors.name"
-                        class="mt-2 text-sm text-red-500"
+                        class="text-sm text-red-500"
                     >
                         {{ form.errors.name }}
                     </p>
                 </div>
 
                 <!-- Guard -->
-                <div>
+                <div class="space-y-2">
                     <label
                         for="guard_name"
-                        class="mb-2 block text-sm font-medium"
+                        class="text-sm font-medium"
                     >
                         Guard
                     </label>
@@ -103,15 +105,17 @@ const submit = () => {
                         :value="permission.guard_name"
                         type="text"
                         disabled
-                        class="w-full rounded-lg border border-sidebar-border bg-muted px-4 py-2.5 text-sm opacity-70"
+                        class="w-full rounded-lg border border-sidebar-border bg-muted px-4 py-2.5 text-sm outline-none transition disabled:cursor-not-allowed disabled:opacity-60"
                     />
                 </div>
 
                 <!-- Botones -->
-                <div class="flex items-center gap-3 pt-2">
+                <div
+                    class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
+                >
                     <Link
                         :href="admin.permissions.index().url"
-                        class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
                         Cancelar
                     </Link>
@@ -119,7 +123,7 @@ const submit = () => {
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {{
                             form.processing
@@ -130,6 +134,5 @@ const submit = () => {
                 </div>
             </form>
         </div>
-
     </div>
 </template>

@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3'
-import permissions from '@/routes/admin/permissions'
-import admin from '@/routes/admin'
+import { Head, Link, useForm } from '@inertiajs/vue3';
+
+import permissions from '@/routes/admin/permissions';
+import admin from '@/routes/admin';
 
 const form = useForm({
     name: '',
-})
+});
 
 const submit = () => {
-    form.post(permissions.store().url)
-}
+    form.post(
+        permissions.store().url,
+    );
+};
 
 defineOptions({
     layout: {
@@ -28,7 +31,7 @@ defineOptions({
             },
         ],
     },
-})
+});
 </script>
 
 <template>
@@ -37,27 +40,50 @@ defineOptions({
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
+        <!-- Encabezado -->
         <div
-            class="relative flex-1 rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
-            <div class="mb-6">
-                <h1 class="text-xl font-semibold text-foreground">
-                    Nuevo permiso
-                </h1>
-
-                <p class="mt-1 text-sm text-muted-foreground">
-                    Crea un nuevo permiso para asignarlo posteriormente a un rol.
-                </p>
-            </div>
-
-            <form
-                class="max-w-2xl space-y-6"
-                @submit.prevent="submit"
+            <div
+                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
                 <div>
+                    <h1 class="text-2xl font-semibold">
+                        Nuevo permiso
+                    </h1>
+
+                    <p
+                        class="mt-1 text-sm text-muted-foreground"
+                    >
+                        Crea un nuevo permiso para asignarlo posteriormente a
+                        un rol.
+                    </p>
+                </div>
+
+                <Link
+                    :href="
+                        permissions.index()
+                    "
+                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                >
+                    Regresar
+                </Link>
+            </div>
+        </div>
+
+        <!-- Formulario -->
+        <div
+            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+        >
+            <form
+                class="space-y-6"
+                @submit.prevent="submit"
+            >
+                <!-- Nombre -->
+                <div class="space-y-2">
                     <label
                         for="name"
-                        class="mb-2 block text-sm font-medium text-foreground"
+                        class="text-sm font-medium"
                     >
                         Nombre del permiso
                     </label>
@@ -67,30 +93,32 @@ defineOptions({
                         v-model="form.name"
                         type="text"
                         placeholder="Ejemplo: users.view"
-                        class="w-full rounded-lg border border-sidebar-border/70 bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-foreground dark:border-sidebar-border"
-                        :class="{
-                            'border-red-500': form.errors.name,
-                        }"
+                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
 
-                    <p class="mt-1.5 text-xs text-muted-foreground">
+                    <p
+                        class="text-xs text-muted-foreground"
+                    >
                         Recomendado: modulo.accion
                     </p>
 
                     <p
                         v-if="form.errors.name"
-                        class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        class="text-sm text-red-500"
                     >
                         {{ form.errors.name }}
                     </p>
                 </div>
 
+                <!-- Acciones -->
                 <div
-                    class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 sm:flex-row sm:justify-end dark:border-sidebar-border"
+                    class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
                 >
                     <Link
-                        :href="permissions.index()"
-                        class="rounded-lg border border-sidebar-border/70 px-4 py-2 text-center text-sm font-medium text-foreground transition hover:bg-muted dark:border-sidebar-border"
+                        :href="
+                            permissions.index()
+                        "
+                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
                         Cancelar
                     </Link>
@@ -98,9 +126,13 @@ defineOptions({
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        {{ form.processing ? 'Guardando...' : 'Guardar permiso' }}
+                        {{
+                            form.processing
+                                ? 'Guardando...'
+                                : 'Guardar permiso'
+                        }}
                     </button>
                 </div>
             </form>

@@ -8,6 +8,8 @@ use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\SpeciesCategoryController;
 use App\Http\Controllers\Admin\SpeciesController;
 use App\Http\Controllers\Admin\SpeciesTagController;
+use App\Http\Controllers\Admin\TicketTypeController;
+
 
 Route::inertia('/', 'Welcome')->name('home');
 
@@ -108,6 +110,19 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:species_tags.edit',
                 'destroy' => 'permission:species_tags.delete',
             ]);
+
+
+        Route::resource('ticket-types', TicketTypeController::class)
+            ->except(['show'])
+            ->middleware([
+                'index' => 'permission:ticket-types.view',
+                'create' => 'permission:ticket-types.create',
+                'store' => 'permission:ticket-types.create',
+                'edit' => 'permission:ticket-types.edit',
+                'update' => 'permission:ticket-types.edit',
+                'destroy' => 'permission:ticket-types.delete',
+            ]);
+
 
     });
 

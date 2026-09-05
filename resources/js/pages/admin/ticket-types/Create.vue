@@ -1,44 +1,25 @@
+
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 import admin from '@/routes/admin';
 
-interface User {
-    id: number;
-    name: string;
-    email: string;
-    roles: Role[];
-}
-
-interface Role {
-    id: number;
-    name: string;
-}
-
-const props = defineProps<{
-    user: User;
-    roles: Role[];
-}>();
-
 const form = useForm({
-    name: props.user.name,
-    email: props.user.email,
-    password: '',
-    password_confirmation: '',
-    role: props.user.roles[0]?.name ?? '',
+    name: '',
+    price: '',
+    description: '',
+    is_active: true,
 });
 
 const submit = () => {
-    form.put(
-        admin.users.update(
-            props.user.id,
-        ).url,
+    form.post(
+        admin.ticketTypes.store().url,
     );
 };
 </script>
 
 <template>
-    <Head title="Editar usuario" />
+    <Head title="Nuevo tipo de boleto" />
 
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
@@ -52,19 +33,19 @@ const submit = () => {
             >
                 <div>
                     <h1 class="text-2xl font-semibold">
-                        Editar usuario
+                        Nuevo tipo de boleto
                     </h1>
 
                     <p
                         class="mt-1 text-sm text-muted-foreground"
                     >
-                        Modifica la información y el rol del usuario.
+                        Registra un nuevo tipo de boleto para el zoológico.
                     </p>
                 </div>
 
                 <Link
                     :href="
-                        admin.users.index().url
+                        admin.ticketTypes.index().url
                     "
                     class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
@@ -94,7 +75,7 @@ const submit = () => {
                         id="name"
                         v-model="form.name"
                         type="text"
-                        placeholder="Nombre completo"
+                        placeholder="Ej. Adulto"
                         class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
 
@@ -106,104 +87,109 @@ const submit = () => {
                     </p>
                 </div>
 
-                <!-- Correo electrónico -->
+                <!-- Precio -->
                 <div class="space-y-2">
                     <label
-                        for="email"
+                        for="price"
                         class="text-sm font-medium"
                     >
-                        Correo electrónico
+                        Precio
                     </label>
 
-                    <input
-                        id="email"
-                        v-model="form.email"
-                        type="email"
-                        placeholder="usuario@ejemplo.com"
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-
-                    <p
-                        v-if="form.errors.email"
-                        class="text-sm text-red-500"
-                    >
-                        {{ form.errors.email }}
-                    </p>
-                </div>
-
-                <!-- Nueva contraseña -->
-                <div class="space-y-2">
-                    <label
-                        for="password"
-                        class="text-sm font-medium"
-                    >
-                        Nueva contraseña
-                    </label>
-
-                    <input
-                        id="password"
-                        v-model="form.password"
-                        type="password"
-                        placeholder="Dejar vacío para conservar la actual"
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-
-                    <p
-                        v-if="form.errors.password"
-                        class="text-sm text-red-500"
-                    >
-                        {{ form.errors.password }}
-                    </p>
-                </div>
-
-                <!-- Confirmar contraseña -->
-                <div class="space-y-2">
-                    <label
-                        for="password_confirmation"
-                        class="text-sm font-medium"
-                    >
-                        Confirmar nueva contraseña
-                    </label>
-
-                    <input
-                        id="password_confirmation"
-                        v-model="form.password_confirmation"
-                        type="password"
-                        placeholder="Repite la nueva contraseña"
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                </div>
-
-                <!-- Rol -->
-                <div class="space-y-2">
-                    <label
-                        for="role"
-                        class="text-sm font-medium"
-                    >
-                        Rol
-                    </label>
-
-                    <select
-                        id="role"
-                        v-model="form.role"
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    >
-                        <option
-                            v-for="role in roles"
-                            :key="role.id"
-                            :value="role.name"
+                    <div class="relative">
+                        <span
+                            class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
                         >
-                            {{ role.name }}
-                        </option>
-                    </select>
+                            $
+                        </span>
+
+                        <input
+                            id="price"
+                            v-model="form.price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="80.00"
+                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-8 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
 
                     <p
-                        v-if="form.errors.role"
+                        v-if="form.errors.price"
                         class="text-sm text-red-500"
                     >
-                        {{ form.errors.role }}
+                        {{ form.errors.price }}
                     </p>
                 </div>
+
+                <!-- Descripción -->
+                <div class="space-y-2">
+                    <label
+                        for="description"
+                        class="text-sm font-medium"
+                    >
+                        Descripción
+                    </label>
+
+                    <textarea
+                        id="description"
+                        v-model="form.description"
+                        rows="4"
+                        placeholder="Describe este tipo de boleto..."
+                        class="w-full resize-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+
+                    <p
+                        v-if="form.errors.description"
+                        class="text-sm text-red-500"
+                    >
+                        {{ form.errors.description }}
+                    </p>
+                </div>
+
+                <!-- Estado -->
+                <div
+                    class="flex items-center justify-between rounded-lg border border-sidebar-border p-4"
+                >
+                    <div>
+                        <div
+                            class="text-sm font-medium"
+                        >
+                            Estado
+                        </div>
+
+                        <div
+                            class="mt-1 text-xs text-muted-foreground"
+                        >
+                            Determina si este tipo de boleto puede utilizarse.
+                        </div>
+                    </div>
+
+                    <label
+                        class="relative inline-flex cursor-pointer items-center"
+                    >
+                        <input
+                            v-model="form.is_active"
+                            type="checkbox"
+                            class="peer sr-only"
+                        />
+
+                        <div
+                            class="h-6 w-11 rounded-full bg-muted transition peer-checked:bg-primary peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20"
+                        >
+                            <div
+                                class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"
+                            />
+                        </div>
+                    </label>
+                </div>
+
+                <p
+                    v-if="form.errors.is_active"
+                    class="text-sm text-red-500"
+                >
+                    {{ form.errors.is_active }}
+                </p>
 
                 <!-- Acciones -->
                 <div
@@ -211,7 +197,7 @@ const submit = () => {
                 >
                     <Link
                         :href="
-                            admin.users.index().url
+                            admin.ticketTypes.index().url
                         "
                         class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
@@ -226,7 +212,7 @@ const submit = () => {
                         {{
                             form.processing
                                 ? 'Guardando...'
-                                : 'Guardar cambios'
+                                : 'Guardar tipo de boleto'
                         }}
                     </button>
                 </div>
