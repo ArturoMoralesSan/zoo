@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\LevelController;
 
 Route::inertia('/', 'Welcome')->name('home');
 
@@ -71,6 +72,17 @@ Route::middleware(['auth', 'verified'])
                 'edit'    => 'permission:permissions.edit',
                 'update'  => 'permission:permissions.edit',
                 'destroy' => 'permission:permissions.delete',
+            ]);
+
+        // Levels
+        Route::resource('levels', LevelController::class)
+            ->middleware([
+                'index'   => 'permission:levels.view',
+                'create'  => 'permission:levels.create',
+                'store'   => 'permission:levels.create',
+                'edit'    => 'permission:levels.edit',
+                'update'  => 'permission:levels.edit',
+                'destroy' => 'permission:levels.delete',
             ]);
 
     });
