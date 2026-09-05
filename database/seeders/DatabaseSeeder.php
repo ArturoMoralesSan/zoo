@@ -19,6 +19,10 @@ class DatabaseSeeder extends Seeder
             MenuSeeder::class,
             UserSeeder::class,
             LevelSeeder::class,
+            SpeciesCategorySeeder::class,
+            SpeciesTagSeeder::class,
+            SpeciesSeeder::class,
+
         ]);
     }
 
