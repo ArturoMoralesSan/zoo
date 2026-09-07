@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             SpeciesCategorySeeder::class,
             SpeciesTagSeeder::class,
             SpeciesSeeder::class,
-
+            PaymentMethodSeeder::class,
         ]);
     }
 

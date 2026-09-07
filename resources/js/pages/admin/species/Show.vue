@@ -27,6 +27,14 @@ interface SpeciesModel {
     is_active: boolean;
 }
 
+interface ZooZone {
+    id: number;
+    name: string;
+    description?: string | null;
+    type?: string | null;
+    is_active: boolean;
+}
+
 interface SpeciesLocation {
     id: number;
     name: string;
@@ -34,6 +42,7 @@ interface SpeciesLocation {
     longitude: number;
     description?: string | null;
     is_active: boolean;
+    zone?: ZooZone | null;
 }
 
 interface SpeciesTag {
@@ -65,6 +74,12 @@ const props = defineProps<{
     species: Species;
 }>();
 
+/*
+|--------------------------------------------------------------------------
+| Imágenes
+|--------------------------------------------------------------------------
+*/
+
 const mainImage =
     props.species.images.find(
         (image) =>
@@ -93,11 +108,29 @@ const galleryImages =
             image.is_active,
     );
 
+/*
+|--------------------------------------------------------------------------
+| Modelo 3D
+|--------------------------------------------------------------------------
+*/
+
 const currentModel =
     props.species.models[0] ?? null;
 
+/*
+|--------------------------------------------------------------------------
+| Ubicación
+|--------------------------------------------------------------------------
+*/
+
 const currentLocation =
     props.species.locations[0] ?? null;
+
+/*
+|--------------------------------------------------------------------------
+| URLs
+|--------------------------------------------------------------------------
+*/
 
 const imageUrl = (path: string) => {
     return `/storage/${path}`;
@@ -126,7 +159,10 @@ const modelUrl = (
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
+        <!-- ===================================================== -->
         <!-- ENCABEZADO -->
+        <!-- ===================================================== -->
+
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -174,7 +210,10 @@ const modelUrl = (
             </div>
         </div>
 
+        <!-- ===================================================== -->
         <!-- INFORMACIÓN GENERAL -->
+        <!-- ===================================================== -->
+
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -182,6 +221,7 @@ const modelUrl = (
                 class="grid gap-6 lg:grid-cols-3"
             >
                 <!-- DATOS -->
+
                 <div
                     class="lg:col-span-2"
                 >
@@ -204,6 +244,7 @@ const modelUrl = (
                         class="mt-6 grid gap-5 sm:grid-cols-2"
                     >
                         <!-- Nombre común -->
+
                         <div>
                             <p
                                 class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -221,6 +262,7 @@ const modelUrl = (
                         </div>
 
                         <!-- Nombre científico -->
+
                         <div>
                             <p
                                 class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -239,6 +281,7 @@ const modelUrl = (
                         </div>
 
                         <!-- Categoría -->
+
                         <div>
                             <p
                                 class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -258,6 +301,7 @@ const modelUrl = (
                         </div>
 
                         <!-- ID -->
+
                         <div>
                             <p
                                 class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -273,6 +317,7 @@ const modelUrl = (
                         </div>
 
                         <!-- Slug -->
+
                         <div>
                             <p
                                 class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -288,6 +333,7 @@ const modelUrl = (
                         </div>
 
                         <!-- Hábitat -->
+
                         <div>
                             <p
                                 class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -306,6 +352,7 @@ const modelUrl = (
                         </div>
 
                         <!-- Origen -->
+
                         <div>
                             <p
                                 class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -324,6 +371,7 @@ const modelUrl = (
                         </div>
 
                         <!-- Dieta -->
+
                         <div>
                             <p
                                 class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -342,6 +390,7 @@ const modelUrl = (
                         </div>
 
                         <!-- Conservación -->
+
                         <div>
                             <p
                                 class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -360,6 +409,7 @@ const modelUrl = (
                         </div>
 
                         <!-- Estado -->
+
                         <div>
                             <p
                                 class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -390,6 +440,7 @@ const modelUrl = (
                     </div>
 
                     <!-- DESCRIPCIÓN -->
+
                     <div
                         v-if="species.description"
                         class="mt-6 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border"
@@ -409,6 +460,7 @@ const modelUrl = (
                 </div>
 
                 <!-- IMAGEN PRINCIPAL -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -444,7 +496,10 @@ const modelUrl = (
             </div>
         </div>
 
+        <!-- ===================================================== -->
         <!-- ETIQUETAS -->
+        <!-- ===================================================== -->
+
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -495,7 +550,10 @@ const modelUrl = (
             </p>
         </div>
 
+        <!-- ===================================================== -->
         <!-- IMÁGENES -->
+        <!-- ===================================================== -->
+
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -518,6 +576,7 @@ const modelUrl = (
                 class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
             >
                 <!-- PRINCIPAL -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -552,6 +611,7 @@ const modelUrl = (
                 </div>
 
                 <!-- MINIATURA -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -586,6 +646,7 @@ const modelUrl = (
                 </div>
 
                 <!-- TARJETA -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -620,6 +681,7 @@ const modelUrl = (
                 </div>
 
                 <!-- GALERÍA -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -664,7 +726,10 @@ const modelUrl = (
             </div>
         </div>
 
+        <!-- ===================================================== -->
         <!-- MODELO 3D -->
+        <!-- ===================================================== -->
+
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -708,6 +773,7 @@ const modelUrl = (
                 class="mt-6 grid gap-5 sm:grid-cols-2"
             >
                 <!-- Nombre -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -723,6 +789,7 @@ const modelUrl = (
                 </div>
 
                 <!-- Formato -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -741,6 +808,7 @@ const modelUrl = (
                 </div>
 
                 <!-- Descripción -->
+
                 <div
                     v-if="currentModel.description"
                     class="sm:col-span-2"
@@ -761,6 +829,7 @@ const modelUrl = (
                 </div>
 
                 <!-- RECURSO -->
+
                 <div
                     class="sm:col-span-2"
                 >
@@ -808,7 +877,10 @@ const modelUrl = (
             </div>
         </div>
 
+        <!-- ===================================================== -->
         <!-- UBICACIÓN -->
+        <!-- ===================================================== -->
+
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -831,12 +903,55 @@ const modelUrl = (
                 v-if="currentLocation"
                 class="mt-6 grid gap-5 sm:grid-cols-2"
             >
+                <!-- ================================================= -->
+                <!-- ZONA -->
+                <!-- ================================================= -->
+
+                <div
+                    class="sm:col-span-2 rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                >
+                    <p
+                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                    >
+                        Zona del zoológico
+                    </p>
+
+                    <p
+                        v-if="currentLocation.zone"
+                        class="mt-1 text-base font-semibold"
+                    >
+                        {{
+                            currentLocation.zone.name
+                        }}
+                    </p>
+
+                    <p
+                        v-else
+                        class="mt-1 text-sm italic text-muted-foreground"
+                    >
+                        Sin zona asignada
+                    </p>
+
+                    <p
+                        v-if="
+                            currentLocation.zone?.type
+                        "
+                        class="mt-1 text-xs text-muted-foreground"
+                    >
+                        Tipo:
+                        {{
+                            currentLocation.zone.type
+                        }}
+                    </p>
+                </div>
+
                 <!-- Nombre -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                     >
-                        Nombre
+                        Nombre de la ubicación
                     </p>
 
                     <p
@@ -847,6 +962,7 @@ const modelUrl = (
                 </div>
 
                 <!-- Estado -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -874,6 +990,7 @@ const modelUrl = (
                 </div>
 
                 <!-- Latitud -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -889,6 +1006,7 @@ const modelUrl = (
                 </div>
 
                 <!-- Longitud -->
+
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -904,6 +1022,7 @@ const modelUrl = (
                 </div>
 
                 <!-- Descripción -->
+
                 <div
                     v-if="currentLocation.description"
                     class="sm:col-span-2"
@@ -923,7 +1042,10 @@ const modelUrl = (
                     </p>
                 </div>
 
+                <!-- ================================================= -->
                 <!-- MAPA -->
+                <!-- ================================================= -->
+
                 <div
                     class="sm:col-span-2"
                 >
@@ -947,7 +1069,10 @@ const modelUrl = (
             </div>
         </div>
 
+        <!-- ===================================================== -->
         <!-- ACCIONES -->
+        <!-- ===================================================== -->
+
         <div
             class="flex flex-col gap-3 rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between"
         >

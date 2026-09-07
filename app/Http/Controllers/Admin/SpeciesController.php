@@ -3,18 +3,23 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Species\StoreSpeciesRequest;
+use App\Http\Requests\Admin\Species\UpdateSpeciesRequest;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\SpeciesImage;
 use App\Models\SpeciesLocation;
 use App\Models\SpeciesModel;
 use App\Models\SpeciesTag;
-use Illuminate\Http\Request;
+use App\Models\ZooZone;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class SpeciesController extends Controller
 {
@@ -24,7 +29,7 @@ class SpeciesController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function index(Request $request)
+    public function index(): Response
     {
         $species = Species::query()
             ->with('category')
@@ -34,13 +39,14 @@ class SpeciesController extends Controller
                 'locations',
                 'tags',
             ])
-            ->when($request->search, function ($query, $search) {
+            ->when(request('search'), function ($query, $search) {
                 $query->where(function ($query) use ($search) {
-                    $query->where(
-                        'common_name',
-                        'like',
-                        "%{$search}%"
-                    )
+                    $query
+                        ->where(
+                            'common_name',
+                            'like',
+                            "%{$search}%"
+                        )
                         ->orWhere(
                             'scientific_name',
                             'like',
@@ -49,7 +55,7 @@ class SpeciesController extends Controller
                 });
             })
             ->when(
-                $request->category_id,
+                request('category_id'),
                 fn ($query, $categoryId) =>
                     $query->where(
                         'species_category_id',
@@ -74,26 +80,35 @@ class SpeciesController extends Controller
                     ]),
 
                 'filters' => [
-                    'search' => $request->search,
-                    'category_id' => $request->category_id,
+                    'search' => request('search'),
+                    'category_id' => request('category_id'),
                 ],
             ]
         );
     }
 
-    public function show(Species $species)
+    /*
+    |--------------------------------------------------------------------------
+    | SHOW
+    |--------------------------------------------------------------------------
+    */
+
+    public function show(Species $species): Response
     {
         $species->load([
             'category',
             'images',
             'models',
-            'locations',
+            'locations.zone',
             'tags',
         ]);
 
-        return Inertia::render('admin/species/Show', [
-            'species' => $species,
-        ]);
+        return Inertia::render(
+            'admin/species/Show',
+            [
+                'species' => $species,
+            ]
+        );
     }
 
     /*
@@ -102,7 +117,7 @@ class SpeciesController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function create()
+    public function create(): Response
     {
         return Inertia::render(
             'admin/species/Create',
@@ -122,6 +137,25 @@ class SpeciesController extends Controller
                         'id',
                         'name',
                     ]),
+
+                /*
+                |--------------------------------------------------------------------------
+                | Zonas
+                |--------------------------------------------------------------------------
+                |
+                | Se envía geometry para poder dibujar el polígono
+                | de la zona en MapMarkerMap.vue.
+                |
+                */
+
+                'zones' => ZooZone::query()
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get([
+                        'id',
+                        'name',
+                        'geometry',
+                    ]),
             ]
         );
     }
@@ -132,192 +166,14 @@ class SpeciesController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function store(Request $request)
+    public function store(StoreSpeciesRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-
-            /*
-            |--------------------------------------------------------------------------
-            | Información
-            |--------------------------------------------------------------------------
-            */
-
-            'species_category_id' => [
-                'required',
-                'exists:species_categories,id',
-            ],
-
-            'common_name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-
-            'scientific_name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-
-            'description' => [
-                'nullable',
-                'string',
-            ],
-
-            'habitat' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'origin' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'diet' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'conservation_status' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'is_active' => [
-                'nullable',
-                'boolean',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Etiquetas
-            |--------------------------------------------------------------------------
-            */
-
-            'tags' => [
-                'nullable',
-                'array',
-            ],
-
-            'tags.*' => [
-                'integer',
-                'exists:species_tags,id',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Imágenes
-            |--------------------------------------------------------------------------
-            */
-
-            'main_image' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:5120',
-            ],
-
-            'thumbnail_image' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:5120',
-            ],
-
-            'card_image' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:5120',
-            ],
-
-            'gallery_images' => [
-                'nullable',
-                'array',
-            ],
-
-            'gallery_images.*' => [
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:5120',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Modelo 3D
-            |--------------------------------------------------------------------------
-            */
-
-            'model_name' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'model_file' => [
-                'nullable',
-                'file',
-                'mimes:glb,gltf,usdz',
-                'max:51200',
-            ],
-
-            'model_url' => [
-                'nullable',
-                'url',
-                'max:2048',
-            ],
-
-            'model_format' => [
-                'nullable',
-                'string',
-                'max:50',
-            ],
-
-            'model_description' => [
-                'nullable',
-                'string',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Ubicación
-            |--------------------------------------------------------------------------
-            */
-
-            'location_name' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'latitude' => [
-                'nullable',
-                'numeric',
-                'between:-90,90',
-            ],
-
-            'longitude' => [
-                'nullable',
-                'numeric',
-                'between:-180,180',
-            ],
-
-            'location_description' => [
-                'nullable',
-                'string',
-            ],
-        ]);
+        $validated = $request->validated();
 
         DB::transaction(function () use (
             $request,
             $validated
         ) {
-
             /*
             |--------------------------------------------------------------------------
             | Crear especie
@@ -483,12 +339,9 @@ class SpeciesController extends Controller
             */
 
             if ($request->hasFile('gallery_images')) {
-
                 foreach (
-                    $request->file('gallery_images')
-                    as $index => $image
+                    $request->file('gallery_images') as $index => $image
                 ) {
-
                     if (!$image->isValid()) {
                         continue;
                     }
@@ -527,11 +380,10 @@ class SpeciesController extends Controller
             */
 
             if (
-                !empty($validated['model_name'])
-                || $request->hasFile('model_file')
-                || !empty($validated['model_url'])
+                !empty($validated['model_name']) ||
+                $request->hasFile('model_file') ||
+                !empty($validated['model_url'])
             ) {
-
                 $modelPath = null;
 
                 if (
@@ -577,17 +429,21 @@ class SpeciesController extends Controller
             | Ubicación
             |--------------------------------------------------------------------------
             |
-            | Solo se crea cuando existen ambas coordenadas.
+            | La ubicación solamente se crea cuando existen
+            | latitud y longitud.
             |
             */
 
             if (
-                $validated['latitude'] !== null
-                && $validated['longitude'] !== null
+                $validated['latitude'] !== null &&
+                $validated['longitude'] !== null
             ) {
                 SpeciesLocation::create([
                     'species_id' =>
                         $species->id,
+
+                    'zone_id' =>
+                        $validated['zone_id'] ?? null,
 
                     'name' =>
                         $validated['location_name']
@@ -623,39 +479,51 @@ class SpeciesController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function edit(Species $species)
+    public function edit(Species $species): Response
     {
         $species->load([
             'category',
             'tags',
             'images',
             'models',
-            'locations',
+            'locations.zone',
         ]);
 
         return Inertia::render(
             'admin/species/Edit',
             [
-                'species' =>
-                    $species,
+                'species' => $species,
 
-                'categories' =>
-                    SpeciesCategory::query()
-                        ->where('is_active', true)
-                        ->orderBy('name')
-                        ->get([
-                            'id',
-                            'name',
-                        ]),
+                'categories' => SpeciesCategory::query()
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get([
+                        'id',
+                        'name',
+                    ]),
 
-                'tags' =>
-                    SpeciesTag::query()
-                        ->where('is_active', true)
-                        ->orderBy('name')
-                        ->get([
-                            'id',
-                            'name',
-                        ]),
+                'tags' => SpeciesTag::query()
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get([
+                        'id',
+                        'name',
+                    ]),
+
+                /*
+                |--------------------------------------------------------------------------
+                | Zonas con geometry
+                |--------------------------------------------------------------------------
+                */
+
+                'zones' => ZooZone::query()
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get([
+                        'id',
+                        'name',
+                        'geometry',
+                    ]),
             ]
         );
     }
@@ -667,194 +535,16 @@ class SpeciesController extends Controller
     */
 
     public function update(
-        Request $request,
+        UpdateSpeciesRequest $request,
         Species $species
-    ) {
-        $validated = $request->validate([
-
-            /*
-            |--------------------------------------------------------------------------
-            | Información
-            |--------------------------------------------------------------------------
-            */
-
-            'species_category_id' => [
-                'required',
-                'exists:species_categories,id',
-            ],
-
-            'common_name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-
-            'scientific_name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-
-            'description' => [
-                'nullable',
-                'string',
-            ],
-
-            'habitat' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'origin' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'diet' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'conservation_status' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'is_active' => [
-                'nullable',
-                'boolean',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Etiquetas
-            |--------------------------------------------------------------------------
-            */
-
-            'tags' => [
-                'nullable',
-                'array',
-            ],
-
-            'tags.*' => [
-                'integer',
-                'exists:species_tags,id',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Imágenes
-            |--------------------------------------------------------------------------
-            */
-
-            'main_image' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:5120',
-            ],
-
-            'thumbnail_image' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:5120',
-            ],
-
-            'card_image' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:5120',
-            ],
-
-            'gallery_images' => [
-                'nullable',
-                'array',
-            ],
-
-            'gallery_images.*' => [
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:5120',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Modelo 3D
-            |--------------------------------------------------------------------------
-            */
-
-            'model_name' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'model_file' => [
-                'nullable',
-                'file',
-                'mimes:glb,gltf,usdz',
-                'max:51200',
-            ],
-
-            'model_url' => [
-                'nullable',
-                'url',
-                'max:2048',
-            ],
-
-            'model_format' => [
-                'nullable',
-                'string',
-                'max:50',
-            ],
-
-            'model_description' => [
-                'nullable',
-                'string',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Ubicación
-            |--------------------------------------------------------------------------
-            */
-
-            'location_name' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'latitude' => [
-                'nullable',
-                'numeric',
-                'between:-90,90',
-            ],
-
-            'longitude' => [
-                'nullable',
-                'numeric',
-                'between:-180,180',
-            ],
-
-            'location_description' => [
-                'nullable',
-                'string',
-            ],
-        ]);
+    ): RedirectResponse {
+        $validated = $request->validated();
 
         DB::transaction(function () use (
             $request,
             $species,
             $validated
         ) {
-
             /*
             |--------------------------------------------------------------------------
             | Información de la especie
@@ -915,8 +605,8 @@ class SpeciesController extends Controller
                 $request->hasFile('main_image') &&
                 $request->file('main_image')->isValid()
             ) {
-
-                $currentImage = $species->images()
+                $currentImage = $species
+                    ->images()
                     ->where('type', 'main')
                     ->first();
 
@@ -926,7 +616,6 @@ class SpeciesController extends Controller
                 );
 
                 if ($currentImage) {
-
                     if (
                         $currentImage->path &&
                         Storage::disk('public')->exists(
@@ -948,9 +637,7 @@ class SpeciesController extends Controller
                         'is_active' =>
                             true,
                     ]);
-
                 } else {
-
                     SpeciesImage::create([
                         'species_id' =>
                             $species->id,
@@ -983,8 +670,8 @@ class SpeciesController extends Controller
                 $request->hasFile('thumbnail_image') &&
                 $request->file('thumbnail_image')->isValid()
             ) {
-
-                $currentImage = $species->images()
+                $currentImage = $species
+                    ->images()
                     ->where('type', 'thumbnail')
                     ->first();
 
@@ -994,7 +681,6 @@ class SpeciesController extends Controller
                 );
 
                 if ($currentImage) {
-
                     if (
                         $currentImage->path &&
                         Storage::disk('public')->exists(
@@ -1016,9 +702,7 @@ class SpeciesController extends Controller
                         'is_active' =>
                             true,
                     ]);
-
                 } else {
-
                     SpeciesImage::create([
                         'species_id' =>
                             $species->id,
@@ -1051,8 +735,8 @@ class SpeciesController extends Controller
                 $request->hasFile('card_image') &&
                 $request->file('card_image')->isValid()
             ) {
-
-                $currentImage = $species->images()
+                $currentImage = $species
+                    ->images()
                     ->where('type', 'card')
                     ->first();
 
@@ -1062,7 +746,6 @@ class SpeciesController extends Controller
                 );
 
                 if ($currentImage) {
-
                     if (
                         $currentImage->path &&
                         Storage::disk('public')->exists(
@@ -1084,9 +767,7 @@ class SpeciesController extends Controller
                         'is_active' =>
                             true,
                     ]);
-
                 } else {
-
                     SpeciesImage::create([
                         'species_id' =>
                             $species->id,
@@ -1119,8 +800,8 @@ class SpeciesController extends Controller
             */
 
             if ($request->hasFile('gallery_images')) {
-
-                $lastSortOrder = $species->images()
+                $lastSortOrder = $species
+                    ->images()
                     ->where('type', 'gallery')
                     ->max('sort_order');
 
@@ -1129,10 +810,8 @@ class SpeciesController extends Controller
                     : $lastSortOrder + 1;
 
                 foreach (
-                    $request->file('gallery_images')
-                    as $index => $image
+                    $request->file('gallery_images') as $index => $image
                 ) {
-
                     if (!$image->isValid()) {
                         continue;
                     }
@@ -1182,29 +861,28 @@ class SpeciesController extends Controller
                 || !empty($validated['model_description']);
 
             if ($hasModelData) {
-
                 $modelPath =
                     $currentModel?->path;
 
                 /*
-                |--------------------------------------------------------------
+                |--------------------------------------------------------------------------
                 | Nuevo archivo 3D
-                |--------------------------------------------------------------
+                |--------------------------------------------------------------------------
                 */
 
                 if (
                     $request->hasFile('model_file') &&
                     $request->file('model_file')->isValid()
                 ) {
-
                     $newModelPath = $this->moveUploadedFile(
                         $request->file('model_file'),
                         'species/' . $species->id . '/models'
                     );
 
                     /*
-                    | Eliminamos el archivo anterior solamente
-                    | después de guardar correctamente el nuevo.
+                    |--------------------------------------------------------------------------
+                    | Eliminar archivo anterior
+                    |--------------------------------------------------------------------------
                     */
 
                     if (
@@ -1246,13 +924,10 @@ class SpeciesController extends Controller
                 ];
 
                 if ($currentModel) {
-
                     $currentModel->update(
                         $modelData
                     );
-
                 } else {
-
                     SpeciesModel::create([
                         'species_id' =>
                             $species->id,
@@ -1274,31 +949,16 @@ class SpeciesController extends Controller
 
             $hasLocationData =
                 !empty($validated['location_name'])
+                || $validated['zone_id'] !== null
                 || $validated['latitude'] !== null
                 || $validated['longitude'] !== null
                 || !empty($validated['location_description']);
 
             if ($hasLocationData) {
-
-                /*
-                | Si existe cualquier dato de ubicación,
-                | ambas coordenadas son obligatorias.
-                */
-
-                if (
-                    $validated['latitude'] === null
-                    || $validated['longitude'] === null
-                ) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'latitude' =>
-                            'La latitud es obligatoria cuando se registra una ubicación.',
-
-                        'longitude' =>
-                            'La longitud es obligatoria cuando se registra una ubicación.',
-                    ]);
-                }
-
                 $locationData = [
+                    'zone_id' =>
+                        $validated['zone_id'] ?? null,
+
                     'name' =>
                         $validated['location_name']
                         ?: 'Ubicación principal',
@@ -1318,13 +978,10 @@ class SpeciesController extends Controller
                 ];
 
                 if ($currentLocation) {
-
                     $currentLocation->update(
                         $locationData
                     );
-
                 } else {
-
                     SpeciesLocation::create([
                         'species_id' =>
                             $species->id,
@@ -1349,7 +1006,7 @@ class SpeciesController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function destroy(Species $species)
+    public function destroy(Species $species): RedirectResponse
     {
         if (
             $species->images()->exists()
@@ -1379,14 +1036,8 @@ class SpeciesController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Mueve un archivo subido directamente al almacenamiento público.
-     *
-     * Se utiliza move() en lugar de store() debido al comportamiento
-     * del UploadedFile en el entorno actual de Windows/PHP.
-     */
     private function moveUploadedFile(
-        \Illuminate\Http\UploadedFile $file,
+        UploadedFile $file,
         string $directory
     ): string {
         $directory = trim(
@@ -1402,12 +1053,11 @@ class SpeciesController extends Controller
             $destination
         );
 
-        $extension = $file->getClientOriginalExtension();
+        $extension =
+            $file->getClientOriginalExtension();
 
-        $filename = uniqid(
-            '',
-            true
-        ) . '.' . $extension;
+        $filename =
+            uniqid('', true) . '.' . $extension;
 
         $file->move(
             $destination,

@@ -9,7 +9,10 @@ use App\Http\Controllers\Admin\SpeciesCategoryController;
 use App\Http\Controllers\Admin\SpeciesController;
 use App\Http\Controllers\Admin\SpeciesTagController;
 use App\Http\Controllers\Admin\TicketTypeController;
-
+use App\Http\Controllers\Admin\PaymentMethodController;
+use App\Http\Controllers\Admin\TicketOrderController;
+use App\Http\Controllers\Admin\ZooZoneController;
+use App\Http\Controllers\Admin\MapMarkerController;
 
 Route::inertia('/', 'Welcome')->name('home');
 
@@ -122,6 +125,56 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:ticket-types.edit',
                 'destroy' => 'permission:ticket-types.delete',
             ]);
+
+
+        Route::resource('payment-methods', PaymentMethodController::class)
+            ->except(['show'])
+            ->middleware([
+                'index' => 'permission:payment-methods.view',
+                'create' => 'permission:payment-methods.create',
+                'store' => 'permission:payment-methods.create',
+                'edit' => 'permission:payment-methods.edit',
+                'update' => 'permission:payment-methods.edit',
+                'destroy' => 'permission:payment-methods.delete',
+            ]);
+
+        Route::resource('ticket-orders', TicketOrderController::class)
+        ->only([
+            'index',
+            'create',
+            'store',
+            'show',
+            'destroy',
+        ])
+        ->middleware([
+            'index' => 'permission:ticket-orders.view',
+            'create' => 'permission:ticket-orders.create',
+            'store' => 'permission:ticket-orders.create',
+            'show' => 'permission:ticket-orders.view',
+            'destroy' => 'permission:ticket-orders.delete',
+        ]);
+
+        Route::resource('zoo-zones', ZooZoneController::class)
+            ->middleware([
+                'index' => 'permission:zoo-zones.view',
+                'create' => 'permission:zoo-zones.create',
+                'store' => 'permission:zoo-zones.create',
+                'show' => 'permission:zoo-zones.view',
+                'edit' => 'permission:zoo-zones.edit',
+                'update' => 'permission:zoo-zones.edit',
+                'destroy' => 'permission:zoo-zones.delete',
+            ]);
+
+        Route::resource('map-markers', MapMarkerController::class)
+        ->middleware([
+            'index' => 'permission:map-markers.view',
+            'create' => 'permission:map-markers.create',
+            'store' => 'permission:map-markers.create',
+            'show' => 'permission:map-markers.view',
+            'edit' => 'permission:map-markers.edit',
+            'update' => 'permission:map-markers.edit',
+            'destroy' => 'permission:map-markers.delete',
+        ]);
 
 
     });

@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import admin from '@/routes/admin';
+import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
+
+interface GeoJsonGeometry {
+    type: 'Polygon';
+    coordinates: number[][][];
+}
 
 interface Category {
     id: number;
@@ -14,39 +20,31 @@ interface Tag {
     name: string;
 }
 
-interface SpeciesImage {
-    id: number;
-    type: string;
-    path: string;
-    alt_text: string | null;
-    is_active: boolean;
-    sort_order: number;
-}
-
-interface SpeciesModel {
+interface Zone {
     id: number;
     name: string;
-    path: string | null;
-    url: string | null;
-    format: string | null;
-    description: string | null;
-    is_active: boolean;
+    geometry: GeoJsonGeometry | null;
+}
+
+interface SpeciesTag {
+    id: number;
+    name: string;
 }
 
 interface SpeciesLocation {
     id: number;
-    name: string;
-    latitude: number | string;
-    longitude: number | string;
+    zone_id: number | null;
+    name: string | null;
+    latitude: number | string | null;
+    longitude: number | string | null;
     description: string | null;
-    is_active: boolean;
 }
 
 interface Species {
     id: number;
-    species_category_id: number;
+    species_category_id: number | null;
     common_name: string;
-    scientific_name: string;
+    scientific_name: string | null;
     description: string | null;
     habitat: string | null;
     origin: string | null;
@@ -54,23 +52,22 @@ interface Species {
     conservation_status: string | null;
     is_active: boolean;
 
-    tags: Tag[];
-    images: SpeciesImage[];
-    models: SpeciesModel[];
+    tags: SpeciesTag[];
+
     locations: SpeciesLocation[];
+
+    model_name: string | null;
+    model_url: string | null;
+    model_format: string | null;
+    model_description: string | null;
 }
 
 const props = defineProps<{
     species: Species;
     categories: Category[];
     tags: Tag[];
+    zones: Zone[];
 }>();
-
-/*
-|--------------------------------------------------------------------------
-| Tabs
-|--------------------------------------------------------------------------
-*/
 
 const activeTab = ref('information');
 
@@ -99,26 +96,48 @@ const tabs = [
 
 /*
 |--------------------------------------------------------------------------
+| Ubicación existente
+|--------------------------------------------------------------------------
+*/
+
+const currentLocation =
+    props.species.locations?.[0] ?? null;
+
+const initialZoneId =
+    currentLocation?.zone_id !== null &&
+    currentLocation?.zone_id !== undefined
+        ? String(currentLocation.zone_id)
+        : '';
+
+const initialLatitude =
+    currentLocation?.latitude !== null &&
+    currentLocation?.latitude !== undefined
+        ? Number(currentLocation.latitude)
+        : null;
+
+const initialLongitude =
+    currentLocation?.longitude !== null &&
+    currentLocation?.longitude !== undefined
+        ? Number(currentLocation.longitude)
+        : null;
+
+/*
+|--------------------------------------------------------------------------
 | Formulario
 |--------------------------------------------------------------------------
-|
-| Importante:
-| Usamos POST + _method=put porque estamos enviando archivos.
-|
 */
 
 const form = useForm({
-    _method: 'put',
-
-    // Información
     species_category_id:
-        props.species.species_category_id,
+        props.species.species_category_id !== null
+            ? String(props.species.species_category_id)
+            : '',
 
     common_name:
-        props.species.common_name,
+        props.species.common_name ?? '',
 
     scientific_name:
-        props.species.scientific_name,
+        props.species.scientific_name ?? '',
 
     description:
         props.species.description ?? '',
@@ -138,110 +157,83 @@ const form = useForm({
     is_active:
         props.species.is_active,
 
-    // Etiquetas
-    tags: props.species.tags.map(
-        (tag) => tag.id,
-    ),
+    tags:
+        props.species.tags?.map((tag) => tag.id) ?? [],
 
-    // Imágenes
     main_image: null as File | null,
 
-    thumbnail_image:
-        null as File | null,
+    thumbnail_image: null as File | null,
 
-    card_image:
-        null as File | null,
+    card_image: null as File | null,
 
-    gallery_images:
-        [] as File[],
+    gallery_images: [] as File[],
 
-    // Modelo 3D
     model_name:
-        props.species.models[0]?.name ?? '',
+        props.species.model_name ?? '',
 
-    model_file:
-        null as File | null,
+    model_file: null as File | null,
 
     model_url:
-        props.species.models[0]?.url ?? '',
+        props.species.model_url ?? '',
 
     model_format:
-        props.species.models[0]?.format ?? '',
+        props.species.model_format ?? '',
 
     model_description:
-        props.species.models[0]?.description ?? '',
+        props.species.model_description ?? '',
 
-    // Ubicación
+    zone_id: initialZoneId,
+
     location_name:
-        props.species.locations[0]?.name ?? '',
+        currentLocation?.name ?? '',
 
-    latitude:
-        props.species.locations[0]?.latitude ?? '',
+    latitude: initialLatitude,
 
-    longitude:
-        props.species.locations[0]?.longitude ?? '',
+    longitude: initialLongitude,
 
     location_description:
-        props.species.locations[0]?.description ?? '',
+        currentLocation?.description ?? '',
 });
 
 /*
 |--------------------------------------------------------------------------
-| Información actual
+| Zona seleccionada
 |--------------------------------------------------------------------------
 */
 
-const mainImage =
-    props.species.images.find(
-        (image) =>
-            image.type === 'main',
+const selectedZone = computed(() => {
+    return (
+        props.zones.find(
+            (zone) => zone.id === Number(form.zone_id),
+        ) ?? null
     );
-
-const thumbnailImage =
-    props.species.images.find(
-        (image) =>
-            image.type === 'thumbnail',
-    );
-
-const cardImage =
-    props.species.images.find(
-        (image) =>
-            image.type === 'card',
-    );
-
-const galleryImages =
-    props.species.images.filter(
-        (image) =>
-            image.type === 'gallery',
-    );
-
-const currentModel =
-    props.species.models[0] ?? null;
-
-const currentLocation =
-    props.species.locations[0] ?? null;
+});
 
 /*
 |--------------------------------------------------------------------------
-| Guardar cambios
+| Cambio de zona
+|--------------------------------------------------------------------------
+|
+| IMPORTANTE:
+| No usamos immediate.
+|
+| De esta manera las coordenadas existentes se conservan
+| al abrir el formulario.
+|
+| Solamente se limpian cuando el usuario realmente cambia
+| de zona.
 |--------------------------------------------------------------------------
 */
 
-const submit = () => {
-    form.post(
-        admin.species.update(
-            props.species.id,
-        ).url,
-        {
-            forceFormData: true,
-
-            onSuccess: () => {
-                // Laravel/Inertia se encarga
-                // de regresar a la página correspondiente.
-            },
-        },
-    );
-};
+watch(
+    () => form.zone_id,
+    (newZone, oldZone) => {
+        if (newZone !== oldZone) {
+            form.latitude = null;
+            form.longitude = null;
+        }
+    },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -249,46 +241,30 @@ const submit = () => {
 |--------------------------------------------------------------------------
 */
 
-const setMainImage = (
-    event: Event,
-) => {
-    const target =
-        event.target as HTMLInputElement;
+const setMainImage = (event: Event) => {
+    const target = event.target as HTMLInputElement;
 
-    form.main_image =
-        target.files?.[0] ?? null;
+    form.main_image = target.files?.[0] ?? null;
 };
 
-const setThumbnailImage = (
-    event: Event,
-) => {
-    const target =
-        event.target as HTMLInputElement;
+const setThumbnailImage = (event: Event) => {
+    const target = event.target as HTMLInputElement;
 
-    form.thumbnail_image =
-        target.files?.[0] ?? null;
+    form.thumbnail_image = target.files?.[0] ?? null;
 };
 
-const setCardImage = (
-    event: Event,
-) => {
-    const target =
-        event.target as HTMLInputElement;
+const setCardImage = (event: Event) => {
+    const target = event.target as HTMLInputElement;
 
-    form.card_image =
-        target.files?.[0] ?? null;
+    form.card_image = target.files?.[0] ?? null;
 };
 
-const setGalleryImages = (
-    event: Event,
-) => {
-    const target =
-        event.target as HTMLInputElement;
+const setGalleryImages = (event: Event) => {
+    const target = event.target as HTMLInputElement;
 
-    form.gallery_images =
-        target.files
-            ? Array.from(target.files)
-            : [];
+    form.gallery_images = target.files
+        ? Array.from(target.files)
+        : [];
 };
 
 /*
@@ -297,105 +273,91 @@ const setGalleryImages = (
 |--------------------------------------------------------------------------
 */
 
-const setModelFile = (
-    event: Event,
-) => {
-    const target =
-        event.target as HTMLInputElement;
+const setModelFile = (event: Event) => {
+    const target = event.target as HTMLInputElement;
 
-    const file =
-        target.files?.[0] ?? null;
+    const file = target.files?.[0] ?? null;
 
     form.model_file = file;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Detectar formato automáticamente
-    |--------------------------------------------------------------------------
-    */
-
     if (file) {
-        const extension =
-            file.name
-                .split('.')
-                .pop()
-                ?.toLowerCase();
+        const extension = file.name
+            .split('.')
+            .pop()
+            ?.toLowerCase();
 
         if (
             extension === 'glb' ||
             extension === 'gltf' ||
             extension === 'usdz'
         ) {
-            form.model_format =
-                extension;
+            form.model_format = extension;
+        }
+
+        if (!form.model_name) {
+            form.model_name = file.name.replace(
+                /\.[^/.]+$/,
+                '',
+            );
         }
     }
 };
 
 /*
 |--------------------------------------------------------------------------
-| Navegación entre pestañas
+| Navegación
 |--------------------------------------------------------------------------
 */
 
 const nextTab = () => {
-    const currentIndex =
-        tabs.findIndex(
-            (tab) =>
-                tab.id ===
-                activeTab.value,
-        );
+    const currentIndex = tabs.findIndex(
+        (tab) => tab.id === activeTab.value,
+    );
 
-    if (
-        currentIndex <
-        tabs.length - 1
-    ) {
-        activeTab.value =
-            tabs[
-                currentIndex + 1
-            ].id;
+    if (currentIndex < tabs.length - 1) {
+        activeTab.value = tabs[currentIndex + 1].id;
     }
 };
 
 const previousTab = () => {
-    const currentIndex =
-        tabs.findIndex(
-            (tab) =>
-                tab.id ===
-                activeTab.value,
-        );
+    const currentIndex = tabs.findIndex(
+        (tab) => tab.id === activeTab.value,
+    );
 
     if (currentIndex > 0) {
-        activeTab.value =
-            tabs[
-                currentIndex - 1
-            ].id;
+        activeTab.value = tabs[currentIndex - 1].id;
     }
+};
+
+const goToTab = (tabId: string) => {
+    activeTab.value = tabId;
 };
 
 /*
 |--------------------------------------------------------------------------
-| URL de imágenes
+| Submit
 |--------------------------------------------------------------------------
 */
 
-const imageUrl = (
-    path: string,
-) => {
-    return `/storage/${path}`;
+const submit = () => {
+    form.put(
+        admin.species.update(props.species.id).url,
+        {
+            forceFormData: true,
+        },
+    );
 };
 </script>
 
 <template>
-    <Head title="Editar especie" />
+    <Head
+        :title="`Editar ${species.common_name}`"
+    />
 
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
-        <!-- ===================================================== -->
         <!-- HEADER -->
-        <!-- ===================================================== -->
-
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -403,23 +365,20 @@ const imageUrl = (
                 class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
             >
                 <div>
-                    <h1
-                        class="text-xl font-semibold"
-                    >
+                    <h1 class="text-xl font-semibold">
                         Editar especie
                     </h1>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Modifica la información de la especie.
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        Actualiza la información de
+                        <strong>
+                            {{ species.common_name }}
+                        </strong>
                     </p>
                 </div>
 
                 <Link
-                    :href="
-                        admin.species.index().url
-                    "
+                    :href="admin.species.index().url"
                     class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
                     Regresar
@@ -427,10 +386,7 @@ const imageUrl = (
             </div>
         </div>
 
-        <!-- ===================================================== -->
-        <!-- FORMULARIO -->
-        <!-- ===================================================== -->
-
+        <!-- FORM -->
         <div
             class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
         >
@@ -438,18 +394,13 @@ const imageUrl = (
                 class="flex flex-col"
                 @submit.prevent="submit"
             >
-                <!-- ================================================= -->
                 <!-- TABS -->
-                <!-- ================================================= -->
-
                 <div
                     class="border-b border-sidebar-border px-6 pt-6"
                 >
-                    <div
-                        class="flex gap-2 overflow-x-auto"
-                    >
+                    <div class="flex gap-2 overflow-x-auto">
                         <button
-                            v-for="tab in tabs"
+                            v-for="(tab, index) in tabs"
                             :key="tab.id"
                             type="button"
                             class="whitespace-nowrap rounded-t-lg px-4 py-3 text-sm font-medium transition"
@@ -458,19 +409,18 @@ const imageUrl = (
                                     ? 'bg-primary text-primary-foreground'
                                     : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                             "
-                            @click="
-                                activeTab = tab.id
-                            "
+                            @click="goToTab(tab.id)"
                         >
+                            <span class="mr-1.5 opacity-70">
+                                {{ index + 1 }}.
+                            </span>
+
                             {{ tab.name }}
                         </button>
                     </div>
                 </div>
 
-                <!-- ================================================= -->
-                <!-- CONTENIDO -->
-                <!-- ================================================= -->
-
+                <!-- CONTENT -->
                 <div class="p-6">
 
                     <!-- ================================================= -->
@@ -478,28 +428,20 @@ const imageUrl = (
                     <!-- ================================================= -->
 
                     <div
-                        v-if="
-                            activeTab ===
-                            'information'
-                        "
+                        v-if="activeTab === 'information'"
                         class="space-y-6"
                     >
                         <div>
-                            <h2
-                                class="text-lg font-semibold"
-                            >
+                            <h2 class="text-lg font-semibold">
                                 Información de la especie
                             </h2>
 
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
+                            <p class="mt-1 text-sm text-muted-foreground">
                                 Información principal de la especie.
                             </p>
                         </div>
 
                         <!-- Categoría -->
-
                         <div>
                             <label
                                 for="species_category_id"
@@ -510,38 +452,31 @@ const imageUrl = (
 
                             <select
                                 id="species_category_id"
-                                v-model="
-                                    form.species_category_id
-                                "
+                                v-model="form.species_category_id"
                                 class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             >
+                                <option value="">
+                                    Selecciona una categoría
+                                </option>
+
                                 <option
-                                    v-for="category in categories"
+                                    v-for="category in props.categories"
                                     :key="category.id"
                                     :value="category.id"
                                 >
-                                    {{
-                                        category.name
-                                    }}
+                                    {{ category.name }}
                                 </option>
                             </select>
 
                             <p
-                                v-if="
-                                    form.errors
-                                        .species_category_id
-                                "
+                                v-if="form.errors.species_category_id"
                                 class="mt-1 text-sm text-red-500"
                             >
-                                {{
-                                    form.errors
-                                        .species_category_id
-                                }}
+                                {{ form.errors.species_category_id }}
                             </p>
                         </div>
 
                         <!-- Nombres -->
-
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
@@ -555,24 +490,16 @@ const imageUrl = (
 
                                 <input
                                     id="common_name"
-                                    v-model="
-                                        form.common_name
-                                    "
+                                    v-model="form.common_name"
                                     type="text"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
 
                                 <p
-                                    v-if="
-                                        form.errors
-                                            .common_name
-                                    "
+                                    v-if="form.errors.common_name"
                                     class="mt-1 text-sm text-red-500"
                                 >
-                                    {{
-                                        form.errors
-                                            .common_name
-                                    }}
+                                    {{ form.errors.common_name }}
                                 </p>
                             </div>
 
@@ -586,30 +513,21 @@ const imageUrl = (
 
                                 <input
                                     id="scientific_name"
-                                    v-model="
-                                        form.scientific_name
-                                    "
+                                    v-model="form.scientific_name"
                                     type="text"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm italic outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
 
                                 <p
-                                    v-if="
-                                        form.errors
-                                            .scientific_name
-                                    "
+                                    v-if="form.errors.scientific_name"
                                     class="mt-1 text-sm text-red-500"
                                 >
-                                    {{
-                                        form.errors
-                                            .scientific_name
-                                    }}
+                                    {{ form.errors.scientific_name }}
                                 </p>
                             </div>
                         </div>
 
                         <!-- Descripción -->
-
                         <div>
                             <label
                                 for="description"
@@ -620,29 +538,13 @@ const imageUrl = (
 
                             <textarea
                                 id="description"
-                                v-model="
-                                    form.description
-                                "
+                                v-model="form.description"
                                 rows="5"
                                 class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
-
-                            <p
-                                v-if="
-                                    form.errors
-                                        .description
-                                "
-                                class="mt-1 text-sm text-red-500"
-                            >
-                                {{
-                                    form.errors
-                                        .description
-                                }}
-                            </p>
                         </div>
 
                         <!-- Datos -->
-
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
@@ -656,9 +558,7 @@ const imageUrl = (
 
                                 <input
                                     id="habitat"
-                                    v-model="
-                                        form.habitat
-                                    "
+                                    v-model="form.habitat"
                                     type="text"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
@@ -674,9 +574,7 @@ const imageUrl = (
 
                                 <input
                                     id="origin"
-                                    v-model="
-                                        form.origin
-                                    "
+                                    v-model="form.origin"
                                     type="text"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
@@ -692,9 +590,7 @@ const imageUrl = (
 
                                 <input
                                     id="diet"
-                                    v-model="
-                                        form.diet
-                                    "
+                                    v-model="form.diet"
                                     type="text"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
@@ -710,36 +606,27 @@ const imageUrl = (
 
                                 <input
                                     id="conservation_status"
-                                    v-model="
-                                        form.conservation_status
-                                    "
+                                    v-model="form.conservation_status"
                                     type="text"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                         </div>
 
-                        <!-- Estado -->
+                        <!-- Activo -->
+                        <label
+                            class="flex cursor-pointer items-center gap-3"
+                        >
+                            <input
+                                v-model="form.is_active"
+                                type="checkbox"
+                                class="h-4 w-4 rounded border-sidebar-border"
+                            />
 
-                        <div>
-                            <label
-                                class="flex cursor-pointer items-center gap-3"
-                            >
-                                <input
-                                    v-model="
-                                        form.is_active
-                                    "
-                                    type="checkbox"
-                                    class="h-4 w-4 rounded border-sidebar-border"
-                                />
-
-                                <span
-                                    class="text-sm font-medium"
-                                >
-                                    Especie activa
-                                </span>
-                            </label>
-                        </div>
+                            <span class="text-sm font-medium">
+                                Especie activa
+                            </span>
+                        </label>
                     </div>
 
                     <!-- ================================================= -->
@@ -747,70 +634,66 @@ const imageUrl = (
                     <!-- ================================================= -->
 
                     <div
-                        v-if="
-                            activeTab === 'tags'
-                        "
+                        v-if="activeTab === 'tags'"
                         class="space-y-6"
                     >
                         <div>
-                            <h2
-                                class="text-lg font-semibold"
-                            >
+                            <h2 class="text-lg font-semibold">
                                 Etiquetas
                             </h2>
 
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                Selecciona las etiquetas que describen a esta especie.
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Selecciona las etiquetas de la especie.
                             </p>
                         </div>
 
                         <div
-                            v-if="tags.length"
-                            class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+                            v-if="props.tags.length"
+                            class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
                         >
                             <label
-                                v-for="tag in tags"
+                                v-for="tag in props.tags"
                                 :key="tag.id"
                                 class="flex cursor-pointer items-center gap-3 rounded-lg border border-sidebar-border px-4 py-3 transition hover:bg-accent"
                             >
                                 <input
-                                    v-model="
-                                        form.tags
-                                    "
+                                    v-model="form.tags"
                                     type="checkbox"
                                     :value="tag.id"
                                     class="h-4 w-4 rounded border-sidebar-border"
                                 />
 
-                                <span
-                                    class="text-sm"
-                                >
-                                    {{
-                                        tag.name
-                                    }}
+                                <span class="text-sm">
+                                    {{ tag.name }}
                                 </span>
                             </label>
                         </div>
 
-                        <p
+                        <div
                             v-else
-                            class="text-sm text-muted-foreground"
+                            class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
                         >
-                            No hay etiquetas activas disponibles.
-                        </p>
+                            <p class="text-sm text-muted-foreground">
+                                No hay etiquetas activas disponibles.
+                            </p>
+                        </div>
 
-                        <p
-                            v-if="
-                                form.errors.tags
-                            "
-                            class="text-sm text-red-500"
+                        <div
+                            v-if="form.tags.length"
+                            class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
                         >
-                            {{
-                                form.errors.tags
-                            }}
-                        </p>
+                            <p class="text-sm">
+                                <strong>
+                                    {{ form.tags.length }}
+                                </strong>
+
+                                {{
+                                    form.tags.length === 1
+                                        ? 'etiqueta seleccionada'
+                                        : 'etiquetas seleccionadas'
+                                }}
+                            </p>
+                        </div>
                     </div>
 
                     <!-- ================================================= -->
@@ -818,313 +701,98 @@ const imageUrl = (
                     <!-- ================================================= -->
 
                     <div
-                        v-if="
-                            activeTab === 'images'
-                        "
+                        v-if="activeTab === 'images'"
                         class="space-y-6"
                     >
                         <div>
-                            <h2
-                                class="text-lg font-semibold"
-                            >
+                            <h2 class="text-lg font-semibold">
                                 Imágenes
                             </h2>
 
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                Administra las imágenes de la especie.
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Actualiza las imágenes de la especie.
                             </p>
                         </div>
 
-                        <!-- ============================================= -->
-                        <!-- IMAGEN PRINCIPAL -->
-                        <!-- ============================================= -->
-
                         <div
-                            class="rounded-xl border border-sidebar-border p-5"
+                            class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
                             <div
-                                class="flex flex-col gap-5 md:flex-row"
+                                class="rounded-xl border border-sidebar-border p-5"
                             >
-                                <div
-                                    v-if="
-                                        mainImage
-                                    "
-                                    class="h-40 w-40 shrink-0 overflow-hidden rounded-lg border border-sidebar-border"
+                                <label
+                                    for="main_image"
+                                    class="mb-2 block text-sm font-medium"
                                 >
-                                    <img
-                                        :src="
-                                            imageUrl(
-                                                mainImage.path,
-                                            )
-                                        "
-                                        :alt="
-                                            mainImage.alt_text ??
-                                            species.common_name
-                                        "
-                                        class="h-full w-full object-cover"
-                                    />
-                                </div>
+                                    Imagen principal
+                                </label>
 
-                                <div
-                                    class="flex-1"
-                                >
-                                    <h3
-                                        class="font-medium"
-                                    >
-                                        Imagen principal
-                                    </h3>
-
-                                    <p
-                                        class="mt-1 text-sm text-muted-foreground"
-                                    >
-                                        {{
-                                            mainImage
-                                                ? 'Imagen actual. Selecciona otra para reemplazarla.'
-                                                : 'No hay una imagen principal.'
-                                        }}
-                                    </p>
-
-                                    <input
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        class="mt-4 block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                        @change="
-                                            setMainImage
-                                        "
-                                    />
-
-                                    <p
-                                        v-if="
-                                            form.errors.main_image
-                                        "
-                                        class="mt-1 text-sm text-red-500"
-                                    >
-                                        {{
-                                            form.errors.main_image
-                                        }}
-                                    </p>
-                                </div>
+                                <input
+                                    id="main_image"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
+                                    @change="setMainImage"
+                                />
                             </div>
-                        </div>
-
-                        <!-- ============================================= -->
-                        <!-- THUMBNAIL -->
-                        <!-- ============================================= -->
-
-                        <div
-                            class="rounded-xl border border-sidebar-border p-5"
-                        >
-                            <div
-                                class="flex flex-col gap-5 md:flex-row"
-                            >
-                                <div
-                                    v-if="
-                                        thumbnailImage
-                                    "
-                                    class="h-32 w-32 shrink-0 overflow-hidden rounded-lg border border-sidebar-border"
-                                >
-                                    <img
-                                        :src="
-                                            imageUrl(
-                                                thumbnailImage.path,
-                                            )
-                                        "
-                                        :alt="
-                                            thumbnailImage.alt_text ??
-                                            species.common_name
-                                        "
-                                        class="h-full w-full object-cover"
-                                    />
-                                </div>
-
-                                <div
-                                    class="flex-1"
-                                >
-                                    <h3
-                                        class="font-medium"
-                                    >
-                                        Miniatura
-                                    </h3>
-
-                                    <p
-                                        class="mt-1 text-sm text-muted-foreground"
-                                    >
-                                        {{
-                                            thumbnailImage
-                                                ? 'Miniatura actual. Selecciona otra para reemplazarla.'
-                                                : 'No hay miniatura.'
-                                        }}
-                                    </p>
-
-                                    <input
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        class="mt-4 block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                        @change="
-                                            setThumbnailImage
-                                        "
-                                    />
-
-                                    <p
-                                        v-if="
-                                            form.errors.thumbnail_image
-                                        "
-                                        class="mt-1 text-sm text-red-500"
-                                    >
-                                        {{
-                                            form.errors.thumbnail_image
-                                        }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ============================================= -->
-                        <!-- TARJETA -->
-                        <!-- ============================================= -->
-
-                        <div
-                            class="rounded-xl border border-sidebar-border p-5"
-                        >
-                            <div
-                                class="flex flex-col gap-5 md:flex-row"
-                            >
-                                <div
-                                    v-if="
-                                        cardImage
-                                    "
-                                    class="h-40 w-28 shrink-0 overflow-hidden rounded-lg border border-sidebar-border"
-                                >
-                                    <img
-                                        :src="
-                                            imageUrl(
-                                                cardImage.path,
-                                            )
-                                        "
-                                        :alt="
-                                            cardImage.alt_text ??
-                                            species.common_name
-                                        "
-                                        class="h-full w-full object-cover"
-                                    />
-                                </div>
-
-                                <div
-                                    class="flex-1"
-                                >
-                                    <h3
-                                        class="font-medium"
-                                    >
-                                        Imagen para tarjeta
-                                    </h3>
-
-                                    <p
-                                        class="mt-1 text-sm text-muted-foreground"
-                                    >
-                                        {{
-                                            cardImage
-                                                ? 'Imagen actual. Selecciona otra para reemplazarla.'
-                                                : 'No hay imagen de tarjeta.'
-                                        }}
-                                    </p>
-
-                                    <input
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        class="mt-4 block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                        @change="
-                                            setCardImage
-                                        "
-                                    />
-
-                                    <p
-                                        v-if="
-                                            form.errors.card_image
-                                        "
-                                        class="mt-1 text-sm text-red-500"
-                                    >
-                                        {{
-                                            form.errors.card_image
-                                        }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ============================================= -->
-                        <!-- GALERÍA -->
-                        <!-- ============================================= -->
-
-                        <div
-                            class="rounded-xl border border-sidebar-border p-5"
-                        >
-                            <h3
-                                class="font-medium"
-                            >
-                                Galería
-                            </h3>
 
                             <div
-                                v-if="
-                                    galleryImages.length
-                                "
-                                class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"
+                                class="rounded-xl border border-sidebar-border p-5"
                             >
-                                <div
-                                    v-for="image in galleryImages"
-                                    :key="image.id"
-                                    class="aspect-square overflow-hidden rounded-lg border border-sidebar-border"
+                                <label
+                                    for="thumbnail_image"
+                                    class="mb-2 block text-sm font-medium"
                                 >
-                                    <img
-                                        :src="
-                                            imageUrl(
-                                                image.path,
-                                            )
-                                        "
-                                        :alt="
-                                            image.alt_text ??
-                                            species.common_name
-                                        "
-                                        class="h-full w-full object-cover"
-                                    />
-                                </div>
+                                    Miniatura
+                                </label>
+
+                                <input
+                                    id="thumbnail_image"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
+                                    @change="setThumbnailImage"
+                                />
                             </div>
 
-                            <p
-                                v-else
-                                class="mt-2 text-sm text-muted-foreground"
+                            <div
+                                class="rounded-xl border border-sidebar-border p-5"
                             >
-                                No hay imágenes en la galería.
-                            </p>
+                                <label
+                                    for="card_image"
+                                    class="mb-2 block text-sm font-medium"
+                                >
+                                    Imagen para tarjeta
+                                </label>
 
-                            <input
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                multiple
-                                class="mt-4 block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                @change="
-                                    setGalleryImages
-                                "
-                            />
+                                <input
+                                    id="card_image"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
+                                    @change="setCardImage"
+                                />
+                            </div>
 
-                            <p
-                                class="mt-1 text-xs text-muted-foreground"
+                            <div
+                                class="rounded-xl border border-sidebar-border p-5"
                             >
-                                Las nuevas imágenes se agregarán a la galería existente.
-                            </p>
+                                <label
+                                    for="gallery_images"
+                                    class="mb-2 block text-sm font-medium"
+                                >
+                                    Galería
+                                </label>
 
-                            <p
-                                v-if="
-                                    form.errors.gallery_images
-                                "
-                                class="mt-1 text-sm text-red-500"
-                            >
-                                {{
-                                    form.errors.gallery_images
-                                }}
-                            </p>
+                                <input
+                                    id="gallery_images"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    multiple
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
+                                    @change="setGalleryImages"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -1133,101 +801,22 @@ const imageUrl = (
                     <!-- ================================================= -->
 
                     <div
-                        v-if="
-                            activeTab === 'model'
-                        "
+                        v-if="activeTab === 'model'"
                         class="space-y-6"
                     >
                         <div>
-                            <h2
-                                class="text-lg font-semibold"
-                            >
+                            <h2 class="text-lg font-semibold">
                                 Modelo 3D
                             </h2>
 
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                Administra el modelo 3D de la especie.
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Actualiza el modelo 3D de la especie.
                             </p>
                         </div>
-
-                        <!-- Modelo actual -->
-
-                        <div
-                            v-if="
-                                currentModel
-                            "
-                            class="rounded-xl border border-sidebar-border bg-accent/30 p-5"
-                        >
-                            <p
-                                class="text-sm font-medium"
-                            >
-                                Modelo actual
-                            </p>
-
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                {{
-                                    currentModel.name
-                                }}
-                            </p>
-
-                            <div
-                                class="mt-3 grid gap-2 text-sm"
-                            >
-                                <p
-                                    v-if="
-                                        currentModel.format
-                                    "
-                                >
-                                    <strong>
-                                        Formato:
-                                    </strong>
-
-                                    {{
-                                        currentModel.format.toUpperCase()
-                                    }}
-                                </p>
-
-                                <p
-                                    v-if="
-                                        currentModel.url
-                                    "
-                                >
-                                    <strong>
-                                        URL:
-                                    </strong>
-
-                                    {{
-                                        currentModel.url
-                                    }}
-                                </p>
-
-                                <p
-                                    v-if="
-                                        currentModel.path
-                                    "
-                                >
-                                    <strong>
-                                        Archivo:
-                                    </strong>
-
-                                    {{
-                                        currentModel.path
-                                    }}
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Campos -->
 
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
-                            <!-- Nombre -->
-
                             <div>
                                 <label
                                     for="model_name"
@@ -1238,27 +827,11 @@ const imageUrl = (
 
                                 <input
                                     id="model_name"
-                                    v-model="
-                                        form.model_name
-                                    "
+                                    v-model="form.model_name"
                                     type="text"
-                                    placeholder="Ej. León 3D"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
-
-                                <p
-                                    v-if="
-                                        form.errors.model_name
-                                    "
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{
-                                        form.errors.model_name
-                                    }}
-                                </p>
                             </div>
-
-                            <!-- Formato -->
 
                             <div>
                                 <label
@@ -1270,47 +843,26 @@ const imageUrl = (
 
                                 <select
                                     id="model_format"
-                                    v-model="
-                                        form.model_format
-                                    "
+                                    v-model="form.model_format"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 >
                                     <option value="">
                                         Selecciona un formato
                                     </option>
 
-                                    <option
-                                        value="glb"
-                                    >
+                                    <option value="glb">
                                         GLB
                                     </option>
 
-                                    <option
-                                        value="gltf"
-                                    >
+                                    <option value="gltf">
                                         GLTF
                                     </option>
 
-                                    <option
-                                        value="usdz"
-                                    >
+                                    <option value="usdz">
                                         USDZ
                                     </option>
                                 </select>
-
-                                <p
-                                    v-if="
-                                        form.errors.model_format
-                                    "
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{
-                                        form.errors.model_format
-                                    }}
-                                </p>
                             </div>
-
-                            <!-- Archivo -->
 
                             <div>
                                 <label
@@ -1325,30 +877,13 @@ const imageUrl = (
                                     type="file"
                                     accept=".glb,.gltf,.usdz"
                                     class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                    @change="
-                                        setModelFile
-                                    "
+                                    @change="setModelFile"
                                 />
 
-                                <p
-                                    class="mt-1 text-xs text-muted-foreground"
-                                >
-                                    Déjalo vacío para conservar el archivo actual.
-                                </p>
-
-                                <p
-                                    v-if="
-                                        form.errors.model_file
-                                    "
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{
-                                        form.errors.model_file
-                                    }}
+                                <p class="mt-2 text-xs text-muted-foreground">
+                                    Deja vacío para conservar el archivo actual.
                                 </p>
                             </div>
-
-                            <!-- URL -->
 
                             <div>
                                 <label
@@ -1360,28 +895,13 @@ const imageUrl = (
 
                                 <input
                                     id="model_url"
-                                    v-model="
-                                        form.model_url
-                                    "
+                                    v-model="form.model_url"
                                     type="url"
                                     placeholder="https://..."
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
-
-                                <p
-                                    v-if="
-                                        form.errors.model_url
-                                    "
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{
-                                        form.errors.model_url
-                                    }}
-                                </p>
                             </div>
                         </div>
-
-                        <!-- Descripción -->
 
                         <div>
                             <label
@@ -1393,23 +913,10 @@ const imageUrl = (
 
                             <textarea
                                 id="model_description"
-                                v-model="
-                                    form.model_description
-                                "
+                                v-model="form.model_description"
                                 rows="4"
                                 class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
-
-                            <p
-                                v-if="
-                                    form.errors.model_description
-                                "
-                                class="mt-1 text-sm text-red-500"
-                            >
-                                {{
-                                    form.errors.model_description
-                                }}
-                            </p>
                         </div>
                     </div>
 
@@ -1418,74 +925,103 @@ const imageUrl = (
                     <!-- ================================================= -->
 
                     <div
-                        v-if="
-                            activeTab === 'location'
-                        "
+                        v-if="activeTab === 'location'"
                         class="space-y-6"
                     >
                         <div>
-                            <h2
-                                class="text-lg font-semibold"
-                            >
+                            <h2 class="text-lg font-semibold">
                                 Ubicación
                             </h2>
 
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                Administra la ubicación de la especie dentro del zoológico.
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Actualiza la ubicación física de la especie
+                                dentro del zoológico.
                             </p>
                         </div>
 
-                        <!-- Ubicación actual -->
+                        <!-- Zona -->
+                        <div>
+                            <label
+                                for="zone_id"
+                                class="mb-2 block text-sm font-medium"
+                            >
+                                Zona del zoológico
+                            </label>
 
+                            <select
+                                id="zone_id"
+                                v-model="form.zone_id"
+                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            >
+                                <option value="">
+                                    Sin zona asignada
+                                </option>
+
+                                <option
+                                    v-for="zone in props.zones"
+                                    :key="zone.id"
+                                    :value="zone.id"
+                                >
+                                    {{ zone.name }}
+                                </option>
+                            </select>
+
+                            <p
+                                v-if="form.errors.zone_id"
+                                class="mt-1 text-sm text-red-500"
+                            >
+                                {{ form.errors.zone_id }}
+                            </p>
+                        </div>
+
+                        <!-- MAPA -->
                         <div
-                            v-if="
-                                currentLocation
-                            "
-                            class="rounded-xl border border-sidebar-border bg-accent/30 p-5"
+                            v-if="selectedZone"
+                            class="space-y-3"
                         >
-                            <p
-                                class="text-sm font-medium"
-                            >
-                                Ubicación actual
-                            </p>
+                            <div>
+                                <h3 class="text-sm font-semibold">
+                                    Ubicación en el mapa
+                                </h3>
 
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                {{
-                                    currentLocation.name
-                                }}
-                            </p>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    El marker actual se muestra dentro de la
+                                    zona. Puedes hacer clic en otra ubicación
+                                    o arrastrar el marker.
+                                </p>
+                            </div>
+
+                            <MapMarkerMap
+                                :geometry="selectedZone.geometry"
+                                v-model:latitude="form.latitude"
+                                v-model:longitude="form.longitude"
+                            />
 
                             <div
-                                class="mt-3 grid gap-2 text-sm md:grid-cols-2"
+                                class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
                             >
-                                <p>
-                                    <strong>
-                                        Latitud:
-                                    </strong>
-
-                                    {{
-                                        currentLocation.latitude
-                                    }}
-                                </p>
-
-                                <p>
-                                    <strong>
-                                        Longitud:
-                                    </strong>
-
-                                    {{
-                                        currentLocation.longitude
-                                    }}
+                                <p class="text-sm text-muted-foreground">
+                                    La ubicación debe permanecer dentro
+                                    de la zona seleccionada.
                                 </p>
                             </div>
                         </div>
 
-                        <!-- Nombre -->
+                        <!-- Sin zona -->
+                        <div
+                            v-else
+                            class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                        >
+                            <p class="text-sm text-muted-foreground">
+                                Esta especie no tiene una zona asignada.
+                            </p>
 
+                            <p class="mt-1 text-xs text-muted-foreground">
+                                Selecciona una zona para mostrar su mapa.
+                            </p>
+                        </div>
+
+                        <!-- Nombre -->
                         <div>
                             <label
                                 for="location_name"
@@ -1496,28 +1032,21 @@ const imageUrl = (
 
                             <input
                                 id="location_name"
-                                v-model="
-                                    form.location_name
-                                "
+                                v-model="form.location_name"
                                 type="text"
                                 placeholder="Ej. Área de felinos"
                                 class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
 
                             <p
-                                v-if="
-                                    form.errors.location_name
-                                "
+                                v-if="form.errors.location_name"
                                 class="mt-1 text-sm text-red-500"
                             >
-                                {{
-                                    form.errors.location_name
-                                }}
+                                {{ form.errors.location_name }}
                             </p>
                         </div>
 
                         <!-- Coordenadas -->
-
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
@@ -1531,24 +1060,22 @@ const imageUrl = (
 
                                 <input
                                     id="latitude"
-                                    v-model="
-                                        form.latitude
+                                    :value="
+                                        form.latitude !== null
+                                            ? form.latitude.toFixed(7)
+                                            : ''
                                     "
-                                    type="number"
-                                    step="0.0000001"
-                                    placeholder="Ej. 24.0277"
-                                    class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    type="text"
+                                    readonly
+                                    placeholder="Selecciona un punto en el mapa"
+                                    class="w-full rounded-lg border border-sidebar-border bg-muted/30 px-4 py-2.5 text-sm outline-none"
                                 />
 
                                 <p
-                                    v-if="
-                                        form.errors.latitude
-                                    "
+                                    v-if="form.errors.latitude"
                                     class="mt-1 text-sm text-red-500"
                                 >
-                                    {{
-                                        form.errors.latitude
-                                    }}
+                                    {{ form.errors.latitude }}
                                 </p>
                             </div>
 
@@ -1562,30 +1089,27 @@ const imageUrl = (
 
                                 <input
                                     id="longitude"
-                                    v-model="
-                                        form.longitude
+                                    :value="
+                                        form.longitude !== null
+                                            ? form.longitude.toFixed(7)
+                                            : ''
                                     "
-                                    type="number"
-                                    step="0.0000001"
-                                    placeholder="Ej. -104.6532"
-                                    class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    type="text"
+                                    readonly
+                                    placeholder="Selecciona un punto en el mapa"
+                                    class="w-full rounded-lg border border-sidebar-border bg-muted/30 px-4 py-2.5 text-sm outline-none"
                                 />
 
                                 <p
-                                    v-if="
-                                        form.errors.longitude
-                                    "
+                                    v-if="form.errors.longitude"
                                     class="mt-1 text-sm text-red-500"
                                 >
-                                    {{
-                                        form.errors.longitude
-                                    }}
+                                    {{ form.errors.longitude }}
                                 </p>
                             </div>
                         </div>
 
                         <!-- Descripción -->
-
                         <div>
                             <label
                                 for="location_description"
@@ -1596,86 +1120,57 @@ const imageUrl = (
 
                             <textarea
                                 id="location_description"
-                                v-model="
-                                    form.location_description
-                                "
+                                v-model="form.location_description"
                                 rows="4"
+                                placeholder="Descripción de la ubicación..."
                                 class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
 
                             <p
-                                v-if="
-                                    form.errors.location_description
-                                "
+                                v-if="form.errors.location_description"
                                 class="mt-1 text-sm text-red-500"
                             >
-                                {{
-                                    form.errors.location_description
-                                }}
+                                {{ form.errors.location_description }}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- ================================================= -->
                 <!-- FOOTER -->
-                <!-- ================================================= -->
-
                 <div
                     class="flex flex-col gap-3 border-t border-sidebar-border px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <!-- Anterior -->
-
                     <div>
                         <button
-                            v-if="
-                                activeTab !==
-                                'information'
-                            "
+                            v-if="activeTab !== 'information'"
                             type="button"
                             class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
-                            @click="
-                                previousTab
-                            "
+                            @click="previousTab"
                         >
                             Anterior
                         </button>
                     </div>
 
-                    <!-- Siguiente / Guardar -->
-
-                    <div
-                        class="flex flex-col gap-3 sm:flex-row"
-                    >
+                    <div class="flex flex-col gap-3 sm:flex-row">
                         <button
-                            v-if="
-                                activeTab !==
-                                'location'
-                            "
+                            v-if="activeTab !== 'location'"
                             type="button"
                             class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
-                            @click="
-                                nextTab
-                            "
+                            @click="nextTab"
                         >
                             Siguiente
                         </button>
 
                         <button
-                            v-if="
-                                activeTab ===
-                                'location'
-                            "
+                            v-if="activeTab === 'location'"
                             type="submit"
-                            :disabled="
-                                form.processing
-                            "
+                            :disabled="form.processing"
                             class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {{
                                 form.processing
                                     ? 'Guardando...'
-                                    : 'Guardar cambios'
+                                    : 'Actualizar especie'
                             }}
                         </button>
                     </div>

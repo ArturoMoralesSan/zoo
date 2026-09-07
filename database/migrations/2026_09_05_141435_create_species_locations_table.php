@@ -15,6 +15,12 @@ return new class extends Migration
                 ->constrained('species')
                 ->cascadeOnDelete();
 
+            $table->foreignId('zone_id')
+                ->nullable()
+                ->after('species_id')
+                ->constrained('zoo_zones')
+                ->nullOnDelete();
+
             $table->string('name');
 
             $table->decimal('latitude', 10, 7);

@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import admin from '@/routes/admin';
+import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
+
+interface GeoJsonGeometry {
+    type: 'Polygon';
+    coordinates: number[][][];
+}
 
 interface Category {
     id: number;
@@ -14,9 +20,16 @@ interface Tag {
     name: string;
 }
 
+interface Zone {
+    id: number;
+    name: string;
+    geometry: GeoJsonGeometry | null;
+}
+
 const props = defineProps<{
     categories: Category[];
     tags: Tag[];
+    zones: Zone[];
 }>();
 
 const activeTab = ref('information');
@@ -45,7 +58,6 @@ const tabs = [
 ];
 
 const form = useForm({
-    // Información
     species_category_id: '',
     common_name: '',
     scientific_name: '',
@@ -56,34 +68,47 @@ const form = useForm({
     conservation_status: '',
     is_active: true,
 
-    // Etiquetas
     tags: [] as number[],
 
-    // Imágenes
     main_image: null as File | null,
     thumbnail_image: null as File | null,
     card_image: null as File | null,
     gallery_images: [] as File[],
 
-    // Modelo 3D
     model_name: '',
     model_file: null as File | null,
     model_url: '',
     model_format: '',
     model_description: '',
 
-    // Ubicación
+    zone_id: '',
     location_name: '',
-    latitude: '',
-    longitude: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
     location_description: '',
 });
 
-const submit = () => {
-    form.post(admin.species.store().url, {
-        forceFormData: true,
-    });
-};
+const selectedZone = computed(() => {
+    return (
+        props.zones.find(
+            (zone) => zone.id === Number(form.zone_id),
+        ) ?? null
+    );
+});
+
+/*
+|--------------------------------------------------------------------------
+| Si cambia la zona, se deben limpiar las coordenadas
+|--------------------------------------------------------------------------
+*/
+
+watch(
+    () => form.zone_id,
+    () => {
+        form.latitude = null;
+        form.longitude = null;
+    },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -155,7 +180,7 @@ const setModelFile = (event: Event) => {
 
 /*
 |--------------------------------------------------------------------------
-| Navegación entre pestañas
+| Navegación
 |--------------------------------------------------------------------------
 */
 
@@ -165,8 +190,7 @@ const nextTab = () => {
     );
 
     if (currentIndex < tabs.length - 1) {
-        activeTab.value =
-            tabs[currentIndex + 1].id;
+        activeTab.value = tabs[currentIndex + 1].id;
     }
 };
 
@@ -176,13 +200,24 @@ const previousTab = () => {
     );
 
     if (currentIndex > 0) {
-        activeTab.value =
-            tabs[currentIndex - 1].id;
+        activeTab.value = tabs[currentIndex - 1].id;
     }
 };
 
 const goToTab = (tabId: string) => {
     activeTab.value = tabId;
+};
+
+/*
+|--------------------------------------------------------------------------
+| Submit
+|--------------------------------------------------------------------------
+*/
+
+const submit = () => {
+    form.post(admin.species.store().url, {
+        forceFormData: true,
+    });
 };
 </script>
 
@@ -192,7 +227,7 @@ const goToTab = (tabId: string) => {
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
-        <!-- Header -->
+        <!-- HEADER -->
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -205,8 +240,8 @@ const goToTab = (tabId: string) => {
                     </h1>
 
                     <p class="mt-1 text-sm text-muted-foreground">
-                        Registra la información, imágenes,
-                        etiquetas, modelo 3D y ubicación.
+                        Registra la información, imágenes, etiquetas,
+                        modelo 3D y ubicación.
                     </p>
                 </div>
 
@@ -219,7 +254,7 @@ const goToTab = (tabId: string) => {
             </div>
         </div>
 
-        <!-- Form -->
+        <!-- FORM -->
         <div
             class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
         >
@@ -227,13 +262,11 @@ const goToTab = (tabId: string) => {
                 class="flex flex-col"
                 @submit.prevent="submit"
             >
-                <!-- Tabs -->
+                <!-- TABS -->
                 <div
                     class="border-b border-sidebar-border px-6 pt-6"
                 >
-                    <div
-                        class="flex gap-2 overflow-x-auto"
-                    >
+                    <div class="flex gap-2 overflow-x-auto">
                         <button
                             v-for="(tab, index) in tabs"
                             :key="tab.id"
@@ -255,7 +288,7 @@ const goToTab = (tabId: string) => {
                     </div>
                 </div>
 
-                <!-- Content -->
+                <!-- CONTENT -->
                 <div class="p-6">
 
                     <!-- ================================================= -->
@@ -311,7 +344,7 @@ const goToTab = (tabId: string) => {
                             </p>
                         </div>
 
-                        <!-- Nombre -->
+                        <!-- Nombre común / científico -->
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
@@ -422,7 +455,7 @@ const goToTab = (tabId: string) => {
                                     id="origin"
                                     v-model="form.origin"
                                     type="text"
-                                    placeholder="Ej. América"
+                                    placeholder="Ej. África"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
@@ -463,21 +496,19 @@ const goToTab = (tabId: string) => {
                         </div>
 
                         <!-- Activo -->
-                        <div>
-                            <label
-                                class="flex cursor-pointer items-center gap-3"
-                            >
-                                <input
-                                    v-model="form.is_active"
-                                    type="checkbox"
-                                    class="h-4 w-4 rounded border-sidebar-border"
-                                />
+                        <label
+                            class="flex cursor-pointer items-center gap-3"
+                        >
+                            <input
+                                v-model="form.is_active"
+                                type="checkbox"
+                                class="h-4 w-4 rounded border-sidebar-border"
+                            />
 
-                                <span class="text-sm font-medium">
-                                    Especie activa
-                                </span>
-                            </label>
-                        </div>
+                            <span class="text-sm font-medium">
+                                Especie activa
+                            </span>
+                        </label>
                     </div>
 
                     <!-- ================================================= -->
@@ -528,19 +559,7 @@ const goToTab = (tabId: string) => {
                             <p class="text-sm text-muted-foreground">
                                 No hay etiquetas activas disponibles.
                             </p>
-
-                            <p class="mt-1 text-xs text-muted-foreground">
-                                Puedes crear etiquetas desde el módulo
-                                de Etiquetas.
-                            </p>
                         </div>
-
-                        <p
-                            v-if="form.errors.tags"
-                            class="text-sm text-red-500"
-                        >
-                            {{ form.errors.tags }}
-                        </p>
 
                         <div
                             v-if="form.tags.length"
@@ -574,15 +593,13 @@ const goToTab = (tabId: string) => {
                             </h2>
 
                             <p class="mt-1 text-sm text-muted-foreground">
-                                Agrega las imágenes utilizadas en el
-                                catálogo, tarjeta y experiencia de la especie.
+                                Agrega las imágenes de la especie.
                             </p>
                         </div>
 
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
-                            <!-- Principal -->
                             <div
                                 class="rounded-xl border border-sidebar-border p-5"
                             >
@@ -597,23 +614,15 @@ const goToTab = (tabId: string) => {
                                     id="main_image"
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
-                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5 file:text-sm"
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
                                     @change="setMainImage"
                                 />
 
                                 <p class="mt-2 text-xs text-muted-foreground">
-                                    JPG, PNG o WEBP. Máximo 5 MB.
-                                </p>
-
-                                <p
-                                    v-if="form.errors.main_image"
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{ form.errors.main_image }}
+                                    JPG, PNG o WEBP.
                                 </p>
                             </div>
 
-                            <!-- Miniatura -->
                             <div
                                 class="rounded-xl border border-sidebar-border p-5"
                             >
@@ -628,23 +637,15 @@ const goToTab = (tabId: string) => {
                                     id="thumbnail_image"
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
-                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5 file:text-sm"
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
                                     @change="setThumbnailImage"
                                 />
 
                                 <p class="mt-2 text-xs text-muted-foreground">
                                     Imagen pequeña para listados.
                                 </p>
-
-                                <p
-                                    v-if="form.errors.thumbnail_image"
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{ form.errors.thumbnail_image }}
-                                </p>
                             </div>
 
-                            <!-- Tarjeta -->
                             <div
                                 class="rounded-xl border border-sidebar-border p-5"
                             >
@@ -659,23 +660,15 @@ const goToTab = (tabId: string) => {
                                     id="card_image"
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
-                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5 file:text-sm"
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
                                     @change="setCardImage"
                                 />
 
                                 <p class="mt-2 text-xs text-muted-foreground">
                                     Imagen para la tarjeta coleccionable.
                                 </p>
-
-                                <p
-                                    v-if="form.errors.card_image"
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{ form.errors.card_image }}
-                                </p>
                             </div>
 
-                            <!-- Galería -->
                             <div
                                 class="rounded-xl border border-sidebar-border p-5"
                             >
@@ -691,7 +684,7 @@ const goToTab = (tabId: string) => {
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
                                     multiple
-                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5 file:text-sm"
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
                                     @change="setGalleryImages"
                                 />
 
@@ -700,39 +693,13 @@ const goToTab = (tabId: string) => {
                                 </p>
 
                                 <p
-                                    v-if="form.errors.gallery_images"
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{ form.errors.gallery_images }}
-                                </p>
-
-                                <div
                                     v-if="form.gallery_images.length"
-                                    class="mt-3 rounded-lg bg-accent/30 p-3"
+                                    class="mt-2 text-xs"
                                 >
-                                    <p class="text-xs">
-                                        {{
-                                            form.gallery_images.length
-                                        }}
-
-                                        {{
-                                            form.gallery_images.length === 1
-                                                ? 'imagen seleccionada'
-                                                : 'imágenes seleccionadas'
-                                        }}
-                                    </p>
-                                </div>
+                                    {{ form.gallery_images.length }}
+                                    imágenes seleccionadas.
+                                </p>
                             </div>
-                        </div>
-
-                        <div
-                            class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
-                        >
-                            <p class="text-sm text-muted-foreground">
-                                Puedes registrar una imagen principal,
-                                una miniatura, una imagen para la tarjeta
-                                y varias imágenes para la galería.
-                            </p>
                         </div>
                     </div>
 
@@ -750,15 +717,13 @@ const goToTab = (tabId: string) => {
                             </h2>
 
                             <p class="mt-1 text-sm text-muted-foreground">
-                                Agrega el modelo 3D que será utilizado
-                                para la experiencia de realidad aumentada.
+                                Agrega el modelo 3D de la especie.
                             </p>
                         </div>
 
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
-                            <!-- Nombre -->
                             <div>
                                 <label
                                     for="model_name"
@@ -774,16 +739,8 @@ const goToTab = (tabId: string) => {
                                     placeholder="Ej. León 3D"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
-
-                                <p
-                                    v-if="form.errors.model_name"
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{ form.errors.model_name }}
-                                </p>
                             </div>
 
-                            <!-- Formato -->
                             <div>
                                 <label
                                     for="model_format"
@@ -813,16 +770,8 @@ const goToTab = (tabId: string) => {
                                         USDZ
                                     </option>
                                 </select>
-
-                                <p
-                                    v-if="form.errors.model_format"
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{ form.errors.model_format }}
-                                </p>
                             </div>
 
-                            <!-- Archivo -->
                             <div>
                                 <label
                                     for="model_file"
@@ -835,33 +784,18 @@ const goToTab = (tabId: string) => {
                                     id="model_file"
                                     type="file"
                                     accept=".glb,.gltf,.usdz"
-                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5 file:text-sm"
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
                                     @change="setModelFile"
                                 />
 
-                                <p class="mt-2 text-xs text-muted-foreground">
-                                    GLB, GLTF o USDZ. Máximo 50 MB.
-                                </p>
-
                                 <p
                                     v-if="form.model_file"
-                                    class="mt-2 text-sm"
+                                    class="mt-2 text-xs"
                                 >
-                                    Archivo:
-                                    <strong>
-                                        {{ form.model_file.name }}
-                                    </strong>
-                                </p>
-
-                                <p
-                                    v-if="form.errors.model_file"
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{ form.errors.model_file }}
+                                    {{ form.model_file.name }}
                                 </p>
                             </div>
 
-                            <!-- URL -->
                             <div>
                                 <label
                                     for="model_url"
@@ -877,21 +811,9 @@ const goToTab = (tabId: string) => {
                                     placeholder="https://..."
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
-
-                                <p class="mt-2 text-xs text-muted-foreground">
-                                    Puedes utilizar archivo, URL o ambos.
-                                </p>
-
-                                <p
-                                    v-if="form.errors.model_url"
-                                    class="mt-1 text-sm text-red-500"
-                                >
-                                    {{ form.errors.model_url }}
-                                </p>
                             </div>
                         </div>
 
-                        <!-- Descripción -->
                         <div>
                             <label
                                 for="model_description"
@@ -907,23 +829,6 @@ const goToTab = (tabId: string) => {
                                 placeholder="Descripción del modelo 3D..."
                                 class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
-
-                            <p
-                                v-if="form.errors.model_description"
-                                class="mt-1 text-sm text-red-500"
-                            >
-                                {{ form.errors.model_description }}
-                            </p>
-                        </div>
-
-                        <div
-                            class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
-                        >
-                            <p class="text-sm text-muted-foreground">
-                                Al seleccionar un archivo, el formato se
-                                detectará automáticamente a partir de su
-                                extensión.
-                            </p>
                         </div>
                     </div>
 
@@ -941,8 +846,85 @@ const goToTab = (tabId: string) => {
                             </h2>
 
                             <p class="mt-1 text-sm text-muted-foreground">
-                                Registra la ubicación física de la especie
-                                dentro del zoológico.
+                                Selecciona la zona y coloca la especie
+                                directamente en el mapa.
+                            </p>
+                        </div>
+
+                        <!-- Zona -->
+                        <div>
+                            <label
+                                for="zone_id"
+                                class="mb-2 block text-sm font-medium"
+                            >
+                                Zona del zoológico
+                            </label>
+
+                            <select
+                                id="zone_id"
+                                v-model="form.zone_id"
+                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            >
+                                <option value="">
+                                    Selecciona una zona
+                                </option>
+
+                                <option
+                                    v-for="zone in props.zones"
+                                    :key="zone.id"
+                                    :value="zone.id"
+                                >
+                                    {{ zone.name }}
+                                </option>
+                            </select>
+
+                            <p
+                                v-if="form.errors.zone_id"
+                                class="mt-1 text-sm text-red-500"
+                            >
+                                {{ form.errors.zone_id }}
+                            </p>
+                        </div>
+
+                        <!-- Mapa -->
+                        <div
+                            v-if="selectedZone"
+                            class="space-y-3"
+                        >
+                            <div>
+                                <h3 class="text-sm font-semibold">
+                                    Ubicación en el mapa
+                                </h3>
+
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    Haz clic dentro de la zona para colocar
+                                    el marker. Puedes arrastrarlo para ajustar
+                                    la ubicación.
+                                </p>
+                            </div>
+
+                            <MapMarkerMap
+                                :geometry="selectedZone.geometry"
+                                v-model:latitude="form.latitude"
+                                v-model:longitude="form.longitude"
+                            />
+
+                            <div
+                                class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                            >
+                                <p class="text-sm text-muted-foreground">
+                                    El marker solamente puede colocarse
+                                    dentro de la zona seleccionada.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            v-else
+                            class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                        >
+                            <p class="text-sm text-muted-foreground">
+                                Selecciona una zona para mostrar el mapa.
                             </p>
                         </div>
 
@@ -985,16 +967,16 @@ const goToTab = (tabId: string) => {
 
                                 <input
                                     id="latitude"
-                                    v-model="form.latitude"
-                                    type="number"
-                                    step="0.0000001"
-                                    placeholder="Ej. 24.0277000"
-                                    class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    :value="
+                                        form.latitude !== null
+                                            ? form.latitude.toFixed(7)
+                                            : ''
+                                    "
+                                    type="text"
+                                    readonly
+                                    placeholder="Selecciona un punto en el mapa"
+                                    class="w-full rounded-lg border border-sidebar-border bg-muted/30 px-4 py-2.5 text-sm outline-none"
                                 />
-
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    Ejemplo: 24.0277000
-                                </p>
 
                                 <p
                                     v-if="form.errors.latitude"
@@ -1014,16 +996,16 @@ const goToTab = (tabId: string) => {
 
                                 <input
                                     id="longitude"
-                                    v-model="form.longitude"
-                                    type="number"
-                                    step="0.0000001"
-                                    placeholder="Ej. -104.6532000"
-                                    class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    :value="
+                                        form.longitude !== null
+                                            ? form.longitude.toFixed(7)
+                                            : ''
+                                    "
+                                    type="text"
+                                    readonly
+                                    placeholder="Selecciona un punto en el mapa"
+                                    class="w-full rounded-lg border border-sidebar-border bg-muted/30 px-4 py-2.5 text-sm outline-none"
                                 />
-
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    Ejemplo: -104.6532000
-                                </p>
 
                                 <p
                                     v-if="form.errors.longitude"
@@ -1058,25 +1040,13 @@ const goToTab = (tabId: string) => {
                                 {{ form.errors.location_description }}
                             </p>
                         </div>
-
-                        <div
-                            class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
-                        >
-                            <p class="text-sm text-muted-foreground">
-                                Para registrar una ubicación se requieren
-                                la latitud y longitud. Estas coordenadas
-                                posteriormente podrán utilizarse para
-                                mostrar la especie en el mapa del zoológico.
-                            </p>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Footer -->
+                <!-- FOOTER -->
                 <div
                     class="flex flex-col gap-3 border-t border-sidebar-border px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <!-- Anterior -->
                     <div>
                         <button
                             v-if="activeTab !== 'information'"
@@ -1089,7 +1059,6 @@ const goToTab = (tabId: string) => {
                     </div>
 
                     <div class="flex flex-col gap-3 sm:flex-row">
-                        <!-- Siguiente -->
                         <button
                             v-if="activeTab !== 'location'"
                             type="button"
@@ -1099,7 +1068,6 @@ const goToTab = (tabId: string) => {
                             Siguiente
                         </button>
 
-                        <!-- Crear -->
                         <button
                             v-if="activeTab === 'location'"
                             type="submit"
