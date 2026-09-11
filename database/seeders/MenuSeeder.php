@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\Menu;
 use App\Models\Link;
-use Spatie\Permission\Models\Permission;
+use App\Models\Menu;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
 
 class MenuSeeder extends Seeder
 {
@@ -13,132 +13,11 @@ class MenuSeeder extends Seeder
     {
         /*
         |--------------------------------------------------------------------------
-        | Permisos
-        |--------------------------------------------------------------------------
-        |
-        | Los permisos se crean aquí para que los MenuLinks puedan asociarse
-        | directamente con ellos.
-        |
-        */
-
-        $permissions = [
-            // Dashboard
-            'dashboard.view',
-
-            // Zoológico
-            'species-categories.view',
-            'species-categories.create',
-            'species-categories.edit',
-            'species-categories.delete',
-
-            'species.view',
-            'species.create',
-            'species.edit',
-            'species.delete',
-
-            'species-tags.view',
-            'species-tags.create',
-            'species-tags.edit',
-            'species-tags.delete',
-
-            'species-images.view',
-            'species-images.create',
-            'species-images.edit',
-            'species-images.delete',
-
-            'species-models.view',
-            'species-models.create',
-            'species-models.edit',
-            'species-models.delete',
-
-            'species-locations.view',
-            'species-locations.create',
-            'species-locations.edit',
-            'species-locations.delete',
-
-            // Boletos
-            'ticket-types.view',
-            'ticket-types.create',
-            'ticket-types.edit',
-            'ticket-types.delete',
-
-            'tickets.view',
-            'tickets.create',
-            'tickets.edit',
-            'tickets.delete',
-
-            // Usuarios / visitantes
-            'users.view',
-            'users.create',
-            'users.edit',
-            'users.delete',
-
-            'visitors.view',
-            'visitors.create',
-            'visitors.edit',
-            'visitors.delete',
-
-            // Gamificación
-            'points.view',
-            'points.create',
-            'points.edit',
-            'points.delete',
-
-            'collections.view',
-            'collections.create',
-            'collections.edit',
-            'collections.delete',
-
-            'species-captures.view',
-            'species-captures.create',
-            'species-captures.edit',
-            'species-captures.delete',
-
-            // Mapa
-            'map.view',
-            'map.create',
-            'map.edit',
-            'map.delete',
-
-            // Diplomas
-            'diplomas.view',
-            'diplomas.create',
-            'diplomas.edit',
-            'diplomas.delete',
-
-            // Reportes
-            'reports.view',
-            'reports.tickets',
-            'reports.users',
-            'reports.points',
-            'reports.captures',
-
-            // Administración
-            'roles.view',
-            'roles.create',
-            'roles.edit',
-            'roles.delete',
-
-            'permissions.view',
-            'permissions.create',
-            'permissions.edit',
-            'permissions.delete',
-        ];
-
-        foreach ($permissions as $permission) {
-            Permission::firstOrCreate([
-                'name' => $permission,
-                'guard_name' => 'web',
-            ]);
-        }
-
-        /*
-        |--------------------------------------------------------------------------
         | Dashboard
         |--------------------------------------------------------------------------
         */
 
-        $dashboard = Menu::updateOrCreate(
+        Menu::updateOrCreate(
             ['name' => 'Dashboard'],
             [
                 'icon' => 'LayoutDashboard',
@@ -170,7 +49,7 @@ class MenuSeeder extends Seeder
             'Tags',
             1,
             'admin.species-categories.index',
-            'species-categories.view'
+            'species_categories.view'
         );
 
         $this->link(
@@ -188,44 +67,35 @@ class MenuSeeder extends Seeder
             'Tag',
             3,
             'admin.species-tags.index',
-            'species-tags.view'
+            'species_tags.view'
         );
 
         $this->link(
             $zoo,
-            'Imágenes',
-            'Image',
+            'Zonas',
+            'Map',
             4,
-            'admin.speciesImages.index',
-            'species-images.view'
+            'admin.zoo-zones.index',
+            'zoo-zones.view'
         );
 
         $this->link(
             $zoo,
-            'Modelos 3D',
-            'Box',
-            5,
-            'admin.speciesModels.index',
-            'species-models.view'
-        );
-
-        $this->link(
-            $zoo,
-            'Ubicaciones',
+            'Marcadores del mapa',
             'MapPin',
-            6,
-            'admin.speciesLocations.index',
-            'species-locations.view'
+            5,
+            'admin.map-markers.index',
+            'map-markers.view'
         );
 
         /*
         |--------------------------------------------------------------------------
-        | Boletos
+        | Taquilla
         |--------------------------------------------------------------------------
         */
 
-        $tickets = Menu::updateOrCreate(
-            ['name' => 'Boletos'],
+        $ticketOffice = Menu::updateOrCreate(
+            ['name' => 'Taquilla'],
             [
                 'icon' => 'Ticket',
                 'order' => 3,
@@ -235,7 +105,7 @@ class MenuSeeder extends Seeder
         );
 
         $this->link(
-            $tickets,
+            $ticketOffice,
             'Tipos de boleto',
             'TicketCheck',
             1,
@@ -244,46 +114,21 @@ class MenuSeeder extends Seeder
         );
 
         $this->link(
-            $tickets,
-            'Boletos',
-            'Ticket',
+            $ticketOffice,
+            'Métodos de pago',
+            'CreditCard',
             2,
-            'admin.tickets.index',
-            'tickets.view'
-        );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Usuarios
-        |--------------------------------------------------------------------------
-        */
-
-        $users = Menu::updateOrCreate(
-            ['name' => 'Usuarios'],
-            [
-                'icon' => 'Users',
-                'order' => 4,
-                'route' => null,
-                'is_submenu' => true,
-            ]
+            'admin.payment-methods.index',
+            'payment-methods.view'
         );
 
         $this->link(
-            $users,
-            'Usuarios',
-            'User',
-            1,
-            'admin.users.index',
-            'users.view'
-        );
-
-        $this->link(
-            $users,
-            'Visitantes',
-            'Users',
-            2,
-            'admin.visitors.index',
-            'visitors.view'
+            $ticketOffice,
+            'Órdenes de boletos',
+            'Receipt',
+            3,
+            'admin.ticket-orders.index',
+            'ticket-orders.view'
         );
 
         /*
@@ -296,6 +141,49 @@ class MenuSeeder extends Seeder
             ['name' => 'Gamificación'],
             [
                 'icon' => 'Gamepad2',
+                'order' => 4,
+                'route' => null,
+                'is_submenu' => true,
+            ]
+        );
+
+        $this->link(
+            $gamification,
+            'Niveles',
+            'Trophy',
+            1,
+            'admin.levels.index',
+            'levels.view'
+        );
+
+        $this->link(
+            $gamification,
+            'Reglas de puntos',
+            'CirclePlus',
+            2,
+            'admin.point-rules.index',
+            'point-rules.view'
+        );
+
+        $this->link(
+            $gamification,
+            'Historial de puntos',
+            'History',
+            3,
+            'admin.point-movements.index',
+            'point-movements.view'
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Eventos
+        |--------------------------------------------------------------------------
+        */
+
+        $events = Menu::updateOrCreate(
+            ['name' => 'Eventos'],
+            [
+                'icon' => 'CalendarDays',
                 'order' => 5,
                 'route' => null,
                 'is_submenu' => true,
@@ -303,132 +191,12 @@ class MenuSeeder extends Seeder
         );
 
         $this->link(
-            $gamification,
-            'Puntos',
-            'Star',
+            $events,
+            'Eventos',
+            'CalendarDays',
             1,
-            'admin.points.index',
-            'points.view'
-        );
-
-        $this->link(
-            $gamification,
-            'Colecciones',
-            'Library',
-            2,
-            'admin.collections.index',
-            'collections.view'
-        );
-
-        $this->link(
-            $gamification,
-            'Capturas AR',
-            'ScanLine',
-            3,
-            'admin.speciesCaptures.index',
-            'species-captures.view'
-        );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Mapa
-        |--------------------------------------------------------------------------
-        */
-
-        $map = Menu::updateOrCreate(
-            ['name' => 'Mapa'],
-            [
-                'icon' => 'Map',
-                'order' => 6,
-                'route' => null,
-                'is_submenu' => true,
-            ]
-        );
-
-        $this->link(
-            $map,
-            'Mapa del zoológico',
-            'Map',
-            1,
-            'admin.map.index',
-            'map.view'
-        );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Diplomas
-        |--------------------------------------------------------------------------
-        */
-
-        $diplomas = Menu::updateOrCreate(
-            ['name' => 'Diplomas'],
-            [
-                'icon' => 'Award',
-                'order' => 7,
-                'route' => null,
-                'is_submenu' => true,
-            ]
-        );
-
-        $this->link(
-            $diplomas,
-            'Diplomas',
-            'Award',
-            1,
-            'admin.diplomas.index',
-            'diplomas.view'
-        );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Reportes
-        |--------------------------------------------------------------------------
-        */
-
-        $reports = Menu::updateOrCreate(
-            ['name' => 'Reportes'],
-            [
-                'icon' => 'ChartNoAxesCombined',
-                'order' => 8,
-                'route' => null,
-                'is_submenu' => true,
-            ]
-        );
-
-        $this->link(
-            $reports,
-            'Boletos',
-            'Ticket',
-            1,
-            'admin.reports.tickets',
-            'reports.tickets'
-        );
-
-        $this->link(
-            $reports,
-            'Usuarios',
-            'Users',
-            2,
-            'admin.reports.users',
-            'reports.users'
-        );
-
-        $this->link(
-            $reports,
-            'Puntos',
-            'Star',
-            3,
-            'admin.reports.points',
-            'reports.points'
-        );
-
-        $this->link(
-            $reports,
-            'Capturas AR',
-            'ScanLine',
-            4,
-            'admin.reports.captures',
-            'reports.captures'
+            'admin.events.index',
+            'events.view'
         );
 
         /*
@@ -441,7 +209,7 @@ class MenuSeeder extends Seeder
             ['name' => 'Administración'],
             [
                 'icon' => 'Settings',
-                'order' => 9,
+                'order' => 6,
                 'route' => null,
                 'is_submenu' => true,
             ]
@@ -475,9 +243,12 @@ class MenuSeeder extends Seeder
         );
     }
 
-    /**
-     * Crear o actualizar un enlace de menú.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Crear o actualizar un enlace de menú
+    |--------------------------------------------------------------------------
+    */
+
     private function link(
         Menu $menu,
         string $name,
@@ -489,7 +260,12 @@ class MenuSeeder extends Seeder
         $permissionModel = Permission::where(
             'name',
             $permission
-        )->first();
+        )
+            ->where(
+                'guard_name',
+                'web'
+            )
+            ->first();
 
         Link::updateOrCreate(
             [

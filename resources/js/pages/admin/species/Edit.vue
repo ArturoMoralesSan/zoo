@@ -10,6 +10,13 @@ interface GeoJsonGeometry {
     coordinates: number[][][];
 }
 
+interface MapImageBounds {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+}
+
 interface Category {
     id: number;
     name: string;
@@ -24,6 +31,8 @@ interface Zone {
     id: number;
     name: string;
     geometry: GeoJsonGeometry | null;
+    map_image: string | null;
+    map_image_bounds: MapImageBounds | null;
 }
 
 interface SpeciesTag {
@@ -214,7 +223,6 @@ const selectedZone = computed(() => {
 | Cambio de zona
 |--------------------------------------------------------------------------
 |
-| IMPORTANTE:
 | No usamos immediate.
 |
 | De esta manera las coordenadas existentes se conservan
@@ -972,6 +980,18 @@ const submit = () => {
                             >
                                 {{ form.errors.zone_id }}
                             </p>
+
+                            <p
+                                v-if="
+                                    selectedZone &&
+                                    !selectedZone.map_image
+                                "
+                                class="mt-2 text-xs text-amber-600"
+                            >
+                                Esta zona no tiene un plano configurado.
+                                Podrás colocar la especie dentro del área
+                                delimitada por la zona.
+                            </p>
                         </div>
 
                         <!-- MAPA -->
@@ -985,14 +1005,19 @@ const submit = () => {
                                 </h3>
 
                                 <p class="mt-1 text-xs text-muted-foreground">
-                                    El marker actual se muestra dentro de la
-                                    zona. Puedes hacer clic en otra ubicación
-                                    o arrastrar el marker.
+                                    El plano de la zona se muestra como
+                                    referencia. Puedes hacer clic o arrastrar
+                                    el marker a cualquier punto dentro de la
+                                    zona.
                                 </p>
                             </div>
 
                             <MapMarkerMap
                                 :geometry="selectedZone.geometry"
+                                :map-image="selectedZone.map_image"
+                                :map-image-bounds="
+                                    selectedZone.map_image_bounds
+                                "
                                 v-model:latitude="form.latitude"
                                 v-model:longitude="form.longitude"
                             />
@@ -1001,8 +1026,10 @@ const submit = () => {
                                 class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
                             >
                                 <p class="text-sm text-muted-foreground">
-                                    La ubicación debe permanecer dentro
-                                    de la zona seleccionada.
+                                    La ubicación debe permanecer dentro de la
+                                    zona seleccionada. El plano es solamente
+                                    una referencia visual y no limita dónde
+                                    puedes colocar la especie.
                                 </p>
                             </div>
                         </div>

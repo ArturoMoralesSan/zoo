@@ -236,7 +236,9 @@ const deleteZone = (zone: ZooZone) => {
                                     {{ zone.description }}
                                 </div>
 
-                                <div class="mt-1 text-xs text-muted-foreground">
+                                <div
+                                    class="mt-1 text-xs text-muted-foreground"
+                                >
                                     ID: {{ zone.id }}
                                 </div>
                             </td>
@@ -268,14 +270,18 @@ const deleteZone = (zone: ZooZone) => {
                                     }}
                                 </div>
 
-                                <div class="mt-1 text-xs text-muted-foreground">
+                                <div
+                                    class="mt-1 text-xs text-muted-foreground"
+                                >
                                     {{
                                         zone.species_locations_count
                                     }}
                                     ubicación(es)
                                 </div>
 
-                                <div class="text-xs text-muted-foreground">
+                                <div
+                                    class="text-xs text-muted-foreground"
+                                >
                                     {{
                                         zone.map_markers_count
                                     }}
@@ -286,18 +292,17 @@ const deleteZone = (zone: ZooZone) => {
                             <!-- Estado -->
                             <td class="px-6 py-4">
                                 <span
-                                    class="rounded-full border px-2.5 py-1 text-xs font-medium"
-                                    :class="
-                                        zone.is_active
-                                            ? 'border-green-500/30 text-green-600 dark:text-green-400'
-                                            : 'border-sidebar-border text-muted-foreground'
-                                    "
+                                    v-if="zone.is_active"
+                                    class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                                 >
-                                    {{
-                                        zone.is_active
-                                            ? 'Activa'
-                                            : 'Inactiva'
-                                    }}
+                                    Activa
+                                </span>
+
+                                <span
+                                    v-else
+                                    class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
+                                >
+                                    Inactiva
                                 </span>
                             </td>
 
@@ -338,7 +343,11 @@ const deleteZone = (zone: ZooZone) => {
                         </tr>
 
                         <!-- Sin resultados -->
-                        <tr v-if="zones.data.length === 0">
+                        <tr
+                            v-if="
+                                zones.data.length === 0
+                            "
+                        >
                             <td
                                 colspan="5"
                                 class="px-6 py-12 text-center text-sm text-muted-foreground"

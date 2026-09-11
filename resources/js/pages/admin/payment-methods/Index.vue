@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import Swal from 'sweetalert2';
 
 import admin from '@/routes/admin';
@@ -13,12 +14,50 @@ interface PaymentMethod {
     sort_order: number;
 }
 
+interface PaginationLink {
+    url: string | null;
+    label: string;
+    active: boolean;
+}
+
+interface PaymentMethodsPagination {
+    data: PaymentMethod[];
+    links: PaginationLink[];
+    current_page: number;
+    last_page: number;
+    from: number | null;
+    to: number | null;
+    total: number;
+}
+
 const props = defineProps<{
-    paymentMethods: PaymentMethod[];
+    paymentMethods: PaymentMethodsPagination;
+    filters: {
+        search?: string;
+    };
 }>();
 
-const deletePaymentMethod = (paymentMethod: PaymentMethod) => {
-    Swal.fire({
+const search = ref(
+    props.filters?.search ?? '',
+);
+
+const submitSearch = (): void => {
+    router.get(
+        admin.paymentMethods.index().url,
+        {
+            search: search.value || undefined,
+        },
+        {
+            preserveState: true,
+            replace: true,
+        },
+    );
+};
+
+const deletePaymentMethod = async (
+    paymentMethod: PaymentMethod,
+): Promise<void> => {
+    const result = await Swal.fire({
         title: '¿Eliminar método de pago?',
         text: `Se eliminará el método de pago "${paymentMethod.name}". Esta acción no se puede deshacer.`,
         icon: 'warning',
@@ -26,18 +65,40 @@ const deletePaymentMethod = (paymentMethod: PaymentMethod) => {
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
-    }).then((result) => {
-        if (result.isConfirmed) {
-            router.delete(
-                admin.paymentMethods.destroy(
-                    paymentMethod.id,
-                ).url,
-                {
-                    preserveScroll: true,
-                },
-            );
-        }
+        focusCancel: true,
     });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
+    router.delete(
+        admin.paymentMethods.destroy(
+            paymentMethod.id,
+        ).url,
+        {
+            preserveScroll: true,
+
+            onSuccess: () => {
+                Swal.fire({
+                    title: 'Eliminado',
+                    text: 'El método de pago se eliminó correctamente.',
+                    icon: 'success',
+                    timer: 1800,
+                    showConfirmButton: false,
+                });
+            },
+
+            onError: () => {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'No se pudo eliminar el método de pago.',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar',
+                });
+            },
+        },
+    );
 };
 
 defineOptions({
@@ -93,6 +154,35 @@ defineOptions({
         <div
             class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
         >
+            <!-- Buscador -->
+            <div
+                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
+            >
+                <form
+                    @submit.prevent="submitSearch"
+                    class="flex w-full gap-2 md:max-w-md"
+                >
+                    <input
+                        v-model="search"
+                        type="search"
+                        placeholder="Buscar método de pago..."
+                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+
+                    <button
+                        type="submit"
+                        class="rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                    >
+                        Buscar
+                    </button>
+                </form>
+
+                <div class="text-sm text-muted-foreground">
+                    {{ paymentMethods.total }} métodos
+                </div>
+            </div>
+
+            <!-- Tabla -->
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead
@@ -129,10 +219,11 @@ defineOptions({
                         class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
                     >
                         <tr
-                            v-for="paymentMethod in props.paymentMethods"
+                            v-for="paymentMethod in paymentMethods.data"
                             :key="paymentMethod.id"
                             class="transition hover:bg-muted/30"
                         >
+                            <!-- Método -->
                             <td class="px-6 py-4">
                                 <div class="font-medium">
                                     {{ paymentMethod.name }}
@@ -143,6 +234,7 @@ defineOptions({
                                 </div>
                             </td>
 
+                            <!-- Código -->
                             <td class="px-6 py-4">
                                 <code
                                     class="rounded bg-muted px-2 py-1 text-xs"
@@ -151,6 +243,7 @@ defineOptions({
                                 </code>
                             </td>
 
+                            <!-- Descripción -->
                             <td class="px-6 py-4">
                                 <div
                                     v-if="paymentMethod.description"
@@ -167,6 +260,7 @@ defineOptions({
                                 </div>
                             </td>
 
+                            <!-- Orden -->
                             <td class="px-6 py-4 text-center">
                                 <span
                                     class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
@@ -175,6 +269,7 @@ defineOptions({
                                 </span>
                             </td>
 
+                            <!-- Estado -->
                             <td class="px-6 py-4">
                                 <span
                                     v-if="paymentMethod.is_active"
@@ -191,6 +286,7 @@ defineOptions({
                                 </span>
                             </td>
 
+                            <!-- Acciones -->
                             <td class="px-6 py-4">
                                 <div class="flex justify-end gap-2">
                                     <Link
@@ -219,9 +315,8 @@ defineOptions({
                             </td>
                         </tr>
 
-                        <tr
-                            v-if="props.paymentMethods.length === 0"
-                        >
+                        <!-- Sin resultados -->
+                        <tr v-if="paymentMethods.data.length === 0">
                             <td
                                 colspan="6"
                                 class="px-6 py-12 text-center text-sm text-muted-foreground"
@@ -231,6 +326,35 @@ defineOptions({
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Paginación -->
+            <div
+                v-if="paymentMethods.last_page > 1"
+                class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            >
+                <template
+                    v-for="(link, index) in paymentMethods.links"
+                    :key="index"
+                >
+                    <Link
+                        v-if="link.url"
+                        :href="link.url"
+                        class="rounded-lg border px-3 py-2 text-sm transition"
+                        :class="
+                            link.active
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-sidebar-border hover:bg-accent'
+                        "
+                        v-html="link.label"
+                    />
+
+                    <span
+                        v-else
+                        class="rounded-lg border border-sidebar-border px-3 py-2 text-sm opacity-50"
+                        v-html="link.label"
+                    />
+                </template>
             </div>
         </div>
     </div>

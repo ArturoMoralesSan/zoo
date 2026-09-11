@@ -26,6 +26,11 @@ return new class extends Migration
             $table->json('geometry')
                 ->nullable();
 
+            $table->string('map_image')->nullable()->after('geometry');
+
+            $table->json('map_image_bounds')
+                ->nullable()
+                ->after('map_image');
             $table->boolean('is_active')
                 ->default(true);
 
@@ -34,6 +39,7 @@ return new class extends Migration
             // Índices
             $table->index('is_active');
             $table->index('type');
+            
         });
     }
 

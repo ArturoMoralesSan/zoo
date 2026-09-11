@@ -9,12 +9,21 @@ interface GeoJsonGeometry {
     coordinates: number[][][];
 }
 
+interface MapImageBounds {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+}
+
 interface ZooZone {
     id: number;
     name: string;
     description?: string | null;
     type?: string | null;
     geometry?: GeoJsonGeometry | null;
+    map_image?: string | null;
+    map_image_bounds?: MapImageBounds | null;
 }
 
 interface MapMarker {
@@ -57,15 +66,11 @@ const props = defineProps<{
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
                 <div>
-                    <h1
-                        class="text-2xl font-semibold"
-                    >
+                    <h1 class="text-2xl font-semibold">
                         Detalles del marker
                     </h1>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
+                    <p class="mt-1 text-sm text-muted-foreground">
                         Información completa de
                         {{ marker.name }}.
                     </p>
@@ -75,9 +80,7 @@ const props = defineProps<{
                     class="flex flex-col gap-2 sm:flex-row"
                 >
                     <Link
-                        :href="
-                            admin.mapMarkers.index().url
-                        "
+                        :href="admin.mapMarkers.index().url"
                         class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
                         Volver
@@ -105,15 +108,11 @@ const props = defineProps<{
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
             <div>
-                <h2
-                    class="text-lg font-semibold"
-                >
+                <h2 class="text-lg font-semibold">
                     Información general
                 </h2>
 
-                <p
-                    class="mt-1 text-sm text-muted-foreground"
-                >
+                <p class="mt-1 text-sm text-muted-foreground">
                     Datos principales del marker.
                 </p>
             </div>
@@ -130,9 +129,7 @@ const props = defineProps<{
                         Nombre
                     </p>
 
-                    <p
-                        class="mt-1 text-sm font-medium"
-                    >
+                    <p class="mt-1 text-sm font-medium">
                         {{ marker.name }}
                     </p>
                 </div>
@@ -146,9 +143,7 @@ const props = defineProps<{
                         Tipo
                     </p>
 
-                    <p
-                        class="mt-1 text-sm"
-                    >
+                    <p class="mt-1 text-sm">
                         {{
                             marker.type ||
                             'Sin especificar'
@@ -165,9 +160,7 @@ const props = defineProps<{
                         ID
                     </p>
 
-                    <p
-                        class="mt-1 text-sm"
-                    >
+                    <p class="mt-1 text-sm">
                         {{ marker.id }}
                     </p>
                 </div>
@@ -224,9 +217,7 @@ const props = defineProps<{
                             📍
                         </span>
 
-                        <span
-                            class="text-sm"
-                        >
+                        <span class="text-sm">
                             {{
                                 marker.icon ||
                                 'Predeterminado'
@@ -256,9 +247,7 @@ const props = defineProps<{
                             }"
                         />
 
-                        <span
-                            class="font-mono text-sm"
-                        >
+                        <span class="font-mono text-sm">
                             {{ marker.color }}
                         </span>
                     </div>
@@ -275,7 +264,7 @@ const props = defineProps<{
 
                 <div
                     v-if="marker.description"
-                    class="sm:col-span-2 border-t border-sidebar-border/70 pt-5 dark:border-sidebar-border"
+                    class="border-t border-sidebar-border/70 pt-5 dark:border-sidebar-border sm:col-span-2"
                 >
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -300,15 +289,11 @@ const props = defineProps<{
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
             <div>
-                <h2
-                    class="text-lg font-semibold"
-                >
+                <h2 class="text-lg font-semibold">
                     Ubicación
                 </h2>
 
-                <p
-                    class="mt-1 text-sm text-muted-foreground"
-                >
+                <p class="mt-1 text-sm text-muted-foreground">
                     Ubicación del marker dentro del
                     zoológico.
                 </p>
@@ -320,7 +305,7 @@ const props = defineProps<{
                 <!-- Zona -->
 
                 <div
-                    class="sm:col-span-2 rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                    class="rounded-lg border border-sidebar-border bg-accent/30 p-4 sm:col-span-2"
                 >
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -360,9 +345,7 @@ const props = defineProps<{
                         Latitud
                     </p>
 
-                    <p
-                        class="mt-1 font-mono text-sm"
-                    >
+                    <p class="mt-1 font-mono text-sm">
                         {{
                             Number(
                                 marker.latitude,
@@ -380,9 +363,7 @@ const props = defineProps<{
                         Longitud
                     </p>
 
-                    <p
-                        class="mt-1 font-mono text-sm"
-                    >
+                    <p class="mt-1 font-mono text-sm">
                         {{
                             Number(
                                 marker.longitude,
@@ -393,9 +374,7 @@ const props = defineProps<{
 
                 <!-- Google Maps -->
 
-                <div
-                    class="sm:col-span-2"
-                >
+                <div class="sm:col-span-2">
                     <a
                         :href="`https://www.google.com/maps?q=${marker.latitude},${marker.longitude}`"
                         target="_blank"
@@ -416,15 +395,11 @@ const props = defineProps<{
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
             <div>
-                <h2
-                    class="text-lg font-semibold"
-                >
+                <h2 class="text-lg font-semibold">
                     Mapa
                 </h2>
 
-                <p
-                    class="mt-1 text-sm text-muted-foreground"
-                >
+                <p class="mt-1 text-sm text-muted-foreground">
                     Ubicación visual del marker dentro
                     de su zona.
                 </p>
@@ -438,6 +413,14 @@ const props = defineProps<{
                         marker.zone?.geometry ??
                         null
                     "
+                    :map-image="
+                        marker.zone?.map_image ??
+                        null
+                    "
+                    :map-image-bounds="
+                        marker.zone?.map_image_bounds ??
+                        null
+                    "
                     :latitude="
                         Number(marker.latitude)
                     "
@@ -446,6 +429,23 @@ const props = defineProps<{
                     "
                     :readonly="true"
                 />
+            </div>
+
+            <div
+                v-if="
+                    marker.zone?.map_image &&
+                    marker.zone?.map_image_bounds
+                "
+                class="mt-4 rounded-lg border border-sidebar-border bg-muted/30 p-4"
+            >
+                <p class="text-sm font-medium">
+                    Plano de la zona
+                </p>
+
+                <p class="mt-1 text-xs text-muted-foreground">
+                    El plano se muestra como referencia visual y el marker
+                    aparece sobre su ubicación registrada.
+                </p>
             </div>
         </div>
 
@@ -457,9 +457,7 @@ const props = defineProps<{
             class="flex flex-col gap-3 rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between"
         >
             <Link
-                :href="
-                    admin.mapMarkers.index().url
-                "
+                :href="admin.mapMarkers.index().url"
                 class="text-sm text-muted-foreground transition hover:text-foreground"
             >
                 ← Volver al listado

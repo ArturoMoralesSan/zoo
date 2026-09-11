@@ -44,392 +44,95 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $permissions = [
 
-            /*
-            |--------------------------------------------------------------------------
-            | Dashboard
-            |--------------------------------------------------------------------------
-            */
-
+            // Dashboard
             'dashboard.view',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Usuarios
-            |--------------------------------------------------------------------------
-            */
-
+            // Usuarios
             'users.view',
             'users.create',
             'users.edit',
             'users.delete',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Visitantes
-            |--------------------------------------------------------------------------
-            */
-
-            'visitors.view',
-            'visitors.create',
-            'visitors.edit',
-            'visitors.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Roles
-            |--------------------------------------------------------------------------
-            */
-
+            // Roles
             'roles.view',
             'roles.create',
             'roles.edit',
             'roles.delete',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Permisos
-            |--------------------------------------------------------------------------
-            */
-
+            // Permisos
             'permissions.view',
             'permissions.create',
             'permissions.edit',
             'permissions.delete',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Categorías de especies
-            |--------------------------------------------------------------------------
-            */
-
-            'species-categories.view',
-            'species-categories.create',
-            'species-categories.edit',
-            'species-categories.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Especies
-            |--------------------------------------------------------------------------
-            */
-
-            'species.view',
-            'species.create',
-            'species.edit',
-            'species.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Imágenes de especies
-            |--------------------------------------------------------------------------
-            */
-
-            'species-images.view',
-            'species-images.create',
-            'species-images.edit',
-            'species-images.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Modelos 3D
-            |--------------------------------------------------------------------------
-            */
-
-            'species-models.view',
-            'species-models.create',
-            'species-models.edit',
-            'species-models.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Ubicaciones de especies
-            |--------------------------------------------------------------------------
-            */
-
-            'species-locations.view',
-            'species-locations.create',
-            'species-locations.edit',
-            'species-locations.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Etiquetas
-            |--------------------------------------------------------------------------
-            */
-
-            'species-tags.view',
-            'species-tags.create',
-            'species-tags.edit',
-            'species-tags.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Mapa
-            |--------------------------------------------------------------------------
-            */
-
-            'map.view',
-            'map.create',
-            'map.edit',
-            'map.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Configuración del mapa
-            |--------------------------------------------------------------------------
-            */
-
-            'map-config.view',
-            'map-config.create',
-            'map-config.edit',
-            'map-config.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Marcadores del mapa
-            |--------------------------------------------------------------------------
-            */
-
-            'map-markers.view',
-            'map-markers.create',
-            'map-markers.edit',
-            'map-markers.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Zonas del zoológico
-            |--------------------------------------------------------------------------
-            */
-
-            'zoo-zones.view',
-            'zoo-zones.create',
-            'zoo-zones.edit',
-            'zoo-zones.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Tipos de boleto
-            |--------------------------------------------------------------------------
-            */
-
-            'ticket-types.view',
-            'ticket-types.create',
-            'ticket-types.edit',
-            'ticket-types.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Órdenes de boletos
-            |--------------------------------------------------------------------------
-            */
-
-            'ticket-orders.view',
-            'ticket-orders.create',
-            'ticket-orders.edit',
-            'ticket-orders.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Boletos
-            |--------------------------------------------------------------------------
-            */
-
-            'tickets.view',
-            'tickets.create',
-            'tickets.edit',
-            'tickets.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Validación de boletos
-            |--------------------------------------------------------------------------
-            */
-
-            'ticket-validations.view',
-            'ticket-validations.create',
-            'ticket-validations.edit',
-            'ticket-validations.delete',
-
-            'tickets.validate',
-            'tickets.scan',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Pagos
-            |--------------------------------------------------------------------------
-            */
-
-            'payments.view',
-            'payments.create',
-            'payments.edit',
-            'payments.delete',
-
-            'payments.process',
-            'payments.refund',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Capturas AR
-            |--------------------------------------------------------------------------
-            */
-
-            'species-captures.view',
-            'species-captures.create',
-            'species-captures.edit',
-            'species-captures.delete',
-
-            'species-captures.capture',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Niveles
-            |--------------------------------------------------------------------------
-            */
-
+            // Levels
             'levels.view',
             'levels.create',
             'levels.edit',
             'levels.delete',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Movimientos de puntos
-            |--------------------------------------------------------------------------
-            */
+            // Categorías de especies
+            'species_categories.view',
+            'species_categories.create',
+            'species_categories.edit',
+            'species_categories.delete',
 
-            'point-movements.view',
-            'point-movements.create',
-            'point-movements.edit',
-            'point-movements.delete',
+            // Especies
+            'species.view',
+            'species.create',
+            'species.edit',
+            'species.delete',
 
-            'point-movements.adjust',
+            // Etiquetas de especies
+            'species_tags.view',
+            'species_tags.create',
+            'species_tags.edit',
+            'species_tags.delete',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Recompensas
-            |--------------------------------------------------------------------------
-            */
+            // Zonas del zoológico
+            'zoo-zones.view',
+            'zoo-zones.create',
+            'zoo-zones.edit',
+            'zoo-zones.delete',
 
-            'rewards.view',
-            'rewards.create',
-            'rewards.edit',
-            'rewards.delete',
+            // Marcadores del mapa
+            'map-markers.view',
+            'map-markers.create',
+            'map-markers.edit',
+            'map-markers.delete',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Canjes de recompensas
-            |--------------------------------------------------------------------------
-            */
+            // Tipos de boleto
+            'ticket-types.view',
+            'ticket-types.create',
+            'ticket-types.edit',
+            'ticket-types.delete',
 
-            'reward-redemptions.view',
-            'reward-redemptions.create',
-            'reward-redemptions.edit',
-            'reward-redemptions.delete',
+            // Métodos de pago
+            'payment-methods.view',
+            'payment-methods.create',
+            'payment-methods.edit',
+            'payment-methods.delete',
 
-            'reward-redemptions.redeem',
+            // Órdenes de boletos
+            'ticket-orders.view',
+            'ticket-orders.create',
+            'ticket-orders.edit',
+            'ticket-orders.delete',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Colecciones
-            |--------------------------------------------------------------------------
-            */
-
-            'collections.view',
-            'collections.create',
-            'collections.edit',
-            'collections.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Socios / Partners
-            |--------------------------------------------------------------------------
-            */
-
-            'partners.view',
-            'partners.create',
-            'partners.edit',
-            'partners.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Sucursales de partners
-            |--------------------------------------------------------------------------
-            */
-
-            'partner-branches.view',
-            'partner-branches.create',
-            'partner-branches.edit',
-            'partner-branches.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Eventos
-            |--------------------------------------------------------------------------
-            */
-
+            // Eventos
             'events.view',
             'events.create',
             'events.edit',
             'events.delete',
 
-            'events.publish',
-            'events.cancel',
+            // Reglas de puntos
+            'point-rules.view',
+            'point-rules.create',
+            'point-rules.edit',
+            'point-rules.delete',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Solicitudes de diplomas
-            |--------------------------------------------------------------------------
-            */
-
-            'diploma-requests.view',
-            'diploma-requests.create',
-            'diploma-requests.edit',
-            'diploma-requests.delete',
-
-            'diploma-requests.approve',
-            'diploma-requests.reject',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Diplomas
-            |--------------------------------------------------------------------------
-            */
-
-            'diplomas.view',
-            'diplomas.create',
-            'diplomas.edit',
-            'diplomas.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Notificaciones
-            |--------------------------------------------------------------------------
-            */
-
-            'notifications.view',
-            'notifications.create',
-            'notifications.edit',
-            'notifications.delete',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Reportes
-            |--------------------------------------------------------------------------
-            */
-
-            'reports.view',
-            'reports.tickets',
-            'reports.users',
-            'reports.points',
-            'reports.captures',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Configuración
-            |--------------------------------------------------------------------------
-            */
-
-            'settings.view',
+            // Historial de puntos
+            'point-movements.view',
         ];
 
         /*
@@ -463,8 +166,7 @@ class RolesAndPermissionsSeeder extends Seeder
         | Admin
         |--------------------------------------------------------------------------
         |
-        | Admin sí utiliza el sistema de permisos y tiene acceso
-        | a todos los módulos administrativos.
+        | Admin tiene acceso a todos los módulos administrativos.
         |
         */
 
@@ -482,178 +184,38 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $staff->syncPermissions([
 
-            /*
-            |--------------------------------------------------------------------------
-            | Dashboard
-            |--------------------------------------------------------------------------
-            */
-
             'dashboard.view',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Zoológico
-            |--------------------------------------------------------------------------
-            */
-
-            'species-categories.view',
-            'species-categories.create',
-            'species-categories.edit',
-
+            // Especies
             'species.view',
-            'species.create',
-            'species.edit',
 
-            'species-images.view',
-            'species-images.create',
-            'species-images.edit',
+            // Categorías
+            'species_categories.view',
 
-            'species-models.view',
-            'species-models.create',
-            'species-models.edit',
+            // Tags
+            'species_tags.view',
 
-            'species-locations.view',
-            'species-locations.create',
-            'species-locations.edit',
-
-            'species-tags.view',
-            'species-tags.create',
-            'species-tags.edit',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Mapa
-            |--------------------------------------------------------------------------
-            */
-
-            'map.view',
-
-            'map-config.view',
-
-            'map-markers.view',
-            'map-markers.create',
-            'map-markers.edit',
-
+            // Zonas
             'zoo-zones.view',
-            'zoo-zones.create',
-            'zoo-zones.edit',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Boletos
-            |--------------------------------------------------------------------------
-            */
+            // Mapa
+            'map-markers.view',
 
+            // Boletos
             'ticket-types.view',
-
             'ticket-orders.view',
+            'ticket-orders.create',
 
-            'tickets.view',
-            'tickets.create',
+            // Métodos de pago
+            'payment-methods.view',
 
-            'ticket-validations.view',
-
-            'tickets.validate',
-            'tickets.scan',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Pagos
-            |--------------------------------------------------------------------------
-            */
-
-            'payments.view',
-            'payments.create',
-            'payments.process',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Capturas AR
-            |--------------------------------------------------------------------------
-            */
-
-            'species-captures.view',
-            'species-captures.capture',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Niveles
-            |--------------------------------------------------------------------------
-            */
-
-            'levels.view',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Puntos
-            |--------------------------------------------------------------------------
-            */
-
-            'point-movements.view',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Recompensas
-            |--------------------------------------------------------------------------
-            */
-
-            'rewards.view',
-
-            'reward-redemptions.view',
-            'reward-redemptions.redeem',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Colecciones
-            |--------------------------------------------------------------------------
-            */
-
-            'collections.view',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Partners
-            |--------------------------------------------------------------------------
-            */
-
-            'partners.view',
-            'partner-branches.view',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Eventos
-            |--------------------------------------------------------------------------
-            */
-
+            // Eventos
             'events.view',
 
-            /*
-            |--------------------------------------------------------------------------
-            | Diplomas
-            |--------------------------------------------------------------------------
-            */
-
-            'diploma-requests.view',
-            'diploma-requests.create',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Notificaciones
-            |--------------------------------------------------------------------------
-            */
-
-            'notifications.view',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Reportes
-            |--------------------------------------------------------------------------
-            */
-
-            'reports.view',
-            'reports.tickets',
-            'reports.points',
-            'reports.captures',
+            // Gamificación
+            'levels.view',
+            'point-rules.view',
+            'point-movements.view',
         ]);
 
         /*

@@ -56,7 +56,7 @@ const submitSearch = () => {
         {
             preserveState: true,
             replace: true,
-        }
+        },
     );
 };
 
@@ -75,7 +75,7 @@ const deleteMarker = (marker: MapMarker) => {
                 admin.mapMarkers.destroy(marker.id).url,
                 {
                     preserveScroll: true,
-                }
+                },
             );
         }
     });
@@ -124,8 +124,8 @@ const deleteMarker = (marker: MapMarker) => {
                 class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
             >
                 <form
-                    @submit.prevent="submitSearch"
                     class="flex w-full gap-2 md:max-w-md"
+                    @submit.prevent="submitSearch"
                 >
                     <input
                         v-model="search"
@@ -276,18 +276,17 @@ const deleteMarker = (marker: MapMarker) => {
                             <!-- Estado -->
                             <td class="px-6 py-4">
                                 <span
-                                    class="rounded-full border px-2.5 py-1 text-xs font-medium"
-                                    :class="
-                                        marker.is_active
-                                            ? 'border-green-500/30 text-green-600'
-                                            : 'border-sidebar-border text-muted-foreground'
-                                    "
+                                    v-if="marker.is_active"
+                                    class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                                 >
-                                    {{
-                                        marker.is_active
-                                            ? 'Activo'
-                                            : 'Inactivo'
-                                    }}
+                                    Activo
+                                </span>
+
+                                <span
+                                    v-else
+                                    class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
+                                >
+                                    Inactivo
                                 </span>
                             </td>
 

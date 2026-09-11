@@ -11,17 +11,42 @@ use Inertia\Response;
 
 class PaymentMethodController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $search = $request->input('search');
+
         $paymentMethods = PaymentMethod::query()
+            ->when($search, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where(
+                        'name',
+                        'like',
+                        "%{$search}%"
+                    )
+                        ->orWhere(
+                            'code',
+                            'like',
+                            "%{$search}%"
+                        )
+                        ->orWhere(
+                            'description',
+                            'like',
+                            "%{$search}%"
+                        );
+                });
+            })
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render(
             'admin/payment-methods/Index',
             [
                 'paymentMethods' => $paymentMethods,
+                'filters' => [
+                    'search' => $search,
+                ],
             ]
         );
     }

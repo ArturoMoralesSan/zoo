@@ -1,4 +1,3 @@
-```vue
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import admin from '@/routes/admin';
@@ -242,4 +241,3 @@ defineOptions({
         </div>
     </div>
 </template>
-```

@@ -1,12 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 
-import admin from '@/routes/admin';
-import ZooZoneMap from '@/components/ZooZoneMap.vue';
+import ZooZoneMap from '@/components/admin/ZooZoneMap.vue';
 
-interface PolygonGeometry {
-    type: 'Polygon';
-    coordinates: number[][][];
+interface MapImageBounds {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
 }
 
 interface ZooZone {
@@ -14,26 +16,90 @@ interface ZooZone {
     name: string;
     description: string | null;
     type: string | null;
-    geometry: PolygonGeometry | null;
+    geometry: {
+        type: string;
+        coordinates: number[][][];
+    } | null;
+    map_image: string | null;
+    map_image_bounds: MapImageBounds | null;
     is_active: boolean;
-    species_locations_count: number;
-    map_markers_count: number;
+    species_locations_count?: number;
+    map_markers_count?: number;
+    created_at: string;
+    updated_at: string;
 }
 
 const props = defineProps<{
     zone: ZooZone;
 }>();
+
+const imageUrl = computed<string | null>(() => {
+    const image = props.zone.map_image;
+
+    if (!image) {
+        return null;
+    }
+
+    if (
+        image.startsWith('http://') ||
+        image.startsWith('https://') ||
+        image.startsWith('blob:') ||
+        image.startsWith('data:') ||
+        image.startsWith('/')
+    ) {
+        return image;
+    }
+
+    return `/storage/${image}`;
+});
+
+const hasGeometry = computed(() => {
+    return (
+        props.zone.geometry !== null &&
+        props.zone.geometry.type === 'Polygon' &&
+        Array.isArray(props.zone.geometry.coordinates)
+    );
+});
+
+const hasMapImage = computed(() => {
+    return Boolean(
+        props.zone.map_image &&
+        props.zone.map_image_bounds
+    );
+});
+
+const formattedCreatedAt = computed(() => {
+    if (!props.zone.created_at) {
+        return '—';
+    }
+
+    return new Date(
+        props.zone.created_at
+    ).toLocaleString('es-MX');
+});
+
+const formattedUpdatedAt = computed(() => {
+    if (!props.zone.updated_at) {
+        return '—';
+    }
+
+    return new Date(
+        props.zone.updated_at
+    ).toLocaleString('es-MX');
+});
+
+const editUrl = computed(() => {
+    return `/admin/zoo-zones/${props.zone.id}/edit`;
+});
 </script>
 
 <template>
-    <Head
-        :title="`Detalles - ${zone.name}`"
-    />
+    <Head :title="`Zona: ${zone.name}`" />
 
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
-        <!-- ENCABEZADO -->
+        <!-- Encabezado -->
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -42,427 +108,427 @@ const props = defineProps<{
             >
                 <div>
                     <h1 class="text-2xl font-semibold">
-                        Detalles de la zona
+                        {{ zone.name }}
                     </h1>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Información completa de {{ zone.name }}.
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        Consulta la información de esta zona.
                     </p>
                 </div>
 
-                <div
-                    class="flex flex-col gap-2 sm:flex-row"
-                >
+                <div class="flex flex-wrap gap-3">
                     <Link
-                        :href="
-                            admin.zooZones.index().url
-                        "
-                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        href="/admin/zoo-zones"
+                        class="rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
                         Volver
                     </Link>
 
                     <Link
-                        :href="
-                            admin.zooZones.edit(
-                                zone.id,
-                            ).url
-                        "
-                        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                        :href="editUrl"
+                        class="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                     >
-                        Editar
+                        Editar zona
                     </Link>
                 </div>
             </div>
         </div>
 
-        <!-- INFORMACIÓN GENERAL -->
+        <!-- Información general -->
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold">
+                    Información general
+                </h2>
+
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Datos principales de la zona.
+                </p>
+            </div>
+
             <div
-                class="grid gap-6 lg:grid-cols-3"
+                class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
             >
-                <!-- DATOS -->
-                <div class="lg:col-span-2">
-                    <div>
-                        <h2
-                            class="text-lg font-semibold"
-                        >
-                            Información general
-                        </h2>
-
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Datos principales de la zona.
-                        </p>
-                    </div>
-
-                    <div
-                        class="mt-6 grid gap-5 sm:grid-cols-2"
-                    >
-                        <!-- Nombre -->
-                        <div>
-                            <p
-                                class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                            >
-                                Nombre
-                            </p>
-
-                            <p
-                                class="mt-1 text-sm font-medium"
-                            >
-                                {{ zone.name }}
-                            </p>
-                        </div>
-
-                        <!-- Tipo -->
-                        <div>
-                            <p
-                                class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                            >
-                                Tipo
-                            </p>
-
-                            <p
-                                class="mt-1 text-sm"
-                            >
-                                {{
-                                    zone.type ||
-                                    'Sin especificar'
-                                }}
-                            </p>
-                        </div>
-
-                        <!-- ID -->
-                        <div>
-                            <p
-                                class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                            >
-                                ID
-                            </p>
-
-                            <p
-                                class="mt-1 text-sm"
-                            >
-                                {{ zone.id }}
-                            </p>
-                        </div>
-
-                        <!-- Estado -->
-                        <div>
-                            <p
-                                class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                            >
-                                Estado
-                            </p>
-
-                            <div class="mt-1">
-                                <span
-                                    v-if="zone.is_active"
-                                    class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
-                                >
-                                    Activa
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
-                                >
-                                    Inactiva
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Ubicaciones -->
-                        <div>
-                            <p
-                                class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                            >
-                                Ubicaciones de especies
-                            </p>
-
-                            <p
-                                class="mt-1 text-sm"
-                            >
-                                {{
-                                    zone.species_locations_count
-                                }}
-                            </p>
-                        </div>
-
-                        <!-- Marcadores -->
-                        <div>
-                            <p
-                                class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                            >
-                                Marcadores del mapa
-                            </p>
-
-                            <p
-                                class="mt-1 text-sm"
-                            >
-                                {{
-                                    zone.map_markers_count
-                                }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- DESCRIPCIÓN -->
-                    <div
-                        v-if="zone.description"
-                        class="mt-6 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border"
-                    >
-                        <p
-                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                        >
-                            Descripción
-                        </p>
-
-                        <p
-                            class="mt-2 whitespace-pre-line text-sm leading-6"
-                        >
-                            {{ zone.description }}
-                        </p>
-                    </div>
-                </div>
-
-                <!-- RESUMEN -->
                 <div>
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Resumen
+                    <p class="text-sm text-muted-foreground">
+                        Nombre
                     </p>
 
-                    <div
-                        class="mt-2 space-y-3"
+                    <p class="mt-1 font-medium">
+                        {{ zone.name }}
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-sm text-muted-foreground">
+                        Tipo
+                    </p>
+
+                    <p class="mt-1 font-medium">
+                        {{ zone.type || '—' }}
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-sm text-muted-foreground">
+                        Estado
+                    </p>
+
+                    <p
+                        class="mt-1 font-medium"
+                        :class="
+                            zone.is_active
+                                ? 'text-green-600'
+                                : 'text-red-500'
+                        "
                     >
-                        <div
-                            class="rounded-lg border border-sidebar-border p-4"
-                        >
-                            <p
-                                class="text-xs text-muted-foreground"
-                            >
-                                Polígono
-                            </p>
+                        {{ zone.is_active ? 'Activa' : 'Inactiva' }}
+                    </p>
+                </div>
 
-                            <p
-                                class="mt-1 text-sm font-medium"
-                            >
-                                {{
-                                    zone.geometry
-                                        ? 'Definido'
-                                        : 'Sin definir'
-                                }}
-                            </p>
-                        </div>
+                <div class="md:col-span-2 lg:col-span-3">
+                    <p class="text-sm text-muted-foreground">
+                        Descripción
+                    </p>
 
-                        <div
-                            class="rounded-lg border border-sidebar-border p-4"
-                        >
-                            <p
-                                class="text-xs text-muted-foreground"
-                            >
-                                Ubicaciones
-                            </p>
-
-                            <p
-                                class="mt-1 text-sm font-medium"
-                            >
-                                {{
-                                    zone.species_locations_count
-                                }}
-                                ubicación(es)
-                            </p>
-                        </div>
-
-                        <div
-                            class="rounded-lg border border-sidebar-border p-4"
-                        >
-                            <p
-                                class="text-xs text-muted-foreground"
-                            >
-                                Marcadores
-                            </p>
-
-                            <p
-                                class="mt-1 text-sm font-medium"
-                            >
-                                {{
-                                    zone.map_markers_count
-                                }}
-                                marcador(es)
-                            </p>
-                        </div>
-                    </div>
+                    <p class="mt-1 whitespace-pre-line">
+                        {{ zone.description || 'Sin descripción.' }}
+                    </p>
                 </div>
             </div>
         </div>
 
-        <!-- MAPA -->
+        <!-- Resumen -->
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
-            <div
-                class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
-            >
-                <div>
-                    <h2
-                        class="text-lg font-semibold"
-                    >
-                        Ubicación de la zona
-                    </h2>
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold">
+                    Resumen
+                </h2>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Área geográfica registrada para esta zona.
-                    </p>
-                </div>
-
-                <span
-                    class="w-fit rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
-                >
-                    {{
-                        zone.geometry
-                            ? 'Polígono definido'
-                            : 'Sin polígono'
-                    }}
-                </span>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Elementos relacionados con esta zona.
+                </p>
             </div>
 
             <div
-                v-if="zone.geometry"
-                class="mt-6"
+                class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            >
+                <div
+                    class="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                >
+                    <p class="text-sm text-muted-foreground">
+                        Especies ubicadas
+                    </p>
+
+                    <p class="mt-2 text-2xl font-semibold">
+                        {{ zone.species_locations_count ?? 0 }}
+                    </p>
+                </div>
+
+                <div
+                    class="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                >
+                    <p class="text-sm text-muted-foreground">
+                        Marcadores
+                    </p>
+
+                    <p class="mt-2 text-2xl font-semibold">
+                        {{ zone.map_markers_count ?? 0 }}
+                    </p>
+                </div>
+
+                <div
+                    class="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                >
+                    <p class="text-sm text-muted-foreground">
+                        Polígono
+                    </p>
+
+                    <p class="mt-2 font-semibold">
+                        {{
+                            hasGeometry
+                                ? 'Configurado'
+                                : 'Sin polígono'
+                        }}
+                    </p>
+                </div>
+
+                <div
+                    class="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                >
+                    <p class="text-sm text-muted-foreground">
+                        Plano
+                    </p>
+
+                    <p class="mt-2 font-semibold">
+                        {{
+                            hasMapImage
+                                ? 'Configurado'
+                                : 'Sin plano'
+                        }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mapa -->
+        <div
+            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+        >
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold">
+                    Mapa de la zona
+                </h2>
+
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Vista geográfica de la zona.
+                </p>
+            </div>
+
+            <div
+                v-if="hasGeometry || hasMapImage"
+                class="overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
             >
                 <ZooZoneMap
                     :model-value="zone.geometry"
                     :readonly="true"
-                    height="500px"
+                    :map-image="zone.map_image"
+                    :map-image-bounds="zone.map_image_bounds"
+                    height="600px"
                 />
             </div>
 
             <div
                 v-else
-                class="mt-6 rounded-lg border border-dashed border-sidebar-border p-10 text-center"
+                class="flex min-h-[300px] items-center justify-center rounded-xl border border-dashed border-sidebar-border/70 dark:border-sidebar-border"
             >
-                <p
-                    class="text-sm text-muted-foreground"
-                >
-                    Esta zona no tiene un polígono definido.
-                </p>
+                <div class="text-center">
+                    <p class="font-medium">
+                        No hay información geográfica configurada.
+                    </p>
 
-                <Link
-                    :href="
-                        admin.zooZones.edit(
-                            zone.id,
-                        ).url
-                    "
-                    class="mt-4 inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    Definir ubicación
-                </Link>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        Edita la zona para agregar información geográfica.
+                    </p>
+                </div>
             </div>
         </div>
 
-        <!-- INFORMACIÓN RELACIONADA -->
+        <!-- Plano -->
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
-            <div>
-                <h2
-                    class="text-lg font-semibold"
-                >
-                    Información relacionada
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold">
+                    Plano del zoológico
                 </h2>
 
-                <p
-                    class="mt-1 text-sm text-muted-foreground"
-                >
-                    Registros asociados actualmente a esta zona.
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Plano asociado a esta zona.
                 </p>
             </div>
 
             <div
-                class="mt-6 grid gap-4 sm:grid-cols-2"
+                v-if="imageUrl"
+                class="space-y-6"
             >
-                <!-- Ubicaciones -->
                 <div
-                    class="rounded-lg border border-sidebar-border p-4"
+                    class="overflow-hidden rounded-xl border border-sidebar-border/70 bg-muted/20 dark:border-sidebar-border"
                 >
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Ubicaciones de especies
-                    </p>
-
-                    <p
-                        class="mt-2 text-2xl font-semibold"
-                    >
-                        {{
-                            zone.species_locations_count
-                        }}
-                    </p>
-
-                    <p
-                        class="mt-1 text-xs text-muted-foreground"
-                    >
-                        Ubicaciones asociadas a esta zona.
-                    </p>
+                    <img
+                        :src="imageUrl"
+                        alt="Plano del zoológico"
+                        class="max-h-[700px] w-full object-contain"
+                    />
                 </div>
 
-                <!-- Marcadores -->
                 <div
-                    class="rounded-lg border border-sidebar-border p-4"
+                    class="grid gap-6 md:grid-cols-2"
                 >
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Marcadores del mapa
+                    <div>
+                        <p class="text-sm text-muted-foreground">
+                            Archivo
+                        </p>
+
+                        <p class="mt-1 break-all font-medium">
+                            {{ zone.map_image }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p class="text-sm text-muted-foreground">
+                            Estado
+                        </p>
+
+                        <p class="mt-1 font-medium text-green-600">
+                            Plano configurado
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    v-if="zone.map_image_bounds"
+                    class="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                >
+                    <p class="mb-4 text-sm font-medium">
+                        Coordenadas del plano
                     </p>
 
-                    <p
-                        class="mt-2 text-2xl font-semibold"
+                    <div
+                        class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
                     >
-                        {{
-                            zone.map_markers_count
-                        }}
+                        <div>
+                            <p class="text-xs text-muted-foreground">
+                                Norte
+                            </p>
+
+                            <p class="mt-1 font-mono text-sm">
+                                {{
+                                    Number(
+                                        zone.map_image_bounds.north
+                                    ).toFixed(7)
+                                }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <p class="text-xs text-muted-foreground">
+                                Sur
+                            </p>
+
+                            <p class="mt-1 font-mono text-sm">
+                                {{
+                                    Number(
+                                        zone.map_image_bounds.south
+                                    ).toFixed(7)
+                                }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <p class="text-xs text-muted-foreground">
+                                Este
+                            </p>
+
+                            <p class="mt-1 font-mono text-sm">
+                                {{
+                                    Number(
+                                        zone.map_image_bounds.east
+                                    ).toFixed(7)
+                                }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <p class="text-xs text-muted-foreground">
+                                Oeste
+                            </p>
+
+                            <p class="mt-1 font-mono text-sm">
+                                {{
+                                    Number(
+                                        zone.map_image_bounds.west
+                                    ).toFixed(7)
+                                }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                v-else
+                class="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-sidebar-border/70 dark:border-sidebar-border"
+            >
+                <div class="text-center">
+                    <p class="font-medium">
+                        Esta zona no tiene un plano configurado.
                     </p>
 
-                    <p
-                        class="mt-1 text-xs text-muted-foreground"
-                    >
-                        Marcadores asociados a esta zona.
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        Puedes agregarlo desde Editar zona.
                     </p>
                 </div>
             </div>
         </div>
 
-        <!-- ACCIONES -->
+        <!-- Información técnica -->
         <div
-            class="flex flex-col gap-3 rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between"
+            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+        >
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold">
+                    Información técnica
+                </h2>
+
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Información de registro de la zona.
+                </p>
+            </div>
+
+            <div
+                class="grid gap-6 md:grid-cols-2"
+            >
+                <div>
+                    <p class="text-sm text-muted-foreground">
+                        ID
+                    </p>
+
+                    <p class="mt-1 font-mono text-sm">
+                        {{ zone.id }}
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-sm text-muted-foreground">
+                        Tipo de geometría
+                    </p>
+
+                    <p class="mt-1 font-medium">
+                        {{ zone.geometry?.type || '—' }}
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-sm text-muted-foreground">
+                        Creada
+                    </p>
+
+                    <p class="mt-1 font-medium">
+                        {{ formattedCreatedAt }}
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-sm text-muted-foreground">
+                        Última actualización
+                    </p>
+
+                    <p class="mt-1 font-medium">
+                        {{ formattedUpdatedAt }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones -->
+        <div
+            class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
         >
             <Link
-                :href="
-                    admin.zooZones.index().url
-                "
-                class="text-sm text-muted-foreground transition hover:text-foreground"
+                href="/admin/zoo-zones"
+                class="rounded-lg border border-sidebar-border px-4 py-2.5 text-center text-sm font-medium transition hover:bg-accent"
             >
-                ← Volver al listado
+                Volver
             </Link>
 
             <Link
-                :href="
-                    admin.zooZones.edit(
-                        zone.id,
-                    ).url
-                "
-                class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                :href="editUrl"
+                class="rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground transition hover:opacity-90"
             >
                 Editar zona
             </Link>

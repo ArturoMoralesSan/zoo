@@ -143,8 +143,8 @@ class SpeciesController extends Controller
                 | Zonas
                 |--------------------------------------------------------------------------
                 |
-                | Se envía geometry para poder dibujar el polígono
-                | de la zona en MapMarkerMap.vue.
+                | Se envía geometry, plano y límites del plano para
+                | mostrar correctamente el mapa de la zona.
                 |
                 */
 
@@ -155,6 +155,8 @@ class SpeciesController extends Controller
                         'id',
                         'name',
                         'geometry',
+                        'map_image',
+                        'map_image_bounds',
                     ]),
             ]
         );
@@ -166,8 +168,9 @@ class SpeciesController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function store(StoreSpeciesRequest $request): RedirectResponse
-    {
+    public function store(
+        StoreSpeciesRequest $request
+    ): RedirectResponse {
         $validated = $request->validated();
 
         DB::transaction(function () use (
@@ -340,7 +343,8 @@ class SpeciesController extends Controller
 
             if ($request->hasFile('gallery_images')) {
                 foreach (
-                    $request->file('gallery_images') as $index => $image
+                    $request->file('gallery_images')
+                    as $index => $image
                 ) {
                     if (!$image->isValid()) {
                         continue;
@@ -392,7 +396,9 @@ class SpeciesController extends Controller
                 ) {
                     $modelPath = $this->moveUploadedFile(
                         $request->file('model_file'),
-                        'species/' . $species->id . '/models'
+                        'species/' .
+                            $species->id .
+                            '/models'
                     );
                 }
 
@@ -512,8 +518,11 @@ class SpeciesController extends Controller
 
                 /*
                 |--------------------------------------------------------------------------
-                | Zonas con geometry
+                | Zonas
                 |--------------------------------------------------------------------------
+                |
+                | Se envía geometry, plano y límites del plano.
+                |
                 */
 
                 'zones' => ZooZone::query()
@@ -523,6 +532,8 @@ class SpeciesController extends Controller
                         'id',
                         'name',
                         'geometry',
+                        'map_image',
+                        'map_image_bounds',
                     ]),
             ]
         );
@@ -810,7 +821,8 @@ class SpeciesController extends Controller
                     : $lastSortOrder + 1;
 
                 foreach (
-                    $request->file('gallery_images') as $index => $image
+                    $request->file('gallery_images')
+                    as $index => $image
                 ) {
                     if (!$image->isValid()) {
                         continue;
@@ -876,7 +888,9 @@ class SpeciesController extends Controller
                 ) {
                     $newModelPath = $this->moveUploadedFile(
                         $request->file('model_file'),
-                        'species/' . $species->id . '/models'
+                        'species/' .
+                            $species->id .
+                            '/models'
                     );
 
                     /*
@@ -1006,8 +1020,9 @@ class SpeciesController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function destroy(Species $species): RedirectResponse
-    {
+    public function destroy(
+        Species $species
+    ): RedirectResponse {
         if (
             $species->images()->exists()
             || $species->models()->exists()

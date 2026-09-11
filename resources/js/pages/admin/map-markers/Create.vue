@@ -9,10 +9,19 @@ interface GeoJsonGeometry {
     coordinates: number[][][];
 }
 
+interface MapImageBounds {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+}
+
 interface ZooZone {
     id: number;
     name: string;
     geometry: GeoJsonGeometry | null;
+    map_image: string | null;
+    map_image_bounds: MapImageBounds | null;
 }
 
 const props = defineProps<{
@@ -31,7 +40,7 @@ const form = useForm({
     is_active: true,
 });
 
-const selectedZone = computed(() =>
+const selectedZone = computed<ZooZone | null>(() =>
     props.zones.find(
         (zone) => zone.id === form.zone_id,
     ) ?? null,
@@ -48,7 +57,6 @@ const submit = () => {
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
-        <!-- Encabezado -->
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -63,7 +71,6 @@ const submit = () => {
             </div>
         </div>
 
-        <!-- Formulario -->
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -71,7 +78,6 @@ const submit = () => {
                 @submit.prevent="submit"
                 class="space-y-6"
             >
-                <!-- Nombre -->
                 <div class="space-y-2">
                     <label
                         for="name"
@@ -96,9 +102,7 @@ const submit = () => {
                     </p>
                 </div>
 
-                <!-- Tipo y Zona -->
                 <div class="grid gap-6 md:grid-cols-2">
-                    <!-- Tipo -->
                     <div class="space-y-2">
                         <label
                             for="type"
@@ -123,7 +127,6 @@ const submit = () => {
                         </p>
                     </div>
 
-                    <!-- Zona -->
                     <div class="space-y-2">
                         <label
                             for="zone_id"
@@ -158,15 +161,27 @@ const submit = () => {
                         </p>
 
                         <p
-                            v-if="form.zone_id && !selectedZone?.geometry"
+                            v-if="
+                                form.zone_id &&
+                                !selectedZone?.geometry
+                            "
                             class="text-xs text-amber-600"
                         >
                             Esta zona no tiene un área definida en el mapa.
                         </p>
+
+                        <p
+                            v-if="
+                                form.zone_id &&
+                                !selectedZone?.map_image
+                            "
+                            class="text-xs text-amber-600"
+                        >
+                            Esta zona no tiene un plano configurado.
+                        </p>
                     </div>
                 </div>
 
-                <!-- Descripción -->
                 <div class="space-y-2">
                     <label
                         for="description"
@@ -191,7 +206,6 @@ const submit = () => {
                     </p>
                 </div>
 
-                <!-- Ubicación -->
                 <div class="space-y-4">
                     <div>
                         <h2 class="text-sm font-medium">
@@ -204,14 +218,20 @@ const submit = () => {
                         </p>
                     </div>
 
-                    <!-- Mapa -->
                     <MapMarkerMap
-                        :geometry="selectedZone?.geometry ?? null"
+                        :geometry="
+                            selectedZone?.geometry ?? null
+                        "
+                        :map-image="
+                            selectedZone?.map_image ?? null
+                        "
+                        :map-image-bounds="
+                            selectedZone?.map_image_bounds ?? null
+                        "
                         v-model:latitude="form.latitude"
                         v-model:longitude="form.longitude"
                     />
 
-                    <!-- Mensaje sin zona -->
                     <div
                         v-if="!form.zone_id"
                         class="rounded-lg border border-dashed border-sidebar-border bg-muted/30 p-4 text-center"
@@ -221,14 +241,29 @@ const submit = () => {
                         </p>
 
                         <p class="mt-1 text-xs text-muted-foreground">
-                            Al seleccionar una zona se mostrará su área en el
-                            mapa y podrás colocar el marker.
+                            Al seleccionar una zona se mostrará su plano y
+                            podrás colocar el marker.
                         </p>
                     </div>
 
-                    <!-- Coordenadas -->
+                    <div
+                        v-else-if="
+                            selectedZone?.map_image &&
+                            selectedZone?.map_image_bounds
+                        "
+                        class="rounded-lg border border-sidebar-border bg-muted/30 p-4"
+                    >
+                        <p class="text-sm font-medium">
+                            Plano de la zona
+                        </p>
+
+                        <p class="mt-1 text-xs text-muted-foreground">
+                            Haz clic sobre el plano para colocar el marker o
+                            arrástralo para ajustar su ubicación.
+                        </p>
+                    </div>
+
                     <div class="grid gap-6 md:grid-cols-2">
-                        <!-- Latitud -->
                         <div class="space-y-2">
                             <label
                                 for="latitude"
@@ -260,7 +295,6 @@ const submit = () => {
                             </p>
                         </div>
 
-                        <!-- Longitud -->
                         <div class="space-y-2">
                             <label
                                 for="longitude"
@@ -294,9 +328,7 @@ const submit = () => {
                     </div>
                 </div>
 
-                <!-- Icono y color -->
                 <div class="grid gap-6 md:grid-cols-2">
-                    <!-- Icono -->
                     <div class="space-y-2">
                         <label
                             for="icon"
@@ -325,7 +357,6 @@ const submit = () => {
                         </p>
                     </div>
 
-                    <!-- Color -->
                     <div class="space-y-2">
                         <label
                             for="color"
@@ -355,7 +386,6 @@ const submit = () => {
                     </div>
                 </div>
 
-                <!-- Estado -->
                 <div class="flex items-center gap-3">
                     <input
                         id="is_active"
@@ -379,7 +409,6 @@ const submit = () => {
                     {{ form.errors.is_active }}
                 </p>
 
-                <!-- Acciones -->
                 <div
                     class="flex flex-col-reverse gap-2 border-t border-sidebar-border/70 pt-6 sm:flex-row sm:justify-end dark:border-sidebar-border"
                 >

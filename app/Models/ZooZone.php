@@ -15,15 +15,18 @@ class ZooZone extends Model
         'description',
         'type',
         'geometry',
+        'map_image', 
+        'map_image_bounds',
         'is_active',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'geometry' => 'array',
-            'is_active' => 'boolean',
-        ];
+    protected function casts(): array 
+    { 
+        return [ 
+            'geometry' => 'array', 
+            'map_image_bounds' => 'array', 
+            'is_active' => 'boolean', 
+        ]; 
     }
 
     /**
@@ -51,5 +54,13 @@ class ZooZone extends Model
     public function events(): HasMany
     {
         return $this->hasMany(Event::class, 'zone_id');
+    }
+
+    public function mapPaths(): HasMany
+    {
+        return $this->hasMany(
+            MapPath::class,
+            'zone_id',
+        );
     }
 }

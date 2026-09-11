@@ -13,9 +13,23 @@ use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\TicketOrderController;
 use App\Http\Controllers\Admin\ZooZoneController;
 use App\Http\Controllers\Admin\MapMarkerController;
+use App\Http\Controllers\Admin\EventController;
+use App\Http\Controllers\Admin\PointRuleController;
+use App\Http\Controllers\Admin\PointMovementController;
+use App\Http\Controllers\Admin\RewardController;
+use App\Http\Controllers\Admin\RewardRedemptionController;
+use App\Http\Controllers\Admin\DonationController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\MapPathController;
+use App\Http\Controllers\MapController;
 
 Route::inertia('/', 'Welcome')->name('home');
 
+Route::get('/map', [MapController::class, 'index'])
+    ->name('map.index');
+
+Route::get('/map/zone/{zooZone}', [MapController::class, 'zone'])
+    ->name('map.zone');
 /*
 |--------------------------------------------------------------------------
 | Admin
@@ -33,9 +47,9 @@ Route::middleware(['auth', 'verified'])
         |--------------------------------------------------------------------------
         */
 
-        Route::inertia('dashboard', 'Dashboard')
-            ->name('dashboard')
-            ->middleware('permission:view.dashboard');
+        Route::get('dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard')
+        ->middleware('permission:dashboard.view');
 
         // Usuarios
         Route::resource('users', UserController::class)
@@ -138,6 +152,10 @@ Route::middleware(['auth', 'verified'])
                 'destroy' => 'permission:payment-methods.delete',
             ]);
 
+        Route::post('ticket-orders/user-by-qr', [TicketOrderController::class, 'userByQr'])
+            ->name('ticket-orders.user-by-qr')
+            ->middleware('permission:ticket-orders.create');
+
         Route::resource('ticket-orders', TicketOrderController::class)
         ->only([
             'index',
@@ -176,6 +194,108 @@ Route::middleware(['auth', 'verified'])
             'destroy' => 'permission:map-markers.delete',
         ]);
 
+        Route::resource('events', EventController::class)
+            ->except(['show'])
+            ->middleware([
+                'index' => 'permission:events.view',
+                'create' => 'permission:events.create',
+                'store' => 'permission:events.create',
+                'edit' => 'permission:events.edit',
+                'update' => 'permission:events.edit',
+                'destroy' => 'permission:events.delete',
+            ]);
+
+        Route::resource('point-rules', PointRuleController::class)
+            ->except(['show'])
+            ->middleware([
+                'index' => 'permission:point-rules.view',
+                'create' => 'permission:point-rules.create',
+                'store' => 'permission:point-rules.create',
+                'edit' => 'permission:point-rules.edit',
+                'update' => 'permission:point-rules.edit',
+                'destroy' => 'permission:point-rules.delete',
+            ]);
+        
+        Route::resource('point-movements', PointMovementController::class)
+            ->only(['index'])
+            ->middleware([
+                'index' => 'permission:point-movements.view',
+            ]);
+
+        Route::resource('rewards', RewardController::class)
+            ->except(['show'])
+            ->middleware([
+                'index' => 'permission:rewards.view',
+                'create' => 'permission:rewards.create',
+                'store' => 'permission:rewards.create',
+                'edit' => 'permission:rewards.edit',
+                'update' => 'permission:rewards.edit',
+                'destroy' => 'permission:rewards.delete',
+            ]);
+
+        Route::post(
+            'reward-redemptions/user-by-qr',
+            [RewardRedemptionController::class, 'userByQr']
+        )
+            ->name('reward-redemptions.user-by-qr')
+            ->middleware('permission:reward-redemptions.create');
+
+        Route::resource('reward-redemptions', RewardRedemptionController::class)
+            ->only([
+                'index',
+                'create',
+                'store',
+            ])
+            ->middleware([
+                'index' => 'permission:reward-redemptions.view',
+                'create' => 'permission:reward-redemptions.create',
+                'store' => 'permission:reward-redemptions.create',
+            ]);
+
+        Route::post(
+            'donations/user-by-qr',
+            [DonationController::class, 'userByQr']
+        )
+            ->name('donations.user-by-qr')
+            ->middleware('permission:donations.create');
+
+        Route::resource('donations', DonationController::class)
+            ->only([
+                'index',
+                'create',
+                'store',
+                'show',
+            ])
+            ->middleware([
+                'index' => 'permission:donations.view',
+                'create' => 'permission:donations.create',
+                'store' => 'permission:donations.create',
+                'show' => 'permission:donations.view',
+            ]);
+
+        Route::get('map-paths/zone/{zooZone}', [MapPathController::class, 'zone'])
+            ->name('map-paths.zone')
+            ->middleware('permission:map_paths.create');
+
+        Route::resource('map-paths', MapPathController::class)
+            ->only([
+                'index',
+                'create',
+                'store',
+                'show',
+                'edit',
+                'update',
+                'destroy',
+            ])
+            ->middleware([
+                'index' => 'permission:map_paths.view',
+                'create' => 'permission:map_paths.create',
+                'store' => 'permission:map_paths.create',
+                'show' => 'permission:map_paths.view',
+                'edit' => 'permission:map_paths.edit',
+                'update' => 'permission:map_paths.edit',
+                'destroy' => 'permission:map_paths.delete',
+            ]);
 
     });
 

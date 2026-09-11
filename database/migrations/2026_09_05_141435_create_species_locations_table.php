@@ -17,14 +17,12 @@ return new class extends Migration
 
             $table->foreignId('zone_id')
                 ->nullable()
-                ->after('species_id')
                 ->constrained('zoo_zones')
                 ->nullOnDelete();
 
             $table->string('name');
 
             $table->decimal('latitude', 10, 7);
-
             $table->decimal('longitude', 10, 7);
 
             $table->text('description')->nullable();
@@ -32,8 +30,6 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
 
             $table->timestamps();
-
-            $table->index('species_id');
         });
     }
 

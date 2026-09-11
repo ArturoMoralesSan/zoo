@@ -5,17 +5,18 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Obtener / crear roles
-        $admin = Role::firstOrCreate([
-            'name' => 'admin',
-            'guard_name' => 'web',
-        ]);
+        /*
+        |--------------------------------------------------------------------------
+        | Obtener / crear roles
+        |--------------------------------------------------------------------------
+        */
 
         $superadmin = Role::firstOrCreate([
             'name' => 'SuperAdmin',
@@ -48,6 +49,8 @@ class UserSeeder extends Seeder
             ]
         );
 
+        $this->ensureQrToken($adminUser);
+
         $adminUser->syncRoles([$superadmin]);
 
         /*
@@ -65,6 +68,8 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('Staff12345'),
             ]
         );
+
+        $this->ensureQrToken($staffUser);
 
         $staffUser->syncRoles([$staff]);
 
@@ -84,6 +89,29 @@ class UserSeeder extends Seeder
             ]
         );
 
+        $this->ensureQrToken($visitorUser);
+
         $visitorUser->syncRoles([$visitor]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Generar QR token si el usuario no tiene uno
+    |--------------------------------------------------------------------------
+    */
+
+    private function ensureQrToken(User $user): void
+    {
+        if (!$user->qr_token) {
+            do {
+                $token = Str::random(64);
+            } while (
+                User::where('qr_token', $token)->exists()
+            );
+
+            $user->update([
+                'qr_token' => $token,
+            ]);
+        }
     }
 }

@@ -47,7 +47,7 @@ const submitSearch = () => {
         {
             preserveState: true,
             replace: true,
-        }
+        },
     );
 };
 
@@ -66,7 +66,7 @@ const deleteTag = (tag: Tag) => {
                 admin.speciesTags.destroy(tag.id).url,
                 {
                     preserveScroll: true,
-                }
+                },
             );
         }
     });
@@ -114,8 +114,8 @@ const deleteTag = (tag: Tag) => {
                 class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
             >
                 <form
-                    @submit.prevent="submitSearch"
                     class="flex w-full gap-2 md:max-w-md"
+                    @submit.prevent="submitSearch"
                 >
                     <input
                         v-model="search"
@@ -200,17 +200,18 @@ const deleteTag = (tag: Tag) => {
                                 </span>
                             </td>
 
+                            <!-- Estado -->
                             <td class="px-6 py-4">
                                 <span
                                     v-if="tag.is_active"
-                                    class="rounded-full border border-green-500/30 px-2.5 py-1 text-xs font-medium text-green-500"
+                                    class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                                 >
                                     Activa
                                 </span>
 
                                 <span
                                     v-else
-                                    class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                                    class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
                                 >
                                     Inactiva
                                 </span>

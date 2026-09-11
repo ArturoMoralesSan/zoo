@@ -9,10 +9,19 @@ interface GeoJsonGeometry {
     coordinates: number[][][];
 }
 
+interface MapImageBounds {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+}
+
 interface ZooZone {
     id: number;
     name: string;
     geometry: GeoJsonGeometry | null;
+    map_image: string | null;
+    map_image_bounds: MapImageBounds | null;
 }
 
 interface MapMarker {
@@ -46,15 +55,17 @@ const form = useForm({
     is_active: props.marker.is_active,
 });
 
-const selectedZone = computed(() =>
+const selectedZone = computed<ZooZone | null>(() =>
     props.zones.find(
         (zone) => zone.id === form.zone_id,
     ) ?? null,
 );
 
-const submit = () => {
+const submit = (): void => {
     form.put(
-        admin.mapMarkers.update(props.marker.id).url,
+        admin.mapMarkers.update(
+            props.marker.id,
+        ).url,
     );
 };
 </script>
@@ -175,10 +186,23 @@ const submit = () => {
                         </p>
 
                         <p
-                            v-if="form.zone_id && !selectedZone?.geometry"
+                            v-if="
+                                form.zone_id &&
+                                !selectedZone?.geometry
+                            "
                             class="text-xs text-amber-600"
                         >
                             Esta zona no tiene un área definida en el mapa.
+                        </p>
+
+                        <p
+                            v-if="
+                                form.zone_id &&
+                                !selectedZone?.map_image
+                            "
+                            class="text-xs text-amber-600"
+                        >
+                            Esta zona no tiene un plano configurado.
                         </p>
                     </div>
                 </div>
@@ -217,16 +241,45 @@ const submit = () => {
 
                         <p class="mt-1 text-xs text-muted-foreground">
                             Selecciona un punto dentro de la zona directamente
-                            sobre el mapa.
+                            sobre el mapa. El plano es solo una referencia
+                            visual.
                         </p>
                     </div>
 
                     <!-- Mapa -->
                     <MapMarkerMap
-                        :geometry="selectedZone?.geometry ?? null"
+                        :geometry="
+                            selectedZone?.geometry ?? null
+                        "
+                        :map-image="
+                            selectedZone?.map_image ?? null
+                        "
+                        :map-image-bounds="
+                            selectedZone?.map_image_bounds ?? null
+                        "
                         v-model:latitude="form.latitude"
                         v-model:longitude="form.longitude"
                     />
+
+                    <!-- Información del plano -->
+                    <div
+                        v-if="
+                            form.zone_id &&
+                            selectedZone?.map_image &&
+                            selectedZone?.map_image_bounds
+                        "
+                        class="rounded-lg border border-sidebar-border bg-muted/30 p-4"
+                    >
+                        <p class="text-sm font-medium">
+                            Plano de la zona
+                        </p>
+
+                        <p class="mt-1 text-xs text-muted-foreground">
+                            El plano se muestra como referencia. Puedes colocar
+                            el marker en cualquier punto dentro de la zona,
+                            incluso en áreas donde no existe imagen.
+                        </p>
+                    </div>
 
                     <!-- Mensaje sin zona -->
                     <div
@@ -238,8 +291,8 @@ const submit = () => {
                         </p>
 
                         <p class="mt-1 text-xs text-muted-foreground">
-                            Al seleccionar una zona se mostrará su área en el
-                            mapa y podrás colocar el marker.
+                            Al seleccionar una zona se mostrará su plano y su
+                            área en el mapa.
                         </p>
                     </div>
 

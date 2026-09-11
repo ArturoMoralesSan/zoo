@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 
 import admin from '@/routes/admin';
+import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 
 interface SpeciesCategory {
     id: number;
@@ -27,11 +28,26 @@ interface SpeciesModel {
     is_active: boolean;
 }
 
+interface MapImageBounds {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+}
+
+interface GeoJsonGeometry {
+    type: 'Polygon';
+    coordinates: number[][][];
+}
+
 interface ZooZone {
     id: number;
     name: string;
     description?: string | null;
     type?: string | null;
+    geometry?: GeoJsonGeometry | null;
+    map_image?: string | null;
+    map_image_bounds?: MapImageBounds | null;
     is_active: boolean;
 }
 
@@ -884,170 +900,258 @@ const modelUrl = (
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
-            <div>
-                <h2
-                    class="text-lg font-semibold"
-                >
-                    Ubicación
-                </h2>
+            <div
+                class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
+            >
+                <div>
+                    <h2
+                        class="text-lg font-semibold"
+                    >
+                        Ubicación
+                    </h2>
 
-                <p
-                    class="mt-1 text-sm text-muted-foreground"
+                    <p
+                        class="mt-1 text-sm text-muted-foreground"
+                    >
+                        Ubicación registrada dentro del
+                        zoológico.
+                    </p>
+                </div>
+
+                <span
+                    v-if="currentLocation?.zone"
+                    class="w-fit rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
                 >
-                    Ubicación registrada dentro del
-                    zoológico.
-                </p>
+                    {{ currentLocation.zone.name }}
+                </span>
             </div>
 
             <div
                 v-if="currentLocation"
-                class="mt-6 grid gap-5 sm:grid-cols-2"
+                class="mt-6 space-y-6"
             >
                 <!-- ================================================= -->
-                <!-- ZONA -->
+                <!-- INFORMACIÓN DE UBICACIÓN -->
                 <!-- ================================================= -->
 
                 <div
-                    class="sm:col-span-2 rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                    class="grid gap-5 sm:grid-cols-2"
                 >
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                    <!-- ZONA -->
+
+                    <div
+                        class="sm:col-span-2 rounded-lg border border-sidebar-border bg-accent/30 p-4"
                     >
-                        Zona del zoológico
-                    </p>
-
-                    <p
-                        v-if="currentLocation.zone"
-                        class="mt-1 text-base font-semibold"
-                    >
-                        {{
-                            currentLocation.zone.name
-                        }}
-                    </p>
-
-                    <p
-                        v-else
-                        class="mt-1 text-sm italic text-muted-foreground"
-                    >
-                        Sin zona asignada
-                    </p>
-
-                    <p
-                        v-if="
-                            currentLocation.zone?.type
-                        "
-                        class="mt-1 text-xs text-muted-foreground"
-                    >
-                        Tipo:
-                        {{
-                            currentLocation.zone.type
-                        }}
-                    </p>
-                </div>
-
-                <!-- Nombre -->
-
-                <div>
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Nombre de la ubicación
-                    </p>
-
-                    <p
-                        class="mt-1 text-sm font-medium"
-                    >
-                        {{ currentLocation.name }}
-                    </p>
-                </div>
-
-                <!-- Estado -->
-
-                <div>
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Estado
-                    </p>
-
-                    <div class="mt-1">
-                        <span
-                            v-if="
-                                currentLocation.is_active
-                            "
-                            class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
+                        <p
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                         >
-                            Activa
-                        </span>
+                            Zona del zoológico
+                        </p>
 
-                        <span
+                        <p
+                            v-if="currentLocation.zone"
+                            class="mt-1 text-base font-semibold"
+                        >
+                            {{
+                                currentLocation.zone.name
+                            }}
+                        </p>
+
+                        <p
                             v-else
-                            class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
+                            class="mt-1 text-sm italic text-muted-foreground"
                         >
-                            Inactiva
-                        </span>
+                            Sin zona asignada
+                        </p>
+
+                        <p
+                            v-if="
+                                currentLocation.zone?.type
+                            "
+                            class="mt-1 text-xs text-muted-foreground"
+                        >
+                            Tipo:
+                            {{
+                                currentLocation.zone.type
+                            }}
+                        </p>
+                    </div>
+
+                    <!-- Nombre -->
+
+                    <div>
+                        <p
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                        >
+                            Nombre de la ubicación
+                        </p>
+
+                        <p
+                            class="mt-1 text-sm font-medium"
+                        >
+                            {{ currentLocation.name }}
+                        </p>
+                    </div>
+
+                    <!-- Estado -->
+
+                    <div>
+                        <p
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                        >
+                            Estado
+                        </p>
+
+                        <div class="mt-1">
+                            <span
+                                v-if="
+                                    currentLocation.is_active
+                                "
+                                class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
+                            >
+                                Activa
+                            </span>
+
+                            <span
+                                v-else
+                                class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
+                            >
+                                Inactiva
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Latitud -->
+
+                    <div>
+                        <p
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                        >
+                            Latitud
+                        </p>
+
+                        <p
+                            class="mt-1 text-sm"
+                        >
+                            {{ currentLocation.latitude }}
+                        </p>
+                    </div>
+
+                    <!-- Longitud -->
+
+                    <div>
+                        <p
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                        >
+                            Longitud
+                        </p>
+
+                        <p
+                            class="mt-1 text-sm"
+                        >
+                            {{ currentLocation.longitude }}
+                        </p>
+                    </div>
+
+                    <!-- Descripción -->
+
+                    <div
+                        v-if="currentLocation.description"
+                        class="sm:col-span-2"
+                    >
+                        <p
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                        >
+                            Descripción
+                        </p>
+
+                        <p
+                            class="mt-1 whitespace-pre-line text-sm leading-6"
+                        >
+                            {{
+                                currentLocation.description
+                            }}
+                        </p>
                     </div>
                 </div>
 
-                <!-- Latitud -->
-
-                <div>
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Latitud
-                    </p>
-
-                    <p
-                        class="mt-1 text-sm"
-                    >
-                        {{ currentLocation.latitude }}
-                    </p>
-                </div>
-
-                <!-- Longitud -->
-
-                <div>
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Longitud
-                    </p>
-
-                    <p
-                        class="mt-1 text-sm"
-                    >
-                        {{ currentLocation.longitude }}
-                    </p>
-                </div>
-
-                <!-- Descripción -->
+                <!-- ================================================= -->
+                <!-- MAPA / PLANO -->
+                <!-- ================================================= -->
 
                 <div
-                    v-if="currentLocation.description"
-                    class="sm:col-span-2"
+                    class="border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border"
                 >
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                    <div>
+                        <h3
+                            class="text-sm font-semibold"
+                        >
+                            Ubicación en el plano
+                        </h3>
+
+                        <p
+                            class="mt-1 text-xs text-muted-foreground"
+                        >
+                            Posición registrada de la especie
+                            dentro de la zona del zoológico.
+                        </p>
+                    </div>
+
+                    <div
+                        v-if="currentLocation.zone?.geometry"
+                        class="mt-4"
                     >
-                        Descripción
-                    </p>
+                        <MapMarkerMap
+                            :geometry="
+                                currentLocation.zone.geometry
+                            "
+                            :map-image="
+                                currentLocation.zone.map_image ?? null
+                            "
+                            :map-image-bounds="
+                                currentLocation.zone.map_image_bounds ?? null
+                            "
+                            :latitude="
+                                currentLocation.latitude
+                            "
+                            :longitude="
+                                currentLocation.longitude
+                            "
+                            :readonly="true"
+                        />
+                    </div>
+
+                    <div
+                        v-else
+                        class="mt-4 rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                    >
+                        <p
+                            class="text-sm text-muted-foreground"
+                        >
+                            La zona de esta especie no tiene
+                            un área definida en el mapa.
+                        </p>
+                    </div>
 
                     <p
-                        class="mt-1 whitespace-pre-line text-sm leading-6"
+                        v-if="
+                            currentLocation.zone &&
+                            !currentLocation.zone.map_image
+                        "
+                        class="mt-2 text-xs text-amber-600"
                     >
-                        {{
-                            currentLocation.description
-                        }}
+                        Esta zona no tiene un plano configurado.
+                        La ubicación se muestra sobre el mapa
+                        utilizando el área geográfica de la zona.
                     </p>
                 </div>
 
                 <!-- ================================================= -->
-                <!-- MAPA -->
+                <!-- GOOGLE MAPS -->
                 <!-- ================================================= -->
 
                 <div
-                    class="sm:col-span-2"
+                    class="border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border"
                 >
                     <a
                         :href="`https://www.google.com/maps?q=${currentLocation.latitude},${currentLocation.longitude}`"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 
 import admin from '@/routes/admin';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
@@ -8,6 +8,13 @@ import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 interface GeoJsonGeometry {
     type: 'Polygon';
     coordinates: number[][][];
+}
+
+interface MapImageBounds {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
 }
 
 interface Category {
@@ -24,6 +31,8 @@ interface Zone {
     id: number;
     name: string;
     geometry: GeoJsonGeometry | null;
+    map_image: string | null;
+    map_image_bounds: MapImageBounds | null;
 }
 
 const props = defineProps<{
@@ -88,7 +97,7 @@ const form = useForm({
     location_description: '',
 });
 
-const selectedZone = computed(() => {
+const selectedZone = computed<Zone | null>(() => {
     return (
         props.zones.find(
             (zone) => zone.id === Number(form.zone_id),
@@ -98,8 +107,11 @@ const selectedZone = computed(() => {
 
 /*
 |--------------------------------------------------------------------------
-| Si cambia la zona, se deben limpiar las coordenadas
+| Cambio de zona
 |--------------------------------------------------------------------------
+|
+| Cuando cambia la zona se eliminan las coordenadas anteriores.
+|
 */
 
 watch(
@@ -119,19 +131,22 @@ watch(
 const setMainImage = (event: Event) => {
     const target = event.target as HTMLInputElement;
 
-    form.main_image = target.files?.[0] ?? null;
+    form.main_image =
+        target.files?.[0] ?? null;
 };
 
 const setThumbnailImage = (event: Event) => {
     const target = event.target as HTMLInputElement;
 
-    form.thumbnail_image = target.files?.[0] ?? null;
+    form.thumbnail_image =
+        target.files?.[0] ?? null;
 };
 
 const setCardImage = (event: Event) => {
     const target = event.target as HTMLInputElement;
 
-    form.card_image = target.files?.[0] ?? null;
+    form.card_image =
+        target.files?.[0] ?? null;
 };
 
 const setGalleryImages = (event: Event) => {
@@ -151,7 +166,8 @@ const setGalleryImages = (event: Event) => {
 const setModelFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
 
-    const file = target.files?.[0] ?? null;
+    const file =
+        target.files?.[0] ?? null;
 
     form.model_file = file;
 
@@ -190,7 +206,8 @@ const nextTab = () => {
     );
 
     if (currentIndex < tabs.length - 1) {
-        activeTab.value = tabs[currentIndex + 1].id;
+        activeTab.value =
+            tabs[currentIndex + 1].id;
     }
 };
 
@@ -200,7 +217,8 @@ const previousTab = () => {
     );
 
     if (currentIndex > 0) {
-        activeTab.value = tabs[currentIndex - 1].id;
+        activeTab.value =
+            tabs[currentIndex - 1].id;
     }
 };
 
@@ -215,9 +233,12 @@ const goToTab = (tabId: string) => {
 */
 
 const submit = () => {
-    form.post(admin.species.store().url, {
-        forceFormData: true,
-    });
+    form.post(
+        admin.species.store().url,
+        {
+            forceFormData: true,
+        },
+    );
 };
 </script>
 
@@ -228,6 +249,7 @@ const submit = () => {
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
         <!-- HEADER -->
+
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -255,6 +277,7 @@ const submit = () => {
         </div>
 
         <!-- FORM -->
+
         <div
             class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
         >
@@ -263,6 +286,7 @@ const submit = () => {
                 @submit.prevent="submit"
             >
                 <!-- TABS -->
+
                 <div
                     class="border-b border-sidebar-border px-6 pt-6"
                 >
@@ -289,11 +313,10 @@ const submit = () => {
                 </div>
 
                 <!-- CONTENT -->
+
                 <div class="p-6">
 
-                    <!-- ================================================= -->
                     <!-- INFORMACIÓN -->
-                    <!-- ================================================= -->
 
                     <div
                         v-if="activeTab === 'information'"
@@ -309,7 +332,6 @@ const submit = () => {
                             </p>
                         </div>
 
-                        <!-- Categoría -->
                         <div>
                             <label
                                 for="species_category_id"
@@ -340,11 +362,13 @@ const submit = () => {
                                 v-if="form.errors.species_category_id"
                                 class="mt-1 text-sm text-red-500"
                             >
-                                {{ form.errors.species_category_id }}
+                                {{
+                                    form.errors
+                                        .species_category_id
+                                }}
                             </p>
                         </div>
 
-                        <!-- Nombre común / científico -->
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
@@ -392,12 +416,14 @@ const submit = () => {
                                     v-if="form.errors.scientific_name"
                                     class="mt-1 text-sm text-red-500"
                                 >
-                                    {{ form.errors.scientific_name }}
+                                    {{
+                                        form.errors
+                                            .scientific_name
+                                    }}
                                 </p>
                             </div>
                         </div>
 
-                        <!-- Descripción -->
                         <div>
                             <label
                                 for="description"
@@ -422,7 +448,6 @@ const submit = () => {
                             </p>
                         </div>
 
-                        <!-- Datos -->
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
@@ -495,7 +520,6 @@ const submit = () => {
                             </div>
                         </div>
 
-                        <!-- Activo -->
                         <label
                             class="flex cursor-pointer items-center gap-3"
                         >
@@ -511,9 +535,7 @@ const submit = () => {
                         </label>
                     </div>
 
-                    <!-- ================================================= -->
                     <!-- ETIQUETAS -->
-                    <!-- ================================================= -->
 
                     <div
                         v-if="activeTab === 'tags'"
@@ -579,9 +601,7 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <!-- ================================================= -->
                     <!-- IMÁGENES -->
-                    <!-- ================================================= -->
 
                     <div
                         v-if="activeTab === 'images'"
@@ -703,9 +723,7 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <!-- ================================================= -->
                     <!-- MODELO 3D -->
-                    <!-- ================================================= -->
 
                     <div
                         v-if="activeTab === 'model'"
@@ -832,9 +850,7 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <!-- ================================================= -->
                     <!-- UBICACIÓN -->
-                    <!-- ================================================= -->
 
                     <div
                         v-if="activeTab === 'location'"
@@ -852,6 +868,7 @@ const submit = () => {
                         </div>
 
                         <!-- Zona -->
+
                         <div>
                             <label
                                 for="zone_id"
@@ -884,9 +901,30 @@ const submit = () => {
                             >
                                 {{ form.errors.zone_id }}
                             </p>
+
+                            <p
+                                v-if="
+                                    form.zone_id &&
+                                    !selectedZone?.geometry
+                                "
+                                class="mt-2 text-xs text-amber-600"
+                            >
+                                Esta zona no tiene un área definida en el mapa.
+                            </p>
+
+                            <p
+                                v-if="
+                                    form.zone_id &&
+                                    !selectedZone?.map_image
+                                "
+                                class="mt-2 text-xs text-amber-600"
+                            >
+                                Esta zona no tiene un plano configurado.
+                            </p>
                         </div>
 
                         <!-- Mapa -->
+
                         <div
                             v-if="selectedZone"
                             class="space-y-3"
@@ -904,9 +942,21 @@ const submit = () => {
                             </div>
 
                             <MapMarkerMap
-                                :geometry="selectedZone.geometry"
-                                v-model:latitude="form.latitude"
-                                v-model:longitude="form.longitude"
+                                :geometry="
+                                    selectedZone.geometry
+                                "
+                                :map-image="
+                                    selectedZone.map_image
+                                "
+                                :map-image-bounds="
+                                    selectedZone.map_image_bounds
+                                "
+                                v-model:latitude="
+                                    form.latitude
+                                "
+                                v-model:longitude="
+                                    form.longitude
+                                "
                             />
 
                             <div
@@ -929,6 +979,7 @@ const submit = () => {
                         </div>
 
                         <!-- Nombre -->
+
                         <div>
                             <label
                                 for="location_name"
@@ -954,6 +1005,7 @@ const submit = () => {
                         </div>
 
                         <!-- Coordenadas -->
+
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
@@ -1017,6 +1069,7 @@ const submit = () => {
                         </div>
 
                         <!-- Descripción -->
+
                         <div>
                             <label
                                 for="location_description"
@@ -1044,6 +1097,7 @@ const submit = () => {
                 </div>
 
                 <!-- FOOTER -->
+
                 <div
                     class="flex flex-col gap-3 border-t border-sidebar-border px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
                 >
@@ -1058,7 +1112,9 @@ const submit = () => {
                         </button>
                     </div>
 
-                    <div class="flex flex-col gap-3 sm:flex-row">
+                    <div
+                        class="flex flex-col gap-3 sm:flex-row"
+                    >
                         <button
                             v-if="activeTab !== 'location'"
                             type="button"
@@ -1071,7 +1127,9 @@ const submit = () => {
                         <button
                             v-if="activeTab === 'location'"
                             type="submit"
-                            :disabled="form.processing"
+                            :disabled="
+                                form.processing
+                            "
                             class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {{
