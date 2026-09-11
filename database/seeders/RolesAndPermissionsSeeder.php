@@ -101,6 +101,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'map-markers.edit',
             'map-markers.delete',
 
+            // Caminos del mapa
+            'map_paths.view',
+            'map_paths.create',
+            'map_paths.edit',
+            'map_paths.delete',
+
             // Tipos de boleto
             'ticket-types.view',
             'ticket-types.create',
@@ -133,6 +139,20 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Historial de puntos
             'point-movements.view',
+
+            // Recompensas
+            'rewards.view',
+            'rewards.create',
+            'rewards.edit',
+            'rewards.delete',
+
+            // Canje de recompensas
+            'reward-redemptions.view',
+            'reward-redemptions.create',
+
+            // Donaciones
+            'donations.view',
+            'donations.create',
         ];
 
         /*
@@ -166,7 +186,7 @@ class RolesAndPermissionsSeeder extends Seeder
         | Admin
         |--------------------------------------------------------------------------
         |
-        | Admin tiene acceso a todos los módulos administrativos.
+        | Admin tiene acceso completo a los módulos administrativos.
         |
         */
 
@@ -177,13 +197,14 @@ class RolesAndPermissionsSeeder extends Seeder
         | Staff
         |--------------------------------------------------------------------------
         |
-        | Puede operar las funciones principales del zoológico,
+        | Staff puede operar las funciones principales del zoológico,
         | pero no administrar usuarios, roles ni permisos.
         |
         */
 
         $staff->syncPermissions([
 
+            // Dashboard
             'dashboard.view',
 
             // Especies
@@ -200,6 +221,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Mapa
             'map-markers.view',
+            'map_paths.view',
 
             // Boletos
             'ticket-types.view',
@@ -216,6 +238,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'levels.view',
             'point-rules.view',
             'point-movements.view',
+
+            // Recompensas
+            'rewards.view',
+
+            // Canje de recompensas
+            'reward-redemptions.view',
+            'reward-redemptions.create',
+
+            // Donaciones
+            'donations.view',
+            'donations.create',
         ]);
 
         /*

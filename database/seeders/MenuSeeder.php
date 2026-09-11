@@ -88,6 +88,24 @@ class MenuSeeder extends Seeder
             'map-markers.view'
         );
 
+        $this->link(
+            $zoo,
+            'Caminos del mapa',
+            'Route',
+            6,
+            'admin.map-paths.index',
+            'map_paths.view'
+        );
+
+        $this->link(
+            $zoo,
+            'Mapa',
+            'Map',
+            7,
+            'map.index',
+            'map_paths.view'
+        );
+
         /*
         |--------------------------------------------------------------------------
         | Taquilla
@@ -131,6 +149,15 @@ class MenuSeeder extends Seeder
             'ticket-orders.view'
         );
 
+        $this->link(
+            $ticketOffice,
+            'Donaciones',
+            'Heart',
+            4,
+            'admin.donations.index',
+            'donations.view'
+        );
+
         /*
         |--------------------------------------------------------------------------
         | Gamificación
@@ -172,6 +199,24 @@ class MenuSeeder extends Seeder
             3,
             'admin.point-movements.index',
             'point-movements.view'
+        );
+
+        $this->link(
+            $gamification,
+            'Recompensas',
+            'Gift',
+            4,
+            'admin.rewards.index',
+            'rewards.view'
+        );
+
+        $this->link(
+            $gamification,
+            'Canje de recompensas',
+            'BadgeCheck',
+            5,
+            'admin.reward-redemptions.index',
+            'reward-redemptions.view'
         );
 
         /*

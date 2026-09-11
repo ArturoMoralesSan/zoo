@@ -2,13 +2,31 @@
 import { Link, usePage } from '@inertiajs/vue3';
 
 import {
+    BadgeCheck,
     BookOpen,
+    CalendarDays,
+    CirclePlus,
+    CreditCard,
     FolderGit2,
+    Gift,
+    Heart,
+    History,
+    KeyRound,
+    LayoutDashboard,
     LayoutGrid,
+    Map,
+    MapPin,
     PawPrint,
-    Ticket,
-    Users,
+    Receipt,
+    Route,
     Settings,
+    Shield,
+    Tag,
+    Tags,
+    Ticket,
+    TicketCheck,
+    Trophy,
+    Users,
 } from '@lucide/vue';
 
 import AppLogo from '@/components/AppLogo.vue';
@@ -56,13 +74,31 @@ const page = usePage();
 const menus = page.props.menus as Menu[];
 
 const icons = {
-    LayoutGrid,
-    PawPrint,
-    Ticket,
-    Users,
-    Settings,
+    BadgeCheck,
     BookOpen,
+    CalendarDays,
+    CirclePlus,
+    CreditCard,
     FolderGit2,
+    Gift,
+    Heart,
+    History,
+    KeyRound,
+    LayoutDashboard,
+    LayoutGrid,
+    Map,
+    MapPin,
+    PawPrint,
+    Receipt,
+    Route,
+    Settings,
+    Shield,
+    Tag,
+    Tags,
+    Ticket,
+    TicketCheck,
+    Trophy,
+    Users,
 };
 
 function getIcon(icon: string | null) {
@@ -74,9 +110,7 @@ function getIcon(icon: string | null) {
 }
 
 const mainNavItems: NavItem[] = menus.map((menu) => {
-
     if (menu.is_submenu) {
-
         return {
             title: menu.name,
             icon: getIcon(menu.icon),
@@ -98,19 +132,7 @@ const mainNavItems: NavItem[] = menus.map((menu) => {
     };
 });
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: FolderGit2,
-    },
-
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
+const footerNavItems: NavItem[] = [];
 </script>
 
 <template>
