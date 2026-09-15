@@ -1,27 +1,27 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DonationController;
+use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\LevelController;
+use App\Http\Controllers\Admin\MapMarkerController;
+use App\Http\Controllers\Admin\MapPathController;
+use App\Http\Controllers\Admin\PaymentMethodController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\PointMovementController;
+use App\Http\Controllers\Admin\PointRuleController;
+use App\Http\Controllers\Admin\RewardController;
+use App\Http\Controllers\Admin\RewardRedemptionController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SpeciesCategoryController;
 use App\Http\Controllers\Admin\SpeciesController;
 use App\Http\Controllers\Admin\SpeciesTagController;
-use App\Http\Controllers\Admin\TicketTypeController;
-use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\TicketOrderController;
+use App\Http\Controllers\Admin\TicketTypeController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZooZoneController;
-use App\Http\Controllers\Admin\MapMarkerController;
-use App\Http\Controllers\Admin\EventController;
-use App\Http\Controllers\Admin\PointRuleController;
-use App\Http\Controllers\Admin\PointMovementController;
-use App\Http\Controllers\Admin\RewardController;
-use App\Http\Controllers\Admin\RewardRedemptionController;
-use App\Http\Controllers\Admin\DonationController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\MapPathController;
 use App\Http\Controllers\MapController;
+use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
 
@@ -48,50 +48,50 @@ Route::middleware(['auth', 'verified'])
         */
 
         Route::get('dashboard', [DashboardController::class, 'index'])
-        ->name('dashboard')
-        ->middleware('permission:dashboard.view');
+            ->name('dashboard')
+            ->middleware('permission:dashboard.view');
 
         // Usuarios
         Route::resource('users', UserController::class)
             ->middleware([
-                'index'   => 'permission:users.view',
-                'create'  => 'permission:users.create',
-                'store'   => 'permission:users.create',
-                'edit'    => 'permission:users.edit',
-                'update'  => 'permission:users.edit',
+                'index' => 'permission:users.view',
+                'create' => 'permission:users.create',
+                'store' => 'permission:users.create',
+                'edit' => 'permission:users.edit',
+                'update' => 'permission:users.edit',
                 'destroy' => 'permission:users.delete',
             ]);
 
         // Roles
         Route::resource('roles', RoleController::class)
             ->middleware([
-                'index'   => 'permission:roles.view',
-                'create'  => 'permission:roles.create',
-                'store'   => 'permission:roles.create',
-                'edit'    => 'permission:roles.edit',
-                'update'  => 'permission:roles.edit',
+                'index' => 'permission:roles.view',
+                'create' => 'permission:roles.create',
+                'store' => 'permission:roles.create',
+                'edit' => 'permission:roles.edit',
+                'update' => 'permission:roles.edit',
                 'destroy' => 'permission:roles.delete',
             ]);
 
         // Permisos
         Route::resource('permissions', PermissionController::class)
             ->middleware([
-                'index'   => 'permission:permissions.view',
-                'create'  => 'permission:permissions.create',
-                'store'   => 'permission:permissions.create',
-                'edit'    => 'permission:permissions.edit',
-                'update'  => 'permission:permissions.edit',
+                'index' => 'permission:permissions.view',
+                'create' => 'permission:permissions.create',
+                'store' => 'permission:permissions.create',
+                'edit' => 'permission:permissions.edit',
+                'update' => 'permission:permissions.edit',
                 'destroy' => 'permission:permissions.delete',
             ]);
 
         // Levels
         Route::resource('levels', LevelController::class)
             ->middleware([
-                'index'   => 'permission:levels.view',
-                'create'  => 'permission:levels.create',
-                'store'   => 'permission:levels.create',
-                'edit'    => 'permission:levels.edit',
-                'update'  => 'permission:levels.edit',
+                'index' => 'permission:levels.view',
+                'create' => 'permission:levels.create',
+                'store' => 'permission:levels.create',
+                'edit' => 'permission:levels.edit',
+                'update' => 'permission:levels.edit',
                 'destroy' => 'permission:levels.delete',
             ]);
 
@@ -105,7 +105,7 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:species_categories.edit',
                 'destroy' => 'permission:species_categories.delete',
             ]);
-        
+
         Route::resource('species', SpeciesController::class)
             ->middleware([
                 'index' => 'permission:species.view',
@@ -128,7 +128,6 @@ Route::middleware(['auth', 'verified'])
                 'destroy' => 'permission:species_tags.delete',
             ]);
 
-
         Route::resource('ticket-types', TicketTypeController::class)
             ->except(['show'])
             ->middleware([
@@ -139,7 +138,6 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:ticket-types.edit',
                 'destroy' => 'permission:ticket-types.delete',
             ]);
-
 
         Route::resource('payment-methods', PaymentMethodController::class)
             ->except(['show'])
@@ -157,20 +155,20 @@ Route::middleware(['auth', 'verified'])
             ->middleware('permission:ticket-orders.create');
 
         Route::resource('ticket-orders', TicketOrderController::class)
-        ->only([
-            'index',
-            'create',
-            'store',
-            'show',
-            'destroy',
-        ])
-        ->middleware([
-            'index' => 'permission:ticket-orders.view',
-            'create' => 'permission:ticket-orders.create',
-            'store' => 'permission:ticket-orders.create',
-            'show' => 'permission:ticket-orders.view',
-            'destroy' => 'permission:ticket-orders.delete',
-        ]);
+            ->only([
+                'index',
+                'create',
+                'store',
+                'show',
+                'destroy',
+            ])
+            ->middleware([
+                'index' => 'permission:ticket-orders.view',
+                'create' => 'permission:ticket-orders.create',
+                'store' => 'permission:ticket-orders.create',
+                'show' => 'permission:ticket-orders.view',
+                'destroy' => 'permission:ticket-orders.delete',
+            ]);
 
         Route::resource('zoo-zones', ZooZoneController::class)
             ->middleware([
@@ -184,15 +182,15 @@ Route::middleware(['auth', 'verified'])
             ]);
 
         Route::resource('map-markers', MapMarkerController::class)
-        ->middleware([
-            'index' => 'permission:map-markers.view',
-            'create' => 'permission:map-markers.create',
-            'store' => 'permission:map-markers.create',
-            'show' => 'permission:map-markers.view',
-            'edit' => 'permission:map-markers.edit',
-            'update' => 'permission:map-markers.edit',
-            'destroy' => 'permission:map-markers.delete',
-        ]);
+            ->middleware([
+                'index' => 'permission:map-markers.view',
+                'create' => 'permission:map-markers.create',
+                'store' => 'permission:map-markers.create',
+                'show' => 'permission:map-markers.view',
+                'edit' => 'permission:map-markers.edit',
+                'update' => 'permission:map-markers.edit',
+                'destroy' => 'permission:map-markers.delete',
+            ]);
 
         Route::resource('events', EventController::class)
             ->except(['show'])
@@ -215,7 +213,7 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:point-rules.edit',
                 'destroy' => 'permission:point-rules.delete',
             ]);
-        
+
         Route::resource('point-movements', PointMovementController::class)
             ->only(['index'])
             ->middleware([

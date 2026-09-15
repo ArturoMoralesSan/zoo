@@ -46,47 +46,47 @@ class TicketOrderController extends Controller
                     )
 
                     // Origen
-                    ->orWhere(
-                        'source',
-                        'like',
-                        "%{$search}%"
-                    )
+                        ->orWhere(
+                            'source',
+                            'like',
+                            "%{$search}%"
+                        )
 
                     // Estado
-                    ->orWhere(
-                        'status',
-                        'like',
-                        "%{$search}%"
-                    )
+                        ->orWhere(
+                            'status',
+                            'like',
+                            "%{$search}%"
+                        )
 
                     // Comprador
-                    ->orWhereHas(
-                        'user',
-                        function ($query) use ($search) {
-                            $query->where(
-                                'name',
-                                'like',
-                                "%{$search}%"
-                            )
-                            ->orWhere(
-                                'email',
-                                'like',
-                                "%{$search}%"
-                            );
-                        }
-                    )
+                        ->orWhereHas(
+                            'user',
+                            function ($query) use ($search) {
+                                $query->where(
+                                    'name',
+                                    'like',
+                                    "%{$search}%"
+                                )
+                                    ->orWhere(
+                                        'email',
+                                        'like',
+                                        "%{$search}%"
+                                    );
+                            }
+                        )
 
                     // Vendedor
-                    ->orWhereHas(
-                        'seller',
-                        function ($query) use ($search) {
-                            $query->where(
-                                'name',
-                                'like',
-                                "%{$search}%"
-                            );
-                        }
-                    );
+                        ->orWhereHas(
+                            'seller',
+                            function ($query) use ($search) {
+                                $query->where(
+                                    'name',
+                                    'like',
+                                    "%{$search}%"
+                                );
+                            }
+                        );
                 });
             })
             ->latest()
@@ -157,10 +157,9 @@ class TicketOrderController extends Controller
             )
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
-                'message' =>
-                    'No se encontró ningún usuario con ese código QR.',
+                'message' => 'No se encontró ningún usuario con ese código QR.',
             ], 404);
         }
 
@@ -250,8 +249,7 @@ class TicketOrderController extends Controller
                 $items = [];
 
                 foreach (
-                    $validated['items']
-                    as $item
+                    $validated['items'] as $item
                 ) {
                     $ticketType =
                         TicketType::query()
@@ -278,17 +276,13 @@ class TicketOrderController extends Controller
                         $itemSubtotal;
 
                     $items[] = [
-                        'ticket_type_id' =>
-                            $ticketType->id,
+                        'ticket_type_id' => $ticketType->id,
 
-                        'quantity' =>
-                            $quantity,
+                        'quantity' => $quantity,
 
-                        'unit_price' =>
-                            $unitPrice,
+                        'unit_price' => $unitPrice,
 
-                        'subtotal' =>
-                            $itemSubtotal,
+                        'subtotal' => $itemSubtotal,
                     ];
                 }
 
@@ -343,8 +337,7 @@ class TicketOrderController extends Controller
                 $cashTotal = 0;
 
                 foreach (
-                    $validated['payments']
-                    as $payment
+                    $validated['payments'] as $payment
                 ) {
                     $paymentMethod =
                         $paymentMethods->get(
@@ -353,7 +346,7 @@ class TicketOrderController extends Controller
                             ]
                         );
 
-                    if (!$paymentMethod) {
+                    if (! $paymentMethod) {
                         abort(
                             422,
                             'El método de pago seleccionado no es válido.'
@@ -434,36 +427,27 @@ class TicketOrderController extends Controller
 
                 $order =
                     TicketOrder::create([
-                        'folio' =>
-                            $this->generateFolio(),
+                        'folio' => $this->generateFolio(),
 
-                        'user_id' =>
-                            $validated[
+                        'user_id' => $validated[
                                 'user_id'
                             ] ?? null,
 
-                        'seller_id' =>
-                            $request
-                                ->user()
-                                ?->id,
+                        'seller_id' => $request
+                            ->user()
+                            ?->id,
 
-                        'source' =>
-                            'taquilla',
+                        'source' => 'taquilla',
 
-                        'subtotal' =>
-                            $subtotal,
+                        'subtotal' => $subtotal,
 
-                        'discount' =>
-                            $discount,
+                        'discount' => $discount,
 
-                        'total' =>
-                            $total,
+                        'total' => $total,
 
-                        'status' =>
-                            'paid',
+                        'status' => 'paid',
 
-                        'paid_at' =>
-                            now(),
+                        'paid_at' => now(),
                     ]);
 
                 /*
@@ -473,8 +457,7 @@ class TicketOrderController extends Controller
                 */
 
                 foreach (
-                    $items
-                    as $item
+                    $items as $item
                 ) {
                     $orderItem =
                         $order
@@ -491,19 +474,15 @@ class TicketOrderController extends Controller
                         $order
                             ->tickets()
                             ->create([
-                                'ticket_order_item_id' =>
-                                    $orderItem->id,
+                                'ticket_order_item_id' => $orderItem->id,
 
-                                'ticket_type_id' =>
-                                    $item[
+                                'ticket_type_id' => $item[
                                         'ticket_type_id'
                                     ],
 
-                                'qr_token' =>
-                                    (string) Str::uuid(),
+                                'qr_token' => (string) Str::uuid(),
 
-                                'status' =>
-                                    'active',
+                                'status' => 'active',
                             ]);
                     }
                 }
@@ -515,24 +494,20 @@ class TicketOrderController extends Controller
                 */
 
                 foreach (
-                    $validated['payments']
-                    as $payment
+                    $validated['payments'] as $payment
                 ) {
                     $order
                         ->payments()
                         ->create([
-                            'payment_method_id' =>
-                                $payment[
+                            'payment_method_id' => $payment[
                                     'payment_method_id'
                                 ],
 
-                            'amount' =>
-                                $payment[
+                            'amount' => $payment[
                                     'amount'
                                 ],
 
-                            'reference' =>
-                                $payment[
+                            'reference' => $payment[
                                     'reference'
                                 ] ?? null,
                         ]);
@@ -548,7 +523,7 @@ class TicketOrderController extends Controller
                 |
                 */
 
-                if (!empty($validated['user_id'])) {
+                if (! empty($validated['user_id'])) {
                     $user = User::findOrFail(
                         $validated['user_id']
                     );
@@ -678,9 +653,9 @@ class TicketOrderController extends Controller
     {
         do {
             $folio =
-                'ZOO-' .
-                now()->format('Ymd') .
-                '-' .
+                'ZOO-'.
+                now()->format('Ymd').
+                '-'.
                 str_pad(
                     (string) random_int(
                         1,

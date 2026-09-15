@@ -6,13 +6,13 @@ import {
     usePage,
 } from '@inertiajs/vue3';
 
+import QRCode from 'qrcode';
 import {
     computed,
     onMounted,
     ref,
 } from 'vue';
 
-import QRCode from 'qrcode';
 
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/DeleteUser.vue';
@@ -25,9 +25,7 @@ import { Label } from '@/components/ui/label';
 
 import { edit } from '@/routes/profile';
 
-/* @chisel-email-verification */
 import { send } from '@/routes/verification';
-/* @end-chisel-email-verification */
 
 defineOptions({
     layout: {
@@ -163,6 +161,7 @@ const handleAvatarChange = (
         !target.files[0]
     ) {
         avatarPreview.value = null;
+
         return;
     }
 
@@ -737,7 +736,6 @@ const handleAvatarChange = (
 
             <!-- Verificación de correo -->
 
-            <!-- @chisel-email-verification -->
 
             <div
                 v-if="
@@ -776,7 +774,6 @@ const handleAvatarChange = (
                 </div>
             </div>
 
-            <!-- @end-chisel-email-verification -->
 
             <!-- Guardar -->
 

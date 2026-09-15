@@ -97,7 +97,7 @@ class SpeciesTagController extends Controller
                 'required',
                 'string',
                 'max:255',
-                'unique:species_tags,name,' .
+                'unique:species_tags,name,'.
                     $speciesTag->id,
             ],
 

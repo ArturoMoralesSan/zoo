@@ -101,7 +101,7 @@ class SpeciesCategoryController extends Controller
                 'required',
                 'string',
                 'max:255',
-                'unique:species_categories,name,' .
+                'unique:species_categories,name,'.
                     $speciesCategory->id,
             ],
 

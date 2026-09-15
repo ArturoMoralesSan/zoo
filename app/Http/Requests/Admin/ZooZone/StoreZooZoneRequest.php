@@ -112,7 +112,7 @@ class StoreZooZoneRequest extends FormRequest
                     $coordinates = $geometry['coordinates'] ?? null;
 
                     if (
-                        !is_array($coordinates) ||
+                        ! is_array($coordinates) ||
                         count($coordinates) !== 1
                     ) {
                         $validator->errors()->add(
@@ -125,7 +125,7 @@ class StoreZooZoneRequest extends FormRequest
 
                     $ring = $coordinates[0] ?? null;
 
-                    if (!is_array($ring) || count($ring) < 4) {
+                    if (! is_array($ring) || count($ring) < 4) {
                         $validator->errors()->add(
                             'geometry',
                             'El polígono debe tener al menos 4 puntos.'
@@ -136,10 +136,10 @@ class StoreZooZoneRequest extends FormRequest
 
                     foreach ($ring as $point) {
                         if (
-                            !is_array($point) ||
+                            ! is_array($point) ||
                             count($point) !== 2 ||
-                            !is_numeric($point[0]) ||
-                            !is_numeric($point[1])
+                            ! is_numeric($point[0]) ||
+                            ! is_numeric($point[1])
                         ) {
                             $validator->errors()->add(
                                 'geometry',
@@ -201,7 +201,7 @@ class StoreZooZoneRequest extends FormRequest
                 }
 
                 if (
-                    !isset(
+                    ! isset(
                         $bounds['north'],
                         $bounds['south'],
                         $bounds['east'],

@@ -45,7 +45,7 @@ class MapController extends Controller
     public function zone(
         ZooZone $zooZone
     ): JsonResponse {
-        if (!$zooZone->is_active) {
+        if (! $zooZone->is_active) {
             return response()->json(
                 [
                     'message' => 'La zona no está disponible.',

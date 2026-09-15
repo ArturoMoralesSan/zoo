@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import {
+    Head,
+    Link,
+    useForm,
+} from '@inertiajs/vue3';
+import {
     computed,
     onBeforeUnmount,
     ref,
 } from 'vue';
 
-import {
-    Head,
-    Link,
-    useForm,
-} from '@inertiajs/vue3';
 
 import ZooZoneMap from '@/components/admin/ZooZoneMap.vue';
 

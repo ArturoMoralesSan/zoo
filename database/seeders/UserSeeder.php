@@ -102,7 +102,7 @@ class UserSeeder extends Seeder
 
     private function ensureQrToken(User $user): void
     {
-        if (!$user->qr_token) {
+        if (! $user->qr_token) {
             do {
                 $token = Str::random(64);
             } while (

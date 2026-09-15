@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import admin from '@/routes/admin';
+import { computed, ref, watch } from 'vue';
 import MapPathMap from '@/components/admin/MapPathMap.vue';
+import admin from '@/routes/admin';
 
 interface MapImageBounds {
     north: number;

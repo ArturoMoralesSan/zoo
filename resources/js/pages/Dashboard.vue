@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import VueApexCharts from 'vue3-apexcharts';
 import { Head, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
-
 import {
     CalendarDays,
     CircleDollarSign,
@@ -12,6 +9,9 @@ import {
     Ticket,
     TrendingUp,
 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+
+import VueApexCharts from 'vue3-apexcharts';
 
 import admin from '@/routes/admin';
 

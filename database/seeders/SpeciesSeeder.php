@@ -69,7 +69,7 @@ class SpeciesSeeder extends Seeder
         foreach ($species as $item) {
             $categoryId = $categories[$item['category']] ?? null;
 
-            if (!$categoryId) {
+            if (! $categoryId) {
                 continue;
             }
 

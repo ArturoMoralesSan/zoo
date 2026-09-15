@@ -105,7 +105,7 @@ class PointRuleController extends Controller
                 'required',
                 'string',
                 'max:100',
-                'unique:point_rules,type,' . $pointRule->id,
+                'unique:point_rules,type,'.$pointRule->id,
             ],
             'name' => [
                 'required',

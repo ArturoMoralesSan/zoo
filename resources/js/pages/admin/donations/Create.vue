@@ -1,10 +1,4 @@
 <script setup lang="ts">
-import {
-    computed,
-    nextTick,
-    onBeforeUnmount,
-    ref,
-} from 'vue';
 
 import {
     Head,
@@ -15,6 +9,12 @@ import {
 import { Html5Qrcode } from 'html5-qrcode';
 
 import Swal from 'sweetalert2';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    ref,
+} from 'vue';
 
 import admin from '@/routes/admin';
 

@@ -36,23 +36,19 @@ class EventController extends Controller
             })
             ->when(
                 $type,
-                fn ($query, $type) =>
-                    $query->where('type', $type)
+                fn ($query, $type) => $query->where('type', $type)
             )
             ->when(
                 $status === 'active',
-                fn ($query) =>
-                    $query->where('is_active', true)
+                fn ($query) => $query->where('is_active', true)
             )
             ->when(
                 $status === 'inactive',
-                fn ($query) =>
-                    $query->where('is_active', false)
+                fn ($query) => $query->where('is_active', false)
             )
             ->when(
                 $zoneId,
-                fn ($query, $zoneId) =>
-                    $query->where('zoo_zone_id', $zoneId)
+                fn ($query, $zoneId) => $query->where('zoo_zone_id', $zoneId)
             )
             ->orderBy('start_at')
             ->paginate(10)
@@ -128,32 +124,23 @@ class EventController extends Controller
                 $validated['name']
             ),
 
-            'description' =>
-                $validated['description'] ?? null,
+            'description' => $validated['description'] ?? null,
 
-            'type' =>
-                $validated['type'] ?? null,
+            'type' => $validated['type'] ?? null,
 
-            'start_at' =>
-                $validated['start_at'],
+            'start_at' => $validated['start_at'],
 
-            'end_at' =>
-                $validated['end_at'] ?? null,
+            'end_at' => $validated['end_at'] ?? null,
 
-            'zoo_zone_id' =>
-                $validated['zoo_zone_id'] ?? null,
+            'zoo_zone_id' => $validated['zoo_zone_id'] ?? null,
 
-            'image' =>
-                $imagePath,
+            'image' => $imagePath,
 
-            'capacity' =>
-                $validated['capacity'] ?? null,
+            'capacity' => $validated['capacity'] ?? null,
 
-            'is_featured' =>
-                $request->boolean('is_featured'),
+            'is_featured' => $request->boolean('is_featured'),
 
-            'is_active' =>
-                $request->boolean('is_active'),
+            'is_active' => $request->boolean('is_active'),
         ]);
 
         return redirect()
@@ -198,29 +185,21 @@ class EventController extends Controller
                 $event->id
             ),
 
-            'description' =>
-                $validated['description'] ?? null,
+            'description' => $validated['description'] ?? null,
 
-            'type' =>
-                $validated['type'] ?? null,
+            'type' => $validated['type'] ?? null,
 
-            'start_at' =>
-                $validated['start_at'],
+            'start_at' => $validated['start_at'],
 
-            'end_at' =>
-                $validated['end_at'] ?? null,
+            'end_at' => $validated['end_at'] ?? null,
 
-            'zoo_zone_id' =>
-                $validated['zoo_zone_id'] ?? null,
+            'zoo_zone_id' => $validated['zoo_zone_id'] ?? null,
 
-            'capacity' =>
-                $validated['capacity'] ?? null,
+            'capacity' => $validated['capacity'] ?? null,
 
-            'is_featured' =>
-                $request->boolean('is_featured'),
+            'is_featured' => $request->boolean('is_featured'),
 
-            'is_active' =>
-                $request->boolean('is_active'),
+            'is_active' => $request->boolean('is_active'),
         ];
 
         if (
@@ -288,12 +267,11 @@ class EventController extends Controller
                 ->where('slug', $slug)
                 ->when(
                     $ignoreId,
-                    fn ($query) =>
-                        $query->where('id', '!=', $ignoreId)
+                    fn ($query) => $query->where('id', '!=', $ignoreId)
                 )
                 ->exists()
         ) {
-            $slug = $originalSlug . '-' . $counter;
+            $slug = $originalSlug.'-'.$counter;
             $counter++;
         }
 
@@ -310,7 +288,7 @@ class EventController extends Controller
         );
 
         $destination = storage_path(
-            'app/public/' . $directory
+            'app/public/'.$directory
         );
 
         File::ensureDirectoryExists(
@@ -321,13 +299,13 @@ class EventController extends Controller
             $file->getClientOriginalExtension();
 
         $filename =
-            uniqid('', true) . '.' . $extension;
+            uniqid('', true).'.'.$extension;
 
         $file->move(
             $destination,
             $filename
         );
 
-        return $directory . '/' . $filename;
+        return $directory.'/'.$filename;
     }
 }

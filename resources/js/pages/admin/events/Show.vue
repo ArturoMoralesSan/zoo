@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 
-import admin from '@/routes/admin';
-
 import {
     ArrowLeft,
     CalendarDays,
@@ -13,6 +11,8 @@ import {
     Star,
     Users,
 } from 'lucide-vue-next';
+import admin from '@/routes/admin';
+
 
 interface Zone {
     id: number;

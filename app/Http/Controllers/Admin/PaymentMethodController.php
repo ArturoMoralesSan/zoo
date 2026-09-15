@@ -122,7 +122,7 @@ class PaymentMethodController extends Controller
                 'string',
                 'max:100',
                 'alpha_dash',
-                'unique:payment_methods,code,' .
+                'unique:payment_methods,code,'.
                     $paymentMethod->id,
             ],
             'description' => [

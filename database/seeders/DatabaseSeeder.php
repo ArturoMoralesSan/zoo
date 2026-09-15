@@ -23,7 +23,9 @@ class DatabaseSeeder extends Seeder
             SpeciesTagSeeder::class,
             SpeciesSeeder::class,
             PaymentMethodSeeder::class,
+            TicketTypeSeeder::class,
+            PointRuleSeeder::class,
+            RewardSeeder::class,
         ]);
     }
-
 }

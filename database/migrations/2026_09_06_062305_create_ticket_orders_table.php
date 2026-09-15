@@ -22,7 +22,7 @@ return new class extends Migration
                 ->nullable()
                 ->constrained('users')
                 ->nullOnDelete();
-                $table->enum('source', ['app', 'taquilla'])->default('taquilla');
+            $table->enum('source', ['app', 'taquilla'])->default('taquilla');
             $table->decimal('subtotal', 10, 2)->default(0);
             $table->decimal('discount', 10, 2)->default(0);
             $table->decimal('total', 10, 2)->default(0);

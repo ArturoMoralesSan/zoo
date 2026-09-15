@@ -22,10 +22,10 @@ class SpeciesFactory extends Factory
             'common_name' => ucfirst($commonName),
 
             'scientific_name' => ucfirst(
-                fake()->word() . ' ' . fake()->word()
+                fake()->word().' '.fake()->word()
             ),
 
-            'slug' => Str::slug($commonName) . '-' . fake()->unique()->numberBetween(1, 99999),
+            'slug' => Str::slug($commonName).'-'.fake()->unique()->numberBetween(1, 99999),
 
             'description' => fake()->optional()->paragraph(),
 

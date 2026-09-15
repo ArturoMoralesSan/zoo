@@ -67,7 +67,7 @@ class PermissionController extends Controller
                 'required',
                 'string',
                 'max:255',
-                'unique:permissions,name,' . $permission->id,
+                'unique:permissions,name,'.$permission->id,
             ],
         ]);
 

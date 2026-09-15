@@ -233,8 +233,8 @@ class ProfileController extends Controller
                  * ----------------------------------------------------------------------
                  */
                 $filename =
-                    uniqid() .
-                    '.' .
+                    uniqid().
+                    '.'.
                     $avatar->getClientOriginalExtension();
 
                 /*
@@ -270,7 +270,7 @@ class ProfileController extends Controller
                  * ----------------------------------------------------------------------
                  */
                 $profile->avatar =
-                    'avatars/' . $filename;
+                    'avatars/'.$filename;
             }
         }
 

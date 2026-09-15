@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import L from 'leaflet';
 import {
     onBeforeUnmount,
     onMounted,
     ref,
     watch,
 } from 'vue';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 interface GeoJsonGeometry {

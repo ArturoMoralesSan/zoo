@@ -47,8 +47,7 @@ class HandleInertiaRequests extends Middleware
 
             'profile' => fn () => $request->user()?->profile,
 
-            'sidebarOpen' =>
-                ! $request->hasCookie('sidebar_state')
+            'sidebarOpen' => ! $request->hasCookie('sidebar_state')
                 || $request->cookie('sidebar_state') === 'true',
 
             'menus' => fn () => app(MenuComposer::class)->getMenus(),

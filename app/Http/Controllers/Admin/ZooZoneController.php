@@ -117,15 +117,15 @@ class ZooZoneController extends Controller
                 $mapImage->isValid()
             ) {
                 $filename =
-                    uniqid() .
-                    '.' .
+                    uniqid().
+                    '.'.
                     $mapImage->getClientOriginalExtension();
 
                 $directory = storage_path(
                     'app/public/zones'
                 );
 
-                if (!is_dir($directory)) {
+                if (! is_dir($directory)) {
                     mkdir(
                         $directory,
                         0755,
@@ -139,7 +139,7 @@ class ZooZoneController extends Controller
                 );
 
                 $data['map_image'] =
-                    'zones/' . $filename;
+                    'zones/'.$filename;
             }
         }
 
@@ -223,8 +223,8 @@ class ZooZoneController extends Controller
                  * Generar nombre único.
                  */
                 $filename =
-                    uniqid() .
-                    '.' .
+                    uniqid().
+                    '.'.
                     $mapImage->getClientOriginalExtension();
 
                 /**
@@ -234,7 +234,7 @@ class ZooZoneController extends Controller
                     'app/public/zones'
                 );
 
-                if (!is_dir($directory)) {
+                if (! is_dir($directory)) {
                     mkdir(
                         $directory,
                         0755,
@@ -254,7 +254,7 @@ class ZooZoneController extends Controller
                  * Guardar nueva ruta.
                  */
                 $data['map_image'] =
-                    'zones/' . $filename;
+                    'zones/'.$filename;
             }
         } else {
             /**

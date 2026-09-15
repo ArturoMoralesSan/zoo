@@ -142,10 +142,9 @@ class RewardRedemptionController extends Controller
             )
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
-                'message' =>
-                    'No se encontró ningún usuario con ese código QR.',
+                'message' => 'No se encontró ningún usuario con ese código QR.',
             ], 404);
         }
 
@@ -197,7 +196,7 @@ class RewardRedemptionController extends Controller
                             $validated['reward_id']
                         );
 
-                    if (!$reward->is_active) {
+                    if (! $reward->is_active) {
                         throw new RuntimeException(
                             'La recompensa no está disponible.'
                         );
@@ -263,9 +262,9 @@ class RewardRedemptionController extends Controller
     {
         do {
             $folio = 'ZOO-RDM-'
-                . now()->format('Ymd')
-                . '-'
-                . strtoupper(
+                .now()->format('Ymd')
+                .'-'
+                .strtoupper(
                     Str::random(5)
                 );
         } while (

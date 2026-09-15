@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 import ZooZoneMap from '@/components/admin/ZooZoneMap.vue';
 

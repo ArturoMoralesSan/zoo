@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import {
     Head,
     Link,
 } from '@inertiajs/vue3';
-import admin from '@/routes/admin';
+import { computed } from 'vue';
 import MapPathMap from '@/components/admin/MapPathMap.vue';
+import admin from '@/routes/admin';
 
 interface MapImageBounds {
     north: number;

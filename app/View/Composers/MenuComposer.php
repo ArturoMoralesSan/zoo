@@ -13,7 +13,7 @@ class MenuComposer
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return collect();
         }
 
@@ -25,8 +25,8 @@ class MenuComposer
             },
             'links.permission',
         ])
-        ->orderBy('order')
-        ->get();
+            ->orderBy('order')
+            ->get();
 
         return $menus
             ->map(function ($menu) use ($user, $isSuperAdmin) {
@@ -38,12 +38,12 @@ class MenuComposer
                 */
                 if ($menu->is_submenu) {
 
-                    if (!$isSuperAdmin) {
+                    if (! $isSuperAdmin) {
                         $menu->links = $menu->links
                             ->filter(function ($link) use ($user) {
 
                                 // Sin permiso = visible
-                                if (!$link->permission_id) {
+                                if (! $link->permission_id) {
                                     return true;
                                 }
 
@@ -78,7 +78,7 @@ class MenuComposer
                 | MENÚ SIMPLE
                 |--------------------------------------------------------------------------
                 */
-                if (!$menu->is_submenu) {
+                if (! $menu->is_submenu) {
 
                     if (
                         $menu->route &&

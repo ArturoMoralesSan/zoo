@@ -26,21 +26,19 @@ class MapPathController extends Controller
             ->with('zone:id,name')
             ->when(
                 $request->search,
-                fn ($query, $search) =>
-                    $query->where(
-                        fn ($query) =>
-                            $query
-                                ->where(
-                                    'name',
-                                    'like',
-                                    "%{$search}%"
-                                )
-                                ->orWhere(
-                                    'description',
-                                    'like',
-                                    "%{$search}%"
-                                )
-                    )
+                fn ($query, $search) => $query->where(
+                    fn ($query) => $query
+                        ->where(
+                            'name',
+                            'like',
+                            "%{$search}%"
+                        )
+                        ->orWhere(
+                            'description',
+                            'like',
+                            "%{$search}%"
+                        )
+                )
             )
             ->orderBy('order')
             ->orderBy('name')
@@ -108,7 +106,6 @@ class MapPathController extends Controller
          * Marcadores
          * -------------------------------------------------
          */
-
         $markers = MapMarker::query()
             ->where(
                 'zone_id',
@@ -136,7 +133,6 @@ class MapPathController extends Controller
          * Ubicaciones de especies
          * -------------------------------------------------
          */
-
         $speciesLocations = SpeciesLocation::query()
             ->with([
                 'species:id,common_name,scientific_name,description',
@@ -234,15 +230,12 @@ class MapPathController extends Controller
         MapPath::create([
             'zone_id' => $zone->id,
             'name' => $validated['name'],
-            'description' =>
-                $validated['description'] ?? null,
+            'description' => $validated['description'] ?? null,
             'coordinates' => $coordinates,
             'distance' => $distance,
             'estimated_time' => $estimatedTime,
-            'is_active' =>
-                $validated['is_active'] ?? true,
-            'order' =>
-                $validated['order'] ?? 0,
+            'is_active' => $validated['is_active'] ?? true,
+            'order' => $validated['order'] ?? 0,
         ]);
 
         return redirect()
@@ -348,15 +341,12 @@ class MapPathController extends Controller
         $mapPath->update([
             'zone_id' => $zone->id,
             'name' => $validated['name'],
-            'description' =>
-                $validated['description'] ?? null,
+            'description' => $validated['description'] ?? null,
             'coordinates' => $coordinates,
             'distance' => $distance,
             'estimated_time' => $estimatedTime,
-            'is_active' =>
-                $validated['is_active'] ?? true,
-            'order' =>
-                $validated['order'] ?? 0,
+            'is_active' => $validated['is_active'] ?? true,
+            'order' => $validated['order'] ?? 0,
         ]);
 
         return redirect()
@@ -511,10 +501,8 @@ class MapPathController extends Controller
          * IDs de nodos
          * -------------------------------------------------
          */
-
         $nodeIds = array_map(
-            fn ($node) =>
-                (int) $node['id'],
+            fn ($node) => (int) $node['id'],
             $nodes
         );
 
@@ -539,12 +527,10 @@ class MapPathController extends Controller
          * Edges
          * -------------------------------------------------
          */
-
         $edgeKeys = [];
 
         foreach (
-            $edges
-            as $index => $edge
+            $edges as $index => $edge
         ) {
             $from =
                 (int) $edge['from'];
@@ -556,7 +542,7 @@ class MapPathController extends Controller
              * El nodo origen debe existir.
              */
             if (
-                !isset(
+                ! isset(
                     $nodeIdLookup[$from]
                 )
             ) {
@@ -570,7 +556,7 @@ class MapPathController extends Controller
              * El nodo destino debe existir.
              */
             if (
-                !isset(
+                ! isset(
                     $nodeIdLookup[$to]
                 )
             ) {
@@ -608,8 +594,8 @@ class MapPathController extends Controller
              */
             $edgeKey =
                 min($from, $to)
-                . '-'
-                . max($from, $to);
+                .'-'
+                .max($from, $to);
 
             if (
                 isset(
@@ -626,24 +612,20 @@ class MapPathController extends Controller
         }
 
         return [
-            'nodes' =>
-                array_values(
-                    $nodes
-                ),
+            'nodes' => array_values(
+                $nodes
+            ),
 
-            'edges' =>
-                array_values(
-                    array_map(
-                        fn ($edge) => [
-                            'from' =>
-                                (int) $edge['from'],
+            'edges' => array_values(
+                array_map(
+                    fn ($edge) => [
+                        'from' => (int) $edge['from'],
 
-                            'to' =>
-                                (int) $edge['to'],
-                        ],
-                        $edges
-                    )
-                ),
+                        'to' => (int) $edge['to'],
+                    ],
+                    $edges
+                )
+            ),
         ];
     }
 
@@ -663,7 +645,7 @@ class MapPathController extends Controller
         $geometry = $zone->geometry;
 
         if (
-            !is_array($geometry) ||
+            ! is_array($geometry) ||
             empty($geometry)
         ) {
             abort(
@@ -680,7 +662,7 @@ class MapPathController extends Controller
                 (float) $node['lng'];
 
             if (
-                !$this->pointInGeometry(
+                ! $this->pointInGeometry(
                     $latitude,
                     $longitude,
                     $geometry
@@ -726,7 +708,7 @@ class MapPathController extends Controller
                 $geometry['geometry'] ?? null;
 
             if (
-                !is_array(
+                ! is_array(
                     $featureGeometry
                 )
             ) {
@@ -753,8 +735,7 @@ class MapPathController extends Controller
                 $geometry['features'] ?? [];
 
             foreach (
-                $features
-                as $feature
+                $features as $feature
             ) {
                 if (
                     is_array($feature) &&
@@ -793,7 +774,7 @@ class MapPathController extends Controller
                 $coordinates[0] ?? [];
 
             if (
-                !$this->pointInRing(
+                ! $this->pointInRing(
                     $latitude,
                     $longitude,
                     $outerRing
@@ -837,15 +818,12 @@ class MapPathController extends Controller
                 $geometry['coordinates'] ?? [];
 
             foreach (
-                $polygons
-                as $polygon
+                $polygons as $polygon
             ) {
                 $polygonGeometry = [
-                    'type' =>
-                        'Polygon',
+                    'type' => 'Polygon',
 
-                    'coordinates' =>
-                        $polygon,
+                    'coordinates' => $polygon,
                 ];
 
                 if (
@@ -885,11 +863,9 @@ class MapPathController extends Controller
                 $latitude,
                 $longitude,
                 [
-                    'type' =>
-                        'Polygon',
+                    'type' => 'Polygon',
 
-                    'coordinates' =>
-                        $geometry['coordinates'],
+                    'coordinates' => $geometry['coordinates'],
                 ]
             );
         }
@@ -934,8 +910,8 @@ class MapPathController extends Controller
                 $ring[$j] ?? null;
 
             if (
-                !is_array($pointI) ||
-                !is_array($pointJ) ||
+                ! is_array($pointI) ||
+                ! is_array($pointJ) ||
                 count($pointI) < 2 ||
                 count($pointJ) < 2
             ) {
@@ -984,7 +960,7 @@ class MapPathController extends Controller
 
             if ($intersects) {
                 $inside =
-                    !$inside;
+                    ! $inside;
             }
         }
 
@@ -1009,8 +985,7 @@ class MapPathController extends Controller
         $nodeLookup = [];
 
         foreach (
-            $nodes
-            as $node
+            $nodes as $node
         ) {
             $nodeLookup[
                 (int) $node['id']
@@ -1020,8 +995,7 @@ class MapPathController extends Controller
         $distance = 0.0;
 
         foreach (
-            $edges
-            as $edge
+            $edges as $edge
         ) {
             $from =
                 $nodeLookup[
@@ -1034,8 +1008,8 @@ class MapPathController extends Controller
                 ] ?? null;
 
             if (
-                !$from ||
-                !$to
+                ! $from ||
+                ! $to
             ) {
                 continue;
             }

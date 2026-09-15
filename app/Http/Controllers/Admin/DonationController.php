@@ -146,8 +146,7 @@ class DonationController extends Controller
         ) {
             return back()
                 ->withErrors([
-                    'reference' =>
-                        'Este método de pago requiere una referencia.',
+                    'reference' => 'Este método de pago requiere una referencia.',
                 ])
                 ->withInput();
         }
@@ -165,13 +164,11 @@ class DonationController extends Controller
 
             'seller_id' => Auth::id(),
 
-            'payment_method_id' =>
-                $validated['payment_method_id'],
+            'payment_method_id' => $validated['payment_method_id'],
 
             'amount' => $validated['amount'],
 
-            'reference' =>
-                $validated['reference'] ?? null,
+            'reference' => $validated['reference'] ?? null,
 
             'status' => 'completed',
         ]);
@@ -203,7 +200,8 @@ class DonationController extends Controller
     /**
      * Buscar usuario mediante QR.
      */
-    public function userByQr(Request $request): JsonResponse    {
+    public function userByQr(Request $request): JsonResponse
+    {
         $validated = $request->validate([
             'qr_token' => [
                 'required',
@@ -222,10 +220,9 @@ class DonationController extends Controller
             )
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
-                'message' =>
-                    'No se encontró ningún usuario con ese código QR.',
+                'message' => 'No se encontró ningún usuario con ese código QR.',
             ], 404);
         }
 

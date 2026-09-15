@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { nextTick, onMounted, ref } from 'vue';
 import QRCode from 'qrcode';
+import { nextTick, onMounted, ref } from 'vue';
 
 import admin from '@/routes/admin';
 
@@ -709,6 +709,7 @@ const printTickets = async (): Promise<void> => {
                     (resolve) => {
                         if (image.complete) {
                             resolve();
+
                             return;
                         }
 

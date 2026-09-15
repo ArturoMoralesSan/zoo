@@ -2,8 +2,8 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
-import admin from '@/routes/admin';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
+import admin from '@/routes/admin';
 
 interface GeoJsonGeometry {
     type: 'Polygon';

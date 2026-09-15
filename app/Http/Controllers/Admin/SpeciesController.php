@@ -56,11 +56,10 @@ class SpeciesController extends Controller
             })
             ->when(
                 request('category_id'),
-                fn ($query, $categoryId) =>
-                    $query->where(
-                        'species_category_id',
-                        $categoryId
-                    )
+                fn ($query, $categoryId) => $query->where(
+                    'species_category_id',
+                    $categoryId
+                )
             )
             ->orderBy('common_name')
             ->paginate(10)
@@ -184,37 +183,27 @@ class SpeciesController extends Controller
             */
 
             $species = Species::create([
-                'species_category_id' =>
-                    $validated['species_category_id'],
+                'species_category_id' => $validated['species_category_id'],
 
-                'common_name' =>
-                    $validated['common_name'],
+                'common_name' => $validated['common_name'],
 
-                'scientific_name' =>
-                    $validated['scientific_name'],
+                'scientific_name' => $validated['scientific_name'],
 
-                'slug' =>
-                    Str::slug(
-                        $validated['common_name']
-                    ),
+                'slug' => Str::slug(
+                    $validated['common_name']
+                ),
 
-                'description' =>
-                    $validated['description'] ?? null,
+                'description' => $validated['description'] ?? null,
 
-                'habitat' =>
-                    $validated['habitat'] ?? null,
+                'habitat' => $validated['habitat'] ?? null,
 
-                'origin' =>
-                    $validated['origin'] ?? null,
+                'origin' => $validated['origin'] ?? null,
 
-                'diet' =>
-                    $validated['diet'] ?? null,
+                'diet' => $validated['diet'] ?? null,
 
-                'conservation_status' =>
-                    $validated['conservation_status'] ?? null,
+                'conservation_status' => $validated['conservation_status'] ?? null,
 
-                'is_active' =>
-                    $request->boolean('is_active'),
+                'is_active' => $request->boolean('is_active'),
             ]);
 
             /*
@@ -239,27 +228,21 @@ class SpeciesController extends Controller
             ) {
                 $path = $this->moveUploadedFile(
                     $request->file('main_image'),
-                    'species/' . $species->id
+                    'species/'.$species->id
                 );
 
                 SpeciesImage::create([
-                    'species_id' =>
-                        $species->id,
+                    'species_id' => $species->id,
 
-                    'type' =>
-                        'main',
+                    'type' => 'main',
 
-                    'path' =>
-                        $path,
+                    'path' => $path,
 
-                    'alt_text' =>
-                        $species->common_name,
+                    'alt_text' => $species->common_name,
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
 
-                    'sort_order' =>
-                        0,
+                    'sort_order' => 0,
                 ]);
             }
 
@@ -275,27 +258,21 @@ class SpeciesController extends Controller
             ) {
                 $path = $this->moveUploadedFile(
                     $request->file('thumbnail_image'),
-                    'species/' . $species->id
+                    'species/'.$species->id
                 );
 
                 SpeciesImage::create([
-                    'species_id' =>
-                        $species->id,
+                    'species_id' => $species->id,
 
-                    'type' =>
-                        'thumbnail',
+                    'type' => 'thumbnail',
 
-                    'path' =>
-                        $path,
+                    'path' => $path,
 
-                    'alt_text' =>
-                        $species->common_name,
+                    'alt_text' => $species->common_name,
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
 
-                    'sort_order' =>
-                        0,
+                    'sort_order' => 0,
                 ]);
             }
 
@@ -311,27 +288,21 @@ class SpeciesController extends Controller
             ) {
                 $path = $this->moveUploadedFile(
                     $request->file('card_image'),
-                    'species/' . $species->id
+                    'species/'.$species->id
                 );
 
                 SpeciesImage::create([
-                    'species_id' =>
-                        $species->id,
+                    'species_id' => $species->id,
 
-                    'type' =>
-                        'card',
+                    'type' => 'card',
 
-                    'path' =>
-                        $path,
+                    'path' => $path,
 
-                    'alt_text' =>
-                        $species->common_name,
+                    'alt_text' => $species->common_name,
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
 
-                    'sort_order' =>
-                        0,
+                    'sort_order' => 0,
                 ]);
             }
 
@@ -343,36 +314,29 @@ class SpeciesController extends Controller
 
             if ($request->hasFile('gallery_images')) {
                 foreach (
-                    $request->file('gallery_images')
-                    as $index => $image
+                    $request->file('gallery_images') as $index => $image
                 ) {
-                    if (!$image->isValid()) {
+                    if (! $image->isValid()) {
                         continue;
                     }
 
                     $path = $this->moveUploadedFile(
                         $image,
-                        'species/' . $species->id
+                        'species/'.$species->id
                     );
 
                     SpeciesImage::create([
-                        'species_id' =>
-                            $species->id,
+                        'species_id' => $species->id,
 
-                        'type' =>
-                            'gallery',
+                        'type' => 'gallery',
 
-                        'path' =>
-                            $path,
+                        'path' => $path,
 
-                        'alt_text' =>
-                            $species->common_name,
+                        'alt_text' => $species->common_name,
 
-                        'is_active' =>
-                            true,
+                        'is_active' => true,
 
-                        'sort_order' =>
-                            $index,
+                        'sort_order' => $index,
                     ]);
                 }
             }
@@ -384,9 +348,9 @@ class SpeciesController extends Controller
             */
 
             if (
-                !empty($validated['model_name']) ||
+                ! empty($validated['model_name']) ||
                 $request->hasFile('model_file') ||
-                !empty($validated['model_url'])
+                ! empty($validated['model_url'])
             ) {
                 $modelPath = null;
 
@@ -396,37 +360,30 @@ class SpeciesController extends Controller
                 ) {
                     $modelPath = $this->moveUploadedFile(
                         $request->file('model_file'),
-                        'species/' .
-                            $species->id .
+                        'species/'.
+                            $species->id.
                             '/models'
                     );
                 }
 
                 SpeciesModel::create([
-                    'species_id' =>
-                        $species->id,
+                    'species_id' => $species->id,
 
-                    'name' =>
-                        $validated['model_name']
-                        ?? $species->common_name . ' 3D',
+                    'name' => $validated['model_name']
+                        ?? $species->common_name.' 3D',
 
-                    'path' =>
-                        $modelPath,
+                    'path' => $modelPath,
 
-                    'url' =>
-                        $validated['model_url']
+                    'url' => $validated['model_url']
                         ?? null,
 
-                    'format' =>
-                        $validated['model_format']
+                    'format' => $validated['model_format']
                         ?? null,
 
-                    'description' =>
-                        $validated['model_description']
+                    'description' => $validated['model_description']
                         ?? null,
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
                 ]);
             }
 
@@ -445,28 +402,21 @@ class SpeciesController extends Controller
                 $validated['longitude'] !== null
             ) {
                 SpeciesLocation::create([
-                    'species_id' =>
-                        $species->id,
+                    'species_id' => $species->id,
 
-                    'zone_id' =>
-                        $validated['zone_id'] ?? null,
+                    'zone_id' => $validated['zone_id'] ?? null,
 
-                    'name' =>
-                        $validated['location_name']
+                    'name' => $validated['location_name']
                         ?: 'Ubicación principal',
 
-                    'latitude' =>
-                        $validated['latitude'],
+                    'latitude' => $validated['latitude'],
 
-                    'longitude' =>
-                        $validated['longitude'],
+                    'longitude' => $validated['longitude'],
 
-                    'description' =>
-                        $validated['location_description']
+                    'description' => $validated['location_description']
                         ?? null,
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
                 ]);
             }
         });
@@ -563,37 +513,27 @@ class SpeciesController extends Controller
             */
 
             $species->update([
-                'species_category_id' =>
-                    $validated['species_category_id'],
+                'species_category_id' => $validated['species_category_id'],
 
-                'common_name' =>
-                    $validated['common_name'],
+                'common_name' => $validated['common_name'],
 
-                'scientific_name' =>
-                    $validated['scientific_name'],
+                'scientific_name' => $validated['scientific_name'],
 
-                'slug' =>
-                    Str::slug(
-                        $validated['common_name']
-                    ),
+                'slug' => Str::slug(
+                    $validated['common_name']
+                ),
 
-                'description' =>
-                    $validated['description'] ?? null,
+                'description' => $validated['description'] ?? null,
 
-                'habitat' =>
-                    $validated['habitat'] ?? null,
+                'habitat' => $validated['habitat'] ?? null,
 
-                'origin' =>
-                    $validated['origin'] ?? null,
+                'origin' => $validated['origin'] ?? null,
 
-                'diet' =>
-                    $validated['diet'] ?? null,
+                'diet' => $validated['diet'] ?? null,
 
-                'conservation_status' =>
-                    $validated['conservation_status'] ?? null,
+                'conservation_status' => $validated['conservation_status'] ?? null,
 
-                'is_active' =>
-                    $request->boolean('is_active'),
+                'is_active' => $request->boolean('is_active'),
             ]);
 
             /*
@@ -623,7 +563,7 @@ class SpeciesController extends Controller
 
                 $path = $this->moveUploadedFile(
                     $request->file('main_image'),
-                    'species/' . $species->id
+                    'species/'.$species->id
                 );
 
                 if ($currentImage) {
@@ -639,34 +579,25 @@ class SpeciesController extends Controller
                     }
 
                     $currentImage->update([
-                        'path' =>
-                            $path,
+                        'path' => $path,
 
-                        'alt_text' =>
-                            $species->common_name,
+                        'alt_text' => $species->common_name,
 
-                        'is_active' =>
-                            true,
+                        'is_active' => true,
                     ]);
                 } else {
                     SpeciesImage::create([
-                        'species_id' =>
-                            $species->id,
+                        'species_id' => $species->id,
 
-                        'type' =>
-                            'main',
+                        'type' => 'main',
 
-                        'path' =>
-                            $path,
+                        'path' => $path,
 
-                        'alt_text' =>
-                            $species->common_name,
+                        'alt_text' => $species->common_name,
 
-                        'is_active' =>
-                            true,
+                        'is_active' => true,
 
-                        'sort_order' =>
-                            0,
+                        'sort_order' => 0,
                     ]);
                 }
             }
@@ -688,7 +619,7 @@ class SpeciesController extends Controller
 
                 $path = $this->moveUploadedFile(
                     $request->file('thumbnail_image'),
-                    'species/' . $species->id
+                    'species/'.$species->id
                 );
 
                 if ($currentImage) {
@@ -704,34 +635,25 @@ class SpeciesController extends Controller
                     }
 
                     $currentImage->update([
-                        'path' =>
-                            $path,
+                        'path' => $path,
 
-                        'alt_text' =>
-                            $species->common_name,
+                        'alt_text' => $species->common_name,
 
-                        'is_active' =>
-                            true,
+                        'is_active' => true,
                     ]);
                 } else {
                     SpeciesImage::create([
-                        'species_id' =>
-                            $species->id,
+                        'species_id' => $species->id,
 
-                        'type' =>
-                            'thumbnail',
+                        'type' => 'thumbnail',
 
-                        'path' =>
-                            $path,
+                        'path' => $path,
 
-                        'alt_text' =>
-                            $species->common_name,
+                        'alt_text' => $species->common_name,
 
-                        'is_active' =>
-                            true,
+                        'is_active' => true,
 
-                        'sort_order' =>
-                            0,
+                        'sort_order' => 0,
                     ]);
                 }
             }
@@ -753,7 +675,7 @@ class SpeciesController extends Controller
 
                 $path = $this->moveUploadedFile(
                     $request->file('card_image'),
-                    'species/' . $species->id
+                    'species/'.$species->id
                 );
 
                 if ($currentImage) {
@@ -769,34 +691,25 @@ class SpeciesController extends Controller
                     }
 
                     $currentImage->update([
-                        'path' =>
-                            $path,
+                        'path' => $path,
 
-                        'alt_text' =>
-                            $species->common_name,
+                        'alt_text' => $species->common_name,
 
-                        'is_active' =>
-                            true,
+                        'is_active' => true,
                     ]);
                 } else {
                     SpeciesImage::create([
-                        'species_id' =>
-                            $species->id,
+                        'species_id' => $species->id,
 
-                        'type' =>
-                            'card',
+                        'type' => 'card',
 
-                        'path' =>
-                            $path,
+                        'path' => $path,
 
-                        'alt_text' =>
-                            $species->common_name,
+                        'alt_text' => $species->common_name,
 
-                        'is_active' =>
-                            true,
+                        'is_active' => true,
 
-                        'sort_order' =>
-                            0,
+                        'sort_order' => 0,
                     ]);
                 }
             }
@@ -821,36 +734,29 @@ class SpeciesController extends Controller
                     : $lastSortOrder + 1;
 
                 foreach (
-                    $request->file('gallery_images')
-                    as $index => $image
+                    $request->file('gallery_images') as $index => $image
                 ) {
-                    if (!$image->isValid()) {
+                    if (! $image->isValid()) {
                         continue;
                     }
 
                     $path = $this->moveUploadedFile(
                         $image,
-                        'species/' . $species->id
+                        'species/'.$species->id
                     );
 
                     SpeciesImage::create([
-                        'species_id' =>
-                            $species->id,
+                        'species_id' => $species->id,
 
-                        'type' =>
-                            'gallery',
+                        'type' => 'gallery',
 
-                        'path' =>
-                            $path,
+                        'path' => $path,
 
-                        'alt_text' =>
-                            $species->common_name,
+                        'alt_text' => $species->common_name,
 
-                        'is_active' =>
-                            true,
+                        'is_active' => true,
 
-                        'sort_order' =>
-                            $sortOrder + $index,
+                        'sort_order' => $sortOrder + $index,
                     ]);
                 }
             }
@@ -866,11 +772,11 @@ class SpeciesController extends Controller
                 ->first();
 
             $hasModelData =
-                !empty($validated['model_name'])
+                ! empty($validated['model_name'])
                 || $request->hasFile('model_file')
-                || !empty($validated['model_url'])
-                || !empty($validated['model_format'])
-                || !empty($validated['model_description']);
+                || ! empty($validated['model_url'])
+                || ! empty($validated['model_format'])
+                || ! empty($validated['model_description']);
 
             if ($hasModelData) {
                 $modelPath =
@@ -888,8 +794,8 @@ class SpeciesController extends Controller
                 ) {
                     $newModelPath = $this->moveUploadedFile(
                         $request->file('model_file'),
-                        'species/' .
-                            $species->id .
+                        'species/'.
+                            $species->id.
                             '/models'
                     );
 
@@ -914,27 +820,21 @@ class SpeciesController extends Controller
                 }
 
                 $modelData = [
-                    'name' =>
-                        $validated['model_name']
-                        ?? $species->common_name . ' 3D',
+                    'name' => $validated['model_name']
+                        ?? $species->common_name.' 3D',
 
-                    'path' =>
-                        $modelPath,
+                    'path' => $modelPath,
 
-                    'url' =>
-                        $validated['model_url']
+                    'url' => $validated['model_url']
                         ?? null,
 
-                    'format' =>
-                        $validated['model_format']
+                    'format' => $validated['model_format']
                         ?? null,
 
-                    'description' =>
-                        $validated['model_description']
+                    'description' => $validated['model_description']
                         ?? null,
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
                 ];
 
                 if ($currentModel) {
@@ -943,8 +843,7 @@ class SpeciesController extends Controller
                     );
                 } else {
                     SpeciesModel::create([
-                        'species_id' =>
-                            $species->id,
+                        'species_id' => $species->id,
 
                         ...$modelData,
                     ]);
@@ -962,33 +861,27 @@ class SpeciesController extends Controller
                 ->first();
 
             $hasLocationData =
-                !empty($validated['location_name'])
+                ! empty($validated['location_name'])
                 || $validated['zone_id'] !== null
                 || $validated['latitude'] !== null
                 || $validated['longitude'] !== null
-                || !empty($validated['location_description']);
+                || ! empty($validated['location_description']);
 
             if ($hasLocationData) {
                 $locationData = [
-                    'zone_id' =>
-                        $validated['zone_id'] ?? null,
+                    'zone_id' => $validated['zone_id'] ?? null,
 
-                    'name' =>
-                        $validated['location_name']
+                    'name' => $validated['location_name']
                         ?: 'Ubicación principal',
 
-                    'latitude' =>
-                        $validated['latitude'],
+                    'latitude' => $validated['latitude'],
 
-                    'longitude' =>
-                        $validated['longitude'],
+                    'longitude' => $validated['longitude'],
 
-                    'description' =>
-                        $validated['location_description']
+                    'description' => $validated['location_description']
                         ?? null,
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
                 ];
 
                 if ($currentLocation) {
@@ -997,8 +890,7 @@ class SpeciesController extends Controller
                     );
                 } else {
                     SpeciesLocation::create([
-                        'species_id' =>
-                            $species->id,
+                        'species_id' => $species->id,
 
                         ...$locationData,
                     ]);
@@ -1061,7 +953,7 @@ class SpeciesController extends Controller
         );
 
         $destination = storage_path(
-            'app/public/' . $directory
+            'app/public/'.$directory
         );
 
         File::ensureDirectoryExists(
@@ -1072,13 +964,13 @@ class SpeciesController extends Controller
             $file->getClientOriginalExtension();
 
         $filename =
-            uniqid('', true) . '.' . $extension;
+            uniqid('', true).'.'.$extension;
 
         $file->move(
             $destination,
             $filename
         );
 
-        return $directory . '/' . $filename;
+        return $directory.'/'.$filename;
     }
 }

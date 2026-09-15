@@ -15,18 +15,18 @@ class ZooZone extends Model
         'description',
         'type',
         'geometry',
-        'map_image', 
+        'map_image',
         'map_image_bounds',
         'is_active',
     ];
 
-    protected function casts(): array 
-    { 
-        return [ 
-            'geometry' => 'array', 
-            'map_image_bounds' => 'array', 
-            'is_active' => 'boolean', 
-        ]; 
+    protected function casts(): array
+    {
+        return [
+            'geometry' => 'array',
+            'map_image_bounds' => 'array',
+            'is_active' => 'boolean',
+        ];
     }
 
     /**

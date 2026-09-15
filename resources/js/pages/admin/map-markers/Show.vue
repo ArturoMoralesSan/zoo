@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 
-import admin from '@/routes/admin';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
+import admin from '@/routes/admin';
 
 interface GeoJsonGeometry {
     type: 'Polygon';

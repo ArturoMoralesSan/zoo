@@ -29,7 +29,7 @@ class PointService
             ->where('is_active', true)
             ->first();
 
-        if (!$rule) {
+        if (! $rule) {
             throw new RuntimeException(
                 "No existe una regla de puntos activa para: {$type}"
             );
@@ -76,7 +76,7 @@ class PointService
             ->orderByDesc('min_points')
             ->first();
 
-        if (!$newLevel) {
+        if (! $newLevel) {
             return;
         }
 
@@ -98,7 +98,7 @@ class PointService
      */
     private function currentLevelMinPoints(User $user): int
     {
-        if (!$user->level_id) {
+        if (! $user->level_id) {
             return -1;
         }
 

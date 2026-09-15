@@ -1,10 +1,4 @@
 <script setup lang="ts">
-import {
-    computed,
-    nextTick,
-    onBeforeUnmount,
-    ref,
-} from 'vue';
 
 import {
     Head,
@@ -13,6 +7,12 @@ import {
 } from '@inertiajs/vue3';
 
 import { Html5Qrcode } from 'html5-qrcode';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    ref,
+} from 'vue';
 
 import admin from '@/routes/admin';
 
@@ -144,6 +144,7 @@ const addTicket = (
 
     if (item) {
         item.quantity++;
+
         return;
     }
 
@@ -164,6 +165,7 @@ const removeTicket = (
 
     if (item.quantity > 1) {
         item.quantity--;
+
         return;
     }
 

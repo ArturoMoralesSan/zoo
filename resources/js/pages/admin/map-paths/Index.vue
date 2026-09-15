@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
 import Swal from 'sweetalert2';
+import { ref } from 'vue';
 import admin from '@/routes/admin';
 
 interface PathNode {
