@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
+
 import admin from '@/routes/admin';
 
 interface GeoJsonGeometry {
@@ -45,6 +46,14 @@ interface MapMarker {
 const props = defineProps<{
     marker: MapMarker;
 }>();
+
+const iconUrl = (icon: string | null | undefined): string | null => {
+    if (!icon) {
+        return null;
+    }
+
+    return `/storage/markers/${icon}`;
+};
 </script>
 
 <template>
@@ -58,7 +67,6 @@ const props = defineProps<{
         <!-- ===================================================== -->
         <!-- ENCABEZADO -->
         <!-- ===================================================== -->
-
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -103,7 +111,6 @@ const props = defineProps<{
         <!-- ===================================================== -->
         <!-- INFORMACIÓN GENERAL -->
         <!-- ===================================================== -->
-
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -121,7 +128,6 @@ const props = defineProps<{
                 class="mt-6 grid gap-5 sm:grid-cols-2"
             >
                 <!-- Nombre -->
-
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -135,7 +141,6 @@ const props = defineProps<{
                 </div>
 
                 <!-- Tipo -->
-
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -152,7 +157,6 @@ const props = defineProps<{
                 </div>
 
                 <!-- ID -->
-
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -166,7 +170,6 @@ const props = defineProps<{
                 </div>
 
                 <!-- Estado -->
-
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -192,7 +195,6 @@ const props = defineProps<{
                 </div>
 
                 <!-- Icono -->
-
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -204,7 +206,7 @@ const props = defineProps<{
                         class="mt-2 flex items-center gap-3"
                     >
                         <span
-                            class="flex h-10 w-10 items-center justify-center rounded-full border"
+                            class="flex h-12 w-12 items-center justify-center rounded-full border"
                             :style="
                                 marker.color
                                     ? {
@@ -214,20 +216,42 @@ const props = defineProps<{
                                     : undefined
                             "
                         >
-                            📍
+                            <img
+                                v-if="iconUrl(marker.icon)"
+                                :src="iconUrl(marker.icon)!"
+                                :alt="marker.name"
+                                class="h-7 w-7 object-contain"
+                            />
+
+                            <span
+                                v-else
+                                class="text-xl"
+                            >
+                                📍
+                            </span>
                         </span>
 
-                        <span class="text-sm">
-                            {{
-                                marker.icon ||
-                                'Predeterminado'
-                            }}
-                        </span>
+                        <div>
+                            <p class="text-sm font-medium">
+                                {{
+                                    marker.icon ||
+                                    'Predeterminado'
+                                }}
+                            </p>
+
+                            <p
+                                v-if="marker.icon"
+                                class="text-xs text-muted-foreground"
+                            >
+                                /storage/markers/{{
+                                    marker.icon
+                                }}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Color -->
-
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -261,7 +285,6 @@ const props = defineProps<{
                 </div>
 
                 <!-- Descripción -->
-
                 <div
                     v-if="marker.description"
                     class="border-t border-sidebar-border/70 pt-5 dark:border-sidebar-border sm:col-span-2"
@@ -284,7 +307,6 @@ const props = defineProps<{
         <!-- ===================================================== -->
         <!-- UBICACIÓN -->
         <!-- ===================================================== -->
-
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -303,7 +325,6 @@ const props = defineProps<{
                 class="mt-6 grid gap-5 sm:grid-cols-2"
             >
                 <!-- Zona -->
-
                 <div
                     class="rounded-lg border border-sidebar-border bg-accent/30 p-4 sm:col-span-2"
                 >
@@ -337,7 +358,6 @@ const props = defineProps<{
                 </div>
 
                 <!-- Latitud -->
-
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -355,7 +375,6 @@ const props = defineProps<{
                 </div>
 
                 <!-- Longitud -->
-
                 <div>
                     <p
                         class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -373,7 +392,6 @@ const props = defineProps<{
                 </div>
 
                 <!-- Google Maps -->
-
                 <div class="sm:col-span-2">
                     <a
                         :href="`https://www.google.com/maps?q=${marker.latitude},${marker.longitude}`"
@@ -390,7 +408,6 @@ const props = defineProps<{
         <!-- ===================================================== -->
         <!-- MAPA -->
         <!-- ===================================================== -->
-
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -427,6 +444,8 @@ const props = defineProps<{
                     :longitude="
                         Number(marker.longitude)
                     "
+                    :icon="marker.icon ?? 'poi.svg'"
+                    :color="marker.color ?? '#22c55e'"
                     :readonly="true"
                 />
             </div>
@@ -452,7 +471,6 @@ const props = defineProps<{
         <!-- ===================================================== -->
         <!-- ACCIONES -->
         <!-- ===================================================== -->
-
         <div
             class="flex flex-col gap-3 rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between"
         >

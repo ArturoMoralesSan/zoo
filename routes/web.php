@@ -116,6 +116,11 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:species.edit',
                 'destroy' => 'permission:species.delete',
             ]);
+        
+        Route::delete(
+            '/species/{species}/images/{image}',
+            [SpeciesController::class, 'destroyImage']
+        )->name('species.images.destroy');
 
         Route::resource('species-tags', SpeciesTagController::class)
             ->except(['show'])

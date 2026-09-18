@@ -937,6 +937,53 @@ class SpeciesController extends Controller
             );
     }
 
+    /**
+     * |--------------------------------------------------------------------------
+     * | DESTROY IMAGE
+     * |--------------------------------------------------------------------------
+     * |
+     * | Elimina individualmente una imagen de la galería.
+     * |
+     */
+    public function destroyImage(
+        Species $species,
+        SpeciesImage $image
+    ): RedirectResponse {
+        // La imagen debe pertenecer a la especie.
+        if ($image->species_id !== $species->id) {
+            abort(404);
+        }
+
+        // Por seguridad, este método solamente permite
+        // eliminar imágenes de tipo galería.
+        if ($image->type !== 'gallery') {
+            return back()->with(
+                'error',
+                'La imagen seleccionada no pertenece a la galería.'
+            );
+        }
+
+        DB::transaction(function () use ($image) {
+            // Eliminar archivo físico.
+            if (
+                $image->path &&
+                Storage::disk('public')->exists($image->path)
+            ) {
+                Storage::disk('public')->delete(
+                    $image->path
+                );
+            }
+
+            // Eliminar registro de la base de datos.
+            $image->delete();
+        });
+
+        return back()->with(
+            'success',
+            'Imagen de la galería eliminada correctamente.'
+        );
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MÉTODOS PRIVADOS

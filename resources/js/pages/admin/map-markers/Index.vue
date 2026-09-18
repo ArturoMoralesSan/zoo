@@ -192,7 +192,7 @@ const deleteMarker = (marker: MapMarker) => {
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-full border"
+                                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border"
                                         :style="
                                             marker.color
                                                 ? {
@@ -202,7 +202,16 @@ const deleteMarker = (marker: MapMarker) => {
                                                 : undefined
                                         "
                                     >
-                                        📍
+                                        <img
+                                            v-if="marker.icon"
+                                            :src="`/storage/markers/${marker.icon}`"
+                                            :alt="marker.name"
+                                            class="h-6 w-6 object-contain"
+                                        />
+
+                                        <span v-else class="text-lg">
+                                            📍
+                                        </span>
                                     </span>
 
                                     <div>

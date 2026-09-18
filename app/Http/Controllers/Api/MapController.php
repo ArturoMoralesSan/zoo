@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\MapMarker;
 use App\Models\MapPath;
+use App\Models\SpeciesImage;
 use App\Models\SpeciesLocation;
 use App\Models\ZooZone;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +33,12 @@ class MapController extends Controller
 
         $zoneIds = $zones->pluck('id');
 
+        /*
+        |--------------------------------------------------------------------------
+        | Marcadores
+        |--------------------------------------------------------------------------
+        */
+
         $markers = MapMarker::query()
             ->whereIn('zone_id', $zoneIds)
             ->where('is_active', true)
@@ -47,6 +54,12 @@ class MapController extends Controller
                 'icon',
                 'color',
             ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ubicaciones de especies
+        |--------------------------------------------------------------------------
+        */
 
         $speciesLocations = SpeciesLocation::query()
             ->with([
@@ -65,6 +78,59 @@ class MapController extends Controller
                 'is_active',
             ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Thumbnails de especies
+        |--------------------------------------------------------------------------
+        */
+
+        $speciesIds = $speciesLocations
+            ->pluck('species_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $speciesImages = SpeciesImage::query()
+            ->whereIn('species_id', $speciesIds)
+            ->where('type', 'thumbnail')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get([
+                'id',
+                'species_id',
+                'type',
+                'path',
+                'alt_text',
+                'sort_order',
+            ])
+            ->groupBy('species_id');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Agregar thumbnails a cada especie
+        |--------------------------------------------------------------------------
+        */
+
+        $speciesLocations->each(function ($location) use ($speciesImages) {
+            $images = $speciesImages->get(
+                $location->species_id,
+                collect()
+            );
+
+            if ($location->species) {
+                $location->species->setRelation(
+                    'images',
+                    $images->values()
+                );
+            }
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Caminos
+        |--------------------------------------------------------------------------
+        */
+
         $paths = MapPath::query()
             ->whereIn('zone_id', $zoneIds)
             ->where('is_active', true)
@@ -81,6 +147,12 @@ class MapController extends Controller
                 'is_active',
                 'order',
             ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Organizar información por zona
+        |--------------------------------------------------------------------------
+        */
 
         $zones = $zones->map(function (ZooZone $zone) use (
             $markers,
@@ -110,8 +182,15 @@ class MapController extends Controller
             ];
         })->values();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Respuesta
+        |--------------------------------------------------------------------------
+        */
+
         return response()->json([
             'success' => true,
+
             'data' => [
                 'zones' => $zones,
             ],
@@ -131,6 +210,12 @@ class MapController extends Controller
             ], 404);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Marcadores
+        |--------------------------------------------------------------------------
+        */
+
         $markers = MapMarker::query()
             ->where('zone_id', $zooZone->id)
             ->where('is_active', true)
@@ -146,6 +231,12 @@ class MapController extends Controller
                 'icon',
                 'color',
             ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ubicaciones de especies
+        |--------------------------------------------------------------------------
+        */
 
         $speciesLocations = SpeciesLocation::query()
             ->with([
@@ -164,6 +255,59 @@ class MapController extends Controller
                 'is_active',
             ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Thumbnails de especies
+        |--------------------------------------------------------------------------
+        */
+
+        $speciesIds = $speciesLocations
+            ->pluck('species_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $speciesImages = SpeciesImage::query()
+            ->whereIn('species_id', $speciesIds)
+            ->where('type', 'thumbnail')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get([
+                'id',
+                'species_id',
+                'type',
+                'path',
+                'alt_text',
+                'sort_order',
+            ])
+            ->groupBy('species_id');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Agregar thumbnails a cada especie
+        |--------------------------------------------------------------------------
+        */
+
+        $speciesLocations->each(function ($location) use ($speciesImages) {
+            $images = $speciesImages->get(
+                $location->species_id,
+                collect()
+            );
+
+            if ($location->species) {
+                $location->species->setRelation(
+                    'images',
+                    $images->values()
+                );
+            }
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Caminos
+        |--------------------------------------------------------------------------
+        */
+
         $paths = MapPath::query()
             ->where('zone_id', $zooZone->id)
             ->where('is_active', true)
@@ -181,8 +325,15 @@ class MapController extends Controller
                 'order',
             ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Respuesta
+        |--------------------------------------------------------------------------
+        */
+
         return response()->json([
             'success' => true,
+
             'data' => [
                 'zone' => [
                     'id' => $zooZone->id,

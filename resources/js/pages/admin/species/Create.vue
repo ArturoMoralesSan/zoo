@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+
+import {
+    computed,
+    onBeforeUnmount,
+    ref,
+    watch,
+} from 'vue';
 
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 import admin from '@/routes/admin';
@@ -41,6 +47,12 @@ const props = defineProps<{
     zones: Zone[];
 }>();
 
+/**
+ * --------------------------------------------------------------------------
+ * Tabs
+ * --------------------------------------------------------------------------
+ */
+
 const activeTab = ref('information');
 
 const tabs = [
@@ -65,6 +77,12 @@ const tabs = [
         name: 'Ubicación',
     },
 ];
+
+/**
+ * --------------------------------------------------------------------------
+ * Formulario
+ * --------------------------------------------------------------------------
+ */
 
 const form = useForm({
     species_category_id: '',
@@ -97,6 +115,12 @@ const form = useForm({
     location_description: '',
 });
 
+/**
+ * --------------------------------------------------------------------------
+ * Zona seleccionada
+ * --------------------------------------------------------------------------
+ */
+
 const selectedZone = computed<Zone | null>(() => {
     return (
         props.zones.find(
@@ -105,14 +129,24 @@ const selectedZone = computed<Zone | null>(() => {
     );
 });
 
-/*
-|--------------------------------------------------------------------------
-| Cambio de zona
-|--------------------------------------------------------------------------
-|
-| Cuando cambia la zona se eliminan las coordenadas anteriores.
-|
-*/
+/**
+ * --------------------------------------------------------------------------
+ * Miniatura
+ * --------------------------------------------------------------------------
+ *
+ * La miniatura se utiliza como icono temporal
+ * del marker mientras se está creando la especie.
+ */
+
+const thumbnailPreviewUrl = ref<string | null>(null);
+
+/**
+ * --------------------------------------------------------------------------
+ * Cambio de zona
+ * --------------------------------------------------------------------------
+ *
+ * Cuando cambia la zona se eliminan las coordenadas anteriores.
+ */
 
 watch(
     () => form.zone_id,
@@ -122,49 +156,76 @@ watch(
     },
 );
 
-/*
-|--------------------------------------------------------------------------
-| Imágenes
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * Imágenes
+ * --------------------------------------------------------------------------
+ */
 
 const setMainImage = (event: Event) => {
-    const target = event.target as HTMLInputElement;
+    const target =
+        event.target as HTMLInputElement;
 
     form.main_image =
         target.files?.[0] ?? null;
 };
 
 const setThumbnailImage = (event: Event) => {
-    const target = event.target as HTMLInputElement;
+    const target =
+        event.target as HTMLInputElement;
 
-    form.thumbnail_image =
+    /**
+     * Liberamos la URL temporal anterior.
+     */
+    if (thumbnailPreviewUrl.value) {
+        URL.revokeObjectURL(
+            thumbnailPreviewUrl.value,
+        );
+
+        thumbnailPreviewUrl.value = null;
+    }
+
+    const file =
         target.files?.[0] ?? null;
+
+    form.thumbnail_image = file;
+
+    /**
+     * Creamos una URL temporal para utilizar
+     * la miniatura directamente en el marker.
+     */
+    if (file) {
+        thumbnailPreviewUrl.value =
+            URL.createObjectURL(file);
+    }
 };
 
 const setCardImage = (event: Event) => {
-    const target = event.target as HTMLInputElement;
+    const target =
+        event.target as HTMLInputElement;
 
     form.card_image =
         target.files?.[0] ?? null;
 };
 
 const setGalleryImages = (event: Event) => {
-    const target = event.target as HTMLInputElement;
+    const target =
+        event.target as HTMLInputElement;
 
     form.gallery_images = target.files
         ? Array.from(target.files)
         : [];
 };
 
-/*
-|--------------------------------------------------------------------------
-| Modelo 3D
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * Modelo 3D
+ * --------------------------------------------------------------------------
+ */
 
 const setModelFile = (event: Event) => {
-    const target = event.target as HTMLInputElement;
+    const target =
+        event.target as HTMLInputElement;
 
     const file =
         target.files?.[0] ?? null;
@@ -182,55 +243,72 @@ const setModelFile = (event: Event) => {
             extension === 'gltf' ||
             extension === 'usdz'
         ) {
-            form.model_format = extension;
+            form.model_format =
+                extension;
         }
 
         if (!form.model_name) {
-            form.model_name = file.name.replace(
-                /\.[^/.]+$/,
-                '',
-            );
+            form.model_name =
+                file.name.replace(
+                    /\.[^/.]+$/,
+                    '',
+                );
         }
     }
 };
 
-/*
-|--------------------------------------------------------------------------
-| Navegación
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * Navegación
+ * --------------------------------------------------------------------------
+ */
 
 const nextTab = () => {
-    const currentIndex = tabs.findIndex(
-        (tab) => tab.id === activeTab.value,
-    );
+    const currentIndex =
+        tabs.findIndex(
+            (tab) =>
+                tab.id ===
+                activeTab.value,
+        );
 
-    if (currentIndex < tabs.length - 1) {
+    if (
+        currentIndex <
+        tabs.length - 1
+    ) {
         activeTab.value =
-            tabs[currentIndex + 1].id;
+            tabs[
+                currentIndex + 1
+            ].id;
     }
 };
 
 const previousTab = () => {
-    const currentIndex = tabs.findIndex(
-        (tab) => tab.id === activeTab.value,
-    );
+    const currentIndex =
+        tabs.findIndex(
+            (tab) =>
+                tab.id ===
+                activeTab.value,
+        );
 
     if (currentIndex > 0) {
         activeTab.value =
-            tabs[currentIndex - 1].id;
+            tabs[
+                currentIndex - 1
+            ].id;
     }
 };
 
-const goToTab = (tabId: string) => {
+const goToTab = (
+    tabId: string,
+) => {
     activeTab.value = tabId;
 };
 
-/*
-|--------------------------------------------------------------------------
-| Submit
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * Submit
+ * --------------------------------------------------------------------------
+ */
 
 const submit = () => {
     form.post(
@@ -240,6 +318,20 @@ const submit = () => {
         },
     );
 };
+
+/**
+ * --------------------------------------------------------------------------
+ * Limpieza
+ * --------------------------------------------------------------------------
+ */
+
+onBeforeUnmount(() => {
+    if (thumbnailPreviewUrl.value) {
+        URL.revokeObjectURL(
+            thumbnailPreviewUrl.value,
+        );
+    }
+});
 </script>
 
 <template>
@@ -261,14 +353,18 @@ const submit = () => {
                         Nueva especie
                     </h1>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Registra la información, imágenes, etiquetas,
-                        modelo 3D y ubicación.
+                    <p
+                        class="mt-1 text-sm text-muted-foreground"
+                    >
+                        Registra la información, imágenes,
+                        etiquetas, modelo 3D y ubicación.
                     </p>
                 </div>
 
                 <Link
-                    :href="admin.species.index().url"
+                    :href="
+                        admin.species.index().url
+                    "
                     class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
                     Regresar
@@ -290,20 +386,31 @@ const submit = () => {
                 <div
                     class="border-b border-sidebar-border px-6 pt-6"
                 >
-                    <div class="flex gap-2 overflow-x-auto">
+                    <div
+                        class="flex gap-2 overflow-x-auto"
+                    >
                         <button
-                            v-for="(tab, index) in tabs"
+                            v-for="(
+                                tab, index
+                            ) in tabs"
                             :key="tab.id"
                             type="button"
                             class="whitespace-nowrap rounded-t-lg px-4 py-3 text-sm font-medium transition"
                             :class="
-                                activeTab === tab.id
+                                activeTab ===
+                                tab.id
                                     ? 'bg-primary text-primary-foreground'
                                     : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                             "
-                            @click="goToTab(tab.id)"
+                            @click="
+                                goToTab(
+                                    tab.id,
+                                )
+                            "
                         >
-                            <span class="mr-1.5 opacity-70">
+                            <span
+                                class="mr-1.5 opacity-70"
+                            >
                                 {{ index + 1 }}.
                             </span>
 
@@ -315,22 +422,30 @@ const submit = () => {
                 <!-- CONTENT -->
 
                 <div class="p-6">
-
                     <!-- INFORMACIÓN -->
 
                     <div
-                        v-if="activeTab === 'information'"
+                        v-if="
+                            activeTab ===
+                            'information'
+                        "
                         class="space-y-6"
                     >
                         <div>
-                            <h2 class="text-lg font-semibold">
+                            <h2
+                                class="text-lg font-semibold"
+                            >
                                 Información de la especie
                             </h2>
 
-                            <p class="mt-1 text-sm text-muted-foreground">
+                            <p
+                                class="mt-1 text-sm text-muted-foreground"
+                            >
                                 Información principal de la especie.
                             </p>
                         </div>
+
+                        <!-- CATEGORÍA -->
 
                         <div>
                             <label
@@ -342,7 +457,9 @@ const submit = () => {
 
                             <select
                                 id="species_category_id"
-                                v-model="form.species_category_id"
+                                v-model="
+                                    form.species_category_id
+                                "
                                 class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             >
                                 <option value="">
@@ -351,15 +468,22 @@ const submit = () => {
 
                                 <option
                                     v-for="category in props.categories"
-                                    :key="category.id"
-                                    :value="category.id"
+                                    :key="
+                                        category.id
+                                    "
+                                    :value="
+                                        category.id
+                                    "
                                 >
                                     {{ category.name }}
                                 </option>
                             </select>
 
                             <p
-                                v-if="form.errors.species_category_id"
+                                v-if="
+                                    form.errors
+                                        .species_category_id
+                                "
                                 class="mt-1 text-sm text-red-500"
                             >
                                 {{
@@ -368,6 +492,8 @@ const submit = () => {
                                 }}
                             </p>
                         </div>
+
+                        <!-- NOMBRES -->
 
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
@@ -382,17 +508,25 @@ const submit = () => {
 
                                 <input
                                     id="common_name"
-                                    v-model="form.common_name"
+                                    v-model="
+                                        form.common_name
+                                    "
                                     type="text"
                                     placeholder="Ej. León"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
 
                                 <p
-                                    v-if="form.errors.common_name"
+                                    v-if="
+                                        form.errors
+                                            .common_name
+                                    "
                                     class="mt-1 text-sm text-red-500"
                                 >
-                                    {{ form.errors.common_name }}
+                                    {{
+                                        form.errors
+                                            .common_name
+                                    }}
                                 </p>
                             </div>
 
@@ -406,14 +540,19 @@ const submit = () => {
 
                                 <input
                                     id="scientific_name"
-                                    v-model="form.scientific_name"
+                                    v-model="
+                                        form.scientific_name
+                                    "
                                     type="text"
                                     placeholder="Ej. Panthera leo"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm italic outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
 
                                 <p
-                                    v-if="form.errors.scientific_name"
+                                    v-if="
+                                        form.errors
+                                            .scientific_name
+                                    "
                                     class="mt-1 text-sm text-red-500"
                                 >
                                     {{
@@ -423,6 +562,8 @@ const submit = () => {
                                 </p>
                             </div>
                         </div>
+
+                        <!-- DESCRIPCIÓN -->
 
                         <div>
                             <label
@@ -434,19 +575,29 @@ const submit = () => {
 
                             <textarea
                                 id="description"
-                                v-model="form.description"
+                                v-model="
+                                    form.description
+                                "
                                 rows="5"
                                 placeholder="Describe la especie..."
                                 class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
 
                             <p
-                                v-if="form.errors.description"
+                                v-if="
+                                    form.errors
+                                        .description
+                                "
                                 class="mt-1 text-sm text-red-500"
                             >
-                                {{ form.errors.description }}
+                                {{
+                                    form.errors
+                                        .description
+                                }}
                             </p>
                         </div>
+
+                        <!-- DATOS -->
 
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
@@ -461,7 +612,9 @@ const submit = () => {
 
                                 <input
                                     id="habitat"
-                                    v-model="form.habitat"
+                                    v-model="
+                                        form.habitat
+                                    "
                                     type="text"
                                     placeholder="Ej. Selva tropical"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -478,7 +631,9 @@ const submit = () => {
 
                                 <input
                                     id="origin"
-                                    v-model="form.origin"
+                                    v-model="
+                                        form.origin
+                                    "
                                     type="text"
                                     placeholder="Ej. África"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -495,7 +650,9 @@ const submit = () => {
 
                                 <input
                                     id="diet"
-                                    v-model="form.diet"
+                                    v-model="
+                                        form.diet
+                                    "
                                     type="text"
                                     placeholder="Ej. Carnívoro"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -512,7 +669,9 @@ const submit = () => {
 
                                 <input
                                     id="conservation_status"
-                                    v-model="form.conservation_status"
+                                    v-model="
+                                        form.conservation_status
+                                    "
                                     type="text"
                                     placeholder="Ej. Vulnerable"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -520,16 +679,22 @@ const submit = () => {
                             </div>
                         </div>
 
+                        <!-- ACTIVO -->
+
                         <label
                             class="flex cursor-pointer items-center gap-3"
                         >
                             <input
-                                v-model="form.is_active"
+                                v-model="
+                                    form.is_active
+                                "
                                 type="checkbox"
                                 class="h-4 w-4 rounded border-sidebar-border"
                             />
 
-                            <span class="text-sm font-medium">
+                            <span
+                                class="text-sm font-medium"
+                            >
                                 Especie activa
                             </span>
                         </label>
@@ -538,37 +703,54 @@ const submit = () => {
                     <!-- ETIQUETAS -->
 
                     <div
-                        v-if="activeTab === 'tags'"
+                        v-if="
+                            activeTab ===
+                            'tags'
+                        "
                         class="space-y-6"
                     >
                         <div>
-                            <h2 class="text-lg font-semibold">
+                            <h2
+                                class="text-lg font-semibold"
+                            >
                                 Etiquetas
                             </h2>
 
-                            <p class="mt-1 text-sm text-muted-foreground">
+                            <p
+                                class="mt-1 text-sm text-muted-foreground"
+                            >
                                 Selecciona las etiquetas que describen
                                 a esta especie.
                             </p>
                         </div>
 
                         <div
-                            v-if="props.tags.length"
+                            v-if="
+                                props.tags.length
+                            "
                             class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
                         >
                             <label
                                 v-for="tag in props.tags"
-                                :key="tag.id"
+                                :key="
+                                    tag.id
+                                "
                                 class="flex cursor-pointer items-center gap-3 rounded-lg border border-sidebar-border px-4 py-3 transition hover:bg-accent"
                             >
                                 <input
-                                    v-model="form.tags"
+                                    v-model="
+                                        form.tags
+                                    "
                                     type="checkbox"
-                                    :value="tag.id"
+                                    :value="
+                                        tag.id
+                                    "
                                     class="h-4 w-4 rounded border-sidebar-border"
                                 />
 
-                                <span class="text-sm">
+                                <span
+                                    class="text-sm"
+                                >
                                     {{ tag.name }}
                                 </span>
                             </label>
@@ -578,13 +760,17 @@ const submit = () => {
                             v-else
                             class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
                         >
-                            <p class="text-sm text-muted-foreground">
+                            <p
+                                class="text-sm text-muted-foreground"
+                            >
                                 No hay etiquetas activas disponibles.
                             </p>
                         </div>
 
                         <div
-                            v-if="form.tags.length"
+                            v-if="
+                                form.tags.length
+                            "
                             class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
                         >
                             <p class="text-sm">
@@ -593,7 +779,8 @@ const submit = () => {
                                 </strong>
 
                                 {{
-                                    form.tags.length === 1
+                                    form.tags.length ===
+                                    1
                                         ? 'etiqueta seleccionada'
                                         : 'etiquetas seleccionadas'
                                 }}
@@ -604,15 +791,22 @@ const submit = () => {
                     <!-- IMÁGENES -->
 
                     <div
-                        v-if="activeTab === 'images'"
+                        v-if="
+                            activeTab ===
+                            'images'
+                        "
                         class="space-y-6"
                     >
                         <div>
-                            <h2 class="text-lg font-semibold">
+                            <h2
+                                class="text-lg font-semibold"
+                            >
                                 Imágenes
                             </h2>
 
-                            <p class="mt-1 text-sm text-muted-foreground">
+                            <p
+                                class="mt-1 text-sm text-muted-foreground"
+                            >
                                 Agrega las imágenes de la especie.
                             </p>
                         </div>
@@ -620,6 +814,8 @@ const submit = () => {
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
+                            <!-- PRINCIPAL -->
+
                             <div
                                 class="rounded-xl border border-sidebar-border p-5"
                             >
@@ -635,13 +831,19 @@ const submit = () => {
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
                                     class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                    @change="setMainImage"
+                                    @change="
+                                        setMainImage
+                                    "
                                 />
 
-                                <p class="mt-2 text-xs text-muted-foreground">
+                                <p
+                                    class="mt-2 text-xs text-muted-foreground"
+                                >
                                     JPG, PNG o WEBP.
                                 </p>
                             </div>
+
+                            <!-- MINIATURA -->
 
                             <div
                                 class="rounded-xl border border-sidebar-border p-5"
@@ -658,13 +860,55 @@ const submit = () => {
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
                                     class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                    @change="setThumbnailImage"
+                                    @change="
+                                        setThumbnailImage
+                                    "
                                 />
 
-                                <p class="mt-2 text-xs text-muted-foreground">
-                                    Imagen pequeña para listados.
+                                <p
+                                    class="mt-2 text-xs text-muted-foreground"
+                                >
+                                    Imagen pequeña para listados y
+                                    representación de la especie en el mapa.
                                 </p>
+
+                                <!-- PREVIEW -->
+
+                                <div
+                                    v-if="
+                                        thumbnailPreviewUrl
+                                    "
+                                    class="mt-4 flex items-center gap-3"
+                                >
+                                    <div
+                                        class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-sidebar-border bg-muted"
+                                    >
+                                        <img
+                                            :src="
+                                                thumbnailPreviewUrl
+                                            "
+                                            alt="Vista previa de miniatura"
+                                            class="h-full w-full object-cover"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <p
+                                            class="text-sm font-medium"
+                                        >
+                                            Miniatura seleccionada
+                                        </p>
+
+                                        <p
+                                            class="text-xs text-muted-foreground"
+                                        >
+                                            Se utilizará como icono del marker.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- TARJETA -->
 
                             <div
                                 class="rounded-xl border border-sidebar-border p-5"
@@ -681,13 +925,19 @@ const submit = () => {
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
                                     class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                    @change="setCardImage"
+                                    @change="
+                                        setCardImage
+                                    "
                                 />
 
-                                <p class="mt-2 text-xs text-muted-foreground">
+                                <p
+                                    class="mt-2 text-xs text-muted-foreground"
+                                >
                                     Imagen para la tarjeta coleccionable.
                                 </p>
                             </div>
+
+                            <!-- GALERÍA -->
 
                             <div
                                 class="rounded-xl border border-sidebar-border p-5"
@@ -705,18 +955,29 @@ const submit = () => {
                                     accept=".jpg,.jpeg,.png,.webp"
                                     multiple
                                     class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                    @change="setGalleryImages"
+                                    @change="
+                                        setGalleryImages
+                                    "
                                 />
 
-                                <p class="mt-2 text-xs text-muted-foreground">
+                                <p
+                                    class="mt-2 text-xs text-muted-foreground"
+                                >
                                     Puedes seleccionar varias imágenes.
                                 </p>
 
                                 <p
-                                    v-if="form.gallery_images.length"
+                                    v-if="
+                                        form.gallery_images
+                                            .length
+                                    "
                                     class="mt-2 text-xs"
                                 >
-                                    {{ form.gallery_images.length }}
+                                    {{
+                                        form
+                                            .gallery_images
+                                            .length
+                                    }}
                                     imágenes seleccionadas.
                                 </p>
                             </div>
@@ -726,15 +987,22 @@ const submit = () => {
                     <!-- MODELO 3D -->
 
                     <div
-                        v-if="activeTab === 'model'"
+                        v-if="
+                            activeTab ===
+                            'model'
+                        "
                         class="space-y-6"
                     >
                         <div>
-                            <h2 class="text-lg font-semibold">
+                            <h2
+                                class="text-lg font-semibold"
+                            >
                                 Modelo 3D
                             </h2>
 
-                            <p class="mt-1 text-sm text-muted-foreground">
+                            <p
+                                class="mt-1 text-sm text-muted-foreground"
+                            >
                                 Agrega el modelo 3D de la especie.
                             </p>
                         </div>
@@ -742,6 +1010,8 @@ const submit = () => {
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
+                            <!-- NOMBRE -->
+
                             <div>
                                 <label
                                     for="model_name"
@@ -752,12 +1022,16 @@ const submit = () => {
 
                                 <input
                                     id="model_name"
-                                    v-model="form.model_name"
+                                    v-model="
+                                        form.model_name
+                                    "
                                     type="text"
                                     placeholder="Ej. León 3D"
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
+
+                            <!-- FORMATO -->
 
                             <div>
                                 <label
@@ -769,7 +1043,9 @@ const submit = () => {
 
                                 <select
                                     id="model_format"
-                                    v-model="form.model_format"
+                                    v-model="
+                                        form.model_format
+                                    "
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 >
                                     <option value="">
@@ -790,6 +1066,8 @@ const submit = () => {
                                 </select>
                             </div>
 
+                            <!-- ARCHIVO -->
+
                             <div>
                                 <label
                                     for="model_file"
@@ -803,16 +1081,26 @@ const submit = () => {
                                     type="file"
                                     accept=".glb,.gltf,.usdz"
                                     class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                    @change="setModelFile"
+                                    @change="
+                                        setModelFile
+                                    "
                                 />
 
                                 <p
-                                    v-if="form.model_file"
+                                    v-if="
+                                        form.model_file
+                                    "
                                     class="mt-2 text-xs"
                                 >
-                                    {{ form.model_file.name }}
+                                    {{
+                                        form
+                                            .model_file
+                                            .name
+                                    }}
                                 </p>
                             </div>
+
+                            <!-- URL -->
 
                             <div>
                                 <label
@@ -824,13 +1112,17 @@ const submit = () => {
 
                                 <input
                                     id="model_url"
-                                    v-model="form.model_url"
+                                    v-model="
+                                        form.model_url
+                                    "
                                     type="url"
                                     placeholder="https://..."
                                     class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                         </div>
+
+                        <!-- DESCRIPCIÓN -->
 
                         <div>
                             <label
@@ -842,7 +1134,9 @@ const submit = () => {
 
                             <textarea
                                 id="model_description"
-                                v-model="form.model_description"
+                                v-model="
+                                    form.model_description
+                                "
                                 rows="4"
                                 placeholder="Descripción del modelo 3D..."
                                 class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -853,21 +1147,28 @@ const submit = () => {
                     <!-- UBICACIÓN -->
 
                     <div
-                        v-if="activeTab === 'location'"
+                        v-if="
+                            activeTab ===
+                            'location'
+                        "
                         class="space-y-6"
                     >
                         <div>
-                            <h2 class="text-lg font-semibold">
+                            <h2
+                                class="text-lg font-semibold"
+                            >
                                 Ubicación
                             </h2>
 
-                            <p class="mt-1 text-sm text-muted-foreground">
+                            <p
+                                class="mt-1 text-sm text-muted-foreground"
+                            >
                                 Selecciona la zona y coloca la especie
                                 directamente en el mapa.
                             </p>
                         </div>
 
-                        <!-- Zona -->
+                        <!-- ZONA -->
 
                         <div>
                             <label
@@ -879,7 +1180,9 @@ const submit = () => {
 
                             <select
                                 id="zone_id"
-                                v-model="form.zone_id"
+                                v-model="
+                                    form.zone_id
+                                "
                                 class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             >
                                 <option value="">
@@ -888,18 +1191,28 @@ const submit = () => {
 
                                 <option
                                     v-for="zone in props.zones"
-                                    :key="zone.id"
-                                    :value="zone.id"
+                                    :key="
+                                        zone.id
+                                    "
+                                    :value="
+                                        zone.id
+                                    "
                                 >
                                     {{ zone.name }}
                                 </option>
                             </select>
 
                             <p
-                                v-if="form.errors.zone_id"
+                                v-if="
+                                    form.errors
+                                        .zone_id
+                                "
                                 class="mt-1 text-sm text-red-500"
                             >
-                                {{ form.errors.zone_id }}
+                                {{
+                                    form.errors
+                                        .zone_id
+                                }}
                             </p>
 
                             <p
@@ -909,7 +1222,8 @@ const submit = () => {
                                 "
                                 class="mt-2 text-xs text-amber-600"
                             >
-                                Esta zona no tiene un área definida en el mapa.
+                                Esta zona no tiene un área definida
+                                en el mapa.
                             </p>
 
                             <p
@@ -923,21 +1237,25 @@ const submit = () => {
                             </p>
                         </div>
 
-                        <!-- Mapa -->
+                        <!-- MAPA -->
 
                         <div
                             v-if="selectedZone"
                             class="space-y-3"
                         >
                             <div>
-                                <h3 class="text-sm font-semibold">
+                                <h3
+                                    class="text-sm font-semibold"
+                                >
                                     Ubicación en el mapa
                                 </h3>
 
-                                <p class="mt-1 text-xs text-muted-foreground">
+                                <p
+                                    class="mt-1 text-xs text-muted-foreground"
+                                >
                                     Haz clic dentro de la zona para colocar
-                                    el marker. Puedes arrastrarlo para ajustar
-                                    la ubicación.
+                                    la especie. Puedes arrastrarla para
+                                    ajustar la ubicación.
                                 </p>
                             </div>
 
@@ -951,6 +1269,9 @@ const submit = () => {
                                 :map-image-bounds="
                                     selectedZone.map_image_bounds
                                 "
+                                :marker-image="
+                                    thumbnailPreviewUrl
+                                "
                                 v-model:latitude="
                                     form.latitude
                                 "
@@ -959,26 +1280,81 @@ const submit = () => {
                                 "
                             />
 
+                            <!-- INFO MINIATURA -->
+
+                            <div
+                                v-if="
+                                    thumbnailPreviewUrl
+                                "
+                                class="flex items-center gap-3 rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                            >
+                                <div
+                                    class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-sidebar-border bg-background"
+                                >
+                                    <img
+                                        :src="
+                                            thumbnailPreviewUrl
+                                        "
+                                        alt="Miniatura de la especie"
+                                        class="h-full w-full object-cover"
+                                    />
+                                </div>
+
+                                <div>
+                                    <p
+                                        class="text-sm font-medium"
+                                    >
+                                        Marker de la especie
+                                    </p>
+
+                                    <p
+                                        class="mt-1 text-xs text-muted-foreground"
+                                    >
+                                        La miniatura seleccionada se
+                                        mostrará como icono en el mapa.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                v-else
+                                class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                            >
+                                <p
+                                    class="text-sm text-muted-foreground"
+                                >
+                                    Selecciona una miniatura en la pestaña
+                                    Imágenes para utilizarla como icono
+                                    de la especie en el mapa.
+                                </p>
+                            </div>
+
                             <div
                                 class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
                             >
-                                <p class="text-sm text-muted-foreground">
+                                <p
+                                    class="text-sm text-muted-foreground"
+                                >
                                     El marker solamente puede colocarse
                                     dentro de la zona seleccionada.
                                 </p>
                             </div>
                         </div>
 
+                        <!-- SIN ZONA -->
+
                         <div
                             v-else
                             class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
                         >
-                            <p class="text-sm text-muted-foreground">
+                            <p
+                                class="text-sm text-muted-foreground"
+                            >
                                 Selecciona una zona para mostrar el mapa.
                             </p>
                         </div>
 
-                        <!-- Nombre -->
+                        <!-- NOMBRE -->
 
                         <div>
                             <label
@@ -990,25 +1366,35 @@ const submit = () => {
 
                             <input
                                 id="location_name"
-                                v-model="form.location_name"
+                                v-model="
+                                    form.location_name
+                                "
                                 type="text"
                                 placeholder="Ej. Área de felinos"
                                 class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
 
                             <p
-                                v-if="form.errors.location_name"
+                                v-if="
+                                    form.errors
+                                        .location_name
+                                "
                                 class="mt-1 text-sm text-red-500"
                             >
-                                {{ form.errors.location_name }}
+                                {{
+                                    form.errors
+                                        .location_name
+                                }}
                             </p>
                         </div>
 
-                        <!-- Coordenadas -->
+                        <!-- COORDENADAS -->
 
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
+                            <!-- LATITUD -->
+
                             <div>
                                 <label
                                     for="latitude"
@@ -1020,8 +1406,11 @@ const submit = () => {
                                 <input
                                     id="latitude"
                                     :value="
-                                        form.latitude !== null
-                                            ? form.latitude.toFixed(7)
+                                        form.latitude !==
+                                        null
+                                            ? form.latitude.toFixed(
+                                                  7,
+                                              )
                                             : ''
                                     "
                                     type="text"
@@ -1031,12 +1420,20 @@ const submit = () => {
                                 />
 
                                 <p
-                                    v-if="form.errors.latitude"
+                                    v-if="
+                                        form.errors
+                                            .latitude
+                                    "
                                     class="mt-1 text-sm text-red-500"
                                 >
-                                    {{ form.errors.latitude }}
+                                    {{
+                                        form.errors
+                                            .latitude
+                                    }}
                                 </p>
                             </div>
+
+                            <!-- LONGITUD -->
 
                             <div>
                                 <label
@@ -1049,8 +1446,11 @@ const submit = () => {
                                 <input
                                     id="longitude"
                                     :value="
-                                        form.longitude !== null
-                                            ? form.longitude.toFixed(7)
+                                        form.longitude !==
+                                        null
+                                            ? form.longitude.toFixed(
+                                                  7,
+                                              )
                                             : ''
                                     "
                                     type="text"
@@ -1060,15 +1460,21 @@ const submit = () => {
                                 />
 
                                 <p
-                                    v-if="form.errors.longitude"
+                                    v-if="
+                                        form.errors
+                                            .longitude
+                                    "
                                     class="mt-1 text-sm text-red-500"
                                 >
-                                    {{ form.errors.longitude }}
+                                    {{
+                                        form.errors
+                                            .longitude
+                                    }}
                                 </p>
                             </div>
                         </div>
 
-                        <!-- Descripción -->
+                        <!-- DESCRIPCIÓN -->
 
                         <div>
                             <label
@@ -1080,17 +1486,25 @@ const submit = () => {
 
                             <textarea
                                 id="location_description"
-                                v-model="form.location_description"
+                                v-model="
+                                    form.location_description
+                                "
                                 rows="4"
                                 placeholder="Descripción de la ubicación..."
                                 class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
 
                             <p
-                                v-if="form.errors.location_description"
+                                v-if="
+                                    form.errors
+                                        .location_description
+                                "
                                 class="mt-1 text-sm text-red-500"
                             >
-                                {{ form.errors.location_description }}
+                                {{
+                                    form.errors
+                                        .location_description
+                                }}
                             </p>
                         </div>
                     </div>
@@ -1103,10 +1517,15 @@ const submit = () => {
                 >
                     <div>
                         <button
-                            v-if="activeTab !== 'information'"
+                            v-if="
+                                activeTab !==
+                                'information'
+                            "
                             type="button"
                             class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
-                            @click="previousTab"
+                            @click="
+                                previousTab
+                            "
                         >
                             Anterior
                         </button>
@@ -1116,16 +1535,24 @@ const submit = () => {
                         class="flex flex-col gap-3 sm:flex-row"
                     >
                         <button
-                            v-if="activeTab !== 'location'"
+                            v-if="
+                                activeTab !==
+                                'location'
+                            "
                             type="button"
                             class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
-                            @click="nextTab"
+                            @click="
+                                nextTab
+                            "
                         >
                             Siguiente
                         </button>
 
                         <button
-                            v-if="activeTab === 'location'"
+                            v-if="
+                                activeTab ===
+                                'location'
+                            "
                             type="submit"
                             :disabled="
                                 form.processing

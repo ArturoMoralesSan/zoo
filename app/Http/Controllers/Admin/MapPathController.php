@@ -58,12 +58,6 @@ class MapPathController extends Controller
 
     /**
      * Mostrar formulario para crear un camino.
-     *
-     * Carga las zonas disponibles.
-     *
-     * La información de markers, especies y
-     * geometría se carga posteriormente cuando
-     * el usuario selecciona una zona.
      */
     public function create(): Response
     {
@@ -89,14 +83,6 @@ class MapPathController extends Controller
      * Obtener la información de una zona
      * para utilizarla como área de trabajo
      * del editor de caminos.
-     *
-     * Devuelve:
-     *
-     * - geometry de la zona
-     * - plano de la zona
-     * - bounds del plano
-     * - markers
-     * - ubicaciones de especies
      */
     public function zone(
         ZooZone $zooZone
@@ -132,10 +118,44 @@ class MapPathController extends Controller
          * -------------------------------------------------
          * Ubicaciones de especies
          * -------------------------------------------------
+         *
+         * Cargamos únicamente la imagen de tipo
+         * thumbnail de cada especie.
          */
         $speciesLocations = SpeciesLocation::query()
             ->with([
-                'species:id,common_name,scientific_name,description',
+                'species' => function ($query) {
+                    $query->select([
+                        'id',
+                        'common_name',
+                        'scientific_name',
+                        'description',
+                    ]);
+                },
+
+                'species.images' => function ($query) {
+                    $query
+                        ->where(
+                            'type',
+                            'thumbnail'
+                        )
+                        ->where(
+                            'is_active',
+                            true
+                        )
+                        ->orderBy(
+                            'sort_order'
+                        )
+                        ->select([
+                            'id',
+                            'species_id',
+                            'type',
+                            'path',
+                            'alt_text',
+                            'is_active',
+                            'sort_order',
+                        ]);
+                },
             ])
             ->where(
                 'zone_id',
@@ -170,7 +190,6 @@ class MapPathController extends Controller
          * Respuesta
          * -------------------------------------------------
          */
-
         return response()->json([
             'zone' => [
                 'id' => $zooZone->id,
@@ -194,10 +213,8 @@ class MapPathController extends Controller
     public function store(
         Request $request
     ): RedirectResponse {
-        $validated = $this->rules();
-
         $validated = $request->validate(
-            $validated
+            $this->rules()
         );
 
         $zone = ZooZone::query()
@@ -222,10 +239,9 @@ class MapPathController extends Controller
             $coordinates
         );
 
-        $estimatedTime =
-            $this->calculateEstimatedTime(
-                $distance
-            );
+        $estimatedTime = $this->calculateEstimatedTime(
+            $distance
+        );
 
         MapPath::create([
             'zone_id' => $zone->id,
@@ -333,10 +349,9 @@ class MapPathController extends Controller
             $coordinates
         );
 
-        $estimatedTime =
-            $this->calculateEstimatedTime(
-                $distance
-            );
+        $estimatedTime = $this->calculateEstimatedTime(
+            $distance
+        );
 
         $mapPath->update([
             'zone_id' => $zone->id,
@@ -448,11 +463,6 @@ class MapPathController extends Controller
                 'min:1',
             ],
 
-            /**
-             * Estos valores llegan desde Vue,
-             * pero NO confiamos en ellos para
-             * guardar distancia y tiempo.
-             */
             'distance' => [
                 'nullable',
                 'integer',
@@ -479,28 +489,13 @@ class MapPathController extends Controller
 
     /**
      * Valida la estructura lógica del grafo.
-     *
-     * Comprueba:
-     *
-     * - IDs únicos.
-     * - edges apuntando a nodos existentes.
-     * - ningún nodo conectado consigo mismo.
-     * - ninguna conexión duplicada.
      */
     private function validateGraph(
         array $coordinates
     ): array {
-        $nodes =
-            $coordinates['nodes'] ?? [];
+        $nodes = $coordinates['nodes'] ?? [];
+        $edges = $coordinates['edges'] ?? [];
 
-        $edges =
-            $coordinates['edges'] ?? [];
-
-        /**
-         * -------------------------------------------------
-         * IDs de nodos
-         * -------------------------------------------------
-         */
         $nodeIds = array_map(
             fn ($node) => (int) $node['id'],
             $nodes
@@ -516,31 +511,19 @@ class MapPathController extends Controller
             );
         }
 
-        $nodeIdLookup =
-            array_fill_keys(
-                $nodeIds,
-                true
-            );
+        $nodeIdLookup = array_fill_keys(
+            $nodeIds,
+            true
+        );
 
-        /**
-         * -------------------------------------------------
-         * Edges
-         * -------------------------------------------------
-         */
         $edgeKeys = [];
 
         foreach (
             $edges as $index => $edge
         ) {
-            $from =
-                (int) $edge['from'];
+            $from = (int) $edge['from'];
+            $to = (int) $edge['to'];
 
-            $to =
-                (int) $edge['to'];
-
-            /**
-             * El nodo origen debe existir.
-             */
             if (
                 ! isset(
                     $nodeIdLookup[$from]
@@ -552,9 +535,6 @@ class MapPathController extends Controller
                 );
             }
 
-            /**
-             * El nodo destino debe existir.
-             */
             if (
                 ! isset(
                     $nodeIdLookup[$to]
@@ -566,11 +546,6 @@ class MapPathController extends Controller
                 );
             }
 
-            /**
-             * No permitimos:
-             *
-             * 5 → 5
-             */
             if ($from === $to) {
                 abort(
                     422,
@@ -578,24 +553,10 @@ class MapPathController extends Controller
                 );
             }
 
-            /**
-             * Tratamos las conexiones como
-             * bidireccionales.
-             *
-             * Por lo tanto:
-             *
-             * 2 → 5
-             *
-             * y
-             *
-             * 5 → 2
-             *
-             * representan la misma conexión.
-             */
             $edgeKey =
                 min($from, $to)
-                .'-'
-                .max($from, $to);
+                . '-'
+                . max($from, $to);
 
             if (
                 isset(
@@ -620,7 +581,6 @@ class MapPathController extends Controller
                 array_map(
                     fn ($edge) => [
                         'from' => (int) $edge['from'],
-
                         'to' => (int) $edge['to'],
                     ],
                     $edges
@@ -632,11 +592,6 @@ class MapPathController extends Controller
     /**
      * Valida que todos los nodos del camino
      * estén dentro de la geometría de la zona.
-     *
-     * Esto es una segunda validación del lado
-     * del servidor. El frontend también realiza
-     * esta comprobación para evitar que el usuario
-     * coloque nodos fuera de la zona.
      */
     private function validateNodesInsideZone(
         array $nodes,
@@ -655,11 +610,8 @@ class MapPathController extends Controller
         }
 
         foreach ($nodes as $node) {
-            $latitude =
-                (float) $node['lat'];
-
-            $longitude =
-                (float) $node['lng'];
+            $latitude = (float) $node['lat'];
+            $longitude = (float) $node['lng'];
 
             if (
                 ! $this->pointInGeometry(
@@ -668,8 +620,7 @@ class MapPathController extends Controller
                     $geometry
                 )
             ) {
-                $nodeId =
-                    (int) $node['id'];
+                $nodeId = (int) $node['id'];
 
                 abort(
                     422,
@@ -682,27 +633,14 @@ class MapPathController extends Controller
     /**
      * Comprueba si un punto está dentro
      * de una geometría GeoJSON.
-     *
-     * Soporta:
-     *
-     * - Polygon
-     * - MultiPolygon
-     * - Feature
-     * - FeatureCollection
      */
     private function pointInGeometry(
         float $latitude,
         float $longitude,
         array $geometry
     ): bool {
-        $type =
-            $geometry['type'] ?? null;
+        $type = $geometry['type'] ?? null;
 
-        /**
-         * -------------------------------------------------
-         * Feature
-         * -------------------------------------------------
-         */
         if ($type === 'Feature') {
             $featureGeometry =
                 $geometry['geometry'] ?? null;
@@ -722,11 +660,6 @@ class MapPathController extends Controller
             );
         }
 
-        /**
-         * -------------------------------------------------
-         * FeatureCollection
-         * -------------------------------------------------
-         */
         if (
             $type ===
             'FeatureCollection'
@@ -752,11 +685,6 @@ class MapPathController extends Controller
             return false;
         }
 
-        /**
-         * -------------------------------------------------
-         * Polygon
-         * -------------------------------------------------
-         */
         if ($type === 'Polygon') {
             $coordinates =
                 $geometry['coordinates'] ?? [];
@@ -767,9 +695,6 @@ class MapPathController extends Controller
                 return false;
             }
 
-            /**
-             * El primer ring es el exterior.
-             */
             $outerRing =
                 $coordinates[0] ?? [];
 
@@ -783,9 +708,6 @@ class MapPathController extends Controller
                 return false;
             }
 
-            /**
-             * Los siguientes rings son agujeros.
-             */
             for (
                 $index = 1;
                 $index < count($coordinates);
@@ -805,11 +727,6 @@ class MapPathController extends Controller
             return true;
         }
 
-        /**
-         * -------------------------------------------------
-         * MultiPolygon
-         * -------------------------------------------------
-         */
         if (
             $type ===
             'MultiPolygon'
@@ -822,7 +739,6 @@ class MapPathController extends Controller
             ) {
                 $polygonGeometry = [
                     'type' => 'Polygon',
-
                     'coordinates' => $polygon,
                 ];
 
@@ -840,17 +756,6 @@ class MapPathController extends Controller
             return false;
         }
 
-        /**
-         * -------------------------------------------------
-         * Formato alternativo:
-         *
-         * {
-         *     "coordinates": [...]
-         * }
-         *
-         * Se intenta interpretar como Polygon.
-         * -------------------------------------------------
-         */
         if (
             isset(
                 $geometry['coordinates']
@@ -864,7 +769,6 @@ class MapPathController extends Controller
                 $longitude,
                 [
                     'type' => 'Polygon',
-
                     'coordinates' => $geometry['coordinates'],
                 ]
             );
@@ -876,10 +780,6 @@ class MapPathController extends Controller
     /**
      * Point in Polygon utilizando
      * Ray Casting.
-     *
-     * GeoJSON utiliza:
-     *
-     * [longitude, latitude]
      */
     private function pointInRing(
         float $latitude,
@@ -887,9 +787,7 @@ class MapPathController extends Controller
         array $ring
     ): bool {
         $inside = false;
-
-        $count =
-            count($ring);
+        $count = count($ring);
 
         if ($count < 3) {
             return false;
@@ -898,9 +796,7 @@ class MapPathController extends Controller
         for (
             $i = 0,
             $j = $count - 1;
-
             $i < $count;
-
             $j = $i++
         ) {
             $pointI =
@@ -959,8 +855,7 @@ class MapPathController extends Controller
                 );
 
             if ($intersects) {
-                $inside =
-                    ! $inside;
+                $inside = ! $inside;
             }
         }
 
@@ -969,9 +864,6 @@ class MapPathController extends Controller
 
     /**
      * Calcula la distancia total del grafo.
-     *
-     * La distancia es la suma de todos
-     * los segmentos que forman las edges.
      */
     private function calculateDistance(
         array $coordinates
@@ -1093,8 +985,7 @@ class MapPathController extends Controller
     }
 
     /**
-     * Calcula el tiempo estimado de
-     * caminata en minutos.
+     * Calcula el tiempo estimado de caminata.
      */
     private function calculateEstimatedTime(
         int $distance

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
+
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 import admin from '@/routes/admin';
 
@@ -38,9 +39,15 @@ interface MapMarker {
     zone?: ZooZone | null;
 }
 
+interface MapIcon {
+    value: string;
+    label: string;
+}
+
 const props = defineProps<{
     marker: MapMarker;
     zones: ZooZone[];
+    mapIcons: MapIcon[];
 }>();
 
 const form = useForm({
@@ -50,16 +57,32 @@ const form = useForm({
     zone_id: props.marker.zone_id,
     latitude: Number(props.marker.latitude),
     longitude: Number(props.marker.longitude),
-    icon: props.marker.icon ?? '',
-    color: props.marker.color ?? '',
+    icon: props.marker.icon ?? 'poi.svg',
+    color: props.marker.color ?? '#22c55e',
     is_active: props.marker.is_active,
 });
 
-const selectedZone = computed<ZooZone | null>(() =>
-    props.zones.find(
-        (zone) => zone.id === form.zone_id,
-    ) ?? null,
+const selectedZone = computed<ZooZone | null>(
+    () =>
+        props.zones.find(
+            (zone) => zone.id === form.zone_id,
+        ) ?? null,
 );
+
+const selectedIcon = computed<MapIcon | null>(
+    () =>
+        props.mapIcons.find(
+            (mapIcon) => mapIcon.value === form.icon,
+        ) ?? null,
+);
+
+const iconUrl = computed(() => {
+    if (!form.icon) {
+        return null;
+    }
+
+    return `/storage/markers/${form.icon}`;
+});
 
 const submit = (): void => {
     form.put(
@@ -259,6 +282,8 @@ const submit = (): void => {
                         "
                         v-model:latitude="form.latitude"
                         v-model:longitude="form.longitude"
+                        :icon="form.icon"
+                        :color="form.color"
                     />
 
                     <!-- Información del plano -->
@@ -375,16 +400,62 @@ const submit = (): void => {
                             Icono
                         </label>
 
-                        <input
-                            id="icon"
-                            v-model="form.icon"
-                            type="text"
-                            placeholder="Ej. map-pin"
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
+                        <div class="flex gap-3">
+                            <!-- Vista previa -->
+                            <div
+                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border"
+                                :style="
+                                    form.color
+                                        ? {
+                                              backgroundColor:
+                                                  form.color,
+                                          }
+                                        : undefined
+                                "
+                            >
+                                <img
+                                    v-if="iconUrl"
+                                    :src="iconUrl"
+                                    :alt="
+                                        selectedIcon?.label ??
+                                        'Icono del marker'
+                                    "
+                                    class="h-7 w-7 object-contain"
+                                />
+
+                                <span
+                                    v-else
+                                    class="text-lg"
+                                >
+                                    📍
+                                </span>
+                            </div>
+
+                            <!-- Selector -->
+                            <select
+                                id="icon"
+                                v-model="form.icon"
+                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            >
+                                <option value="">
+                                    Selecciona un icono
+                                </option>
+
+                                <option
+                                    v-for="mapIcon in mapIcons"
+                                    :key="mapIcon.value"
+                                    :value="mapIcon.value"
+                                >
+                                    {{ mapIcon.label }}
+                                </option>
+                            </select>
+                        </div>
 
                         <p class="text-xs text-muted-foreground">
-                            Nombre del icono que utilizará el mapa.
+                            {{
+                                selectedIcon?.label ??
+                                'Icono del marker'
+                            }}
                         </p>
 
                         <p
@@ -404,16 +475,55 @@ const submit = (): void => {
                             Color
                         </label>
 
-                        <input
-                            id="color"
-                            v-model="form.color"
-                            type="text"
-                            placeholder="Ej. #22c55e"
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
+                        <div class="flex gap-2">
+                            <!-- Campo hexadecimal -->
+                            <input
+                                id="color"
+                                v-model="form.color"
+                                type="text"
+                                placeholder="Ej. #22c55e"
+                                class="min-w-0 flex-1 rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
+
+                            <!-- Color picker -->
+                            <input
+                                v-model="form.color"
+                                type="color"
+                                class="h-11 w-14 cursor-pointer rounded-lg border border-sidebar-border bg-background p-1"
+                                title="Seleccionar color"
+                            />
+                        </div>
+
+                        <!-- Vista previa del color -->
+                        <div
+                            class="flex items-center gap-3 rounded-lg border border-sidebar-border bg-muted/30 p-3"
+                        >
+                            <span
+                                class="h-8 w-8 shrink-0 rounded-full border shadow-sm"
+                                :style="{
+                                    backgroundColor:
+                                        form.color ||
+                                        '#22c55e',
+                                }"
+                            ></span>
+
+                            <div>
+                                <p class="text-xs font-medium">
+                                    Color seleccionado
+                                </p>
+
+                                <p class="text-xs text-muted-foreground">
+                                    {{
+                                        form.color ||
+                                        '#22c55e'
+                                    }}
+                                </p>
+                            </div>
+                        </div>
 
                         <p class="text-xs text-muted-foreground">
-                            Color que tendrá el marker en el mapa.
+                            Puedes escribir el código hexadecimal o utilizar
+                            el selector de color.
                         </p>
 
                         <p

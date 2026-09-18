@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
+
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 import admin from '@/routes/admin';
 
@@ -24,8 +25,14 @@ interface ZooZone {
     map_image_bounds: MapImageBounds | null;
 }
 
+interface MapIcon {
+    value: string;
+    label: string;
+}
+
 const props = defineProps<{
     zones: ZooZone[];
+    mapIcons: MapIcon[];
 }>();
 
 const form = useForm({
@@ -35,16 +42,32 @@ const form = useForm({
     zone_id: null as number | null,
     latitude: null as number | null,
     longitude: null as number | null,
-    icon: '',
-    color: '',
+    icon: 'poi.svg',
+    color: '#22c55e',
     is_active: true,
 });
 
-const selectedZone = computed<ZooZone | null>(() =>
-    props.zones.find(
-        (zone) => zone.id === form.zone_id,
-    ) ?? null,
+const selectedZone = computed<ZooZone | null>(
+    () =>
+        props.zones.find(
+            (zone) => zone.id === form.zone_id,
+        ) ?? null,
 );
+
+const selectedIcon = computed<MapIcon | null>(
+    () =>
+        props.mapIcons.find(
+            (mapIcon) => mapIcon.value === form.icon,
+        ) ?? null,
+);
+
+const iconUrl = computed(() => {
+    if (!form.icon) {
+        return null;
+    }
+
+    return `/storage/markers/${form.icon}`;
+});
 
 const submit = () => {
     form.post(admin.mapMarkers.store().url);
@@ -57,6 +80,7 @@ const submit = () => {
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
+        <!-- Encabezado -->
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -71,6 +95,7 @@ const submit = () => {
             </div>
         </div>
 
+        <!-- Formulario -->
         <div
             class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
         >
@@ -78,6 +103,7 @@ const submit = () => {
                 @submit.prevent="submit"
                 class="space-y-6"
             >
+                <!-- Nombre -->
                 <div class="space-y-2">
                     <label
                         for="name"
@@ -102,7 +128,9 @@ const submit = () => {
                     </p>
                 </div>
 
+                <!-- Tipo / Zona -->
                 <div class="grid gap-6 md:grid-cols-2">
+                    <!-- Tipo -->
                     <div class="space-y-2">
                         <label
                             for="type"
@@ -127,6 +155,7 @@ const submit = () => {
                         </p>
                     </div>
 
+                    <!-- Zona -->
                     <div class="space-y-2">
                         <label
                             for="zone_id"
@@ -145,7 +174,7 @@ const submit = () => {
                             </option>
 
                             <option
-                                v-for="zone in zones"
+                                v-for="zone in props.zones"
                                 :key="zone.id"
                                 :value="zone.id"
                             >
@@ -182,6 +211,7 @@ const submit = () => {
                     </div>
                 </div>
 
+                <!-- Descripción -->
                 <div class="space-y-2">
                     <label
                         for="description"
@@ -206,6 +236,7 @@ const submit = () => {
                     </p>
                 </div>
 
+                <!-- Ubicación -->
                 <div class="space-y-4">
                     <div>
                         <h2 class="text-sm font-medium">
@@ -219,19 +250,18 @@ const submit = () => {
                     </div>
 
                     <MapMarkerMap
-                        :geometry="
-                            selectedZone?.geometry ?? null
-                        "
-                        :map-image="
-                            selectedZone?.map_image ?? null
-                        "
+                        :geometry="selectedZone?.geometry ?? null"
+                        :map-image="selectedZone?.map_image ?? null"
                         :map-image-bounds="
                             selectedZone?.map_image_bounds ?? null
                         "
                         v-model:latitude="form.latitude"
                         v-model:longitude="form.longitude"
+                        :icon="form.icon"
+                        :color="form.color"
                     />
 
+                    <!-- Sin zona -->
                     <div
                         v-if="!form.zone_id"
                         class="rounded-lg border border-dashed border-sidebar-border bg-muted/30 p-4 text-center"
@@ -246,6 +276,7 @@ const submit = () => {
                         </p>
                     </div>
 
+                    <!-- Con plano -->
                     <div
                         v-else-if="
                             selectedZone?.map_image &&
@@ -263,7 +294,9 @@ const submit = () => {
                         </p>
                     </div>
 
+                    <!-- Coordenadas -->
                     <div class="grid gap-6 md:grid-cols-2">
+                        <!-- Latitud -->
                         <div class="space-y-2">
                             <label
                                 for="latitude"
@@ -295,6 +328,7 @@ const submit = () => {
                             </p>
                         </div>
 
+                        <!-- Longitud -->
                         <div class="space-y-2">
                             <label
                                 for="longitude"
@@ -328,7 +362,9 @@ const submit = () => {
                     </div>
                 </div>
 
+                <!-- Icono / Color -->
                 <div class="grid gap-6 md:grid-cols-2">
+                    <!-- Icono -->
                     <div class="space-y-2">
                         <label
                             for="icon"
@@ -337,16 +373,56 @@ const submit = () => {
                             Icono
                         </label>
 
-                        <input
+                        <select
                             id="icon"
                             v-model="form.icon"
-                            type="text"
-                            placeholder="Ej. map-pin"
                             class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
+                        >
+                            <option
+                                v-for="mapIcon in props.mapIcons"
+                                :key="mapIcon.value"
+                                :value="mapIcon.value"
+                            >
+                                {{ mapIcon.label }}
+                            </option>
+                        </select>
+
+                        <!-- Vista previa -->
+                        <div
+                            v-if="iconUrl"
+                            class="flex items-center gap-4 rounded-lg border border-sidebar-border bg-muted/30 p-4"
+                        >
+                            <div
+                                class="flex h-14 w-14 items-center justify-center rounded-full border"
+                                :style="{
+                                    backgroundColor:
+                                        form.color || '#22c55e',
+                                }"
+                            >
+                                <img
+                                    :src="iconUrl"
+                                    :alt="
+                                        selectedIcon?.label ??
+                                        'Icono'
+                                    "
+                                    class="h-9 w-9 object-contain"
+                                />
+                            </div>
+
+                            <div>
+                                <p class="text-sm font-medium">
+                                    {{ selectedIcon?.label }}
+                                </p>
+
+                                <p class="text-xs text-muted-foreground">
+                                    {{ form.icon }}
+                                </p>
+                            </div>
+                        </div>
 
                         <p class="text-xs text-muted-foreground">
-                            Nombre del icono que utilizará el mapa.
+                            Selecciona el icono que utilizará este marker en
+                            el mapa.
                         </p>
 
                         <p
@@ -357,6 +433,7 @@ const submit = () => {
                         </p>
                     </div>
 
+                    <!-- Color -->
                     <div class="space-y-2">
                         <label
                             for="color"
@@ -365,13 +442,22 @@ const submit = () => {
                             Color
                         </label>
 
-                        <input
-                            id="color"
-                            v-model="form.color"
-                            type="text"
-                            placeholder="Ej. #22c55e"
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
+                        <div class="flex gap-2">
+                            <input
+                                id="color"
+                                v-model="form.color"
+                                type="text"
+                                placeholder="Ej. #22c55e"
+                                class="min-w-0 flex-1 rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
+
+                            <input
+                                v-model="form.color"
+                                type="color"
+                                class="h-11 w-14 cursor-pointer rounded-lg border border-sidebar-border bg-background p-1"
+                                title="Seleccionar color"
+                            />
+                        </div>
 
                         <p class="text-xs text-muted-foreground">
                             Color que tendrá el marker en el mapa.
@@ -386,6 +472,7 @@ const submit = () => {
                     </div>
                 </div>
 
+                <!-- Estado -->
                 <div class="flex items-center gap-3">
                     <input
                         id="is_active"
@@ -409,6 +496,7 @@ const submit = () => {
                     {{ form.errors.is_active }}
                 </p>
 
+                <!-- Botones -->
                 <div
                     class="flex flex-col-reverse gap-2 border-t border-sidebar-border/70 pt-6 sm:flex-row sm:justify-end dark:border-sidebar-border"
                 >

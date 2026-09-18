@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
+
 import admin from '@/routes/admin';
 
 interface SpeciesCategory {
@@ -78,7 +79,6 @@ interface Species {
     diet?: string | null;
     conservation_status?: string | null;
     is_active: boolean;
-
     category?: SpeciesCategory | null;
     images: SpeciesImage[];
     models: SpeciesModel[];
@@ -90,11 +90,11 @@ const props = defineProps<{
     species: Species;
 }>();
 
-/*
-|--------------------------------------------------------------------------
-| Imágenes
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * Imágenes
+ * --------------------------------------------------------------------------
+ */
 
 const mainImage =
     props.species.images.find(
@@ -124,33 +124,37 @@ const galleryImages =
             image.is_active,
     );
 
-/*
-|--------------------------------------------------------------------------
-| Modelo 3D
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * Modelo 3D
+ * --------------------------------------------------------------------------
+ */
 
 const currentModel =
     props.species.models[0] ?? null;
 
-/*
-|--------------------------------------------------------------------------
-| Ubicación
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * Ubicación
+ * --------------------------------------------------------------------------
+ */
 
 const currentLocation =
     props.species.locations[0] ?? null;
 
-/*
-|--------------------------------------------------------------------------
-| URLs
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * URLs
+ * --------------------------------------------------------------------------
+ */
 
 const imageUrl = (path: string) => {
     return `/storage/${path}`;
 };
+
+const thumbnailMarkerUrl = thumbnailImage
+    ? imageUrl(thumbnailImage.path)
+    : null;
 
 const modelUrl = (
     model: SpeciesModel,
@@ -1111,6 +1115,9 @@ const modelUrl = (
                             :map-image-bounds="
                                 currentLocation.zone.map_image_bounds ?? null
                             "
+                            :marker-image="
+                                thumbnailMarkerUrl
+                            "
                             :latitude="
                                 currentLocation.latitude
                             "
@@ -1144,6 +1151,38 @@ const modelUrl = (
                         La ubicación se muestra sobre el mapa
                         utilizando el área geográfica de la zona.
                     </p>
+
+                    <div
+                        v-if="thumbnailMarkerUrl"
+                        class="mt-4 flex items-center gap-3 rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                    >
+                        <div
+                            class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white shadow-sm"
+                        >
+                            <img
+                                :src="thumbnailMarkerUrl"
+                                :alt="
+                                    `Miniatura de ${species.common_name}`
+                                "
+                                class="h-full w-full object-cover"
+                            />
+                        </div>
+
+                        <div>
+                            <p
+                                class="text-sm font-medium"
+                            >
+                                Miniatura utilizada en el mapa
+                            </p>
+
+                            <p
+                                class="mt-1 text-xs text-muted-foreground"
+                            >
+                                Esta imagen se muestra como
+                                marcador de la especie.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ================================================= -->

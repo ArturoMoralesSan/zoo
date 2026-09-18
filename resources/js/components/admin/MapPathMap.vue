@@ -48,6 +48,16 @@ interface MapMarker {
     color: string | null;
 }
 
+interface SpeciesImage {
+    id: number;
+    species_id: number;
+    type: string;
+    path: string;
+    alt_text: string | null;
+    is_active?: boolean;
+    sort_order?: number;
+}
+
 interface SpeciesLocation {
     id: number;
     species_id: number;
@@ -56,35 +66,24 @@ interface SpeciesLocation {
     latitude: number | string;
     longitude: number | string;
     description: string | null;
+
     species?: {
         id: number;
         common_name: string;
         scientific_name: string | null;
         description: string | null;
+        images?: SpeciesImage[];
     } | null;
 }
 
 const props = withDefaults(
     defineProps<{
-        coordinates:
-            | PathData
-            | PathNode[]
-            | null;
-
+        coordinates: PathData | PathNode[] | null;
         readonly?: boolean;
-
-        zoneGeometry?:
-            | GeoJsonGeometry
-            | null;
-
+        zoneGeometry?: GeoJsonGeometry | null;
         mapImage?: string | null;
-
-        mapImageBounds?:
-            | MapImageBounds
-            | null;
-
+        mapImageBounds?: MapImageBounds | null;
         markers?: MapMarker[];
-
         speciesLocations?: SpeciesLocation[];
     }>(),
     {
@@ -99,31 +98,21 @@ const props = withDefaults(
 
 const emit = defineEmits<{
     'update:coordinates': [value: PathData];
-
     'update:distance': [value: number];
 }>();
 
-const mapContainer =
-    ref<HTMLElement | null>(null);
+const mapContainer = ref<HTMLElement | null>(null);
 
 let map: L.Map | null = null;
-
 let zoneLayer: L.GeoJSON | null = null;
-
 let imageLayer: L.ImageOverlay | null = null;
-
 let referenceLayer: L.LayerGroup | null = null;
-
 let edgesLayer: L.LayerGroup | null = null;
-
 let nodesLayer: L.LayerGroup | null = null;
 
-const selectedNodeId =
-    ref<number | null>(null);
+const selectedNodeId = ref<number | null>(null);
 
-let originalDragPosition:
-    | L.LatLng
-    | null = null;
+let originalDragPosition: L.LatLng | null = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -132,10 +121,7 @@ let originalDragPosition:
 */
 
 function normalizeCoordinates(
-    value:
-        | PathData
-        | PathNode[]
-        | null,
+    value: PathData | PathNode[] | null,
 ): PathData {
     if (!value) {
         return {
@@ -163,8 +149,7 @@ function normalizeCoordinates(
             index++
         ) {
             edges.push({
-                from:
-                    nodes[index - 1].id,
+                from: nodes[index - 1].id,
                 to: nodes[index].id,
             });
         }
@@ -177,18 +162,22 @@ function normalizeCoordinates(
 
     return {
         nodes: Array.isArray(value.nodes)
-            ? value.nodes.map((node) => ({
-                  id: Number(node.id),
-                  lat: Number(node.lat),
-                  lng: Number(node.lng),
-              }))
+            ? value.nodes.map(
+                  (node) => ({
+                      id: Number(node.id),
+                      lat: Number(node.lat),
+                      lng: Number(node.lng),
+                  }),
+              )
             : [],
 
         edges: Array.isArray(value.edges)
-            ? value.edges.map((edge) => ({
-                  from: Number(edge.from),
-                  to: Number(edge.to),
-              }))
+            ? value.edges.map(
+                  (edge) => ({
+                      from: Number(edge.from),
+                      to: Number(edge.to),
+                  }),
+              )
             : [],
     };
 }
@@ -315,9 +304,7 @@ function pointInPolygon(
 }
 
 function extractPolygonCoordinates(
-    geometry:
-        | GeoJsonGeometry
-        | null,
+    geometry: GeoJsonGeometry | null,
 ): number[][][][] {
     if (!geometry) {
         return [];
@@ -375,7 +362,8 @@ function extractPolygonCoordinates(
         return features.flatMap(
             (feature) =>
                 extractPolygonCoordinates(
-                    feature.geometry ?? null,
+                    feature.geometry ??
+                        null,
                 ),
         );
     }
@@ -452,7 +440,6 @@ function drawMapImage(): void {
 
     if (imageLayer) {
         imageLayer.remove();
-
         imageLayer = null;
     }
 
@@ -487,24 +474,10 @@ function drawMapImage(): void {
             imageBounds,
             {
                 opacity: 1,
-
-                /*
-                 * MUY IMPORTANTE:
-                 *
-                 * El plano no debe recibir
-                 * eventos del mouse.
-                 *
-                 * Así podemos hacer clic
-                 * directamente sobre la imagen
-                 * para crear nodos.
-                 */
                 interactive: false,
-
                 crossOrigin: true,
-
                 className:
                     'zoo-map-plan-image',
-
                 pane:
                     'zooMapImagePane',
             },
@@ -528,7 +501,8 @@ function getNextNodeId(): number {
     return (
         Math.max(
             ...pathData.value.nodes.map(
-                (node) => node.id,
+                (node) =>
+                    node.id,
             ),
         ) + 1
     );
@@ -540,14 +514,18 @@ function areNodesConnected(
 ): boolean {
     return pathData.value.edges.some(
         (edge) =>
-            (edge.from ===
-                firstId &&
+            (
+                edge.from ===
+                    firstId &&
                 edge.to ===
-                    secondId) ||
-            (edge.from ===
-                secondId &&
+                    secondId
+            ) ||
+            (
+                edge.from ===
+                    secondId &&
                 edge.to ===
-                    firstId),
+                    firstId
+            ),
     );
 }
 
@@ -576,9 +554,7 @@ function addConnection(
     });
 
     syncCoordinates();
-
     emitDistance();
-
     drawMap();
 }
 
@@ -632,12 +608,6 @@ function handleMapClick(
     const longitude =
         event.latlng.lng;
 
-    /*
-     * La zona es la única
-     * restricción geográfica.
-     *
-     * El plano NO restringe.
-     */
     if (
         !isInsideZone(
             latitude,
@@ -675,9 +645,7 @@ function handleMapClick(
         newNode.id;
 
     syncCoordinates();
-
     emitDistance();
-
     drawMap();
 }
 
@@ -728,9 +696,7 @@ function handleNodeDrag(
         position.lng;
 
     syncCoordinates();
-
     emitDistance();
-
     drawEdges();
 }
 
@@ -775,9 +741,7 @@ function handleNodeDragEnd(
         null;
 
     syncCoordinates();
-
     emitDistance();
-
     drawMap();
 }
 
@@ -794,7 +758,6 @@ function drawZone(): void {
 
     if (zoneLayer) {
         zoneLayer.remove();
-
         zoneLayer = null;
     }
 
@@ -822,7 +785,7 @@ function drawZone(): void {
 
 /*
 |--------------------------------------------------------------------------
-| Markers y especies
+| Utilidades HTML
 |--------------------------------------------------------------------------
 */
 
@@ -852,6 +815,291 @@ function escapeHtml(
         );
 }
 
+/*
+|--------------------------------------------------------------------------
+| URL de MapMarker
+|--------------------------------------------------------------------------
+*/
+
+function getMarkerIconUrl(
+    icon: string | null,
+): string {
+    if (
+        !icon ||
+        !icon.trim()
+    ) {
+        return '/storage/markers/poi.svg';
+    }
+
+    const value =
+        icon.trim();
+
+    if (
+        value.startsWith(
+            'http://',
+        ) ||
+        value.startsWith(
+            'https://',
+        )
+    ) {
+        return value;
+    }
+
+    if (
+        value.startsWith(
+            'data:image/',
+        )
+    ) {
+        return value;
+    }
+
+    if (
+        value.startsWith(
+            'blob:',
+        )
+    ) {
+        return value;
+    }
+
+    if (
+        value.startsWith('/')
+    ) {
+        return value;
+    }
+
+    if (
+        value.startsWith(
+            'storage/',
+        )
+    ) {
+        return `/${value}`;
+    }
+
+    if (
+        value.startsWith(
+            'markers/',
+        )
+    ) {
+        return `/storage/${value}`;
+    }
+
+    if (
+        value.startsWith(
+            'map-markers/',
+        )
+    ) {
+        return `/storage/${value}`;
+    }
+
+    return `/storage/markers/${value}`;
+}
+
+function getMarkerIconHtml(
+    icon: string | null,
+): string {
+    const imageUrl =
+        getMarkerIconUrl(icon);
+
+    return `
+        <img
+            src="${escapeHtml(
+                imageUrl,
+            )}"
+            alt=""
+            draggable="false"
+            class="zoo-map-marker-image"
+            onerror="
+                this.style.display='none';
+                this.nextElementSibling.style.display='flex';
+            "
+        />
+
+        <span
+            class="zoo-map-marker-fallback"
+            style="
+                display:none;
+                width:22px;
+                height:22px;
+                align-items:center;
+                justify-content:center;
+                font-size:17px;
+                line-height:1;
+            "
+        >
+            📍
+        </span>
+    `;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Thumbnail de especie
+|--------------------------------------------------------------------------
+*/
+
+function getSpeciesThumbnail(
+    item: SpeciesLocation,
+): string | null {
+    const images =
+        item.species?.images ?? [];
+
+    /**
+     * Buscamos específicamente thumbnail.
+     *
+     * Aunque el backend ya filtra type=thumbnail,
+     * dejamos la validación aquí también para mayor
+     * seguridad.
+     */
+    const thumbnail =
+        images.find(
+            (image) =>
+                image.type ===
+                'thumbnail',
+        ) ??
+        images[0] ??
+        null;
+
+    if (
+        !thumbnail ||
+        !thumbnail.path ||
+        !thumbnail.path.trim()
+    ) {
+        return null;
+    }
+
+    const value =
+        thumbnail.path.trim();
+
+    /**
+     * URL absoluta.
+     */
+    if (
+        value.startsWith(
+            'http://',
+        ) ||
+        value.startsWith(
+            'https://',
+        )
+    ) {
+        return value;
+    }
+
+    /**
+     * Data URI.
+     */
+    if (
+        value.startsWith(
+            'data:image/',
+        )
+    ) {
+        return value;
+    }
+
+    /**
+     * Blob.
+     */
+    if (
+        value.startsWith(
+            'blob:',
+        )
+    ) {
+        return value;
+    }
+
+    /**
+     * Ruta absoluta.
+     *
+     * Ejemplo:
+     * /storage/species/leon.jpg
+     */
+    if (
+        value.startsWith('/')
+    ) {
+        return value;
+    }
+
+    /**
+     * Ya contiene storage/.
+     *
+     * Ejemplo:
+     * storage/species/leon.jpg
+     */
+    if (
+        value.startsWith(
+            'storage/',
+        )
+    ) {
+        return `/${value}`;
+    }
+
+    /**
+     * Ruta normal almacenada por Laravel.
+     *
+     * Ejemplo:
+     * species/leon.jpg
+     *
+     * Resultado:
+     * /storage/species/leon.jpg
+     */
+    return `/storage/${value}`;
+}
+
+function getSpeciesThumbnailHtml(
+    item: SpeciesLocation,
+): string {
+    const imageUrl =
+        getSpeciesThumbnail(
+            item,
+        );
+
+    if (!imageUrl) {
+        return `
+            <span
+                class="zoo-map-species-fallback"
+            >
+                🐾
+            </span>
+        `;
+    }
+
+    const speciesName =
+        item.species
+            ?.common_name ??
+        item.name;
+
+    return `
+        <img
+            src="${escapeHtml(
+                imageUrl,
+            )}"
+            alt="${escapeHtml(
+                speciesName,
+            )}"
+            draggable="false"
+            class="zoo-map-species-thumbnail"
+            onerror="
+                this.style.display='none';
+                this.nextElementSibling.style.display='flex';
+            "
+        />
+
+        <span
+            class="zoo-map-species-fallback"
+            style="
+                display:none;
+            "
+        >
+            🐾
+        </span>
+    `;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Markers y especies
+|--------------------------------------------------------------------------
+*/
+
 function drawReferenceMarkers(): void {
     if (!map) {
         return;
@@ -867,8 +1115,11 @@ function drawReferenceMarkers(): void {
     }
 
     /*
-     * MapMarkers
-     */
+    |--------------------------------------------------------------------------
+    | MapMarkers
+    |--------------------------------------------------------------------------
+    */
+
     props.markers.forEach(
         (item) => {
             const latitude =
@@ -892,9 +1143,10 @@ function drawReferenceMarkers(): void {
                 return;
             }
 
-            const iconText =
-                item.icon ||
-                '📍';
+            const iconHtml =
+                getMarkerIconHtml(
+                    item.icon,
+                );
 
             const color =
                 item.color ||
@@ -907,22 +1159,24 @@ function drawReferenceMarkers(): void {
 
                     html: `
                         <div
+                            class="zoo-map-marker-pin"
                             style="
-                                width: 32px;
-                                height: 32px;
-                                border-radius: 50%;
-                                background: ${color};
-                                border: 3px solid white;
-                                box-shadow: 0 2px 6px rgba(0,0,0,.35);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                font-size: 16px;
+                                width:32px;
+                                height:32px;
+                                border-radius:50%;
+                                background:${escapeHtml(
+                                    color,
+                                )};
+                                border:3px solid white;
+                                box-shadow:0 2px 6px rgba(0,0,0,.35);
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                overflow:hidden;
+                                box-sizing:border-box;
                             "
                         >
-                            ${escapeHtml(
-                                iconText,
-                            )}
+                            ${iconHtml}
                         </div>
                     `,
 
@@ -945,11 +1199,16 @@ function drawReferenceMarkers(): void {
                     ],
                     {
                         icon,
+                        zIndexOffset: 5000,
                     },
                 );
 
             let popup = `
-                <div style="min-width:180px">
+                <div
+                    style="
+                        min-width:180px;
+                    "
+                >
                     <strong>
                         ${escapeHtml(
                             item.name,
@@ -977,7 +1236,11 @@ function drawReferenceMarkers(): void {
                 item.description
             ) {
                 popup += `
-                    <div style="margin-top:8px">
+                    <div
+                        style="
+                            margin-top:8px;
+                        "
+                    >
                         ${escapeHtml(
                             item.description,
                         )}
@@ -985,8 +1248,9 @@ function drawReferenceMarkers(): void {
                 `;
             }
 
-            popup +=
-                '</div>';
+            popup += `
+                </div>
+            `;
 
             marker.bindPopup(
                 popup,
@@ -996,7 +1260,6 @@ function drawReferenceMarkers(): void {
                 item.name,
                 {
                     direction: 'top',
-
                     offset: [
                         0,
                         -16,
@@ -1011,8 +1274,11 @@ function drawReferenceMarkers(): void {
     );
 
     /*
-     * SpeciesLocation
-     */
+    |--------------------------------------------------------------------------
+    | SpeciesLocation
+    |--------------------------------------------------------------------------
+    */
+
     props.speciesLocations.forEach(
         (item) => {
             const latitude =
@@ -1036,6 +1302,21 @@ function drawReferenceMarkers(): void {
                 return;
             }
 
+            const speciesName =
+                item.species
+                    ?.common_name ??
+                item.name;
+
+            const thumbnailUrl =
+                getSpeciesThumbnail(
+                    item,
+                );
+
+            const thumbnailHtml =
+                getSpeciesThumbnailHtml(
+                    item,
+                );
+
             const icon =
                 L.divIcon({
                     className:
@@ -1043,31 +1324,20 @@ function drawReferenceMarkers(): void {
 
                     html: `
                         <div
-                            style="
-                                width: 34px;
-                                height: 34px;
-                                border-radius: 50%;
-                                background: #16a34a;
-                                border: 3px solid white;
-                                box-shadow: 0 2px 6px rgba(0,0,0,.35);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                font-size: 17px;
-                            "
+                            class="zoo-map-species-pin"
                         >
-                            🐾
+                            ${thumbnailHtml}
                         </div>
                     `,
 
                     iconSize: [
-                        34,
-                        34,
+                        40,
+                        40,
                     ],
 
                     iconAnchor: [
-                        17,
-                        17,
+                        20,
+                        20,
                     ],
                 });
 
@@ -1079,21 +1349,69 @@ function drawReferenceMarkers(): void {
                     ],
                     {
                         icon,
+                        zIndexOffset: 4000,
                     },
                 );
 
-            const speciesName =
-                item.species
-                    ?.common_name ??
-                item.name;
+            /*
+            |--------------------------------------------------------------------------
+            | Popup de especie
+            |--------------------------------------------------------------------------
+            */
 
             let popup = `
-                <div style="min-width:200px">
-                    <strong>
-                        ${escapeHtml(
-                            speciesName,
-                        )}
-                    </strong>
+                <div
+                    class="zoo-map-species-popup"
+                    style="
+                        min-width:220px;
+                        max-width:280px;
+                    "
+                >
+            `;
+
+            if (thumbnailUrl) {
+                popup += `
+                    <div
+                        style="
+                            width:100%;
+                            height:120px;
+                            margin-bottom:10px;
+                            border-radius:10px;
+                            overflow:hidden;
+                            background:#f3f4f6;
+                        "
+                    >
+                        <img
+                            src="${escapeHtml(
+                                thumbnailUrl,
+                            )}"
+                            alt="${escapeHtml(
+                                speciesName,
+                            )}"
+                            style="
+                                width:100%;
+                                height:100%;
+                                object-fit:cover;
+                                display:block;
+                            "
+                            onerror="
+                                this.style.display='none';
+                            "
+                        />
+                    </div>
+                `;
+            }
+
+            popup += `
+                <strong
+                    style="
+                        font-size:16px;
+                    "
+                >
+                    ${escapeHtml(
+                        speciesName,
+                    )}
+                </strong>
             `;
 
             if (
@@ -1136,7 +1454,13 @@ function drawReferenceMarkers(): void {
                 item.description
             ) {
                 popup += `
-                    <div style="margin-top:8px">
+                    <div
+                        style="
+                            margin-top:8px;
+                            font-size:13px;
+                            color:#4b5563;
+                        "
+                    >
                         ${escapeHtml(
                             item.description,
                         )}
@@ -1144,8 +1468,9 @@ function drawReferenceMarkers(): void {
                 `;
             }
 
-            popup +=
-                '</div>';
+            popup += `
+                </div>
+            `;
 
             marker.bindPopup(
                 popup,
@@ -1155,10 +1480,9 @@ function drawReferenceMarkers(): void {
                 speciesName,
                 {
                     direction: 'top',
-
                     offset: [
                         0,
-                        -17,
+                        -20,
                     ],
                 },
             );
@@ -1191,10 +1515,7 @@ function drawEdges(): void {
     }
 
     const nodeLookup =
-        new Map<
-            number,
-            PathNode
-        >();
+        new Map<number, PathNode>();
 
     pathData.value.nodes.forEach(
         (node) => {
@@ -1237,7 +1558,6 @@ function drawEdges(): void {
                         color: '#2563eb',
                         weight: 5,
                         opacity: 0.85,
-
                         pane:
                             'zooMapPathPane',
                     },
@@ -1284,27 +1604,28 @@ function drawNodes(): void {
                     html: `
                         <div
                             style="
-                                width: 28px;
-                                height: 28px;
-                                border-radius: 50%;
-                                background: ${
+                                width:28px;
+                                height:28px;
+                                border-radius:50%;
+                                background:${
                                     selected
                                         ? '#dc2626'
                                         : '#2563eb'
                                 };
-                                border: 3px solid white;
-                                box-shadow: 0 2px 6px rgba(0,0,0,.35);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                color: white;
-                                font-size: 12px;
-                                font-weight: 700;
-                                cursor: ${
+                                border:3px solid white;
+                                box-shadow:0 2px 6px rgba(0,0,0,.35);
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                color:white;
+                                font-size:12px;
+                                font-weight:700;
+                                cursor:${
                                     props.readonly
                                         ? 'default'
                                         : 'pointer'
                                 };
+                                box-sizing:border-box;
                             "
                         >
                             ${node.id}
@@ -1336,6 +1657,8 @@ function drawNodes(): void {
 
                         pane:
                             'zooMapNodePane',
+
+                        zIndexOffset: 10000,
                     },
                 );
 
@@ -1352,7 +1675,6 @@ function drawNodes(): void {
                 `Nodo ${node.id}`,
                 {
                     direction: 'top',
-
                     offset: [
                         0,
                         -14,
@@ -1405,12 +1727,6 @@ function createMapPanes(): void {
         return;
     }
 
-    /*
-     * Plano:
-     * debajo de todo el contenido
-     * dinámico, pero encima de los
-     * tiles de OpenStreetMap.
-     */
     if (
         !map.getPane(
             'zooMapImagePane',
@@ -1428,9 +1744,6 @@ function createMapPanes(): void {
             'none';
     }
 
-    /*
-     * Zona.
-     */
     if (
         !map.getPane(
             'zooMapZonePane',
@@ -1448,9 +1761,6 @@ function createMapPanes(): void {
             'none';
     }
 
-    /*
-     * Caminos.
-     */
     if (
         !map.getPane(
             'zooMapPathPane',
@@ -1468,9 +1778,6 @@ function createMapPanes(): void {
             'none';
     }
 
-    /*
-     * Nodos.
-     */
     if (
         !map.getPane(
             'zooMapNodePane',
@@ -1483,6 +1790,9 @@ function createMapPanes(): void {
 
         pane.style.zIndex =
             '650';
+
+        pane.style.pointerEvents =
+            'auto';
     }
 }
 
@@ -1491,25 +1801,10 @@ function drawMap(): void {
         return;
     }
 
-    /*
-     * Orden visual:
-     *
-     * 1. Tiles
-     * 2. Plano
-     * 3. Zona
-     * 4. Caminos
-     * 5. Referencias
-     * 6. Nodos
-     */
-
     drawMapImage();
-
     drawZone();
-
     drawReferenceMarkers();
-
     drawEdges();
-
     drawNodes();
 
     nextTick(() => {
@@ -1520,13 +1815,7 @@ function drawMap(): void {
         const nodes =
             pathData.value.nodes;
 
-        /*
-         * Si existen nodos,
-         * centramos en ellos.
-         */
-        if (
-            nodes.length > 0
-        ) {
+        if (nodes.length > 0) {
             const bounds =
                 L.latLngBounds(
                     nodes.map(
@@ -1541,9 +1830,7 @@ function drawMap(): void {
                     ),
                 );
 
-            if (
-                bounds.isValid()
-            ) {
+            if (bounds.isValid()) {
                 map.fitBounds(
                     bounds,
                     {
@@ -1551,7 +1838,6 @@ function drawMap(): void {
                             40,
                             40,
                         ],
-
                         maxZoom: 19,
                     },
                 );
@@ -1560,17 +1846,11 @@ function drawMap(): void {
             return;
         }
 
-        /*
-         * Si no hay nodos,
-         * centramos en la zona.
-         */
         if (zoneLayer) {
             const bounds =
                 zoneLayer.getBounds();
 
-            if (
-                bounds.isValid()
-            ) {
+            if (bounds.isValid()) {
                 map.fitBounds(
                     bounds,
                     {
@@ -1578,7 +1858,6 @@ function drawMap(): void {
                             30,
                             30,
                         ],
-
                         maxZoom: 19,
                     },
                 );
@@ -1587,17 +1866,11 @@ function drawMap(): void {
             return;
         }
 
-        /*
-         * Si no hay zona pero sí
-         * existe un plano.
-         */
         if (imageLayer) {
             const bounds =
                 imageLayer.getBounds();
 
-            if (
-                bounds.isValid()
-            ) {
+            if (bounds.isValid()) {
                 map.fitBounds(
                     bounds,
                     {
@@ -1605,7 +1878,6 @@ function drawMap(): void {
                             30,
                             30,
                         ],
-
                         maxZoom: 19,
                     },
                 );
@@ -1622,10 +1894,7 @@ function drawMap(): void {
 
 function calculateDistance(): number {
     const nodeLookup =
-        new Map<
-            number,
-            PathNode
-        >();
+        new Map<number, PathNode>();
 
     pathData.value.nodes.forEach(
         (node) => {
@@ -1679,24 +1948,20 @@ function haversineDistance(
         6371000;
 
     const latitude1Radians =
-        (latitude1 *
-            Math.PI) /
+        (latitude1 * Math.PI) /
         180;
 
     const latitude2Radians =
-        (latitude2 *
-            Math.PI) /
+        (latitude2 * Math.PI) /
         180;
 
     const deltaLatitude =
-        ((latitude2 -
-            latitude1) *
+        ((latitude2 - latitude1) *
             Math.PI) /
         180;
 
     const deltaLongitude =
-        ((longitude2 -
-            longitude1) *
+        ((longitude2 - longitude1) *
             Math.PI) /
         180;
 
@@ -1723,9 +1988,7 @@ function haversineDistance(
             Math.sqrt(1 - a),
         );
 
-    return (
-        earthRadius * c
-    );
+    return earthRadius * c;
 }
 
 function emitDistance(): void {
@@ -1750,7 +2013,6 @@ watch(
             );
 
         drawMap();
-
         emitDistance();
     },
     {
@@ -1787,21 +2049,71 @@ watch(
 
 watch(
     () => props.markers,
-    () => {
+    (value) => {
+        console.log(
+            'MapMarkers recibidos:',
+            value,
+        );
+
+        console.log(
+            'MapMarker icons:',
+            value.map(
+                (marker) => ({
+                    id: marker.id,
+                    name: marker.name,
+                    icon: marker.icon,
+                    iconUrl:
+                        getMarkerIconUrl(
+                            marker.icon,
+                        ),
+                    color: marker.color,
+                }),
+            ),
+        );
+
         drawMap();
     },
     {
         deep: true,
+        immediate: true,
     },
 );
 
 watch(
     () => props.speciesLocations,
-    () => {
+    (value) => {
+        console.log(
+            'SpeciesLocations recibidas:',
+            value,
+        );
+
+        console.log(
+            'Species thumbnails:',
+            value.map(
+                (item) => ({
+                    id: item.id,
+
+                    species:
+                        item.species
+                            ?.common_name,
+
+                    images:
+                        item.species
+                            ?.images,
+
+                    thumbnail:
+                        getSpeciesThumbnail(
+                            item,
+                        ),
+                }),
+            ),
+        );
+
         drawMap();
     },
     {
         deep: true,
+        immediate: true,
     },
 );
 
@@ -1823,32 +2135,24 @@ onMounted(() => {
         return;
     }
 
-    map = L.map(
-        mapContainer.value,
-        {
-            zoomControl: true,
-            attributionControl: true,
-        },
-    );
+    map =
+        L.map(
+            mapContainer.value,
+            {
+                zoomControl: true,
+                attributionControl: true,
+            },
+        );
 
-    /*
-     * Tiles base.
-     */
     L.tileLayer(
         'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         {
             attribution:
                 '&copy; OpenStreetMap contributors',
-
             maxZoom: 22,
         },
     ).addTo(map);
 
-    /*
-     * Creamos las capas
-     * personalizadas antes de
-     * dibujar el contenido.
-     */
     createMapPanes();
 
     map.on(
@@ -1860,7 +2164,6 @@ onMounted(() => {
 
     setTimeout(() => {
         map?.invalidateSize();
-
         drawMap();
     }, 200);
 });
@@ -1881,7 +2184,6 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="space-y-3">
-        <!-- Instrucciones -->
         <div
             v-if="!readonly"
             class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
@@ -1927,7 +2229,6 @@ onBeforeUnmount(() => {
             </ul>
         </div>
 
-        <!-- Nodo seleccionado -->
         <div
             v-if="!readonly"
             class="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900"
@@ -1964,7 +2265,6 @@ onBeforeUnmount(() => {
             </button>
         </div>
 
-        <!-- Mapa -->
         <div
             ref="mapContainer"
             class="h-[600px] w-full overflow-hidden rounded-xl border border-gray-300 dark:border-gray-600"
@@ -1980,7 +2280,93 @@ onBeforeUnmount(() => {
 .zoo-map-reference-marker,
 .zoo-map-species-marker,
 .zoo-map-path-node {
-    background: transparent;
-    border: none;
+    background: transparent !important;
+    border: none !important;
+}
+
+.zoo-map-reference-marker {
+    width: 32px !important;
+    height: 32px !important;
+    pointer-events: auto !important;
+}
+
+.zoo-map-reference-marker img {
+    width: 22px !important;
+    height: 22px !important;
+    object-fit: contain !important;
+    display: block;
+    pointer-events: none;
+}
+
+.zoo-map-reference-marker .zoo-map-marker-pin {
+    pointer-events: none;
+}
+
+.zoo-map-reference-marker span {
+    pointer-events: none;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Species marker
+|--------------------------------------------------------------------------
+*/
+
+.zoo-map-species-marker {
+    width: 40px !important;
+    height: 40px !important;
+    pointer-events: auto !important;
+}
+
+.zoo-map-species-pin {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #16a34a;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.35);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    margin: 0;
+
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.zoo-map-species-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+
+.zoo-map-species-fallback {
+    width: 30px !important;
+    height: 30px !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    margin: 0;
+
+    font-size: 17px;
+    line-height: 30px;
+    text-align: center;
+
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.zoo-map-path-node {
+    width: 28px !important;
+    height: 28px !important;
+    pointer-events: auto !important;
 }
 </style>

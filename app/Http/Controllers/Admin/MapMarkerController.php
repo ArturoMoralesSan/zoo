@@ -99,23 +99,78 @@ class MapMarkerController extends Controller
     }
 
     public function create(): Response
-    {
-        return Inertia::render(
-            'admin/map-markers/Create',
-            [
-                'zones' => ZooZone::query()
-                    ->where('is_active', true)
-                    ->orderBy('name')
-                    ->get([
-                        'id',
-                        'name',
-                        'geometry',
-                        'map_image',
-                        'map_image_bounds',
-                    ]),
-            ]
-        );
-    }
+{
+    return Inertia::render(
+        'admin/map-markers/Create',
+        [
+            'zones' => ZooZone::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'name',
+                    'geometry',
+                    'map_image',
+                    'map_image_bounds',
+                ]),
+
+            'mapIcons' => [
+                [
+                    'value' => 'restaurant.svg',
+                    'label' => 'Área de comida / Restaurante',
+                ],
+                [
+                    'value' => 'bathroom.svg',
+                    'label' => 'Baños',
+                ],
+                [
+                    'value' => 'entrance.svg',
+                    'label' => 'Entrada',
+                ],
+                [
+                    'value' => 'exit.svg',
+                    'label' => 'Salida',
+                ],
+                [
+                    'value' => 'rest.svg',
+                    'label' => 'Área de descanso',
+                ],
+                [
+                    'value' => 'garden.svg',
+                    'label' => 'Área verde / Jardín',
+                ],
+                [
+                    'value' => 'parking.svg',
+                    'label' => 'Estacionamiento',
+                ],
+                [
+                    'value' => 'accessibility.svg',
+                    'label' => 'Accesibilidad',
+                ],
+                [
+                    'value' => 'information.svg',
+                    'label' => 'Información',
+                ],
+                [
+                    'value' => 'first-aid.svg',
+                    'label' => 'Primeros auxilios',
+                ],
+                [
+                    'value' => 'playground.svg',
+                    'label' => 'Juegos infantiles',
+                ],
+                [
+                    'value' => 'shop.svg',
+                    'label' => 'Tienda',
+                ],
+                [
+                    'value' => 'poi.svg',
+                    'label' => 'Punto de interés',
+                ],
+            ],
+        ]
+    );
+}
 
     public function store(
         StoreMapMarkerRequest $request
@@ -167,6 +222,60 @@ class MapMarkerController extends Controller
                         'map_image',
                         'map_image_bounds',
                     ]),
+                'mapIcons' => [
+                [
+                    'value' => 'restaurant.svg',
+                    'label' => 'Área de comida / Restaurante',
+                ],
+                [
+                    'value' => 'bathroom.svg',
+                    'label' => 'Baños',
+                ],
+                [
+                    'value' => 'entrance.svg',
+                    'label' => 'Entrada',
+                ],
+                [
+                    'value' => 'exit.svg',
+                    'label' => 'Salida',
+                ],
+                [
+                    'value' => 'rest.svg',
+                    'label' => 'Área de descanso',
+                ],
+                [
+                    'value' => 'garden.svg',
+                    'label' => 'Área verde / Jardín',
+                ],
+                [
+                    'value' => 'parking.svg',
+                    'label' => 'Estacionamiento',
+                ],
+                [
+                    'value' => 'accessibility.svg',
+                    'label' => 'Accesibilidad',
+                ],
+                [
+                    'value' => 'information.svg',
+                    'label' => 'Información',
+                ],
+                [
+                    'value' => 'first-aid.svg',
+                    'label' => 'Primeros auxilios',
+                ],
+                [
+                    'value' => 'playground.svg',
+                    'label' => 'Juegos infantiles',
+                ],
+                [
+                    'value' => 'shop.svg',
+                    'label' => 'Tienda',
+                ],
+                [
+                    'value' => 'poi.svg',
+                    'label' => 'Punto de interés',
+                ],
+            ],
             ]
         );
     }

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import L from 'leaflet';
+
 import {
     onBeforeUnmount,
     onMounted,
     ref,
     watch,
 } from 'vue';
+
 import 'leaflet/dist/leaflet.css';
 
 interface GeoJsonGeometry {
@@ -28,6 +30,16 @@ const props = withDefaults(
         readonly?: boolean;
         mapImage?: File | string | null;
         mapImageBounds?: MapImageBounds | null;
+
+        // Icono del marker
+        icon?: string | null;
+
+        // Color del marker
+        color?: string | null;
+
+        // Imagen personalizada del marker.
+        // Se utiliza, por ejemplo, para el thumbnail de una especie.
+        markerImage?: string | null;
     }>(),
     {
         latitude: null,
@@ -35,6 +47,9 @@ const props = withDefaults(
         readonly: false,
         mapImage: null,
         mapImageBounds: null,
+        icon: 'poi.svg',
+        color: '#22c55e',
+        markerImage: null,
     },
 );
 
@@ -58,67 +73,63 @@ const defaultCenter: L.LatLngExpression = [
     -104.6532,
 ];
 
-/*
-|--------------------------------------------------------------------------
-| PANES
-|--------------------------------------------------------------------------
-|
-| Zona   = 400
-| Imagen = 450
-| Marker = 700
-|
-| El marker siempre queda encima de la imagen.
-|
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * PANES
+ * --------------------------------------------------------------------------
+ *
+ * Zona   = 400
+ * Imagen = 450
+ * Marker = 700
+ *
+ * El marker siempre queda encima de la imagen.
+ *
+ */
 const createMapPanes = (): void => {
     if (!map) {
         return;
     }
 
-    /*
+    /**
      * Zona
      */
     map.createPane('zooZonePane');
 
-    const zonePane =
-        map.getPane('zooZonePane');
+    const zonePane = map.getPane('zooZonePane');
 
     if (zonePane) {
         zonePane.style.zIndex = '400';
 
-        /*
+        /**
          * La zona no debe bloquear
          * los clicks del mapa.
          */
         zonePane.style.pointerEvents = 'none';
     }
 
-    /*
+    /**
      * Imagen del zoológico
      */
     map.createPane('zooImagePane');
 
-    const imagePane =
-        map.getPane('zooImagePane');
+    const imagePane = map.getPane('zooImagePane');
 
     if (imagePane) {
         imagePane.style.zIndex = '450';
 
-        /*
+        /**
          * La imagen solamente es visual.
          * Nunca debe bloquear los clicks.
          */
         imagePane.style.pointerEvents = 'none';
     }
 
-    /*
+    /**
      * Marker
      */
     map.createPane('zooMarkerPane');
 
-    const markerPane =
-        map.getPane('zooMarkerPane');
+    const markerPane = map.getPane('zooMarkerPane');
 
     if (markerPane) {
         markerPane.style.zIndex = '700';
@@ -126,31 +137,68 @@ const createMapPanes = (): void => {
     }
 };
 
-/*
-|--------------------------------------------------------------------------
-| ICONO DEL MARKER
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * ICONO DEL MARKER
+ * --------------------------------------------------------------------------
+ *
+ * Utiliza el SVG almacenado en:
+ *
+ * /storage/markers/{icon}
+ *
+ * Ejemplo:
+ *
+ * /storage/markers/restaurant.svg
+ *
+ * Si markerImage existe, se utiliza esa imagen en lugar del SVG.
+ *
+ */
+const createMarkerIcon = (): L.DivIcon => {
+    const icon = props.icon || 'poi.svg';
+    const color = props.color || '#22c55e';
 
-const markerIcon = L.divIcon({
-    className: 'custom-map-marker',
+    const markerImage = props.markerImage;
 
-    html: `
-        <div class="map-marker-pin">
-            📍
-        </div>
-    `,
+    const iconUrl = `/storage/markers/${icon}`;
 
-    iconSize: [40, 40],
+    const imageHtml = markerImage
+        ? `
+            <img
+                src="${markerImage}"
+                alt=""
+                class="map-marker-icon map-marker-custom-image"
+            />
+        `
+        : `
+            <img
+                src="${iconUrl}"
+                alt=""
+                class="map-marker-icon"
+            />
+        `;
 
-    iconAnchor: [20, 40],
-});
+    return L.divIcon({
+        className: 'custom-map-marker',
 
-/*
-|--------------------------------------------------------------------------
-| POLÍGONO
-|--------------------------------------------------------------------------
-*/
+        html: `
+            <div
+                class="map-marker-pin"
+                style="background-color: ${color};"
+            >
+                ${imageHtml}
+            </div>
+        `,
+
+        iconSize: [44, 44],
+        iconAnchor: [22, 44],
+    });
+};
+
+/**
+ * --------------------------------------------------------------------------
+ * POLÍGONO
+ * --------------------------------------------------------------------------
+ */
 
 /**
  * Determina si un punto está dentro
@@ -192,7 +240,7 @@ const pointInPolygon = (
         const denominator =
             latitudeJ - latitudeI;
 
-        /*
+        /**
          * Segmento horizontal.
          */
         if (denominator === 0) {
@@ -225,12 +273,6 @@ const pointInPolygon = (
  * IMPORTANTE:
  *
  * mapImageBounds NO se utiliza aquí.
- *
- * Esto permite colocar un marker:
- *
- *   ✓ encima de la imagen
- *   ✓ fuera de la imagen
- *   ✓ siempre que esté dentro de la zona
  */
 const isInsideZone = (
     latitude: number,
@@ -239,7 +281,7 @@ const isInsideZone = (
     const ring =
         props.geometry?.coordinates?.[0];
 
-    /*
+    /**
      * Si todavía no existe geometría,
      * no podemos restringir el punto.
      */
@@ -257,19 +299,18 @@ const isInsideZone = (
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| BOUNDS DEL PLANO
-|--------------------------------------------------------------------------
-|
-| Estos bounds SOLO sirven para dibujar
-| la imagen sobre el mapa.
-|
-| NO sirven para decidir dónde puede
-| colocarse el marker.
-|
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * BOUNDS DEL PLANO
+ * --------------------------------------------------------------------------
+ *
+ * Estos bounds SOLO sirven para dibujar
+ * la imagen sobre el mapa.
+ *
+ * NO sirven para decidir dónde puede
+ * colocarse el marker.
+ *
+ */
 const getImageBounds = (): L.LatLngBounds | null => {
     const bounds =
         props.mapImageBounds;
@@ -318,11 +359,11 @@ const getImageBounds = (): L.LatLngBounds | null => {
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| COORDENADAS
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * COORDENADAS
+ * --------------------------------------------------------------------------
+ */
 
 const updateCoordinates = (
     latLng: L.LatLng,
@@ -342,16 +383,16 @@ const updateCoordinates = (
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| IMAGEN
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * IMAGEN
+ * --------------------------------------------------------------------------
+ */
 
 const resolveImageUrl = (
     image: File | string,
 ): string => {
-    /*
+    /**
      * Imagen existente almacenada
      * en la base de datos.
      */
@@ -379,7 +420,7 @@ const resolveImageUrl = (
         return `/storage/${image}`;
     }
 
-    /*
+    /**
      * Imagen nueva seleccionada
      * desde el formulario.
      */
@@ -408,7 +449,6 @@ const clearImage = (): void => {
     }
 
     currentImageUrl = null;
-
     imageUrlIsObjectUrl = false;
 };
 
@@ -423,7 +463,7 @@ const renderImage = (): void => {
         return;
     }
 
-    /*
+    /**
      * Los bounds solamente indican
      * dónde debe aparecer el plano.
      */
@@ -453,13 +493,13 @@ const renderImage = (): void => {
             {
                 opacity: 0.9,
 
-                /*
+                /**
                  * La imagen jamás captura
                  * eventos del mouse.
                  */
                 interactive: false,
 
-                /*
+                /**
                  * Debajo del marker.
                  */
                 pane: 'zooImagePane',
@@ -470,16 +510,15 @@ const renderImage = (): void => {
         ).addTo(map);
 };
 
-/*
-|--------------------------------------------------------------------------
-| MARKER
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * MARKER
+ * --------------------------------------------------------------------------
+ */
 
 const clearMarker = (): void => {
     if (marker) {
         marker.remove();
-
         marker = null;
     }
 };
@@ -501,9 +540,10 @@ const createMarker = (
                 longitude,
             ],
             {
-                icon: markerIcon,
+                icon:
+                    createMarkerIcon(),
 
-                /*
+                /**
                  * Marker encima de todo.
                  */
                 pane: 'zooMarkerPane',
@@ -518,7 +558,7 @@ const createMarker = (
             },
         ).addTo(map);
 
-    /*
+    /**
      * Al comenzar a arrastrar,
      * bloqueamos el movimiento del mapa.
      */
@@ -533,7 +573,7 @@ const createMarker = (
         },
     );
 
-    /*
+    /**
      * Al terminar de arrastrar,
      * comprobamos la ZONA.
      */
@@ -549,13 +589,9 @@ const createMarker = (
             const position =
                 marker.getLatLng();
 
-            /*
-             * IMPORTANTE:
-             *
+            /**
              * Solamente validamos contra
              * la geometría de la ZONA.
-             *
-             * La imagen no importa.
              */
             if (
                 !isInsideZone(
@@ -563,7 +599,7 @@ const createMarker = (
                     position.lng,
                 )
             ) {
-                /*
+                /**
                  * Si intentó salir de la zona,
                  * regresamos a la última posición
                  * válida.
@@ -587,7 +623,7 @@ const createMarker = (
                 return;
             }
 
-            /*
+            /**
              * Nueva posición válida.
              */
             updateCoordinates(
@@ -597,32 +633,50 @@ const createMarker = (
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| RENDER DE ZONA
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * ACTUALIZAR ICONO
+ * --------------------------------------------------------------------------
+ *
+ * Se utiliza cuando el usuario cambia
+ * el icono, color o imagen desde el formulario.
+ *
+ */
+const updateMarkerIcon = (): void => {
+    if (!marker) {
+        return;
+    }
+
+    marker.setIcon(
+        createMarkerIcon(),
+    );
+};
+
+/**
+ * --------------------------------------------------------------------------
+ * RENDER DE ZONA
+ * --------------------------------------------------------------------------
+ */
 
 const renderZone = (): void => {
     if (!map) {
         return;
     }
 
-    /*
+    /**
      * Eliminar zona anterior.
      */
     if (zoneLayer) {
         zoneLayer.remove();
-
         zoneLayer = null;
     }
 
-    /*
+    /**
      * Eliminar marker anterior.
      */
     clearMarker();
 
-    /*
+    /**
      * Dibujar la geometría de la zona.
      */
     if (props.geometry) {
@@ -632,7 +686,7 @@ const renderZone = (): void => {
                 {
                     pane: 'zooZonePane',
 
-                    /*
+                    /**
                      * La geometría no captura clicks.
                      */
                     interactive: false,
@@ -646,7 +700,7 @@ const renderZone = (): void => {
             ).addTo(map);
     }
 
-    /*
+    /**
      * Dibujar el plano.
      *
      * Esto es independiente de la zona.
@@ -656,15 +710,11 @@ const renderZone = (): void => {
     const zoneBounds =
         zoneLayer?.getBounds();
 
-    /*
+    /**
      * IMPORTANTE:
      *
      * Centramos el mapa en la ZONA,
      * no en la imagen.
-     *
-     * Así también podemos ver y utilizar
-     * las partes de la zona que están fuera
-     * del plano.
      */
     if (
         zoneBounds &&
@@ -680,7 +730,7 @@ const renderZone = (): void => {
             },
         );
     } else {
-        /*
+        /**
          * Si no hay zona pero sí imagen,
          * usamos la imagen solamente para
          * posicionar el mapa.
@@ -709,7 +759,7 @@ const renderZone = (): void => {
         }
     }
 
-    /*
+    /**
      * Restaurar marker existente.
      */
     if (
@@ -722,7 +772,7 @@ const renderZone = (): void => {
         props.longitude !==
             undefined
     ) {
-        /*
+        /**
          * El marker existente solamente
          * debe estar dentro de la ZONA.
          */
@@ -740,11 +790,11 @@ const renderZone = (): void => {
     }
 };
 
-/*
-|--------------------------------------------------------------------------
-| CLICK SOBRE EL MAPA
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * CLICK SOBRE EL MAPA
+ * --------------------------------------------------------------------------
+ */
 
 const handleMapClick = (
     event: L.LeafletMouseEvent,
@@ -759,36 +809,12 @@ const handleMapClick = (
     const longitude =
         event.latlng.lng;
 
-    /*
-     * ==========================================================
-     * IMPORTANTE
-     * ==========================================================
-     *
-     * NO usamos:
-     *
-     *     mapImageBounds
-     *
+    /**
+     * NO usamos mapImageBounds
      * para validar el click.
      *
-     * Solamente usamos:
-     *
-     *     geometry
-     *
-     * Por lo tanto:
-     *
-     *      ┌────────────────────────┐
-     *      │        IMAGEN          │
-     *      │       📍               │
-     *      │                        │
-     *      └────────────────────────┘
-     *
-     *                  📍
-     *
-     * El segundo marker también puede
-     * colocarse si está dentro de la ZONA,
-     * aunque esté fuera de la imagen.
+     * Solamente usamos geometry.
      */
-
     if (
         !isInsideZone(
             latitude,
@@ -798,7 +824,7 @@ const handleMapClick = (
         return;
     }
 
-    /*
+    /**
      * Crear marker.
      */
     createMarker(
@@ -806,7 +832,7 @@ const handleMapClick = (
         longitude,
     );
 
-    /*
+    /**
      * Actualizar coordenadas del formulario.
      */
     updateCoordinates(
@@ -814,11 +840,11 @@ const handleMapClick = (
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| MOUNTED
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * MOUNTED
+ * --------------------------------------------------------------------------
+ */
 
 onMounted(() => {
     if (!mapElement.value) {
@@ -836,13 +862,13 @@ onMounted(() => {
             15,
         );
 
-    /*
+    /**
      * Crear panes antes de
      * dibujar las capas.
      */
     createMapPanes();
 
-    /*
+    /**
      * Mapa base.
      */
     L.tileLayer(
@@ -853,7 +879,7 @@ onMounted(() => {
         },
     ).addTo(map);
 
-    /*
+    /**
      * Evento click.
      *
      * Como la imagen y la zona tienen
@@ -865,12 +891,12 @@ onMounted(() => {
         handleMapClick,
     );
 
-    /*
+    /**
      * Dibujar zona, imagen y marker.
      */
     renderZone();
 
-    /*
+    /**
      * Leaflet necesita recalcular
      * el tamaño después de renderizar.
      */
@@ -879,11 +905,11 @@ onMounted(() => {
     }, 100);
 });
 
-/*
-|--------------------------------------------------------------------------
-| WATCH GEOMETRY
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * WATCH GEOMETRY
+ * --------------------------------------------------------------------------
+ */
 
 watch(
     () => props.geometry,
@@ -895,11 +921,11 @@ watch(
     },
 );
 
-/*
-|--------------------------------------------------------------------------
-| WATCH IMAGEN
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * WATCH IMAGEN
+ * --------------------------------------------------------------------------
+ */
 
 watch(
     () => props.mapImage,
@@ -912,11 +938,11 @@ watch(
     },
 );
 
-/*
-|--------------------------------------------------------------------------
-| WATCH BOUNDS DE IMAGEN
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * WATCH BOUNDS DE IMAGEN
+ * --------------------------------------------------------------------------
+ */
 
 watch(
     () => props.mapImageBounds,
@@ -932,11 +958,11 @@ watch(
     },
 );
 
-/*
-|--------------------------------------------------------------------------
-| WATCH COORDENADAS
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * WATCH COORDENADAS
+ * --------------------------------------------------------------------------
+ */
 
 watch(
     () => [
@@ -948,7 +974,7 @@ watch(
             return;
         }
 
-        /*
+        /**
          * Sin coordenadas,
          * quitar marker.
          */
@@ -963,11 +989,10 @@ watch(
                 undefined
         ) {
             clearMarker();
-
             return;
         }
 
-        /*
+        /**
          * Las coordenadas también deben
          * respetar la ZONA.
          */
@@ -994,11 +1019,54 @@ watch(
     },
 );
 
-/*
-|--------------------------------------------------------------------------
-| UNMOUNTED
-|--------------------------------------------------------------------------
-*/
+/**
+ * --------------------------------------------------------------------------
+ * WATCH ICONO
+ * --------------------------------------------------------------------------
+ */
+
+watch(
+    () => props.icon,
+    () => {
+        updateMarkerIcon();
+    },
+);
+
+/**
+ * --------------------------------------------------------------------------
+ * WATCH COLOR
+ * --------------------------------------------------------------------------
+ */
+
+watch(
+    () => props.color,
+    () => {
+        updateMarkerIcon();
+    },
+);
+
+/**
+ * --------------------------------------------------------------------------
+ * WATCH IMAGEN DEL MARKER
+ * --------------------------------------------------------------------------
+ *
+ * Este watch permite que el thumbnail
+ * seleccionado en especies aparezca
+ * inmediatamente en el mapa.
+ *
+ */
+watch(
+    () => props.markerImage,
+    () => {
+        updateMarkerIcon();
+    },
+);
+
+/**
+ * --------------------------------------------------------------------------
+ * UNMOUNTED
+ * --------------------------------------------------------------------------
+ */
 
 onBeforeUnmount(() => {
     clearMarker();
@@ -1007,7 +1075,6 @@ onBeforeUnmount(() => {
 
     if (map) {
         map.remove();
-
         map = null;
     }
 });
@@ -1024,39 +1091,58 @@ onBeforeUnmount(() => {
 .custom-map-marker {
     background: transparent !important;
     border: none !important;
-
-    width: 40px !important;
-    height: 40px !important;
-
+    width: 44px !important;
+    height: 44px !important;
     pointer-events: auto !important;
 }
 
 .map-marker-pin {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    font-size: 36px;
-    line-height: 1;
+    border-radius: 50%;
 
-    /*
-     * El contenido del pin no captura
-     * el evento del mouse.
-     */
+    border: 3px solid white;
+
+    box-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.35);
+
+    overflow: hidden;
+
     pointer-events: none;
+}
 
-    filter:
-        drop-shadow(
-            0 2px 3px
-            rgba(0, 0, 0, 0.55)
-        );
+.map-marker-icon {
+    width: 27px;
+    height: 27px;
+
+    object-fit: contain;
+
+    display: block;
+
+    pointer-events: none;
+}
+
+/*
+ * Imagen personalizada del marker.
+ *
+ * Se utiliza para thumbnails de especies.
+ */
+.map-marker-custom-image {
+    width: 34px;
+    height: 34px;
+
+    border-radius: 50%;
+
+    object-fit: cover;
 }
 
 .map-marker-image-overlay {
-    /*
+    /**
      * El plano nunca bloquea
      * los clicks del mapa.
      */
