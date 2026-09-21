@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ExploreController;
 use App\Http\Controllers\Api\MapController;
 use App\Http\Controllers\Api\SpeciesController;
 use App\Http\Controllers\Api\TicketController;
+use App\Http\Controllers\Api\DonationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -63,4 +64,9 @@ Route::middleware('auth:sanctum')->group(function () {
         TicketController::class,
         'myTickets',
     ])->name('api.tickets.index');
+
+
+   Route::get('/donations', [ DonationController::class, 'index', ]); 
+   Route::post('/donations', [ DonationController::class, 'store', ]); 
+   Route::get('/donations/{donation}', [ DonationController::class, 'show', ]);
 });
