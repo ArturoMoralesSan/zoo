@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\TicketOrderController;
 use App\Http\Controllers\Admin\TicketTypeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZooZoneController;
+use App\Http\Controllers\Admin\CardController;
 use App\Http\Controllers\MapController;
 use Illuminate\Support\Facades\Route;
 
@@ -299,6 +300,28 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:map_paths.edit',
                 'destroy' => 'permission:map_paths.delete',
             ]);
+
+        Route::resource('cards', CardController::class)
+            ->middleware([
+                'index' => 'permission:cards.view',
+                'create' => 'permission:cards.create',
+                'store' => 'permission:cards.create',
+                'edit' => 'permission:cards.edit',
+                'update' => 'permission:cards.edit',
+                'destroy' => 'permission:cards.delete',
+            ]);
+
+        Route::delete(
+            'cards/{card}/image',
+            [CardController::class, 'destroyImage']
+        )->middleware('permission:cards.edit')
+            ->name('cards.image.destroy');
+
+        Route::delete(
+            'cards/{card}/model',
+            [CardController::class, 'destroyModel']
+        )->middleware('permission:cards.edit')
+            ->name('cards.model.destroy');
 
     });
 

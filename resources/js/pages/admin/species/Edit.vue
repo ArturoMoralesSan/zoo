@@ -61,7 +61,7 @@ interface SpeciesLocation {
 interface SpeciesImage {
     id: number;
     species_id: number;
-    type: 'main' | 'thumbnail' | 'card' | 'gallery' | string;
+    type: 'main' | 'thumbnail' | 'gallery' | string;
     path: string;
     alt_text: string | null;
     is_active: boolean;
@@ -91,20 +91,17 @@ interface Species {
      * Imágenes existentes
      * ----------------------------------------------------------------------
      *
-     * Las imágenes NO están directamente en:
-     *
-     * species.thumbnail_image
-     *
-     * sino en:
+     * Las imágenes se encuentran en:
      *
      * species.images
+     *
+     * y pueden ser:
+     *
+     * main
+     * thumbnail
+     * gallery
      */
     images: SpeciesImage[];
-
-    model_name: string | null;
-    model_url: string | null;
-    model_format: string | null;
-    model_description: string | null;
 }
 
 const props = defineProps<{
@@ -134,10 +131,6 @@ const tabs = [
     {
         id: 'images',
         name: 'Imágenes',
-    },
-    {
-        id: 'model',
-        name: 'Modelo 3D',
     },
     {
         id: 'location',
@@ -240,19 +233,6 @@ const existingThumbnailImage =
     });
 
 /**
- * Imagen de tarjeta existente.
- */
-const existingCardImage = computed<SpeciesImage | null>(() => {
-    return (
-        existingImages.value.find(
-            (image) =>
-                image.type === 'card' &&
-                image.is_active,
-        ) ?? null
-    );
-});
-
-/**
  * Galería existente.
  */
 const existingGalleryImages =
@@ -284,12 +264,6 @@ const existingThumbnailUrl =
             existingThumbnailImage.value?.path,
         );
     });
-
-const existingCardImageUrl = computed<string | null>(() => {
-    return imageUrl(
-        existingCardImage.value?.path,
-    );
-});
 
 /**
  * --------------------------------------------------------------------------
@@ -337,38 +311,26 @@ const form = useForm({
     /**
      * Estos campos representan únicamente NUEVOS archivos.
      */
-    main_image: null as File | null,
+    main_image:
+        null as File | null,
 
     thumbnail_image:
         null as File | null,
 
-    card_image: null as File | null,
+    gallery_images:
+        [] as File[],
 
-    gallery_images: [] as File[],
-
-    model_name:
-        props.species.model_name ?? '',
-
-    model_file:
-        null as File | null,
-
-    model_url:
-        props.species.model_url ?? '',
-
-    model_format:
-        props.species.model_format ?? '',
-
-    model_description:
-        props.species.model_description ?? '',
-
-    zone_id: initialZoneId,
+    zone_id:
+        initialZoneId,
 
     location_name:
         currentLocation?.name ?? '',
 
-    latitude: initialLatitude,
+    latitude:
+        initialLatitude,
 
-    longitude: initialLongitude,
+    longitude:
+        initialLongitude,
 
     location_description:
         currentLocation?.description ?? '',
@@ -388,7 +350,8 @@ const deleteImageForm = useForm({});
  * Se utiliza para no permitir múltiples eliminaciones
  * simultáneas.
  */
-const deletingImageId = ref<number | null>(null);
+const deletingImageId =
+    ref<number | null>(null);
 
 /**
  * --------------------------------------------------------------------------
@@ -410,14 +373,6 @@ const mainPreviewUrl =
     );
 
 const mainObjectUrl =
-    ref<string | null>(null);
-
-const cardPreviewUrl =
-    ref<string | null>(
-        existingCardImageUrl.value,
-    );
-
-const cardObjectUrl =
     ref<string | null>(null);
 
 const galleryPreviewUrls =
@@ -616,43 +571,6 @@ const setThumbnailImage = (
 };
 
 /**
- * Imagen de tarjeta.
- */
-const setCardImage = (event: Event) => {
-    const target =
-        event.target as HTMLInputElement;
-
-    const file =
-        target.files?.[0] ?? null;
-
-    if (cardObjectUrl.value) {
-        URL.revokeObjectURL(
-            cardObjectUrl.value,
-        );
-
-        cardObjectUrl.value = null;
-    }
-
-    form.card_image = file;
-
-    if (file) {
-        const objectUrl =
-            URL.createObjectURL(file);
-
-        cardObjectUrl.value =
-            objectUrl;
-
-        cardPreviewUrl.value =
-            objectUrl;
-
-        return;
-    }
-
-    cardPreviewUrl.value =
-        existingCardImageUrl.value;
-};
-
-/**
  * Galería.
  *
  * Las imágenes nuevas se agregan a la galería
@@ -691,46 +609,6 @@ const setGalleryImages = (
             objectUrl,
         );
     });
-};
-
-/**
- * --------------------------------------------------------------------------
- * Modelo 3D
- * --------------------------------------------------------------------------
- */
-
-const setModelFile = (event: Event) => {
-    const target =
-        event.target as HTMLInputElement;
-
-    const file =
-        target.files?.[0] ?? null;
-
-    form.model_file = file;
-
-    if (file) {
-        const extension = file.name
-            .split('.')
-            .pop()
-            ?.toLowerCase();
-
-        if (
-            extension === 'glb' ||
-            extension === 'gltf' ||
-            extension === 'usdz'
-        ) {
-            form.model_format =
-                extension;
-        }
-
-        if (!form.model_name) {
-            form.model_name =
-                file.name.replace(
-                    /\.[^/.]+$/,
-                    '',
-                );
-        }
-    }
 };
 
 /**
@@ -813,12 +691,6 @@ onBeforeUnmount(() => {
     if (mainObjectUrl.value) {
         URL.revokeObjectURL(
             mainObjectUrl.value,
-        );
-    }
-
-    if (cardObjectUrl.value) {
-        URL.revokeObjectURL(
-            cardObjectUrl.value,
         );
     }
 
@@ -1444,69 +1316,10 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
 
-                            <!-- TARJETA -->
-
-                            <div
-                                class="rounded-xl border border-sidebar-border p-5"
-                            >
-                                <label
-                                    for="card_image"
-                                    class="mb-2 block text-sm font-medium"
-                                >
-                                    Imagen para tarjeta
-                                </label>
-
-                                <div
-                                    v-if="
-                                        cardPreviewUrl
-                                    "
-                                    class="mb-4 overflow-hidden rounded-lg border border-sidebar-border bg-muted"
-                                >
-                                    <img
-                                        :src="
-                                            cardPreviewUrl
-                                        "
-                                        alt="Imagen de tarjeta"
-                                        class="h-48 w-full object-cover"
-                                    />
-                                </div>
-
-                                <div
-                                    v-else
-                                    class="mb-4 flex h-48 items-center justify-center rounded-lg border border-dashed border-sidebar-border bg-muted/30"
-                                >
-                                    <p
-                                        class="text-sm text-muted-foreground"
-                                    >
-                                        No hay imagen de tarjeta.
-                                    </p>
-                                </div>
-
-                                <input
-                                    id="card_image"
-                                    type="file"
-                                    accept=".jpg,.jpeg,.png,.webp"
-                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                    @change="
-                                        setCardImage
-                                    "
-                                />
-
-                                <p
-                                    class="mt-2 text-xs text-muted-foreground"
-                                >
-                                    {{
-                                        cardObjectUrl
-                                            ? 'Nueva imagen seleccionada.'
-                                            : 'Imagen actual. Deja vacío para conservarla.'
-                                    }}
-                                </p>
-                            </div>
-
                             <!-- GALERÍA -->
 
                             <div
-                                class="rounded-xl border border-sidebar-border p-5"
+                                class="rounded-xl border border-sidebar-border p-5 md:col-span-2"
                             >
                                 <label
                                     for="gallery_images"
@@ -1530,7 +1343,7 @@ onBeforeUnmount(() => {
                                     </p>
 
                                     <div
-                                        class="grid grid-cols-3 gap-2"
+                                        class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6"
                                     >
                                         <div
                                             v-for="image in existingGalleryImages"
@@ -1636,7 +1449,7 @@ onBeforeUnmount(() => {
                                     v-if="
                                         galleryPreviewUrls.length
                                     "
-                                    class="mb-4 grid grid-cols-3 gap-2"
+                                    class="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6"
                                 >
                                     <div
                                         v-for="(
@@ -1696,150 +1509,6 @@ onBeforeUnmount(() => {
                                     }}
                                 </p>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- ================================================= -->
-                    <!-- MODELO 3D -->
-                    <!-- ================================================= -->
-
-                    <div
-                        v-if="
-                            activeTab ===
-                            'model'
-                        "
-                        class="space-y-6"
-                    >
-                        <div>
-                            <h2
-                                class="text-lg font-semibold"
-                            >
-                                Modelo 3D
-                            </h2>
-
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                Actualiza el modelo 3D de la especie.
-                            </p>
-                        </div>
-
-                        <div
-                            class="grid grid-cols-1 gap-6 md:grid-cols-2"
-                        >
-                            <div>
-                                <label
-                                    for="model_name"
-                                    class="mb-2 block text-sm font-medium"
-                                >
-                                    Nombre del modelo
-                                </label>
-
-                                <input
-                                    id="model_name"
-                                    v-model="
-                                        form.model_name
-                                    "
-                                    type="text"
-                                    class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                />
-                            </div>
-
-                            <div>
-                                <label
-                                    for="model_format"
-                                    class="mb-2 block text-sm font-medium"
-                                >
-                                    Formato
-                                </label>
-
-                                <select
-                                    id="model_format"
-                                    v-model="
-                                        form.model_format
-                                    "
-                                    class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                >
-                                    <option value="">
-                                        Selecciona un formato
-                                    </option>
-
-                                    <option value="glb">
-                                        GLB
-                                    </option>
-
-                                    <option value="gltf">
-                                        GLTF
-                                    </option>
-
-                                    <option value="usdz">
-                                        USDZ
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label
-                                    for="model_file"
-                                    class="mb-2 block text-sm font-medium"
-                                >
-                                    Nuevo archivo 3D
-                                </label>
-
-                                <input
-                                    id="model_file"
-                                    type="file"
-                                    accept=".glb,.gltf,.usdz"
-                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
-                                    @change="
-                                        setModelFile
-                                    "
-                                />
-
-                                <p
-                                    class="mt-2 text-xs text-muted-foreground"
-                                >
-                                    Deja vacío para conservar el archivo
-                                    actual.
-                                </p>
-                            </div>
-
-                            <div>
-                                <label
-                                    for="model_url"
-                                    class="mb-2 block text-sm font-medium"
-                                >
-                                    URL del modelo
-                                </label>
-
-                                <input
-                                    id="model_url"
-                                    v-model="
-                                        form.model_url
-                                    "
-                                    type="url"
-                                    placeholder="https://..."
-                                    class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label
-                                for="model_description"
-                                class="mb-2 block text-sm font-medium"
-                            >
-                                Descripción
-                            </label>
-
-                            <textarea
-                                id="model_description"
-                                v-model="
-                                    form.model_description
-                                "
-                                rows="4"
-                                class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            />
                         </div>
                     </div>
 

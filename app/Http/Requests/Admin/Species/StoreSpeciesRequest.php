@@ -117,12 +117,7 @@ class StoreSpeciesRequest extends FormRequest
                 'max:5120',
             ],
 
-            'card_image' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:5120',
-            ],
+            
 
             'gallery_images' => [
                 'nullable',
@@ -135,41 +130,6 @@ class StoreSpeciesRequest extends FormRequest
                 'max:5120',
             ],
 
-            /*
-            |--------------------------------------------------------------------------
-            | Modelo 3D
-            |--------------------------------------------------------------------------
-            */
-
-            'model_name' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'model_file' => [
-                'nullable',
-                'file',
-                'mimes:glb,gltf,usdz',
-                'max:51200',
-            ],
-
-            'model_url' => [
-                'nullable',
-                'url',
-                'max:2048',
-            ],
-
-            'model_format' => [
-                'nullable',
-                'string',
-                'max:50',
-            ],
-
-            'model_description' => [
-                'nullable',
-                'string',
-            ],
 
             /*
             |--------------------------------------------------------------------------

@@ -12,21 +12,11 @@ interface SpeciesCategory {
 
 interface SpeciesImage {
     id: number;
-    type: 'main' | 'thumbnail' | 'card' | 'gallery';
+    type: 'main' | 'thumbnail' | 'gallery';
     path: string;
     alt_text?: string | null;
     is_active: boolean;
     sort_order: number;
-}
-
-interface SpeciesModel {
-    id: number;
-    name: string;
-    path?: string | null;
-    url?: string | null;
-    format?: string | null;
-    description?: string | null;
-    is_active: boolean;
 }
 
 interface MapImageBounds {
@@ -81,7 +71,6 @@ interface Species {
     is_active: boolean;
     category?: SpeciesCategory | null;
     images: SpeciesImage[];
-    models: SpeciesModel[];
     locations: SpeciesLocation[];
     tags: SpeciesTag[];
 }
@@ -110,28 +99,12 @@ const thumbnailImage =
             image.is_active,
     ) ?? null;
 
-const cardImage =
-    props.species.images.find(
-        (image) =>
-            image.type === 'card' &&
-            image.is_active,
-    ) ?? null;
-
 const galleryImages =
     props.species.images.filter(
         (image) =>
             image.type === 'gallery' &&
             image.is_active,
     );
-
-/**
- * --------------------------------------------------------------------------
- * Modelo 3D
- * --------------------------------------------------------------------------
- */
-
-const currentModel =
-    props.species.models[0] ?? null;
 
 /**
  * --------------------------------------------------------------------------
@@ -155,20 +128,6 @@ const imageUrl = (path: string) => {
 const thumbnailMarkerUrl = thumbnailImage
     ? imageUrl(thumbnailImage.path)
     : null;
-
-const modelUrl = (
-    model: SpeciesModel,
-) => {
-    if (model.url) {
-        return model.url;
-    }
-
-    if (model.path) {
-        return `/storage/${model.path}`;
-    }
-
-    return null;
-};
 </script>
 
 <template>
@@ -275,9 +234,7 @@ const modelUrl = (
                             <p
                                 class="mt-1 text-sm font-medium"
                             >
-                                {{
-                                    species.common_name
-                                }}
+                                {{ species.common_name }}
                             </p>
                         </div>
 
@@ -313,8 +270,7 @@ const modelUrl = (
                                 class="mt-1 text-sm"
                             >
                                 {{
-                                    species.category
-                                        ?.name ||
+                                    species.category?.name ||
                                     'Sin categoría'
                                 }}
                             </p>
@@ -593,7 +549,7 @@ const modelUrl = (
             </div>
 
             <div
-                class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+                class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
             >
                 <!-- PRINCIPAL -->
 
@@ -665,41 +621,6 @@ const modelUrl = (
                     </div>
                 </div>
 
-                <!-- TARJETA -->
-
-                <div>
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Tarjeta
-                    </p>
-
-                    <div
-                        class="mt-2 overflow-hidden rounded-lg border border-sidebar-border/70 dark:border-sidebar-border"
-                    >
-                        <img
-                            v-if="cardImage"
-                            :src="
-                                imageUrl(
-                                    cardImage.path,
-                                )
-                            "
-                            :alt="
-                                cardImage.alt_text ||
-                                species.common_name
-                            "
-                            class="aspect-square w-full object-cover"
-                        />
-
-                        <div
-                            v-else
-                            class="flex aspect-square items-center justify-center bg-muted text-xs text-muted-foreground"
-                        >
-                            Sin imagen
-                        </div>
-                    </div>
-                </div>
-
                 <!-- GALERÍA -->
 
                 <div>
@@ -743,157 +664,6 @@ const modelUrl = (
                         Sin imágenes
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- ===================================================== -->
-        <!-- MODELO 3D -->
-        <!-- ===================================================== -->
-
-        <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
-            >
-                <div>
-                    <h2
-                        class="text-lg font-semibold"
-                    >
-                        Modelo 3D
-                    </h2>
-
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Modelo 3D asociado a la
-                        especie.
-                    </p>
-                </div>
-
-                <span
-                    v-if="currentModel"
-                    :class="
-                        currentModel.is_active
-                            ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
-                            : 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400'
-                    "
-                    class="w-fit rounded-full border px-2.5 py-1 text-xs font-medium"
-                >
-                    {{
-                        currentModel.is_active
-                            ? 'Activo'
-                            : 'Inactivo'
-                    }}
-                </span>
-            </div>
-
-            <div
-                v-if="currentModel"
-                class="mt-6 grid gap-5 sm:grid-cols-2"
-            >
-                <!-- Nombre -->
-
-                <div>
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Nombre
-                    </p>
-
-                    <p
-                        class="mt-1 text-sm font-medium"
-                    >
-                        {{ currentModel.name }}
-                    </p>
-                </div>
-
-                <!-- Formato -->
-
-                <div>
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Formato
-                    </p>
-
-                    <p
-                        class="mt-1 text-sm"
-                    >
-                        {{
-                            currentModel.format ||
-                            'Sin especificar'
-                        }}
-                    </p>
-                </div>
-
-                <!-- Descripción -->
-
-                <div
-                    v-if="currentModel.description"
-                    class="sm:col-span-2"
-                >
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Descripción
-                    </p>
-
-                    <p
-                        class="mt-1 whitespace-pre-line text-sm leading-6"
-                    >
-                        {{
-                            currentModel.description
-                        }}
-                    </p>
-                </div>
-
-                <!-- RECURSO -->
-
-                <div
-                    class="sm:col-span-2"
-                >
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Recurso
-                    </p>
-
-                    <div class="mt-2">
-                        <a
-                            v-if="
-                                modelUrl(
-                                    currentModel,
-                                )
-                            "
-                            :href="
-                                modelUrl(
-                                    currentModel,
-                                ) || '#'
-                            "
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                        >
-                            Abrir modelo 3D
-                        </a>
-
-                        <span
-                            v-else
-                            class="text-sm italic text-muted-foreground"
-                        >
-                            Sin archivo o URL.
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                v-else
-                class="mt-6 rounded-lg border border-dashed border-sidebar-border p-6 text-center text-sm text-muted-foreground"
-            >
-                No hay un modelo 3D registrado para
-                esta especie.
             </div>
         </div>
 
@@ -944,7 +714,7 @@ const modelUrl = (
                     <!-- ZONA -->
 
                     <div
-                        class="sm:col-span-2 rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                        class="rounded-lg border border-sidebar-border bg-accent/30 p-4 sm:col-span-2"
                     >
                         <p
                             class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -1110,10 +880,12 @@ const modelUrl = (
                                 currentLocation.zone.geometry
                             "
                             :map-image="
-                                currentLocation.zone.map_image ?? null
+                                currentLocation.zone.map_image ??
+                                null
                             "
                             :map-image-bounds="
-                                currentLocation.zone.map_image_bounds ?? null
+                                currentLocation.zone
+                                    .map_image_bounds ?? null
                             "
                             :marker-image="
                                 thumbnailMarkerUrl

@@ -65,4 +65,11 @@ class Species extends Model
             'species_tag'
         );
     }
+
+    public function cards()
+    {
+        return $this->hasMany(
+            Card::class
+        );
+    }
 }
