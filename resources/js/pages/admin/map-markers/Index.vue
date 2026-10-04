@@ -2,6 +2,15 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
+import {
+    Edit,
+    Eye,
+    MapPin,
+    Plus,
+    Search,
+    Trash2,
+} from 'lucide-vue-next';
+
 import admin from '@/routes/admin';
 
 interface ZooZone {
@@ -85,31 +94,36 @@ const deleteMarker = (marker: MapMarker) => {
 <template>
     <Head title="Markers" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
+    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
         <!-- Encabezado -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div>
-                    <h1 class="text-2xl font-semibold">
-                        Markers
-                    </h1>
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div class="flex items-start gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <MapPin class="h-5 w-5" />
+                    </div>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Administra los puntos y ubicaciones del mapa del
-                        zoológico.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Markers
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Administra los puntos y ubicaciones del mapa del
+                            zoológico.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
                     :href="admin.mapMarkers.create().url"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                 >
+                    <Plus class="h-4 w-4" />
                     Nuevo marker
                 </Link>
             </div>
@@ -117,7 +131,7 @@ const deleteMarker = (marker: MapMarker) => {
 
         <!-- Tabla -->
         <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
         >
             <!-- Buscador -->
             <div
@@ -127,22 +141,30 @@ const deleteMarker = (marker: MapMarker) => {
                     class="flex w-full gap-2 md:max-w-md"
                     @submit.prevent="submitSearch"
                 >
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Buscar marker..."
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
+                    <div class="relative flex-1">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Buscar marker..."
+                            class="w-full rounded-lg border border-sidebar-border bg-background py-2 pl-9 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
 
                     <button
                         type="submit"
-                        class="rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
                     >
+                        <Search class="h-4 w-4" />
                         Buscar
                     </button>
                 </form>
 
-                <div class="text-sm text-muted-foreground">
+                <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin class="h-4 w-4" />
                     {{ markers.total }} markers
                 </div>
             </div>
@@ -192,7 +214,7 @@ const deleteMarker = (marker: MapMarker) => {
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <span
-                                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border"
+                                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sidebar-border"
                                         :style="
                                             marker.color
                                                 ? {
@@ -209,12 +231,13 @@ const deleteMarker = (marker: MapMarker) => {
                                             class="h-6 w-6 object-contain"
                                         />
 
-                                        <span v-else class="text-lg">
-                                            📍
-                                        </span>
+                                        <MapPin
+                                            v-else
+                                            class="h-5 w-5"
+                                        />
                                     </span>
 
-                                    <div>
+                                    <div class="min-w-0">
                                         <div class="font-medium">
                                             {{ marker.name }}
                                         </div>
@@ -226,9 +249,7 @@ const deleteMarker = (marker: MapMarker) => {
                                             {{ marker.description }}
                                         </div>
 
-                                        <div
-                                            class="text-xs text-muted-foreground"
-                                        >
+                                        <div class="text-xs text-muted-foreground">
                                             ID: {{ marker.id }}
                                         </div>
                                     </div>
@@ -239,7 +260,7 @@ const deleteMarker = (marker: MapMarker) => {
                             <td class="px-6 py-4">
                                 <span
                                     v-if="marker.type"
-                                    class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                                    class="inline-flex items-center rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
                                 >
                                     {{ marker.type }}
                                 </span>
@@ -256,8 +277,9 @@ const deleteMarker = (marker: MapMarker) => {
                             <td class="px-6 py-4">
                                 <span
                                     v-if="marker.zone"
-                                    class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
                                 >
+                                    <MapPin class="h-3 w-3" />
                                     {{ marker.zone.name }}
                                 </span>
 
@@ -275,9 +297,7 @@ const deleteMarker = (marker: MapMarker) => {
                                     {{ Number(marker.latitude).toFixed(7) }}
                                 </div>
 
-                                <div
-                                    class="font-mono text-xs text-muted-foreground"
-                                >
+                                <div class="font-mono text-xs text-muted-foreground">
                                     {{ Number(marker.longitude).toFixed(7) }}
                                 </div>
                             </td>
@@ -286,14 +306,14 @@ const deleteMarker = (marker: MapMarker) => {
                             <td class="px-6 py-4">
                                 <span
                                     v-if="marker.is_active"
-                                    class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
+                                    class="inline-flex items-center rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                                 >
                                     Activo
                                 </span>
 
                                 <span
                                     v-else
-                                    class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
+                                    class="inline-flex items-center rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
                                 >
                                     Inactivo
                                 </span>
@@ -308,8 +328,9 @@ const deleteMarker = (marker: MapMarker) => {
                                                 marker.id,
                                             ).url
                                         "
-                                        class="rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
+                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
                                     >
+                                        <Eye class="h-4 w-4" />
                                         Ver
                                     </Link>
 
@@ -319,16 +340,18 @@ const deleteMarker = (marker: MapMarker) => {
                                                 marker.id,
                                             ).url
                                         "
-                                        class="rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
+                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
                                     >
+                                        <Edit class="h-4 w-4" />
                                         Editar
                                     </Link>
 
                                     <button
                                         type="button"
-                                        class="rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
+                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
                                         @click="deleteMarker(marker)"
                                     >
+                                        <Trash2 class="h-4 w-4" />
                                         Eliminar
                                     </button>
                                 </div>
@@ -339,9 +362,21 @@ const deleteMarker = (marker: MapMarker) => {
                         <tr v-if="markers.data.length === 0">
                             <td
                                 colspan="6"
-                                class="px-6 py-12 text-center text-sm text-muted-foreground"
+                                class="px-6 py-12 text-center"
                             >
-                                No se encontraron markers.
+                                <div
+                                    class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"
+                                >
+                                    <MapPin class="h-5 w-5" />
+                                </div>
+
+                                <p class="mt-3 text-sm font-medium">
+                                    No se encontraron markers.
+                                </p>
+
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    Prueba con otro término de búsqueda.
+                                </p>
                             </td>
                         </tr>
                     </tbody>

@@ -2,6 +2,13 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
+import {
+    Edit,
+    Plus,
+    Search,
+    Tags,
+    Trash2,
+} from 'lucide-vue-next';
 
 import admin from '@/routes/admin';
 
@@ -81,25 +88,34 @@ const deleteTag = (tag: Tag) => {
     >
         <!-- Encabezado -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1 class="text-2xl font-semibold">
-                        Etiquetas
-                    </h1>
+                <div class="flex items-center gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <Tags class="h-5 w-5" />
+                    </div>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Administra las etiquetas utilizadas por las especies.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Etiquetas
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Administra las etiquetas utilizadas por las especies.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
                     :href="admin.speciesTags.create().url"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                 >
+                    <Plus class="h-4 w-4" />
                     Nueva etiqueta
                 </Link>
             </div>
@@ -107,7 +123,7 @@ const deleteTag = (tag: Tag) => {
 
         <!-- Tabla -->
         <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
         >
             <!-- Buscador -->
             <div
@@ -117,17 +133,24 @@ const deleteTag = (tag: Tag) => {
                     class="flex w-full gap-2 md:max-w-md"
                     @submit.prevent="submitSearch"
                 >
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Buscar etiqueta..."
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
+                    <div class="relative w-full">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Buscar etiqueta..."
+                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-9 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
 
                     <button
                         type="submit"
-                        class="rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <Search class="h-4 w-4" />
                         Buscar
                     </button>
                 </form>
@@ -175,12 +198,24 @@ const deleteTag = (tag: Tag) => {
                             class="transition hover:bg-muted/30"
                         >
                             <td class="px-6 py-4">
-                                <div class="font-medium">
-                                    {{ tag.name }}
-                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                                    >
+                                        <Tags class="h-4 w-4" />
+                                    </div>
 
-                                <div class="text-xs text-muted-foreground">
-                                    ID: {{ tag.id }}
+                                    <div>
+                                        <div class="font-medium">
+                                            {{ tag.name }}
+                                        </div>
+
+                                        <div
+                                            class="text-xs text-muted-foreground"
+                                        >
+                                            ID: {{ tag.id }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
@@ -225,16 +260,18 @@ const deleteTag = (tag: Tag) => {
                                                 .edit(tag.id)
                                                 .url
                                         "
-                                        class="rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
+                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
                                     >
+                                        <Edit class="h-3.5 w-3.5" />
                                         Editar
                                     </Link>
 
                                     <button
                                         type="button"
-                                        class="rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
+                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
                                         @click="deleteTag(tag)"
                                     >
+                                        <Trash2 class="h-3.5 w-3.5" />
                                         Eliminar
                                     </button>
                                 </div>
@@ -247,7 +284,17 @@ const deleteTag = (tag: Tag) => {
                                 colspan="5"
                                 class="px-6 py-12 text-center text-sm text-muted-foreground"
                             >
-                                No se encontraron etiquetas.
+                                <div class="flex flex-col items-center justify-center gap-2">
+                                    <div
+                                        class="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+                                    >
+                                        <Tags class="h-5 w-5" />
+                                    </div>
+
+                                    <span>
+                                        No se encontraron etiquetas.
+                                    </span>
+                                </div>
                             </td>
                         </tr>
                     </tbody>

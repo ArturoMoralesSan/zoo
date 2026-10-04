@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import {
+    CalendarClock,
+    Coins,
+    Gift,
+    Hash,
+    Plus,
+    Search,
+    User,
+} from 'lucide-vue-next';
 import { ref } from 'vue';
 
 import admin from '@/routes/admin';
@@ -102,76 +111,66 @@ const statusLabel = (
 <template>
     <Head title="Canjes de recompensas" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
+    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
         <!-- Encabezado -->
-        <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div>
-                    <h1
-                        class="text-2xl font-semibold"
-                    >
-                        Canjes de recompensas
-                    </h1>
+        <div class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div class="flex items-start gap-4">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Gift class="h-5 w-5" />
+                    </div>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Consulta el historial de
-                        recompensas canjeadas por los
-                        usuarios.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Canjes de recompensas
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Consulta el historial de recompensas canjeadas por los usuarios.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
-                    :href="
-                        admin.rewardRedemptions
-                            .create().url
-                    "
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    :href="admin.rewardRedemptions.create().url"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                 >
+                    <Plus class="h-4 w-4" />
                     Nuevo canje
                 </Link>
             </div>
         </div>
 
         <!-- Tabla -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-        >
+        <div class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border">
             <!-- Buscador -->
-            <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
-            >
+            <div class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between">
                 <form
                     class="flex w-full gap-2 md:max-w-md"
                     @submit.prevent="submitSearch"
                 >
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Buscar canje..."
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
+                    <div class="relative flex-1">
+                        <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Buscar canje..."
+                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
 
                     <button
                         type="submit"
-                        class="rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <Search class="h-4 w-4" />
                         Buscar
                     </button>
                 </form>
 
-                <div
-                    class="text-sm text-muted-foreground"
-                >
+                <div class="text-sm text-muted-foreground">
                     {{ redemptions.total }}
-
                     {{
                         redemptions.total === 1
                             ? 'canje'
@@ -182,210 +181,173 @@ const statusLabel = (
 
             <!-- Tabla -->
             <div class="overflow-x-auto">
-                <table
-                    class="w-full text-left text-sm"
-                >
-                    <thead
-                        class="border-b border-sidebar-border/70 bg-muted/40 dark:border-sidebar-border"
-                    >
+                <table class="w-full text-left text-sm">
+                    <thead class="border-b border-sidebar-border/70 bg-muted/40 dark:border-sidebar-border">
                         <tr>
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
+                            <th class="px-6 py-4 font-semibold">
                                 Folio
                             </th>
 
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
+                            <th class="px-6 py-4 font-semibold">
                                 Usuario
                             </th>
 
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
+                            <th class="px-6 py-4 font-semibold">
                                 Recompensa
                             </th>
 
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
+                            <th class="px-6 py-4 font-semibold">
                                 Puntos requeridos
                             </th>
 
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
+                            <th class="px-6 py-4 font-semibold">
                                 Estado
                             </th>
 
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
+                            <th class="px-6 py-4 font-semibold">
                                 Fecha
                             </th>
                         </tr>
                     </thead>
 
-                    <tbody
-                        class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
-                    >
+                    <tbody class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
                         <tr
-                            v-for="
-                                redemption in redemptions.data
-                            "
+                            v-for="redemption in redemptions.data"
                             :key="redemption.id"
                             class="transition hover:bg-muted/30"
                         >
                             <!-- Folio -->
                             <td class="px-6 py-4">
-                                <div
-                                    class="font-medium"
-                                >
-                                    {{ redemption.folio }}
-                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-primary/10 text-primary">
+                                        <Hash class="h-4 w-4" />
+                                    </span>
 
-                                <div
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    ID:
-                                    {{
-                                        redemption.id
-                                    }}
+                                    <div>
+                                        <div class="font-medium">
+                                            {{ redemption.folio }}
+                                        </div>
+
+                                        <div class="text-xs text-muted-foreground">
+                                            ID: {{ redemption.id }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
                             <!-- Usuario -->
                             <td class="px-6 py-4">
-                                <div
-                                    class="font-medium"
-                                >
-                                    {{
-                                        redemption.user
-                                            .name
-                                    }}
-                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-primary/10 text-primary">
+                                        <User class="h-4 w-4" />
+                                    </span>
 
-                                <div
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    {{
-                                        redemption.user
-                                            .email
-                                    }}
+                                    <div class="min-w-0">
+                                        <div class="font-medium">
+                                            {{ redemption.user.name }}
+                                        </div>
+
+                                        <div class="text-xs text-muted-foreground">
+                                            {{ redemption.user.email }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
                             <!-- Recompensa -->
                             <td class="px-6 py-4">
-                                <div
-                                    class="font-medium"
-                                >
-                                    {{
-                                        redemption.reward
-                                            .name
-                                    }}
+                                <div class="flex items-center gap-3">
+                                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-primary/10 text-primary">
+                                        <Gift class="h-4 w-4" />
+                                    </span>
+
+                                    <div class="font-medium">
+                                        {{ redemption.reward.name }}
+                                    </div>
                                 </div>
                             </td>
 
                             <!-- Puntos -->
                             <td class="px-6 py-4">
-                                <span
-                                    class="font-semibold"
-                                >
-                                    {{
-                                        formatPoints(
-                                            redemption.points,
-                                        )
-                                    }}
-                                </span>
+                                <span class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-semibold">
+                                    <Coins class="h-3.5 w-3.5 text-muted-foreground" />
 
-                                <span
-                                    class="ml-1 text-xs text-muted-foreground"
-                                >
-                                    pts
+                                    {{ formatPoints(redemption.points) }}
+
+                                    <span class="font-normal text-muted-foreground">
+                                        pts
+                                    </span>
                                 </span>
                             </td>
 
                             <!-- Estado -->
                             <td class="px-6 py-4">
                                 <span
-                                    v-if="
-                                        redemption.status ===
-                                        'completed'
-                                    "
-                                    class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                    v-if="redemption.status === 'completed'"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                                 >
-                                    {{
-                                        statusLabel(
-                                            redemption.status,
-                                        )
-                                    }}
+                                    <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+
+                                    {{ statusLabel(redemption.status) }}
                                 </span>
 
                                 <span
-                                    v-else-if="
-                                        redemption.status ===
-                                        'cancelled'
-                                    "
-                                    class="rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                    v-else-if="redemption.status === 'cancelled'"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
                                 >
-                                    {{
-                                        statusLabel(
-                                            redemption.status,
-                                        )
-                                    }}
+                                    <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+
+                                    {{ statusLabel(redemption.status) }}
                                 </span>
 
                                 <span
                                     v-else
-                                    class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium"
                                 >
-                                    {{
-                                        statusLabel(
-                                            redemption.status,
-                                        )
-                                    }}
+                                    <span class="h-1.5 w-1.5 rounded-full bg-muted-foreground"></span>
+
+                                    {{ statusLabel(redemption.status) }}
                                 </span>
                             </td>
 
                             <!-- Fecha -->
                             <td class="px-6 py-4">
-                                <div>
-                                    {{
-                                        formatDate(
-                                            redemption.redeemed_at,
-                                        )
-                                    }}
-                                </div>
+                                <div class="flex items-start gap-2">
+                                    <CalendarClock class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
 
-                                <div
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    Creado:
+                                    <div>
+                                        <div>
+                                            {{ formatDate(redemption.redeemed_at) }}
+                                        </div>
 
-                                    {{
-                                        formatDate(
-                                            redemption.created_at,
-                                        )
-                                    }}
+                                        <div class="mt-1 text-xs text-muted-foreground">
+                                            Creado:
+                                            {{ formatDate(redemption.created_at) }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
 
                         <!-- Sin resultados -->
-                        <tr
-                            v-if="
-                                redemptions.data
-                                    .length === 0
-                            "
-                        >
+                        <tr v-if="redemptions.data.length === 0">
                             <td
                                 colspan="6"
-                                class="px-6 py-12 text-center text-sm text-muted-foreground"
+                                class="px-6 py-12"
                             >
-                                No se encontraron
-                                canjes de recompensas.
+                                <div class="flex flex-col items-center justify-center text-center">
+                                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                                        <Gift class="h-6 w-6" />
+                                    </div>
+
+                                    <h3 class="mt-4 text-sm font-semibold text-foreground">
+                                        No se encontraron canjes
+                                    </h3>
+
+                                    <p class="mt-1 max-w-md text-sm text-muted-foreground">
+                                        No hay canjes de recompensas que coincidan con la búsqueda.
+                                    </p>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -394,15 +356,11 @@ const statusLabel = (
 
             <!-- Paginación -->
             <div
-                v-if="
-                    redemptions.last_page > 1
-                "
+                v-if="redemptions.last_page > 1"
                 class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
             >
                 <template
-                    v-for="(
-                        link, index
-                    ) in redemptions.links"
+                    v-for="(link, index) in redemptions.links"
                     :key="index"
                 >
                     <Link

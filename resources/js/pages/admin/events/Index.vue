@@ -2,7 +2,20 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
-
+import {
+    CalendarDays,
+    CheckCircle2,
+    ChevronDown,
+    Clock3,
+    Edit,
+    Image,
+    MapPin,
+    Plus,
+    Search,
+    Trash2,
+    Users,
+    X,
+} from 'lucide-vue-next';
 import admin from '@/routes/admin';
 
 interface Zone {
@@ -182,116 +195,171 @@ const getStatusClasses = (event: EventItem) => {
     >
         <!-- Encabezado -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1 class="text-2xl font-semibold">
-                        Eventos
-                    </h1>
-
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
+                <div class="flex items-start gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
                     >
-                        Administra los eventos y actividades del zoológico.
-                    </p>
+                        <CalendarDays class="h-5 w-5" />
+                    </div>
+
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Eventos
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Administra los eventos y actividades del zoológico.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
                     :href="admin.events.create().url"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                 >
+                    <Plus class="h-4 w-4" />
                     Nuevo evento
                 </Link>
             </div>
         </div>
 
-        <!-- Tabla -->
+        <!-- Listado -->
         <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
         >
             <!-- Buscador y filtros -->
             <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
+                class="border-b border-sidebar-border/70 p-6 dark:border-sidebar-border"
             >
+                <div
+                    class="mb-5 flex items-center gap-3 border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border"
+                >
+                    <div
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                    >
+                        <Search class="h-5 w-5" />
+                    </div>
+
+                    <div>
+                        <h2 class="text-base font-semibold">
+                            Buscar y filtrar
+                        </h2>
+
+                        <p class="text-sm text-muted-foreground">
+                            Utiliza los filtros para encontrar un evento.
+                        </p>
+                    </div>
+                </div>
+
                 <form
                     @submit.prevent="submitSearch"
-                    class="flex w-full flex-col gap-2 md:max-w-2xl md:flex-row"
+                    class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
                 >
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Buscar evento..."
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
+                    <!-- Buscar -->
+                    <div class="relative">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
 
-                    <select
-                        v-model="type"
-                        class="rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        @change="applyFilters"
-                    >
-                        <option value="">
-                            Todos los tipos
-                        </option>
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Buscar evento..."
+                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
 
-                        <option
-                            v-for="item in types"
-                            :key="item"
-                            :value="item"
+                    <!-- Tipo -->
+                    <div class="relative">
+                        <select
+                            v-model="type"
+                            class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            @change="applyFilters"
                         >
-                            {{ item }}
-                        </option>
-                    </select>
+                            <option value="">
+                                Todos los tipos
+                            </option>
 
-                    <select
-                        v-model="zooZoneId"
-                        class="rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        @change="applyFilters"
-                    >
-                        <option value="">
-                            Todas las zonas
-                        </option>
+                            <option
+                                v-for="item in types"
+                                :key="item"
+                                :value="item"
+                            >
+                                {{ item }}
+                            </option>
+                        </select>
 
-                        <option
-                            v-for="zone in zones"
-                            :key="zone.id"
-                            :value="String(zone.id)"
+                        <ChevronDown
+                            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+                    </div>
+
+                    <!-- Zona -->
+                    <div class="relative">
+                        <select
+                            v-model="zooZoneId"
+                            class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            @change="applyFilters"
                         >
-                            {{ zone.name }}
-                        </option>
-                    </select>
+                            <option value="">
+                                Todas las zonas
+                            </option>
 
-                    <select
-                        v-model="status"
-                        class="rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        @change="applyFilters"
-                    >
-                        <option value="">
-                            Todos los estados
-                        </option>
+                            <option
+                                v-for="zone in zones"
+                                :key="zone.id"
+                                :value="String(zone.id)"
+                            >
+                                {{ zone.name }}
+                            </option>
+                        </select>
 
-                        <option value="active">
-                            Activos
-                        </option>
+                        <ChevronDown
+                            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+                    </div>
 
-                        <option value="inactive">
-                            Inactivos
-                        </option>
-                    </select>
+                    <!-- Estado -->
+                    <div class="relative">
+                        <select
+                            v-model="status"
+                            class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            @change="applyFilters"
+                        >
+                            <option value="">
+                                Todos los estados
+                            </option>
 
+                            <option value="active">
+                                Activos
+                            </option>
+
+                            <option value="inactive">
+                                Inactivos
+                            </option>
+                        </select>
+
+                        <ChevronDown
+                            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+                    </div>
+
+                    <!-- Buscar -->
                     <button
                         type="submit"
-                        class="rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <Search class="h-4 w-4" />
                         Buscar
                     </button>
                 </form>
 
-                <div
-                    class="text-sm text-muted-foreground"
-                >
+                <div class="mt-4 flex justify-end text-sm text-muted-foreground">
                     {{ events.total }} eventos
                 </div>
             </div>
@@ -345,9 +413,7 @@ const getStatusClasses = (event: EventItem) => {
                         >
                             <!-- Evento -->
                             <td class="px-6 py-4">
-                                <div
-                                    class="flex items-center gap-3"
-                                >
+                                <div class="flex items-center gap-3">
                                     <div
                                         class="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-sidebar-border bg-muted"
                                     >
@@ -360,44 +426,35 @@ const getStatusClasses = (event: EventItem) => {
 
                                         <div
                                             v-else
-                                            class="flex h-full w-full items-center justify-center text-xs text-muted-foreground"
+                                            class="flex h-full w-full items-center justify-center text-muted-foreground"
                                         >
-                                            Sin imagen
+                                            <Image class="h-5 w-5" />
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <div
-                                            class="font-medium"
-                                        >
+                                    <div class="min-w-0">
+                                        <div class="font-medium">
                                             {{ event.name }}
 
                                             <span
-                                                v-if="
-                                                    event.is_featured
-                                                "
-                                                class="ml-2 rounded-full border border-yellow-500/30 px-2 py-0.5 text-[10px] font-medium text-yellow-600"
+                                                v-if="event.is_featured"
+                                                class="ml-2 inline-flex items-center gap-1 rounded-full border border-yellow-500/30 px-2 py-0.5 text-[10px] font-medium text-yellow-600"
                                             >
                                                 Destacado
                                             </span>
                                         </div>
 
                                         <div
-                                            v-if="
-                                                event.description
-                                            "
+                                            v-if="event.description"
                                             class="max-w-xs truncate text-xs text-muted-foreground"
                                         >
-                                            {{
-                                                event.description
-                                            }}
+                                            {{ event.description }}
                                         </div>
 
                                         <div
                                             class="text-xs text-muted-foreground"
                                         >
-                                            ID:
-                                            {{ event.id }}
+                                            ID: {{ event.id }}
                                         </div>
                                     </div>
                                 </div>
@@ -422,37 +479,43 @@ const getStatusClasses = (event: EventItem) => {
 
                             <!-- Fecha -->
                             <td class="px-6 py-4">
-                                <div
-                                    class="font-medium"
-                                >
-                                    {{
-                                        formatDate(
-                                            event.start_at,
-                                        )
-                                    }}
-                                </div>
+                                <div class="flex items-start gap-2">
+                                    <Clock3
+                                        class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                                    />
 
-                                <div
-                                    v-if="event.end_at"
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    Hasta:
-                                    {{
-                                        formatDate(
-                                            event.end_at,
-                                        )
-                                    }}
+                                    <div>
+                                        <div class="font-medium">
+                                            {{ formatDate(event.start_at) }}
+                                        </div>
+
+                                        <div
+                                            v-if="event.end_at"
+                                            class="text-xs text-muted-foreground"
+                                        >
+                                            Hasta:
+                                            {{ formatDate(event.end_at) }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
                             <!-- Zona -->
                             <td class="px-6 py-4">
-                                <span
+                                <div
                                     v-if="event.zone"
-                                    class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                                    class="flex items-center gap-2"
                                 >
-                                    {{ event.zone.name }}
-                                </span>
+                                    <MapPin
+                                        class="h-4 w-4 text-muted-foreground"
+                                    />
+
+                                    <span
+                                        class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                                    >
+                                        {{ event.zone.name }}
+                                    </span>
+                                </div>
 
                                 <span
                                     v-else
@@ -464,69 +527,65 @@ const getStatusClasses = (event: EventItem) => {
 
                             <!-- Capacidad -->
                             <td class="px-6 py-4">
-                                <span
-                                    v-if="event.capacity"
-                                    class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
-                                >
-                                    {{
-                                        event.capacity.toLocaleString(
-                                            'es-MX',
-                                        )
-                                    }}
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <Users
+                                        class="h-4 w-4 text-muted-foreground"
+                                    />
 
-                                <span
-                                    v-else
-                                    class="text-muted-foreground"
-                                >
-                                    Ilimitada
-                                </span>
+                                    <span
+                                        v-if="event.capacity"
+                                        class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                                    >
+                                        {{
+                                            event.capacity.toLocaleString(
+                                                'es-MX',
+                                            )
+                                        }}
+                                    </span>
+
+                                    <span
+                                        v-else
+                                        class="text-muted-foreground"
+                                    >
+                                        Ilimitada
+                                    </span>
+                                </div>
                             </td>
 
                             <!-- Estado -->
                             <td class="px-6 py-4">
                                 <span
-                                    class="rounded-full border px-2.5 py-1 text-xs font-medium"
-                                    :class="
-                                        getStatusClasses(
-                                            event,
-                                        )
-                                    "
+                                    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
+                                    :class="getStatusClasses(event)"
                                 >
+                                    <CheckCircle2 class="h-3.5 w-3.5" />
+
                                     {{
-                                        getStatusLabel(
-                                            event,
-                                        )
+                                        getStatusLabel(event)
                                     }}
                                 </span>
                             </td>
 
                             <!-- Acciones -->
                             <td class="px-6 py-4">
-                                <div
-                                    class="flex justify-end gap-2"
-                                >
+                                <div class="flex justify-end gap-2">
                                     <Link
                                         :href="
                                             admin.events
-                                                .edit(
-                                                    event.id,
-                                                ).url
+                                                .edit(event.id).url
                                         "
-                                        class="rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
+                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
                                     >
+                                        <Edit class="h-4 w-4" />
                                         Editar
                                     </Link>
 
                                     <button
                                         type="button"
-                                        class="rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                        @click="
-                                            deleteEvent(
-                                                event,
-                                            )
-                                        "
+                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
+                                        @click="deleteEvent(event)"
                                     >
+                                        <Trash2 class="h-4 w-4" />
                                         Eliminar
                                     </button>
                                 </div>
@@ -534,16 +593,30 @@ const getStatusClasses = (event: EventItem) => {
                         </tr>
 
                         <!-- Sin resultados -->
-                        <tr
-                            v-if="
-                                events.data.length === 0
-                            "
-                        >
+                        <tr v-if="events.data.length === 0">
                             <td
                                 colspan="7"
-                                class="px-6 py-12 text-center text-sm text-muted-foreground"
+                                class="px-6 py-12 text-center"
                             >
-                                No se encontraron eventos.
+                                <div
+                                    class="flex flex-col items-center justify-center gap-3"
+                                >
+                                    <div
+                                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+                                    >
+                                        <CalendarDays class="h-5 w-5" />
+                                    </div>
+
+                                    <div>
+                                        <p class="font-medium">
+                                            No se encontraron eventos.
+                                        </p>
+
+                                        <p class="mt-1 text-sm text-muted-foreground">
+                                            Intenta cambiar los filtros de búsqueda.
+                                        </p>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -556,9 +629,7 @@ const getStatusClasses = (event: EventItem) => {
                 class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
             >
                 <template
-                    v-for="(
-                        link, index
-                    ) in events.links"
+                    v-for="(link, index) in events.links"
                     :key="index"
                 >
                     <Link

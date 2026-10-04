@@ -1,12 +1,30 @@
 <script setup lang="ts">
-
 import {
     Head,
     Link,
     useForm,
 } from '@inertiajs/vue3';
-
 import { Html5Qrcode } from 'html5-qrcode';
+import {
+    ArrowLeft,
+    Banknote,
+    Camera,
+    CheckCircle2,
+    CreditCard,
+    Info,
+    Minus,
+    Plus,
+    QrCode,
+    Receipt,
+    Save,
+    Search,
+    Store,
+    Ticket,
+    Trash2,
+    UserRound,
+    WalletCards,
+    X,
+} from 'lucide-vue-next';
 import {
     computed,
     nextTick,
@@ -60,38 +78,28 @@ const props = defineProps<{
 
 const form = useForm({
     user_id: null as number | null,
-
     items: [] as OrderItem[],
-
     discount: 0,
-
     payments: [] as OrderPayment[],
 });
 
-/*
-|--------------------------------------------------------------------------
-| Usuario / QR
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Usuario / QR
+ * --------------------------------------------------------------------------
+ */
 const identifiedUser = ref<User | null>(null);
-
 const qrScanner = ref<Html5Qrcode | null>(null);
-
 const scanning = ref(false);
-
 const qrError = ref<string | null>(null);
-
 const searchingUser = ref(false);
-
 const manualQrToken = ref('');
 
-/*
-|--------------------------------------------------------------------------
-| Formato
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Formato
+ * --------------------------------------------------------------------------
+ */
 const formatCurrency = (
     value: number | string,
 ): string => {
@@ -104,12 +112,11 @@ const formatCurrency = (
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| Boletos
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Boletos
+ * --------------------------------------------------------------------------
+ */
 const getTicketType = (
     ticketTypeId: number,
 ): TicketType | undefined => {
@@ -144,7 +151,6 @@ const addTicket = (
 
     if (item) {
         item.quantity++;
-
         return;
     }
 
@@ -165,7 +171,6 @@ const removeTicket = (
 
     if (item.quantity > 1) {
         item.quantity--;
-
         return;
     }
 
@@ -176,12 +181,11 @@ const removeTicket = (
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| Totales
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Totales
+ * --------------------------------------------------------------------------
+ */
 const subtotal = computed(() => {
     return form.items.reduce(
         (total, item) => {
@@ -223,12 +227,11 @@ const total = computed(() => {
     );
 });
 
-/*
-|--------------------------------------------------------------------------
-| Métodos de pago
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Métodos de pago
+ * --------------------------------------------------------------------------
+ */
 const getPaymentMethod = (
     paymentMethodId: number | null,
 ): PaymentMethod | undefined => {
@@ -269,9 +272,7 @@ const addPayment = (): void => {
         payment_method_id:
             props.paymentMethods[0]?.id ??
             null,
-
         amount: 0,
-
         reference: '',
     });
 };
@@ -282,12 +283,11 @@ const removePayment = (
     form.payments.splice(index, 1);
 };
 
-/*
-|--------------------------------------------------------------------------
-| Totales de pagos
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Totales de pagos
+ * --------------------------------------------------------------------------
+ */
 const nonCashPaymentsTotal =
     computed(() => {
         return form.payments.reduce(
@@ -334,12 +334,11 @@ const cashPaymentsTotal =
         );
     });
 
-/*
-|--------------------------------------------------------------------------
-| Saldo antes del efectivo
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Saldo antes del efectivo
+ * --------------------------------------------------------------------------
+ */
 const remainingBeforeCash =
     computed(() => {
         return Math.max(
@@ -349,12 +348,11 @@ const remainingBeforeCash =
         );
     });
 
-/*
-|--------------------------------------------------------------------------
-| Falta por pagar
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Falta por pagar
+ * --------------------------------------------------------------------------
+ */
 const remaining = computed(() => {
     return Math.max(
         remainingBeforeCash.value -
@@ -363,12 +361,11 @@ const remaining = computed(() => {
     );
 });
 
-/*
-|--------------------------------------------------------------------------
-| Cambio
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Cambio
+ * --------------------------------------------------------------------------
+ */
 const change = computed(() => {
     return Math.max(
         cashPaymentsTotal.value -
@@ -377,12 +374,11 @@ const change = computed(() => {
     );
 });
 
-/*
-|--------------------------------------------------------------------------
-| Estado del pago
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Estado del pago
+ * --------------------------------------------------------------------------
+ */
 const isPaymentComplete =
     computed(() => {
         return (
@@ -400,12 +396,11 @@ const hasPaymentError =
         );
     });
 
-/*
-|--------------------------------------------------------------------------
-| Usuario / QR
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Usuario / QR
+ * --------------------------------------------------------------------------
+ */
 const findUserByQr = async (
     token: string,
 ): Promise<void> => {
@@ -416,7 +411,6 @@ const findUserByQr = async (
     }
 
     searchingUser.value = true;
-
     qrError.value = null;
 
     try {
@@ -424,14 +418,11 @@ const findUserByQr = async (
             '/admin/ticket-orders/user-by-qr',
             {
                 method: 'POST',
-
                 headers: {
                     'Content-Type':
                         'application/json',
-
                     Accept:
                         'application/json',
-
                     'X-CSRF-TOKEN':
                         document
                             .querySelector(
@@ -441,7 +432,6 @@ const findUserByQr = async (
                                 'content',
                             ) ?? '',
                 },
-
                 body: JSON.stringify({
                     qr_token: cleanToken,
                 }),
@@ -482,12 +472,11 @@ const findUserByQr = async (
     }
 };
 
-/*
-|--------------------------------------------------------------------------
-| Iniciar lector QR
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Iniciar lector QR
+ * --------------------------------------------------------------------------
+ */
 const startQrScanner = async (): Promise<void> => {
     if (scanning.value) {
         return;
@@ -496,28 +485,25 @@ const startQrScanner = async (): Promise<void> => {
     qrError.value = null;
 
     try {
-        /*
-        |--------------------------------------------------------------------------
-        | Activamos el lector
-        |--------------------------------------------------------------------------
-        */
-
+        /**
+         * --------------------------------------------------------------------------
+         * Activamos el lector
+         * --------------------------------------------------------------------------
+         */
         scanning.value = true;
 
-        /*
-        |--------------------------------------------------------------------------
-        | Esperamos a que Vue renderice el contenedor
-        |--------------------------------------------------------------------------
-        */
-
+        /**
+         * --------------------------------------------------------------------------
+         * Esperamos a que Vue renderice el contenedor
+         * --------------------------------------------------------------------------
+         */
         await nextTick();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Verificamos el elemento
-        |--------------------------------------------------------------------------
-        */
-
+        /**
+         * --------------------------------------------------------------------------
+         * Verificamos el elemento
+         * --------------------------------------------------------------------------
+         */
         const readerElement =
             document.getElementById(
                 'user-qr-reader',
@@ -529,40 +515,34 @@ const startQrScanner = async (): Promise<void> => {
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Crear lector
-        |--------------------------------------------------------------------------
-        */
-
+        /**
+         * --------------------------------------------------------------------------
+         * Crear lector
+         * --------------------------------------------------------------------------
+         */
         qrScanner.value =
             new Html5Qrcode(
                 'user-qr-reader',
             );
 
-        /*
-        |--------------------------------------------------------------------------
-        | Iniciar cámara
-        |--------------------------------------------------------------------------
-        */
-
+        /**
+         * --------------------------------------------------------------------------
+         * Iniciar cámara
+         * --------------------------------------------------------------------------
+         */
         await qrScanner.value.start(
             {
                 facingMode:
                     'environment',
             },
-
             {
                 fps: 10,
-
                 qrbox: {
                     width: 230,
                     height: 230,
                 },
-
                 aspectRatio: 1,
             },
-
             async (decodedText) => {
                 console.log(
                     'QR detectado:',
@@ -573,14 +553,13 @@ const startQrScanner = async (): Promise<void> => {
                     decodedText,
                 );
             },
-
             () => {
-                /*
-                |--------------------------------------------------------------------------
-                | Este callback se ejecuta continuamente mientras
-                | la cámara busca un QR.
-                |--------------------------------------------------------------------------
-                */
+                /**
+                 * --------------------------------------------------------------------------
+                 * Este callback se ejecuta continuamente mientras
+                 * la cámara busca un QR.
+                 * --------------------------------------------------------------------------
+                 */
             },
         );
     } catch (error) {
@@ -605,7 +584,6 @@ const startQrScanner = async (): Promise<void> => {
         );
 
         scanning.value = false;
-
         qrScanner.value = null;
 
         if (error instanceof Error) {
@@ -628,17 +606,15 @@ const startQrScanner = async (): Promise<void> => {
     }
 };
 
-/*
-|--------------------------------------------------------------------------
-| Detener lector QR
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Detener lector QR
+ * --------------------------------------------------------------------------
+ */
 const stopQrScanner =
     async (): Promise<void> => {
         if (!qrScanner.value) {
             scanning.value = false;
-
             return;
         }
 
@@ -656,35 +632,29 @@ const stopQrScanner =
         }
 
         qrScanner.value = null;
-
         scanning.value = false;
     };
 
-/*
-|--------------------------------------------------------------------------
-| Quitar usuario
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Quitar usuario
+ * --------------------------------------------------------------------------
+ */
 const clearIdentifiedUser =
     async (): Promise<void> => {
         await stopQrScanner();
 
         identifiedUser.value = null;
-
         form.user_id = null;
-
         qrError.value = null;
-
         manualQrToken.value = '';
     };
 
-/*
-|--------------------------------------------------------------------------
-| Buscar QR manualmente
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Buscar QR manualmente
+ * --------------------------------------------------------------------------
+ */
 const searchManualQr =
     async (): Promise<void> => {
         await findUserByQr(
@@ -692,22 +662,20 @@ const searchManualQr =
         );
     };
 
-/*
-|--------------------------------------------------------------------------
-| Limpiar cámara al salir
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Limpiar cámara al salir
+ * --------------------------------------------------------------------------
+ */
 onBeforeUnmount(async () => {
     await stopQrScanner();
 });
 
-/*
-|--------------------------------------------------------------------------
-| Submit
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * --------------------------------------------------------------------------
+ * Submit
+ * --------------------------------------------------------------------------
+ */
 const submit = (): void => {
     form.post(
         admin.ticketOrders.store().url,
@@ -723,24 +691,27 @@ const submit = (): void => {
     >
         <!-- Header -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1
-                        class="text-2xl font-semibold"
+                <div class="flex items-center gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
                     >
-                        Nueva orden de boletos
-                    </h1>
+                        <Ticket class="h-5 w-5" />
+                    </div>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Registra una venta de boletos
-                        realizada en taquilla.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Nueva orden de boletos
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Registra una venta de boletos realizada en taquilla.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
@@ -748,8 +719,9 @@ const submit = (): void => {
                         admin.ticketOrders
                             .index().url
                     "
-                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
+                    <ArrowLeft class="h-4 w-4" />
                     Regresar
                 </Link>
             </div>
@@ -761,110 +733,105 @@ const submit = (): void => {
         >
             <!-- Información de la venta -->
             <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
             >
                 <div
                     class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
                 >
-                    <div>
-                        <h2
-                            class="text-lg font-semibold"
-                        >
-                            Información de la venta
-                        </h2>
+                    <div class="flex items-start gap-3">
+                        <Info
+                            class="mt-0.5 h-5 w-5 shrink-0 text-primary"
+                        />
 
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Esta orden se registrará
-                            como una venta de taquilla.
-                        </p>
+                        <div>
+                            <h2 class="text-lg font-semibold">
+                                Información de la venta
+                            </h2>
+
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Esta orden se registrará como una venta de taquilla.
+                            </p>
+                        </div>
                     </div>
 
                     <span
-                        class="inline-flex w-fit rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-600 dark:text-purple-400"
+                        class="inline-flex w-fit items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-600 dark:text-purple-400"
                     >
+                        <Store class="h-3.5 w-3.5" />
                         Taquilla
                     </span>
                 </div>
 
                 <!-- Vendedor -->
                 <div
-                    class="rounded-lg border border-sidebar-border p-4"
+                    class="rounded-xl border border-sidebar-border bg-muted/10 p-5"
                 >
-                    <p
-                        class="text-sm font-medium"
-                    >
-                        Vendedor
-                    </p>
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        >
+                            <UserRound class="h-4 w-4" />
+                        </div>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Se asignará automáticamente
-                        al usuario que está registrando
-                        la venta.
-                    </p>
+                        <div>
+                            <p class="text-sm font-medium">
+                                Vendedor
+                            </p>
+
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Se asignará automáticamente al usuario que está registrando la venta.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Cliente / visitante -->
                 <div
-                    class="mt-4 rounded-lg border border-sidebar-border p-4"
+                    class="mt-4 rounded-xl border border-sidebar-border bg-muted/10 p-5"
                 >
                     <div
                         class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"
                     >
-                        <div>
-                            <p
-                                class="text-sm font-medium"
+                        <div class="flex items-start gap-3">
+                            <div
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                             >
-                                Cliente / visitante
-                            </p>
+                                <QrCode class="h-4 w-4" />
+                            </div>
 
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                Escanea el código QR
-                                personal del visitante
-                                para asociar la venta a
-                                su cuenta.
-                            </p>
+                            <div>
+                                <p class="text-sm font-medium">
+                                    Cliente / visitante
+                                </p>
+
+                                <p class="mt-1 text-sm text-muted-foreground">
+                                    Escanea el código QR personal del visitante para asociar la venta a su cuenta.
+                                </p>
+                            </div>
                         </div>
 
                         <button
                             v-if="!scanning"
                             type="button"
-                            class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                            @click="
-                                startQrScanner
-                            "
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                            @click="startQrScanner"
                         >
+                            <Camera class="h-4 w-4" />
                             Escanear QR
                         </button>
 
                         <button
                             v-else
                             type="button"
-                            class="inline-flex items-center justify-center rounded-lg border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
-                            @click="
-                                stopQrScanner
-                            "
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
+                            @click="stopQrScanner"
                         >
+                            <X class="h-4 w-4" />
                             Detener cámara
                         </button>
                     </div>
 
-                    <!--
-                    |--------------------------------------------------------------------------
-                    | Lector QR
-                    |--------------------------------------------------------------------------
-                    |
-                    | La cámara ocupa un área cuadrada.
-                    | El overlay oscurece el exterior y deja
-                    | únicamente visible la zona central
-                    | donde debe colocarse el QR.
-                    |
-                    -->
+                    <!-- Lector QR -->
                     <div
                         v-if="scanning"
                         class="mt-4 flex justify-center"
@@ -878,11 +845,7 @@ const submit = (): void => {
                                 class="absolute inset-0"
                             ></div>
 
-                            <!--
-                            |--------------------------------------------------------------------------
-                            | Overlay oscuro
-                            |--------------------------------------------------------------------------
-                            -->
+                            <!-- Overlay oscuro -->
                             <div
                                 class="pointer-events-none absolute inset-0 z-20 grid grid-cols-[1fr_230px_1fr] grid-rows-[1fr_230px_1fr]"
                             >
@@ -897,9 +860,7 @@ const submit = (): void => {
                                 ></div>
 
                                 <!-- Centro transparente -->
-                                <div
-                                    class="relative"
-                                >
+                                <div class="relative">
                                     <!-- Esquinas -->
                                     <span
                                         class="absolute left-0 top-0 h-9 w-9 rounded-tl-xl border-l-4 border-t-4 border-primary"
@@ -939,10 +900,10 @@ const submit = (): void => {
                                 class="pointer-events-none absolute bottom-3 left-0 right-0 z-30 text-center"
                             >
                                 <span
-                                    class="rounded-full bg-black/60 px-3 py-1 text-xs text-white backdrop-blur-sm"
+                                    class="inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs text-white backdrop-blur-sm"
                                 >
-                                    Coloca el QR dentro
-                                    del recuadro
+                                    <QrCode class="h-3.5 w-3.5" />
+                                    Coloca el QR dentro del recuadro
                                 </span>
                             </div>
                         </div>
@@ -956,17 +917,23 @@ const submit = (): void => {
                         <div
                             class="flex flex-col gap-2 sm:flex-row"
                         >
-                            <input
-                                v-model="
-                                    manualQrToken
-                                "
-                                type="text"
-                                placeholder="También puedes ingresar el código QR manualmente"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                @keyup.enter="
-                                    searchManualQr
-                                "
-                            />
+                            <div class="relative w-full">
+                                <QrCode
+                                    class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                                />
+
+                                <input
+                                    v-model="
+                                        manualQrToken
+                                    "
+                                    type="text"
+                                    placeholder="También puedes ingresar el código QR manualmente"
+                                    class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-9 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    @keyup.enter="
+                                        searchManualQr
+                                    "
+                                />
+                            </div>
 
                             <button
                                 type="button"
@@ -974,11 +941,13 @@ const submit = (): void => {
                                     searchingUser ||
                                     !manualQrToken.trim()
                                 "
-                                class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                                class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                                 @click="
                                     searchManualQr
                                 "
                             >
+                                <Search class="h-4 w-4" />
+
                                 {{
                                     searchingUser
                                         ? 'Buscando...'
@@ -991,68 +960,73 @@ const submit = (): void => {
                     <!-- Usuario identificado -->
                     <div
                         v-if="identifiedUser"
-                        class="mt-4 rounded-lg border border-green-500/30 bg-green-500/10 p-4"
+                        class="mt-4 rounded-xl border border-green-500/30 bg-green-500/10 p-5"
                     >
                         <div
                             class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                         >
-                            <div>
-                                <p
-                                    class="text-sm font-medium text-green-700 dark:text-green-400"
-                                >
-                                    Usuario identificado
-                                </p>
-
-                                <p
-                                    class="mt-1 text-lg font-semibold"
-                                >
-                                    {{
-                                        identifiedUser.name
-                                    }}
-                                </p>
-
-                                <p
-                                    class="mt-1 text-sm text-muted-foreground"
-                                >
-                                    {{
-                                        identifiedUser.email
-                                    }}
-                                </p>
-
+                            <div class="flex items-start gap-3">
                                 <div
-                                    class="mt-2 flex flex-wrap gap-2"
+                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-600 dark:text-green-400"
                                 >
-                                    <span
-                                        class="rounded-full border border-sidebar-border px-3 py-1 text-xs"
-                                    >
-                                        {{
-                                            identifiedUser
-                                                .level
-                                                ?.name ??
-                                            'Sin nivel'
-                                        }}
-                                    </span>
+                                    <CheckCircle2 class="h-4 w-4" />
+                                </div>
 
-                                    <span
-                                        class="rounded-full border border-sidebar-border px-3 py-1 text-xs"
+                                <div>
+                                    <p
+                                        class="text-sm font-medium text-green-700 dark:text-green-400"
                                     >
+                                        Usuario identificado
+                                    </p>
+
+                                    <p class="mt-1 text-lg font-semibold">
                                         {{
-                                            identifiedUser.points.toLocaleString(
-                                                'es-MX',
-                                            )
+                                            identifiedUser.name
                                         }}
-                                        puntos
-                                    </span>
+                                    </p>
+
+                                    <p class="mt-1 text-sm text-muted-foreground">
+                                        {{
+                                            identifiedUser.email
+                                        }}
+                                    </p>
+
+                                    <div
+                                        class="mt-2 flex flex-wrap gap-2"
+                                    >
+                                        <span
+                                            class="rounded-full border border-sidebar-border px-3 py-1 text-xs"
+                                        >
+                                            {{
+                                                identifiedUser
+                                                    .level
+                                                    ?.name ??
+                                                'Sin nivel'
+                                            }}
+                                        </span>
+
+                                        <span
+                                            class="rounded-full border border-sidebar-border px-3 py-1 text-xs"
+                                        >
+                                            {{
+                                                identifiedUser.points.toLocaleString(
+                                                    'es-MX',
+                                                )
+                                            }}
+                                            puntos
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
                             <button
                                 type="button"
-                                class="inline-flex items-center justify-center rounded-lg border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
+                                class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
                                 @click="
                                     clearIdentifiedUser
                                 "
                             >
+                                <X class="h-4 w-4" />
                                 Quitar usuario
                             </button>
                         </div>
@@ -1061,7 +1035,7 @@ const submit = (): void => {
                     <!-- Error -->
                     <div
                         v-if="qrError"
-                        class="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4"
+                        class="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4"
                     >
                         <p
                             class="text-sm font-medium text-red-600 dark:text-red-400"
@@ -1074,21 +1048,20 @@ const submit = (): void => {
 
             <!-- Boletos -->
             <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
             >
-                <div class="mb-6">
-                    <h2
-                        class="text-lg font-semibold"
-                    >
-                        Boletos
-                    </h2>
+                <div class="mb-6 flex items-start gap-3">
+                    <Ticket class="mt-0.5 h-5 w-5 shrink-0 text-primary" />
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Selecciona los tipos y
-                        cantidades de boletos.
-                    </p>
+                    <div>
+                        <h2 class="text-lg font-semibold">
+                            Boletos
+                        </h2>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Selecciona los tipos y cantidades de boletos.
+                        </p>
+                    </div>
                 </div>
 
                 <div
@@ -1098,33 +1071,35 @@ const submit = (): void => {
                     <div
                         v-for="ticketType in ticketTypes"
                         :key="ticketType.id"
-                        class="flex flex-col gap-4 rounded-lg border border-sidebar-border p-4 sm:flex-row sm:items-center sm:justify-between"
+                        class="flex flex-col gap-4 rounded-xl border border-sidebar-border bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between"
                     >
-                        <div>
-                            <p
-                                class="font-medium"
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                             >
-                                {{ ticketType.name }}
-                            </p>
+                                <Ticket class="h-4 w-4" />
+                            </div>
 
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                {{
-                                    formatCurrency(
-                                        ticketType.price,
-                                    )
-                                }}
-                                por boleto
-                            </p>
+                            <div>
+                                <p class="font-medium">
+                                    {{ ticketType.name }}
+                                </p>
+
+                                <p class="mt-1 text-sm text-muted-foreground">
+                                    {{
+                                        formatCurrency(
+                                            ticketType.price,
+                                        )
+                                    }}
+                                    por boleto
+                                </p>
+                            </div>
                         </div>
 
-                        <div
-                            class="flex items-center gap-3"
-                        >
+                        <div class="flex items-center gap-3">
                             <button
                                 type="button"
-                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-sidebar-border text-lg transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-sidebar-border transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
                                 :disabled="
                                     getQuantity(
                                         ticketType.id,
@@ -1136,7 +1111,7 @@ const submit = (): void => {
                                     )
                                 "
                             >
-                                −
+                                <Minus class="h-4 w-4" />
                             </button>
 
                             <span
@@ -1151,14 +1126,14 @@ const submit = (): void => {
 
                             <button
                                 type="button"
-                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-sidebar-border text-lg transition hover:bg-accent"
+                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-sidebar-border transition hover:bg-accent"
                                 @click="
                                     addTicket(
                                         ticketType.id,
                                     )
                                 "
                             >
-                                +
+                                <Plus class="h-4 w-4" />
                             </button>
                         </div>
                     </div>
@@ -1166,13 +1141,14 @@ const submit = (): void => {
 
                 <div
                     v-else
-                    class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                    class="rounded-xl border border-dashed border-sidebar-border p-6 text-center"
                 >
-                    <p
-                        class="text-sm text-muted-foreground"
-                    >
-                        No hay tipos de boleto
-                        activos.
+                    <Ticket
+                        class="mx-auto h-6 w-6 text-muted-foreground"
+                    />
+
+                    <p class="mt-2 text-sm text-muted-foreground">
+                        No hay tipos de boleto activos.
                     </p>
                 </div>
 
@@ -1190,21 +1166,22 @@ const submit = (): void => {
             >
                 <!-- Descuento -->
                 <div
-                    class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                    class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
                 >
-                    <div class="mb-6">
-                        <h2
-                            class="text-lg font-semibold"
-                        >
-                            Descuento
-                        </h2>
+                    <div class="mb-6 flex items-start gap-3">
+                        <WalletCards
+                            class="mt-0.5 h-5 w-5 shrink-0 text-primary"
+                        />
 
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Aplica un descuento a la
-                            orden si corresponde.
-                        </p>
+                        <div>
+                            <h2 class="text-lg font-semibold">
+                                Descuento
+                            </h2>
+
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Aplica un descuento a la orden si corresponde.
+                            </p>
+                        </div>
                     </div>
 
                     <div class="space-y-2">
@@ -1215,9 +1192,7 @@ const submit = (): void => {
                             Descuento
                         </label>
 
-                        <div
-                            class="relative"
-                        >
+                        <div class="relative">
                             <span
                                 class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
                             >
@@ -1253,19 +1228,17 @@ const submit = (): void => {
 
                 <!-- Resumen -->
                 <div
-                    class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                    class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
                 >
-                    <div class="mb-6">
-                        <h2
-                            class="text-lg font-semibold"
-                        >
+                    <div class="mb-6 flex items-center gap-3">
+                        <Receipt class="h-5 w-5 text-primary" />
+
+                        <h2 class="text-lg font-semibold">
                             Resumen
                         </h2>
                     </div>
 
-                    <div
-                        class="space-y-3"
-                    >
+                    <div class="space-y-3">
                         <div
                             class="flex justify-between text-sm"
                         >
@@ -1275,9 +1248,7 @@ const submit = (): void => {
                                 Subtotal
                             </span>
 
-                            <span
-                                class="font-medium"
-                            >
+                            <span class="font-medium">
                                 {{
                                     formatCurrency(
                                         subtotal,
@@ -1295,9 +1266,7 @@ const submit = (): void => {
                                 Descuento
                             </span>
 
-                            <span
-                                class="font-medium"
-                            >
+                            <span class="font-medium">
                                 -
                                 {{
                                     formatCurrency(
@@ -1310,15 +1279,11 @@ const submit = (): void => {
                         <div
                             class="flex justify-between border-t border-sidebar-border pt-3"
                         >
-                            <span
-                                class="font-semibold"
-                            >
+                            <span class="font-semibold">
                                 Total
                             </span>
 
-                            <span
-                                class="text-xl font-semibold"
-                            >
+                            <span class="text-xl font-semibold">
                                 {{
                                     formatCurrency(
                                         total,
@@ -1332,24 +1297,25 @@ const submit = (): void => {
 
             <!-- Métodos de pago -->
             <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
             >
                 <div
                     class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <div>
-                        <h2
-                            class="text-lg font-semibold"
-                        >
-                            Métodos de pago
-                        </h2>
+                    <div class="flex items-start gap-3">
+                        <CreditCard
+                            class="mt-0.5 h-5 w-5 shrink-0 text-primary"
+                        />
 
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Puedes utilizar uno o
-                            varios métodos de pago.
-                        </p>
+                        <div>
+                            <h2 class="text-lg font-semibold">
+                                Métodos de pago
+                            </h2>
+
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Puedes utilizar uno o varios métodos de pago.
+                            </p>
+                        </div>
                     </div>
 
                     <button
@@ -1358,9 +1324,10 @@ const submit = (): void => {
                             paymentMethods.length ===
                             0
                         "
-                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                         @click="addPayment"
                     >
+                        <Plus class="h-4 w-4" />
                         Agregar pago
                     </button>
                 </div>
@@ -1370,13 +1337,14 @@ const submit = (): void => {
                         paymentMethods.length ===
                         0
                     "
-                    class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                    class="rounded-xl border border-dashed border-sidebar-border p-6 text-center"
                 >
-                    <p
-                        class="text-sm text-muted-foreground"
-                    >
-                        No hay métodos de pago
-                        activos.
+                    <CreditCard
+                        class="mx-auto h-6 w-6 text-muted-foreground"
+                    />
+
+                    <p class="mt-2 text-sm text-muted-foreground">
+                        No hay métodos de pago activos.
                     </p>
                 </div>
 
@@ -1385,20 +1353,22 @@ const submit = (): void => {
                         form.payments.length ===
                         0
                     "
-                    class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                    class="rounded-xl border border-dashed border-sidebar-border p-6 text-center"
                 >
-                    <p
-                        class="text-sm text-muted-foreground"
-                    >
-                        Agrega al menos un método
-                        de pago.
+                    <CreditCard
+                        class="mx-auto h-6 w-6 text-muted-foreground"
+                    />
+
+                    <p class="mt-2 text-sm text-muted-foreground">
+                        Agrega al menos un método de pago.
                     </p>
 
                     <button
                         type="button"
-                        class="mt-3 text-sm font-medium text-primary hover:underline"
+                        class="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
                         @click="addPayment"
                     >
+                        <Plus class="h-4 w-4" />
                         Agregar método de pago
                     </button>
                 </div>
@@ -1412,7 +1382,7 @@ const submit = (): void => {
                             payment, index
                         ) in form.payments"
                         :key="index"
-                        class="rounded-lg border border-sidebar-border p-4"
+                        class="rounded-xl border border-sidebar-border bg-muted/10 p-5"
                     >
                         <!-- Campos de pago -->
                         <div
@@ -1441,8 +1411,7 @@ const submit = (): void => {
                                             null
                                         "
                                     >
-                                        Selecciona un
-                                        método
+                                        Selecciona un método
                                     </option>
 
                                     <option
@@ -1478,9 +1447,7 @@ const submit = (): void => {
                                     }}
                                 </label>
 
-                                <div
-                                    class="relative"
-                                >
+                                <div class="relative">
                                     <span
                                         class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
                                     >
@@ -1552,14 +1519,18 @@ const submit = (): void => {
                             >
                                 <button
                                     type="button"
-                                    class="rounded-lg border border-red-500/30 px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
+                                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
                                     @click="
                                         removePayment(
                                             index,
                                         )
                                     "
                                 >
-                                    Quitar
+                                    <Trash2 class="h-4 w-4" />
+
+                                    <span class="sr-only">
+                                        Quitar pago
+                                    </span>
                                 </button>
                             </div>
                         </div>
@@ -1571,15 +1542,14 @@ const submit = (): void => {
                                     payment.payment_method_id,
                                 )
                             "
-                            class="mt-3"
+                            class="mt-3 flex items-start gap-2"
                         >
-                            <p
-                                class="text-xs text-muted-foreground"
-                            >
-                                Puede ser mayor al
-                                saldo. El excedente
-                                se devuelve como
-                                cambio.
+                            <Banknote
+                                class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                            />
+
+                            <p class="text-xs text-muted-foreground">
+                                Puede ser mayor al saldo. El excedente se devuelve como cambio.
                             </p>
                         </div>
 
@@ -1633,11 +1603,19 @@ const submit = (): void => {
 
                 <!-- Resumen de pagos -->
                 <div
-                    class="mt-6 rounded-lg border border-sidebar-border p-4"
+                    class="mt-6 rounded-xl border border-sidebar-border bg-muted/10 p-5"
                 >
-                    <div
-                        class="space-y-3"
-                    >
+                    <div class="mb-4 flex items-center gap-3">
+                        <WalletCards
+                            class="h-5 w-5 text-primary"
+                        />
+
+                        <h3 class="text-base font-semibold">
+                            Resumen de pagos
+                        </h3>
+                    </div>
+
+                    <div class="space-y-3">
                         <div
                             class="flex justify-between text-sm"
                         >
@@ -1647,9 +1625,7 @@ const submit = (): void => {
                                 Total de la orden
                             </span>
 
-                            <span
-                                class="font-medium"
-                            >
+                            <span class="font-medium">
                                 {{
                                     formatCurrency(
                                         total,
@@ -1664,13 +1640,10 @@ const submit = (): void => {
                             <span
                                 class="text-muted-foreground"
                             >
-                                Pagos electrónicos /
-                                otros
+                                Pagos electrónicos / otros
                             </span>
 
-                            <span
-                                class="font-medium"
-                            >
+                            <span class="font-medium">
                                 {{
                                     formatCurrency(
                                         nonCashPaymentsTotal,
@@ -1688,9 +1661,7 @@ const submit = (): void => {
                                 Efectivo recibido
                             </span>
 
-                            <span
-                                class="font-medium"
-                            >
+                            <span class="font-medium">
                                 {{
                                     formatCurrency(
                                         cashPaymentsTotal,
@@ -1701,15 +1672,16 @@ const submit = (): void => {
 
                         <div
                             v-if="hasPaymentError"
-                            class="rounded-lg border border-red-500/30 bg-red-500/10 p-3"
+                            class="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3"
                         >
+                            <X
+                                class="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400"
+                            />
+
                             <p
                                 class="text-sm font-medium text-red-600 dark:text-red-400"
                             >
-                                Los pagos que no son en
-                                efectivo no pueden
-                                superar el total de la
-                                orden.
+                                Los pagos que no son en efectivo no pueden superar el total de la orden.
                             </p>
                         </div>
 
@@ -1719,9 +1691,7 @@ const submit = (): void => {
                             "
                             class="flex justify-between border-t border-sidebar-border pt-3 text-sm"
                         >
-                            <span
-                                class="font-medium"
-                            >
+                            <span class="font-medium">
                                 Falta pagar
                             </span>
 
@@ -1742,9 +1712,7 @@ const submit = (): void => {
                             "
                             class="flex justify-between border-t border-sidebar-border pt-3 text-sm"
                         >
-                            <span
-                                class="font-medium"
-                            >
+                            <span class="font-medium">
                                 Cambio
                             </span>
 
@@ -1765,15 +1733,14 @@ const submit = (): void => {
                             "
                             class="flex justify-between border-t border-sidebar-border pt-3 text-sm"
                         >
-                            <span
-                                class="font-medium"
-                            >
+                            <span class="font-medium">
                                 Estado
                             </span>
 
                             <span
-                                class="font-medium text-green-600 dark:text-green-400"
+                                class="inline-flex items-center gap-2 font-medium text-green-600 dark:text-green-400"
                             >
+                                <CheckCircle2 class="h-4 w-4" />
                                 Pago completo
                             </span>
                         </div>
@@ -1789,15 +1756,16 @@ const submit = (): void => {
 
                 <!-- Acciones -->
                 <div
-                    class="mt-6 flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
+                    class="mt-6 flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-end"
                 >
                     <Link
                         :href="
                             admin.ticketOrders
                                 .index().url
                         "
-                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <ArrowLeft class="h-4 w-4" />
                         Cancelar
                     </Link>
 
@@ -1812,8 +1780,10 @@ const submit = (): void => {
                             !isPaymentComplete ||
                             hasPaymentError
                         "
-                        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
+                        <Save class="h-4 w-4" />
+
                         {{
                             form.processing
                                 ? 'Procesando...'

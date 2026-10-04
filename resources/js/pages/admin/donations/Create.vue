@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 import {
     Head,
     Link,
@@ -9,12 +8,32 @@ import {
 import { Html5Qrcode } from 'html5-qrcode';
 
 import Swal from 'sweetalert2';
+
 import {
     computed,
     nextTick,
     onBeforeUnmount,
     ref,
 } from 'vue';
+
+import {
+    ArrowLeft,
+    Camera,
+    CameraOff,
+    Check,
+    ChevronDown,
+    CircleDollarSign,
+    FileText,
+    Info,
+    QrCode,
+    Save,
+    Search,
+    ShieldCheck,
+    Sparkles,
+    UserRound,
+    Wallet,
+    X,
+} from 'lucide-vue-next';
 
 import admin from '@/routes/admin';
 
@@ -102,8 +121,7 @@ const selectedPaymentMethod = computed(() => {
     return (
         props.paymentMethods.find(
             (method) =>
-                method.id ===
-                form.payment_method_id,
+                method.id === form.payment_method_id,
         ) ?? null
     );
 });
@@ -165,14 +183,11 @@ const findUserByQr = async (
             '/admin/donations/user-by-qr',
             {
                 method: 'POST',
-
                 headers: {
                     'Content-Type':
                         'application/json',
-
                     Accept:
                         'application/json',
-
                     'X-CSRF-TOKEN':
                         document
                             .querySelector(
@@ -182,7 +197,6 @@ const findUserByQr = async (
                                 'content',
                             ) ?? '',
                 },
-
                 body: JSON.stringify({
                     qr_token: cleanToken,
                 }),
@@ -210,7 +224,6 @@ const findUserByQr = async (
         await stopQrScanner();
     } catch (error) {
         identifiedUser.value = null;
-
         form.user_id = null;
 
         qrError.value =
@@ -264,12 +277,10 @@ const startQrScanner =
                 },
                 {
                     fps: 10,
-
                     qrbox: {
                         width: 230,
                         height: 230,
                     },
-
                     aspectRatio: 1,
                 },
                 async (decodedText) => {
@@ -286,7 +297,6 @@ const startQrScanner =
             );
 
             scanning.value = false;
-
             qrScanner.value = null;
 
             if (error instanceof Error) {
@@ -309,7 +319,6 @@ const stopQrScanner =
     async (): Promise<void> => {
         if (!qrScanner.value) {
             scanning.value = false;
-
             return;
         }
 
@@ -327,7 +336,6 @@ const stopQrScanner =
         }
 
         qrScanner.value = null;
-
         scanning.value = false;
     };
 
@@ -342,11 +350,8 @@ const clearIdentifiedUser =
         await stopQrScanner();
 
         identifiedUser.value = null;
-
         form.user_id = null;
-
         qrError.value = null;
-
         manualQrToken.value = '';
     };
 
@@ -416,23 +421,33 @@ const submit = async (): Promise<void> => {
     >
         <!-- Header -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1
-                        class="text-2xl font-semibold"
+                <div class="flex items-start gap-3">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
                     >
-                        Registrar donación
-                    </h1>
+                        <CircleDollarSign
+                            class="h-6 w-6"
+                        />
+                    </div>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Registra una donación realizada por un visitante.
-                    </p>
+                    <div>
+                        <h1
+                            class="text-2xl font-semibold"
+                        >
+                            Registrar donación
+                        </h1>
+
+                        <p
+                            class="mt-1 text-sm text-muted-foreground"
+                        >
+                            Registra una donación realizada por un visitante.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
@@ -440,8 +455,11 @@ const submit = async (): Promise<void> => {
                         admin.donations
                             .index().url
                     "
-                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
+                    <ArrowLeft
+                        class="h-4 w-4"
+                    />
                     Regresar
                 </Link>
             </div>
@@ -453,55 +471,73 @@ const submit = async (): Promise<void> => {
         >
             <!-- Usuario -->
             <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
             >
                 <div
-                    class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+                    class="mb-6 flex flex-col gap-4 border-b border-sidebar-border/70 pb-6 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
                 >
-                    <div>
-                        <h2
-                            class="text-lg font-semibold"
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                         >
-                            Usuario
-                        </h2>
+                            <UserRound
+                                class="h-5 w-5"
+                            />
+                        </div>
 
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Escanea el código QR del visitante para identificar su cuenta.
-                        </p>
+                        <div>
+                            <h2
+                                class="text-lg font-semibold"
+                            >
+                                Usuario
+                            </h2>
+
+                            <p
+                                class="mt-1 text-sm text-muted-foreground"
+                            >
+                                Identifica al visitante mediante su código QR.
+                            </p>
+                        </div>
                     </div>
 
-                    <button
-                        v-if="!scanning"
-                        type="button"
-                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                        @click="
-                            startQrScanner
-                        "
-                    >
-                        Escanear QR
-                    </button>
+                    <div class="flex flex-col gap-2 sm:flex-row">
+                        <button
+                            v-if="!scanning"
+                            type="button"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                            @click="
+                                startQrScanner
+                            "
+                        >
+                            <QrCode
+                                class="h-4 w-4"
+                            />
+                            Escanear QR
+                        </button>
 
-                    <button
-                        v-else
-                        type="button"
-                        class="inline-flex items-center justify-center rounded-lg border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
-                        @click="
-                            stopQrScanner
-                        "
-                    >
-                        Detener cámara
-                    </button>
+                        <button
+                            v-else
+                            type="button"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                            @click="
+                                stopQrScanner
+                            "
+                        >
+                            <X
+                                class="h-4 w-4"
+                            />
+                            Detener cámara
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Lector QR -->
                 <div
                     v-if="scanning"
-                    class="mt-4 flex justify-center"
+                    class="flex justify-center"
                 >
                     <div
-                        class="relative h-[320px] w-[320px] overflow-hidden rounded-2xl border border-sidebar-border bg-black shadow-lg"
+                        class="relative h-[320px] w-[320px] max-w-full overflow-hidden rounded-xl border border-sidebar-border bg-black shadow-lg"
                     >
                         <div
                             id="user-qr-reader"
@@ -539,7 +575,7 @@ const submit = async (): Promise<void> => {
                                 ></span>
 
                                 <span
-                                    class="absolute left-3 right-3 top-1/2 h-0.5 -translate-y-1/2 bg-primary opacity-90 shadow-[0_0_8px_currentColor] animate-pulse"
+                                    class="absolute left-3 right-3 top-1/2 h-0.5 -translate-y-1/2 animate-pulse bg-primary opacity-90 shadow-[0_0_8px_currentColor]"
                                 ></span>
                             </div>
 
@@ -556,10 +592,12 @@ const submit = async (): Promise<void> => {
                             class="pointer-events-none absolute bottom-3 left-0 right-0 z-30 text-center"
                         >
                             <span
-                                class="rounded-full bg-black/60 px-3 py-1 text-xs text-white backdrop-blur-sm"
+                                class="inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm"
                             >
-                                Coloca el QR dentro
-                                del recuadro
+                                <QrCode
+                                    class="h-3.5 w-3.5"
+                                />
+                                Coloca el QR dentro del recuadro
                             </span>
                         </div>
                     </div>
@@ -568,22 +606,46 @@ const submit = async (): Promise<void> => {
                 <!-- Búsqueda manual -->
                 <div
                     v-if="!identifiedUser"
-                    class="mt-4"
+                    class="mt-6 rounded-xl border border-dashed border-sidebar-border bg-muted/20 p-4"
                 >
+                    <div
+                        class="mb-3 flex items-center gap-2"
+                    >
+                        <QrCode
+                            class="h-4 w-4 text-muted-foreground"
+                        />
+
+                        <p
+                            class="text-sm font-medium"
+                        >
+                            Identificación manual
+                        </p>
+                    </div>
+
                     <div
                         class="flex flex-col gap-2 sm:flex-row"
                     >
-                        <input
-                            v-model="
-                                manualQrToken
-                            "
-                            type="text"
-                            placeholder="También puedes ingresar el código QR manualmente"
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            @keyup.enter="
-                                searchManualQr
-                            "
-                        />
+                        <div
+                            class="relative flex-1"
+                        >
+                            <input
+                                v-model="
+                                    manualQrToken
+                                "
+                                type="text"
+                                placeholder="Ingresa el código QR manualmente"
+                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                @keyup.enter="
+                                    searchManualQr
+                                "
+                            />
+
+                            <span
+                                class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground"
+                            >
+                                QR
+                            </span>
+                        </div>
 
                         <button
                             type="button"
@@ -591,11 +653,15 @@ const submit = async (): Promise<void> => {
                                 searchingUser ||
                                 !manualQrToken.trim()
                             "
-                            class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                             @click="
                                 searchManualQr
                             "
                         >
+                            <Search
+                                class="h-4 w-4"
+                            />
+
                             {{
                                 searchingUser
                                     ? 'Buscando...'
@@ -608,70 +674,91 @@ const submit = async (): Promise<void> => {
                 <!-- Usuario identificado -->
                 <div
                     v-if="identifiedUser"
-                    class="mt-4 rounded-lg border border-green-500/30 bg-green-500/10 p-4"
+                    class="mt-6 rounded-xl border border-green-500/30 bg-green-500/10 p-4"
                 >
                     <div
                         class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                     >
-                        <div>
-                            <p
-                                class="text-sm font-medium text-green-700 dark:text-green-400"
-                            >
-                                Usuario identificado
-                            </p>
-
-                            <p
-                                class="mt-1 text-lg font-semibold"
-                            >
-                                {{
-                                    identifiedUser.name
-                                }}
-                            </p>
-
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                {{
-                                    identifiedUser.email
-                                }}
-                            </p>
-
+                        <div class="flex items-start gap-3">
                             <div
-                                class="mt-2 flex flex-wrap gap-2"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/15 text-green-600 dark:text-green-400"
                             >
-                                <span
-                                    class="rounded-full border border-sidebar-border px-3 py-1 text-xs"
-                                >
-                                    {{
-                                        identifiedUser
-                                            .level
-                                            ?.name ??
-                                        'Sin nivel'
-                                    }}
-                                </span>
+                                <Check
+                                    class="h-5 w-5"
+                                />
+                            </div>
 
-                                <span
-                                    class="rounded-full border border-sidebar-border px-3 py-1 text-xs"
+                            <div>
+                                <p
+                                    class="text-sm font-medium text-green-700 dark:text-green-400"
+                                >
+                                    Usuario identificado
+                                </p>
+
+                                <p
+                                    class="mt-1 text-lg font-semibold"
                                 >
                                     {{
-                                        identifiedUser
-                                            .points
-                                            .toLocaleString(
-                                                'es-MX',
-                                            )
+                                        identifiedUser.name
                                     }}
-                                    puntos
-                                </span>
+                                </p>
+
+                                <p
+                                    class="mt-1 text-sm text-muted-foreground"
+                                >
+                                    {{
+                                        identifiedUser.email
+                                    }}
+                                </p>
+
+                                <div
+                                    class="mt-2 flex flex-wrap gap-2"
+                                >
+                                    <span
+                                        class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border px-3 py-1 text-xs"
+                                    >
+                                        <ShieldCheck
+                                            class="h-3.5 w-3.5"
+                                        />
+
+                                        {{
+                                            identifiedUser
+                                                .level
+                                                ?.name ??
+                                            'Sin nivel'
+                                        }}
+                                    </span>
+
+                                    <span
+                                        class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border px-3 py-1 text-xs"
+                                    >
+                                        <CircleDollarSign
+                                            class="h-3.5 w-3.5"
+                                        />
+
+                                        {{
+                                            identifiedUser
+                                                .points
+                                                .toLocaleString(
+                                                    'es-MX',
+                                                )
+                                        }}
+                                        puntos
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
                         <button
                             type="button"
-                            class="inline-flex items-center justify-center rounded-lg border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                             @click="
                                 clearIdentifiedUser
                             "
                         >
+                            <X
+                                class="h-4 w-4"
+                            />
                             Quitar usuario
                         </button>
                     </div>
@@ -680,13 +767,29 @@ const submit = async (): Promise<void> => {
                 <!-- Error -->
                 <div
                     v-if="qrError"
-                    class="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4"
+                    class="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4"
                 >
-                    <p
-                        class="text-sm font-medium text-red-600 dark:text-red-400"
+                    <div
+                        class="flex items-start gap-3"
                     >
-                        {{ qrError }}
-                    </p>
+                        <Info
+                            class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400"
+                        />
+
+                        <div>
+                            <p
+                                class="text-sm font-medium text-red-600 dark:text-red-400"
+                            >
+                                No se pudo identificar al usuario
+                            </p>
+
+                            <p
+                                class="mt-1 text-sm text-red-600/80 dark:text-red-400/80"
+                            >
+                                {{ qrError }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <p
@@ -699,20 +802,32 @@ const submit = async (): Promise<void> => {
 
             <!-- Donación -->
             <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
             >
-                <div class="mb-6">
-                    <h2
-                        class="text-lg font-semibold"
+                <div
+                    class="mb-6 flex items-start gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
+                >
+                    <div
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                     >
-                        Donación
-                    </h2>
+                        <Wallet
+                            class="h-5 w-5"
+                        />
+                    </div>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Ingresa el monto y selecciona el método de pago.
-                    </p>
+                    <div>
+                        <h2
+                            class="text-lg font-semibold"
+                        >
+                            Donación
+                        </h2>
+
+                        <p
+                            class="mt-1 text-sm text-muted-foreground"
+                        >
+                            Ingresa el monto y selecciona el método de pago.
+                        </p>
+                    </div>
                 </div>
 
                 <div
@@ -722,14 +837,15 @@ const submit = async (): Promise<void> => {
                     <div class="space-y-2">
                         <label
                             for="amount"
-                            class="text-sm font-medium"
+                            class="flex items-center gap-2 text-sm font-medium"
                         >
+                            <CircleDollarSign
+                                class="h-4 w-4 text-muted-foreground"
+                            />
                             Monto
                         </label>
 
-                        <div
-                            class="relative"
-                        >
+                        <div class="relative">
                             <span
                                 class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
                             >
@@ -776,34 +892,43 @@ const submit = async (): Promise<void> => {
                     <div class="space-y-2">
                         <label
                             for="payment_method"
-                            class="text-sm font-medium"
+                            class="flex items-center gap-2 text-sm font-medium"
                         >
+                            <Wallet
+                                class="h-4 w-4 text-muted-foreground"
+                            />
                             Método de pago
                         </label>
 
-                        <select
-                            id="payment_method"
-                            v-model="
-                                form.payment_method_id
-                            "
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        >
-                            <option
-                                :value="null"
+                        <div class="relative">
+                            <select
+                                id="payment_method"
+                                v-model="
+                                    form.payment_method_id
+                                "
+                                class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             >
-                                Selecciona un método de pago
-                            </option>
+                                <option
+                                    :value="null"
+                                >
+                                    Selecciona un método de pago
+                                </option>
 
-                            <option
-                                v-for="method in paymentMethods"
-                                :key="method.id"
-                                :value="method.id"
-                            >
-                                {{
-                                    method.name
-                                }}
-                            </option>
-                        </select>
+                                <option
+                                    v-for="method in paymentMethods"
+                                    :key="method.id"
+                                    :value="method.id"
+                                >
+                                    {{
+                                        method.name
+                                    }}
+                                </option>
+                            </select>
+
+                            <ChevronDown
+                                class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                            />
+                        </div>
 
                         <p
                             v-if="
@@ -826,9 +951,13 @@ const submit = async (): Promise<void> => {
                 >
                     <label
                         for="reference"
-                        class="text-sm font-medium"
+                        class="flex items-center gap-2 text-sm font-medium"
                     >
+                        <FileText
+                            class="h-4 w-4 text-muted-foreground"
+                        />
                         Referencia
+
                         <span
                             class="font-normal text-muted-foreground"
                         >
@@ -862,14 +991,32 @@ const submit = async (): Promise<void> => {
 
             <!-- Resumen -->
             <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
             >
-                <div class="mb-6">
-                    <h2
-                        class="text-lg font-semibold"
+                <div
+                    class="mb-6 flex items-start gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
+                >
+                    <div
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                     >
-                        Resumen de la donación
-                    </h2>
+                        <Info
+                            class="h-5 w-5"
+                        />
+                    </div>
+
+                    <div>
+                        <h2
+                            class="text-lg font-semibold"
+                        >
+                            Resumen de la donación
+                        </h2>
+
+                        <p
+                            class="mt-1 text-sm text-muted-foreground"
+                        >
+                            Revisa la información antes de registrar la donación.
+                        </p>
+                    </div>
                 </div>
 
                 <div
@@ -878,105 +1025,151 @@ const submit = async (): Promise<void> => {
                         selectedPaymentMethod &&
                         form.amount
                     "
-                    class="space-y-3"
+                    class="space-y-4"
                 >
                     <div
-                        class="flex justify-between text-sm"
+                        class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
                     >
-                        <span
-                            class="text-muted-foreground"
+                        <!-- Usuario -->
+                        <div
+                            class="rounded-xl border border-sidebar-border/70 bg-muted/20 p-4"
                         >
-                            Usuario
-                        </span>
+                            <div
+                                class="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
+                            >
+                                <UserRound
+                                    class="h-4 w-4"
+                                />
+                                Usuario
+                            </div>
 
-                        <span
-                            class="font-medium"
+                            <p
+                                class="font-medium"
+                            >
+                                {{
+                                    selectedUser.name
+                                }}
+                            </p>
+                        </div>
+
+                        <!-- Monto -->
+                        <div
+                            class="rounded-xl border border-sidebar-border/70 bg-muted/20 p-4"
                         >
-                            {{
-                                selectedUser.name
-                            }}
-                        </span>
+                            <div
+                                class="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
+                            >
+                                <CircleDollarSign
+                                    class="h-4 w-4"
+                                />
+                                Monto
+                            </div>
+
+                            <p
+                                class="text-lg font-semibold"
+                            >
+                                {{
+                                    formatCurrency(
+                                        form.amount,
+                                    )
+                                }}
+                            </p>
+                        </div>
+
+                        <!-- Método -->
+                        <div
+                            class="rounded-xl border border-sidebar-border/70 bg-muted/20 p-4"
+                        >
+                            <div
+                                class="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
+                            >
+                                <Wallet
+                                    class="h-4 w-4"
+                                />
+                                Método de pago
+                            </div>
+
+                            <p
+                                class="font-medium"
+                            >
+                                {{
+                                    selectedPaymentMethod
+                                        .name
+                                }}
+                            </p>
+                        </div>
                     </div>
 
-                    <div
-                        class="flex justify-between text-sm"
-                    >
-                        <span
-                            class="text-muted-foreground"
-                        >
-                            Monto
-                        </span>
-
-                        <span
-                            class="font-semibold"
-                        >
-                            {{
-                                formatCurrency(
-                                    form.amount,
-                                )
-                            }}
-                        </span>
-                    </div>
-
-                    <div
-                        class="flex justify-between text-sm"
-                    >
-                        <span
-                            class="text-muted-foreground"
-                        >
-                            Método de pago
-                        </span>
-
-                        <span
-                            class="font-medium"
-                        >
-                            {{
-                                selectedPaymentMethod
-                                    .name
-                            }}
-                        </span>
-                    </div>
-
+                    <!-- Referencia -->
                     <div
                         v-if="form.reference"
-                        class="flex justify-between gap-4 text-sm"
+                        class="rounded-xl border border-sidebar-border/70 bg-muted/20 p-4"
                     >
-                        <span
-                            class="text-muted-foreground"
+                        <div
+                            class="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
                         >
+                            <FileText
+                                class="h-4 w-4"
+                            />
                             Referencia
-                        </span>
+                        </div>
 
-                        <span
-                            class="max-w-[60%] text-right font-medium break-words"
+                        <p
+                            class="break-words text-sm font-medium"
                         >
                             {{
                                 form.reference
                             }}
-                        </span>
+                        </p>
                     </div>
 
+                    <!-- Estado -->
                     <div
-                        class="rounded-lg border border-green-500/30 bg-green-500/10 p-4"
+                        class="flex items-center gap-3 rounded-xl border border-green-500/30 bg-green-500/10 p-4"
                     >
-                        <p
-                            class="text-sm font-medium text-green-700 dark:text-green-400"
-                        >
-                            La donación está lista para registrarse.
-                        </p>
+                        <Check
+                            class="h-5 w-5 shrink-0 text-green-600 dark:text-green-400"
+                        />
+
+                        <div>
+                            <p
+                                class="text-sm font-medium text-green-700 dark:text-green-400"
+                            >
+                                La donación está lista para registrarse.
+                            </p>
+
+                            <p
+                                class="mt-0.5 text-xs text-green-700/70 dark:text-green-400/70"
+                            >
+                                Verifica los datos antes de confirmar.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
+                <!-- Vacío -->
                 <div
                     v-else
-                    class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                    class="rounded-xl border border-dashed border-sidebar-border bg-muted/20 p-8 text-center"
                 >
-                    <p
-                        class="text-sm text-muted-foreground"
+                    <div
+                        class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"
                     >
-                        Identifica un usuario, ingresa
-                        el monto y selecciona un método
-                        de pago para continuar.
+                        <CircleDollarSign
+                            class="h-6 w-6"
+                        />
+                    </div>
+
+                    <h3
+                        class="mt-4 text-sm font-semibold"
+                    >
+                        Donación incompleta
+                    </h3>
+
+                    <p
+                        class="mx-auto mt-1 max-w-md text-sm text-muted-foreground"
+                    >
+                        Identifica un usuario, ingresa el monto y selecciona un método de pago para continuar.
                     </p>
                 </div>
 
@@ -989,8 +1182,11 @@ const submit = async (): Promise<void> => {
                             admin.donations
                                 .index().url
                         "
-                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <ArrowLeft
+                            class="h-4 w-4"
+                        />
                         Cancelar
                     </Link>
 
@@ -1000,8 +1196,18 @@ const submit = async (): Promise<void> => {
                             form.processing ||
                             !canRegister
                         "
-                        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
+                        <Sparkles
+                            v-if="form.processing"
+                            class="h-4 w-4 animate-pulse"
+                        />
+
+                        <Save
+                            v-else
+                            class="h-4 w-4"
+                        />
+
                         {{
                             form.processing
                                 ? 'Procesando...'

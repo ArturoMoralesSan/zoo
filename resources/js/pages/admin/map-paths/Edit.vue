@@ -1,5 +1,22 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import {
+    ArrowLeft,
+    Check,
+    CircleDot,
+    Clock3,
+    GitBranch,
+    Info,
+    Map,
+    MapPin,
+    Route,
+    Ruler,
+    Save,
+    Sparkles,
+    Trash2,
+    Undo2,
+    X,
+} from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
 import MapPathMap from '@/components/admin/MapPathMap.vue';
 import admin from '@/routes/admin';
@@ -11,6 +28,11 @@ interface MapImageBounds {
     west: number;
 }
 
+interface GeoJsonGeometry {
+    type: string;
+    coordinates: unknown;
+}
+
 interface Zone {
     id: number;
     name: string;
@@ -18,11 +40,6 @@ interface Zone {
     geometry: GeoJsonGeometry | null;
     map_image: string | null;
     map_image_bounds: MapImageBounds | null;
-}
-
-interface GeoJsonGeometry {
-    type: string;
-    coordinates: unknown;
 }
 
 interface MapMarker {
@@ -211,30 +228,24 @@ const zoneSpeciesLocations =
 
 const loadingZone = ref(false);
 
-const zoneError = ref<string | null>(null);
+const zoneError =
+    ref<string | null>(null);
 
 const form = useForm({
     zone_id: selectedZoneId.value,
-
     name: props.mapPath.name,
-
     description:
         props.mapPath.description ?? '',
-
     coordinates:
         normalizeCoordinates(
             props.mapPath.coordinates,
         ),
-
     distance:
         props.mapPath.distance ?? 0,
-
     estimated_time:
         props.mapPath.estimated_time ?? 0,
-
     is_active:
         props.mapPath.is_active,
-
     order:
         props.mapPath.order ?? 0,
 });
@@ -438,15 +449,12 @@ async function loadZone(
             ).url,
             {
                 method: 'GET',
-
                 headers: {
                     Accept:
                         'application/json',
-
                     'X-Requested-With':
                         'XMLHttpRequest',
                 },
-
                 credentials:
                     'same-origin',
             },
@@ -548,7 +556,6 @@ function submit(): void {
     if (!form.zone_id) {
         zoneError.value =
             'Debes seleccionar una zona antes de actualizar el camino.';
-
         return;
     }
 
@@ -558,7 +565,6 @@ function submit(): void {
     ) {
         zoneError.value =
             'Debes tener al menos 2 nodos.';
-
         return;
     }
 
@@ -568,7 +574,6 @@ function submit(): void {
     ) {
         zoneError.value =
             'Debes tener al menos una conexión entre nodos.';
-
         return;
     }
 
@@ -588,54 +593,86 @@ function submit(): void {
         :title="`Editar camino: ${mapPath.name}`"
     />
 
-    <div class="p-6">
+    <div
+        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+    >
         <!-- Encabezado -->
         <div
-            class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
-            <div>
-                <h1
-                    class="text-2xl font-bold text-gray-900 dark:text-white"
-                >
-                    Editar camino
-                </h1>
-
-                <p
-                    class="mt-1 text-sm text-gray-600 dark:text-gray-400"
-                >
-                    Modifica la red de caminos internos del zoológico.
-                </p>
-            </div>
-
-            <Link
-                :href="
-                    admin.mapPaths.index()
-                        .url
-                "
-                class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+            <div
+                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                ← Regresar
-            </Link>
+                <div class="flex items-start gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <Route class="h-5 w-5" />
+                    </div>
+
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Editar camino
+                        </h1>
+
+                        <p
+                            class="mt-1 text-sm text-muted-foreground"
+                        >
+                            Modifica la red de caminos
+                            internos del zoológico.
+                        </p>
+                    </div>
+                </div>
+
+                <Link
+                    :href="
+                        admin.mapPaths.index().url
+                    "
+                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                >
+                    <ArrowLeft
+                        class="h-4 w-4"
+                    />
+                    Regresar
+                </Link>
+            </div>
         </div>
 
         <!-- Información general -->
         <div
-            class="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+            class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
-            <h2
-                class="mb-4 text-lg font-semibold text-gray-900 dark:text-white"
+            <div
+                class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
             >
-                Información general
-            </h2>
+                <div
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                >
+                    <Info class="h-5 w-5" />
+                </div>
+
+                <div>
+                    <h2 class="text-base font-semibold">
+                        Información general
+                    </h2>
+
+                    <p
+                        class="text-sm text-muted-foreground"
+                    >
+                        Configura los datos básicos
+                        del camino.
+                    </p>
+                </div>
+            </div>
 
             <div
-                class="grid grid-cols-1 gap-6 md:grid-cols-2"
+                class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2"
             >
                 <!-- Nombre -->
                 <div>
                     <label
                         for="name"
-                        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                        class="mb-2 block text-sm font-medium"
                     >
                         Nombre del camino
                         <span class="text-red-500">*</span>
@@ -645,12 +682,13 @@ function submit(): void {
                         id="name"
                         v-model="form.name"
                         type="text"
-                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                        placeholder="Ej. Camino principal"
+                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
 
                     <p
                         v-if="form.errors.name"
-                        class="mt-1 text-sm text-red-600"
+                        class="mt-1 text-sm text-red-600 dark:text-red-400"
                     >
                         {{ form.errors.name }}
                     </p>
@@ -660,163 +698,179 @@ function submit(): void {
                 <div>
                     <label
                         for="order"
-                        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                        class="mb-2 block text-sm font-medium"
                     >
                         Orden
                     </label>
 
                     <input
                         id="order"
-                        v-model.number="
-                            form.order
-                        "
+                        v-model.number="form.order"
                         type="number"
                         min="0"
-                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
 
                     <p
                         v-if="form.errors.order"
-                        class="mt-1 text-sm text-red-600"
+                        class="mt-1 text-sm text-red-600 dark:text-red-400"
                     >
                         {{ form.errors.order }}
                     </p>
                 </div>
 
                 <!-- Descripción -->
-                <div
-                    class="md:col-span-2"
-                >
+                <div class="md:col-span-2">
                     <label
                         for="description"
-                        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                        class="mb-2 block text-sm font-medium"
                     >
                         Descripción
                     </label>
 
                     <textarea
                         id="description"
-                        v-model="
-                            form.description
-                        "
+                        v-model="form.description"
                         rows="3"
                         placeholder="Descripción del camino..."
-                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                        class="w-full resize-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
 
                     <p
                         v-if="
-                            form.errors
-                                .description
+                            form.errors.description
                         "
-                        class="mt-1 text-sm text-red-600"
+                        class="mt-1 text-sm text-red-600 dark:text-red-400"
                     >
-                        {{
-                            form.errors
-                                .description
-                        }}
+                        {{ form.errors.description }}
                     </p>
                 </div>
 
                 <!-- Estado -->
-                <div
-                    class="md:col-span-2"
-                >
+                <div class="md:col-span-2">
                     <label
                         class="inline-flex cursor-pointer items-center gap-3"
                     >
                         <input
-                            v-model="
-                                form.is_active
-                            "
+                            v-model="form.is_active"
                             type="checkbox"
-                            class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            class="h-4 w-4 rounded border-sidebar-border text-primary focus:ring-primary"
                         />
 
-                        <span
-                            class="text-sm font-medium text-gray-700 dark:text-gray-300"
-                        >
+                        <span class="text-sm font-medium">
                             Camino activo
                         </span>
                     </label>
+
+                    <p
+                        class="mt-1 ml-7 text-xs text-muted-foreground"
+                    >
+                        Los caminos inactivos no se
+                        consideran disponibles para
+                        la navegación pública.
+                    </p>
                 </div>
             </div>
         </div>
 
         <!-- Zona -->
         <div
-            class="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+            class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
-            <div class="mb-4">
-                <h2
-                    class="text-lg font-semibold text-gray-900 dark:text-white"
+            <div
+                class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
+            >
+                <div
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                 >
-                    Zona del zoológico
-                </h2>
+                    <MapPin class="h-5 w-5" />
+                </div>
 
-                <p
-                    class="mt-1 text-sm text-gray-600 dark:text-gray-400"
-                >
-                    Selecciona la zona donde pertenece este camino.
-                </p>
+                <div>
+                    <h2 class="text-base font-semibold">
+                        Zona del zoológico
+                    </h2>
+
+                    <p
+                        class="text-sm text-muted-foreground"
+                    >
+                        Selecciona la zona donde pertenece
+                        este camino.
+                    </p>
+                </div>
             </div>
 
-            <div>
+            <div class="mt-6">
                 <label
                     for="zone"
-                    class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    class="mb-2 block text-sm font-medium"
                 >
                     Zona
                     <span class="text-red-500">*</span>
                 </label>
 
-                <select
-                    id="zone"
-                    v-model="
-                        selectedZoneId
-                    "
-                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
-                >
-                    <option
-                        :value="null"
+                <div class="relative">
+                    <select
+                        id="zone"
+                        v-model="selectedZoneId"
+                        class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     >
-                        Selecciona una zona...
-                    </option>
+                        <option :value="null">
+                            Selecciona una zona...
+                        </option>
 
-                    <option
-                        v-for="zone in props.zones"
-                        :key="zone.id"
-                        :value="zone.id"
+                        <option
+                            v-for="zone in props.zones"
+                            :key="zone.id"
+                            :value="zone.id"
+                        >
+                            {{ zone.name }}
+                        </option>
+                    </select>
+
+                    <svg
+                        class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
                     >
-                        {{ zone.name }}
-                    </option>
-                </select>
+                        <path d="m6 9 6 6 6-6" />
+                    </svg>
+                </div>
 
                 <p
                     v-if="form.errors.zone_id"
-                    class="mt-1 text-sm text-red-600"
+                    class="mt-1 text-sm text-red-600 dark:text-red-400"
                 >
-                    {{
-                        form.errors
-                            .zone_id
-                    }}
+                    {{ form.errors.zone_id }}
                 </p>
             </div>
 
             <!-- Loading -->
             <div
                 v-if="loadingZone"
-                class="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
+                class="mt-4 flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
             >
+                <Sparkles
+                    class="h-4 w-4 animate-pulse"
+                />
+
                 Cargando información de la zona...
             </div>
 
             <!-- Error -->
             <div
                 v-if="zoneError"
-                class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300"
+                class="mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300"
             >
-                {{ zoneError }}
+                <Info
+                    class="mt-0.5 h-4 w-4 shrink-0"
+                />
+
+                <span>{{ zoneError }}</span>
             </div>
 
             <!-- Zona seleccionada -->
@@ -825,53 +879,43 @@ function submit(): void {
                     selectedZone &&
                     !loadingZone
                 "
-                class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900"
+                class="mt-4 rounded-lg border border-sidebar-border bg-muted/20 p-4"
             >
                 <div
                     class="grid grid-cols-1 gap-4 sm:grid-cols-4"
                 >
                     <div>
                         <p
-                            class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                         >
                             Zona
                         </p>
 
-                        <p
-                            class="mt-1 font-semibold text-gray-900 dark:text-white"
-                        >
-                            {{
-                                selectedZone.name
-                            }}
+                        <p class="mt-1 font-semibold">
+                            {{ selectedZone.name }}
                         </p>
                     </div>
 
                     <div>
                         <p
-                            class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                         >
                             Puntos de interés
                         </p>
 
-                        <p
-                            class="mt-1 font-semibold text-gray-900 dark:text-white"
-                        >
-                            {{
-                                zoneMarkers.length
-                            }}
+                        <p class="mt-1 font-semibold">
+                            {{ zoneMarkers.length }}
                         </p>
                     </div>
 
                     <div>
                         <p
-                            class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                         >
                             Especies
                         </p>
 
-                        <p
-                            class="mt-1 font-semibold text-gray-900 dark:text-white"
-                        >
+                        <p class="mt-1 font-semibold">
                             {{
                                 zoneSpeciesLocations.length
                             }}
@@ -880,7 +924,7 @@ function submit(): void {
 
                     <div>
                         <p
-                            class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                         >
                             Plano
                         </p>
@@ -903,215 +947,254 @@ function submit(): void {
                 </div>
 
                 <p
-                    v-if="
-                        selectedZone.description
-                    "
-                    class="mt-4 text-sm text-gray-600 dark:text-gray-400"
+                    v-if="selectedZone.description"
+                    class="mt-4 text-sm text-muted-foreground"
                 >
-                    {{
-                        selectedZone.description
-                    }}
+                    {{ selectedZone.description }}
                 </p>
             </div>
         </div>
 
         <!-- MAPA + PANEL DERECHO -->
         <div
-            class="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]"
+            class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]"
         >
             <!-- MAPA -->
             <div
-                class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
             >
                 <div
-                    class="mb-4"
+                    class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
                 >
-                    <h2
-                        class="text-lg font-semibold text-gray-900 dark:text-white"
+                    <div
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                     >
-                        Editor de caminos
-                    </h2>
+                        <Map class="h-5 w-5" />
+                    </div>
 
-                    <p
-                        class="mt-1 text-sm text-gray-600 dark:text-gray-400"
-                    >
-                        Haz clic sobre el mapa para crear nodos y conectar los
-                        caminos.
-                    </p>
+                    <div>
+                        <h2 class="text-base font-semibold">
+                            Editor de caminos
+                        </h2>
+
+                        <p
+                            class="text-sm text-muted-foreground"
+                        >
+                            Haz clic sobre el mapa para crear
+                            nodos y conectar los caminos.
+                        </p>
+                    </div>
                 </div>
 
-                <MapPathMap
-                    v-model:coordinates="
-                        form.coordinates
-                    "
-                    :zone-geometry="
-                        zoneGeometry
-                    "
-                    :map-image="
-                        zoneMapImage
-                    "
-                    :map-image-bounds="
-                        zoneMapImageBounds
-                    "
-                    :markers="
-                        zoneMarkers
-                    "
-                    :species-locations="
-                        zoneSpeciesLocations
-                    "
-                    @update:distance="
-                        updateDistance
-                    "
-                />
+                <div class="mt-6">
+                    <MapPathMap
+                        v-model:coordinates="
+                            form.coordinates
+                        "
+                        :zone-geometry="
+                            zoneGeometry
+                        "
+                        :map-image="
+                            zoneMapImage
+                        "
+                        :map-image-bounds="
+                            zoneMapImageBounds
+                        "
+                        :markers="
+                            zoneMarkers
+                        "
+                        :species-locations="
+                            zoneSpeciesLocations
+                        "
+                        @update:distance="
+                            updateDistance
+                        "
+                    />
 
-                <p
-                    v-if="
-                        form.errors
-                            .coordinates
-                    "
-                    class="mt-2 text-sm text-red-600"
-                >
-                    {{
-                        form.errors
-                            .coordinates
-                    }}
-                </p>
+                    <p
+                        v-if="
+                            form.errors.coordinates
+                        "
+                        class="mt-2 text-sm text-red-600 dark:text-red-400"
+                    >
+                        {{ form.errors.coordinates }}
+                    </p>
 
-                <p
-                    v-if="
-                        selectedZone &&
-                        !zoneMapImage
-                    "
-                    class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
-                >
-                    Esta zona no tiene un plano configurado. El camino se
-                    dibuja directamente sobre el área delimitada por la zona.
-                </p>
+                    <p
+                        v-if="
+                            selectedZone &&
+                            !zoneMapImage
+                        "
+                        class="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+                    >
+                        <Info
+                            class="mt-0.5 h-4 w-4 shrink-0"
+                        />
 
-                <p
-                    v-else-if="
-                        selectedZone &&
-                        zoneMapImage
-                    "
-                    class="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
-                >
-                    El plano es una referencia visual. Los nodos del camino
-                    pueden colocarse en cualquier punto dentro de la zona.
-                </p>
+                        <span>
+                            Esta zona no tiene un plano
+                            configurado. El camino se dibuja
+                            directamente sobre el área
+                            delimitada por la zona.
+                        </span>
+                    </p>
+
+                    <p
+                        v-else-if="
+                            selectedZone &&
+                            zoneMapImage
+                        "
+                        class="mt-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
+                    >
+                        <Info
+                            class="mt-0.5 h-4 w-4 shrink-0"
+                        />
+
+                        <span>
+                            El plano es una referencia visual.
+                            Los nodos del camino pueden colocarse
+                            en cualquier punto dentro de la zona.
+                        </span>
+                    </p>
+                </div>
             </div>
 
             <!-- PANEL DERECHO -->
-            <div
-                class="space-y-6"
-            >
+            <div class="space-y-6">
                 <!-- Herramientas -->
                 <div
-                    class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                    class="rounded-xl border border-sidebar-border/70 bg-background p-5 dark:border-sidebar-border"
                 >
-                    <h3
-                        class="mb-4 text-base font-semibold text-gray-900 dark:text-white"
+                    <div
+                        class="flex items-center gap-3 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
                     >
-                        Herramientas
-                    </h3>
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        >
+                            <Route
+                                class="h-5 w-5"
+                            />
+                        </div>
+
+                        <div>
+                            <h3 class="text-base font-semibold">
+                                Herramientas
+                            </h3>
+
+                            <p
+                                class="text-xs text-muted-foreground"
+                            >
+                                Gestiona los nodos del camino.
+                            </p>
+                        </div>
+                    </div>
 
                     <div
-                        class="grid grid-cols-2 gap-2"
+                        class="mt-4 grid grid-cols-2 gap-2"
                     >
                         <button
                             type="button"
-                            :disabled="
-                                nodeCount ===
-                                0
-                            "
-                            class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
-                            @click="
-                                undoLastNode
-                            "
+                            :disabled="nodeCount === 0"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2.5 text-sm font-medium transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                            @click="undoLastNode"
                         >
-                            ↩ Deshacer
+                            <Undo2
+                                class="h-4 w-4"
+                            />
+                            Deshacer
                         </button>
 
                         <button
                             type="button"
-                            :disabled="
-                                nodeCount ===
-                                0
-                            "
-                            class="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-800 dark:bg-gray-900 dark:text-red-400 dark:hover:bg-red-950/30"
-                            @click="
-                                clearPath
-                            "
+                            :disabled="nodeCount === 0"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2.5 text-sm font-medium text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            @click="clearPath"
                         >
-                            🗑 Limpiar
+                            <Trash2
+                                class="h-4 w-4"
+                            />
+                            Limpiar
                         </button>
                     </div>
                 </div>
 
                 <!-- Resumen -->
                 <div
-                    class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                    class="rounded-xl border border-sidebar-border/70 bg-background p-5 dark:border-sidebar-border"
                 >
-                    <h3
-                        class="mb-4 text-base font-semibold text-gray-900 dark:text-white"
-                    >
-                        Resumen del camino
-                    </h3>
-
                     <div
-                        class="space-y-4"
+                        class="flex items-center gap-3 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
                     >
                         <div
-                            class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-700"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        >
+                            <Info
+                                class="h-5 w-5"
+                            />
+                        </div>
+
+                        <div>
+                            <h3 class="text-base font-semibold">
+                                Resumen del camino
+                            </h3>
+
+                            <p
+                                class="text-xs text-muted-foreground"
+                            >
+                                Información calculada del recorrido.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 space-y-4">
+                        <div
+                            class="flex items-center justify-between border-b border-sidebar-border/70 pb-3 dark:border-sidebar-border"
                         >
                             <span
-                                class="text-sm text-gray-500 dark:text-gray-400"
+                                class="flex items-center gap-2 text-sm text-muted-foreground"
                             >
+                                <CircleDot
+                                    class="h-4 w-4"
+                                />
                                 Nodos
                             </span>
 
-                            <span
-                                class="font-semibold text-gray-900 dark:text-white"
-                            >
-                                {{
-                                    nodeCount
-                                }}
+                            <span class="font-semibold">
+                                {{ nodeCount }}
                             </span>
                         </div>
 
                         <div
-                            class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-700"
+                            class="flex items-center justify-between border-b border-sidebar-border/70 pb-3 dark:border-sidebar-border"
                         >
                             <span
-                                class="text-sm text-gray-500 dark:text-gray-400"
+                                class="flex items-center gap-2 text-sm text-muted-foreground"
                             >
+                                <GitBranch
+                                    class="h-4 w-4"
+                                />
                                 Conexiones
                             </span>
 
-                            <span
-                                class="font-semibold text-gray-900 dark:text-white"
-                            >
-                                {{
-                                    connectionCount
-                                }}
+                            <span class="font-semibold">
+                                {{ connectionCount }}
                             </span>
                         </div>
 
                         <div
-                            class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-700"
+                            class="flex items-center justify-between border-b border-sidebar-border/70 pb-3 dark:border-sidebar-border"
                         >
                             <span
-                                class="text-sm text-gray-500 dark:text-gray-400"
+                                class="flex items-center gap-2 text-sm text-muted-foreground"
                             >
+                                <Ruler
+                                    class="h-4 w-4"
+                                />
                                 Distancia
                             </span>
 
-                            <span
-                                class="font-semibold text-gray-900 dark:text-white"
-                            >
-                                {{
-                                    form.distance
-                                }}
-                                m
+                            <span class="font-semibold">
+                                {{ form.distance }} m
                             </span>
                         </div>
 
@@ -1119,14 +1202,15 @@ function submit(): void {
                             class="flex items-center justify-between"
                         >
                             <span
-                                class="text-sm text-gray-500 dark:text-gray-400"
+                                class="flex items-center gap-2 text-sm text-muted-foreground"
                             >
+                                <Clock3
+                                    class="h-4 w-4"
+                                />
                                 Tiempo estimado
                             </span>
 
-                            <span
-                                class="font-semibold text-gray-900 dark:text-white"
-                            >
+                            <span class="font-semibold">
                                 {{
                                     calculatedEstimatedTime
                                 }}
@@ -1138,45 +1222,60 @@ function submit(): void {
 
                 <!-- Nodos -->
                 <div
-                    class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                    class="overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
                 >
                     <div
-                        class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700"
+                        class="flex items-center justify-between border-b border-sidebar-border/70 px-5 py-4 dark:border-sidebar-border"
                     >
-                        <div>
-                            <h3
-                                class="text-base font-semibold text-gray-900 dark:text-white"
+                        <div
+                            class="flex items-center gap-3"
+                        >
+                            <div
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                             >
-                                Nodos del camino
-                            </h3>
+                                <CircleDot
+                                    class="h-5 w-5"
+                                />
+                            </div>
 
-                            <p
-                                class="mt-1 text-xs text-gray-500 dark:text-gray-400"
-                            >
-                                {{
-                                    connectionCount
-                                }}
-                                conexiones
-                            </p>
+                            <div>
+                                <h3 class="text-base font-semibold">
+                                    Nodos del camino
+                                </h3>
+
+                                <p
+                                    class="mt-1 text-xs text-muted-foreground"
+                                >
+                                    {{ connectionCount }}
+                                    conexiones
+                                </p>
+                            </div>
                         </div>
 
                         <span
-                            class="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
+                            class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-semibold"
                         >
-                            {{
-                                nodeCount
-                            }}
+                            {{ nodeCount }}
                         </span>
                     </div>
 
                     <div
-                        v-if="
-                            nodeCount ===
-                            0
-                        "
-                        class="p-5 text-center text-sm text-gray-500 dark:text-gray-400"
+                        v-if="nodeCount === 0"
+                        class="p-8 text-center"
                     >
-                        No hay nodos todavía.
+                        <div
+                            class="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+                        >
+                            <CircleDot
+                                class="h-5 w-5"
+                            />
+                        </div>
+
+                        <p
+                            class="mt-3 text-sm text-muted-foreground"
+                        >
+                            No hay nodos todavía.
+                        </p>
                     </div>
 
                     <div
@@ -1185,36 +1284,25 @@ function submit(): void {
                     >
                         <div
                             v-for="node in form.coordinates.nodes"
-                            :key="
-                                node.id
-                            "
-                            class="flex items-center justify-between border-b border-gray-100 px-5 py-3 last:border-b-0 dark:border-gray-700"
+                            :key="node.id"
+                            class="flex items-center justify-between border-b border-sidebar-border/70 px-5 py-3 last:border-b-0 dark:border-sidebar-border"
                         >
                             <div
-                                class="flex min-w-0 items-center gap-2"
+                                class="flex min-w-0 items-center gap-3"
                             >
                                 <span
-                                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white"
+                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
                                 >
-                                    {{
-                                        node.id
-                                    }}
+                                    {{ node.id }}
                                 </span>
 
-                                <div
-                                    class="min-w-0"
-                                >
-                                    <p
-                                        class="text-sm font-medium text-gray-900 dark:text-white"
-                                    >
-                                        Nodo
-                                        {{
-                                            node.id
-                                        }}
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">
+                                        Nodo {{ node.id }}
                                     </p>
 
                                     <p
-                                        class="truncate text-xs text-gray-500 dark:text-gray-400"
+                                        class="truncate text-xs text-muted-foreground"
                                     >
                                         {{
                                             node.lat.toFixed(
@@ -1232,13 +1320,16 @@ function submit(): void {
 
                             <button
                                 type="button"
-                                class="ml-3 shrink-0 text-xs font-medium text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                class="ml-3 inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-red-500/30 px-2.5 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
                                 @click="
                                     removeNode(
                                         node.id,
                                     )
                                 "
                             >
+                                <Trash2
+                                    class="h-3.5 w-3.5"
+                                />
                                 Eliminar
                             </button>
                         </div>
@@ -1247,70 +1338,75 @@ function submit(): void {
             </div>
         </div>
 
-        <!-- Guardar -->
+        <!-- Errores generales -->
         <div
-            class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"
+            v-if="
+                Object.keys(form.errors).length > 0
+            "
+            class="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/30"
+        >
+            <div class="flex items-start gap-3">
+                <Info
+                    class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400"
+                />
+
+                <div>
+                    <p
+                        class="text-sm font-semibold text-red-700 dark:text-red-300"
+                    >
+                        Hay errores en el formulario:
+                    </p>
+
+                    <ul
+                        class="mt-2 list-inside list-disc text-sm text-red-600 dark:text-red-400"
+                    >
+                        <li
+                            v-for="(error, key) in form.errors"
+                            :key="key"
+                        >
+                            {{ error }}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones -->
+        <div
+            class="flex flex-col-reverse gap-2 border-t border-sidebar-border/70 pt-6 sm:flex-row sm:justify-end dark:border-sidebar-border"
         >
             <Link
                 :href="
-                    admin.mapPaths.index()
-                        .url
+                    admin.mapPaths.index().url
                 "
-                class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
             >
+                <X class="h-4 w-4" />
                 Cancelar
             </Link>
 
             <button
                 type="button"
-                :disabled="
-                    !canSave
-                "
-                class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                :disabled="!canSave"
+                class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 @click="submit"
             >
-                <span
-                    v-if="
-                        form.processing
-                    "
-                >
-                    Actualizando...
-                </span>
+                <Sparkles
+                    v-if="form.processing"
+                    class="h-4 w-4 animate-pulse"
+                />
 
-                <span v-else>
-                    Actualizar camino
-                </span>
+                <Save
+                    v-else
+                    class="h-4 w-4"
+                />
+
+                {{
+                    form.processing
+                        ? 'Actualizando...'
+                        : 'Actualizar camino'
+                }}
             </button>
-        </div>
-
-        <!-- Errores generales -->
-        <div
-            v-if="
-                Object.keys(
-                    form.errors,
-                ).length > 0
-            "
-            class="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/30"
-        >
-            <p
-                class="text-sm font-semibold text-red-700 dark:text-red-300"
-            >
-                Hay errores en el formulario:
-            </p>
-
-            <ul
-                class="mt-2 list-inside list-disc text-sm text-red-600 dark:text-red-400"
-            >
-                <li
-                    v-for="(
-                        error,
-                        key
-                    ) in form.errors"
-                    :key="key"
-                >
-                    {{ error }}
-                </li>
-            </ul>
         </div>
     </div>
 </template>

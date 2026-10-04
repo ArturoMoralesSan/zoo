@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import {
+    ArrowLeft,
+    Check,
+    Edit,
+    Image as ImageIcon,
+    Info,
+    Map,
+    MapPinned,
+} from 'lucide-vue-next';
 
 import ZooZoneMap from '@/components/admin/ZooZoneMap.vue';
 
@@ -64,7 +73,7 @@ const hasGeometry = computed(() => {
 const hasMapImage = computed(() => {
     return Boolean(
         props.zone.map_image &&
-        props.zone.map_image_bounds
+        props.zone.map_image_bounds,
     );
 });
 
@@ -74,7 +83,7 @@ const formattedCreatedAt = computed(() => {
     }
 
     return new Date(
-        props.zone.created_at
+        props.zone.created_at,
     ).toLocaleString('es-MX');
 });
 
@@ -84,7 +93,7 @@ const formattedUpdatedAt = computed(() => {
     }
 
     return new Date(
-        props.zone.updated_at
+        props.zone.updated_at,
     ).toLocaleString('es-MX');
 });
 
@@ -101,33 +110,43 @@ const editUrl = computed(() => {
     >
         <!-- Encabezado -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1 class="text-2xl font-semibold">
-                        {{ zone.name }}
-                    </h1>
+                <div class="flex items-center gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <MapPinned class="h-5 w-5" />
+                    </div>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Consulta la información de esta zona.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold tracking-tight">
+                            {{ zone.name }}
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Consulta la información de esta zona.
+                        </p>
+                    </div>
                 </div>
 
                 <div class="flex flex-wrap gap-3">
                     <Link
                         href="/admin/zoo-zones"
-                        class="rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <ArrowLeft class="h-4 w-4" />
                         Volver
                     </Link>
 
                     <Link
                         :href="editUrl"
-                        class="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                     >
+                        <Edit class="h-4 w-4" />
                         Editar zona
                     </Link>
                 </div>
@@ -136,12 +155,18 @@ const editUrl = computed(() => {
 
         <!-- Información general -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
-            <div class="mb-6">
-                <h2 class="text-lg font-semibold">
-                    Información general
-                </h2>
+            <div
+                class="mb-6 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+            >
+                <div class="flex items-center gap-2">
+                    <Info class="h-5 w-5 text-primary" />
+
+                    <h2 class="text-base font-semibold">
+                        Información general
+                    </h2>
+                </div>
 
                 <p class="mt-1 text-sm text-muted-foreground">
                     Datos principales de la zona.
@@ -177,13 +202,18 @@ const editUrl = computed(() => {
                     </p>
 
                     <p
-                        class="mt-1 font-medium"
+                        class="mt-1 inline-flex items-center gap-1.5 font-medium"
                         :class="
                             zone.is_active
-                                ? 'text-green-600'
+                                ? 'text-green-600 dark:text-green-400'
                                 : 'text-red-500'
                         "
                     >
+                        <Check
+                            v-if="zone.is_active"
+                            class="h-4 w-4"
+                        />
+
                         {{ zone.is_active ? 'Activa' : 'Inactiva' }}
                     </p>
                 </div>
@@ -202,12 +232,18 @@ const editUrl = computed(() => {
 
         <!-- Resumen -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
-            <div class="mb-6">
-                <h2 class="text-lg font-semibold">
-                    Resumen
-                </h2>
+            <div
+                class="mb-6 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+            >
+                <div class="flex items-center gap-2">
+                    <MapPinned class="h-5 w-5 text-primary" />
+
+                    <h2 class="text-base font-semibold">
+                        Resumen
+                    </h2>
+                </div>
 
                 <p class="mt-1 text-sm text-muted-foreground">
                     Elementos relacionados con esta zona.
@@ -218,71 +254,117 @@ const editUrl = computed(() => {
                 class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
             >
                 <div
-                    class="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                    class="rounded-xl border border-sidebar-border bg-muted/10 p-5"
                 >
-                    <p class="text-sm text-muted-foreground">
-                        Especies ubicadas
-                    </p>
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        >
+                            <MapPinned class="h-4 w-4" />
+                        </div>
 
-                    <p class="mt-2 text-2xl font-semibold">
-                        {{ zone.species_locations_count ?? 0 }}
-                    </p>
+                        <div>
+                            <p class="text-sm text-muted-foreground">
+                                Especies ubicadas
+                            </p>
+
+                            <p class="mt-1 text-2xl font-semibold">
+                                {{ zone.species_locations_count ?? 0 }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <div
-                    class="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                    class="rounded-xl border border-sidebar-border bg-muted/10 p-5"
                 >
-                    <p class="text-sm text-muted-foreground">
-                        Marcadores
-                    </p>
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        >
+                            <MapPin class="h-4 w-4" />
+                        </div>
 
-                    <p class="mt-2 text-2xl font-semibold">
-                        {{ zone.map_markers_count ?? 0 }}
-                    </p>
+                        <div>
+                            <p class="text-sm text-muted-foreground">
+                                Marcadores
+                            </p>
+
+                            <p class="mt-1 text-2xl font-semibold">
+                                {{ zone.map_markers_count ?? 0 }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <div
-                    class="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                    class="rounded-xl border border-sidebar-border bg-muted/10 p-5"
                 >
-                    <p class="text-sm text-muted-foreground">
-                        Polígono
-                    </p>
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        >
+                            <Map class="h-4 w-4" />
+                        </div>
 
-                    <p class="mt-2 font-semibold">
-                        {{
-                            hasGeometry
-                                ? 'Configurado'
-                                : 'Sin polígono'
-                        }}
-                    </p>
+                        <div>
+                            <p class="text-sm text-muted-foreground">
+                                Polígono
+                            </p>
+
+                            <p class="mt-1 font-semibold">
+                                {{
+                                    hasGeometry
+                                        ? 'Configurado'
+                                        : 'Sin polígono'
+                                }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <div
-                    class="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                    class="rounded-xl border border-sidebar-border bg-muted/10 p-5"
                 >
-                    <p class="text-sm text-muted-foreground">
-                        Plano
-                    </p>
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        >
+                            <ImageIcon class="h-4 w-4" />
+                        </div>
 
-                    <p class="mt-2 font-semibold">
-                        {{
-                            hasMapImage
-                                ? 'Configurado'
-                                : 'Sin plano'
-                        }}
-                    </p>
+                        <div>
+                            <p class="text-sm text-muted-foreground">
+                                Plano
+                            </p>
+
+                            <p class="mt-1 font-semibold">
+                                {{
+                                    hasMapImage
+                                        ? 'Configurado'
+                                        : 'Sin plano'
+                                }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Mapa -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
-            <div class="mb-6">
-                <h2 class="text-lg font-semibold">
-                    Mapa de la zona
-                </h2>
+            <div
+                class="mb-6 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+            >
+                <div class="flex items-center gap-2">
+                    <Map class="h-5 w-5 text-primary" />
+
+                    <h2 class="text-base font-semibold">
+                        Mapa de la zona
+                    </h2>
+                </div>
 
                 <p class="mt-1 text-sm text-muted-foreground">
                     Vista geográfica de la zona.
@@ -307,6 +389,12 @@ const editUrl = computed(() => {
                 class="flex min-h-[300px] items-center justify-center rounded-xl border border-dashed border-sidebar-border/70 dark:border-sidebar-border"
             >
                 <div class="text-center">
+                    <div
+                        class="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+                    >
+                        <Map class="h-5 w-5" />
+                    </div>
+
                     <p class="font-medium">
                         No hay información geográfica configurada.
                     </p>
@@ -320,12 +408,18 @@ const editUrl = computed(() => {
 
         <!-- Plano -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
-            <div class="mb-6">
-                <h2 class="text-lg font-semibold">
-                    Plano del zoológico
-                </h2>
+            <div
+                class="mb-6 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+            >
+                <div class="flex items-center gap-2">
+                    <ImageIcon class="h-5 w-5 text-primary" />
+
+                    <h2 class="text-base font-semibold">
+                        Plano del zoológico
+                    </h2>
+                </div>
 
                 <p class="mt-1 text-sm text-muted-foreground">
                     Plano asociado a esta zona.
@@ -364,7 +458,10 @@ const editUrl = computed(() => {
                             Estado
                         </p>
 
-                        <p class="mt-1 font-medium text-green-600">
+                        <p
+                            class="mt-1 inline-flex items-center gap-1.5 font-medium text-green-600 dark:text-green-400"
+                        >
+                            <Check class="h-4 w-4" />
                             Plano configurado
                         </p>
                     </div>
@@ -372,11 +469,15 @@ const editUrl = computed(() => {
 
                 <div
                     v-if="zone.map_image_bounds"
-                    class="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                    class="rounded-xl border border-sidebar-border bg-muted/10 p-5"
                 >
-                    <p class="mb-4 text-sm font-medium">
-                        Coordenadas del plano
-                    </p>
+                    <div class="mb-4 flex items-center gap-2">
+                        <MapPinned class="h-4 w-4 text-primary" />
+
+                        <p class="text-sm font-medium">
+                            Coordenadas del plano
+                        </p>
+                    </div>
 
                     <div
                         class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
@@ -389,7 +490,7 @@ const editUrl = computed(() => {
                             <p class="mt-1 font-mono text-sm">
                                 {{
                                     Number(
-                                        zone.map_image_bounds.north
+                                        zone.map_image_bounds.north,
                                     ).toFixed(7)
                                 }}
                             </p>
@@ -403,7 +504,7 @@ const editUrl = computed(() => {
                             <p class="mt-1 font-mono text-sm">
                                 {{
                                     Number(
-                                        zone.map_image_bounds.south
+                                        zone.map_image_bounds.south,
                                     ).toFixed(7)
                                 }}
                             </p>
@@ -417,7 +518,7 @@ const editUrl = computed(() => {
                             <p class="mt-1 font-mono text-sm">
                                 {{
                                     Number(
-                                        zone.map_image_bounds.east
+                                        zone.map_image_bounds.east,
                                     ).toFixed(7)
                                 }}
                             </p>
@@ -431,7 +532,7 @@ const editUrl = computed(() => {
                             <p class="mt-1 font-mono text-sm">
                                 {{
                                     Number(
-                                        zone.map_image_bounds.west
+                                        zone.map_image_bounds.west,
                                     ).toFixed(7)
                                 }}
                             </p>
@@ -445,6 +546,12 @@ const editUrl = computed(() => {
                 class="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-sidebar-border/70 dark:border-sidebar-border"
             >
                 <div class="text-center">
+                    <div
+                        class="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+                    >
+                        <ImageIcon class="h-5 w-5" />
+                    </div>
+
                     <p class="font-medium">
                         Esta zona no tiene un plano configurado.
                     </p>
@@ -458,12 +565,18 @@ const editUrl = computed(() => {
 
         <!-- Información técnica -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
-            <div class="mb-6">
-                <h2 class="text-lg font-semibold">
-                    Información técnica
-                </h2>
+            <div
+                class="mb-6 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+            >
+                <div class="flex items-center gap-2">
+                    <Info class="h-5 w-5 text-primary" />
+
+                    <h2 class="text-base font-semibold">
+                        Información técnica
+                    </h2>
+                </div>
 
                 <p class="mt-1 text-sm text-muted-foreground">
                     Información de registro de la zona.
@@ -521,15 +634,17 @@ const editUrl = computed(() => {
         >
             <Link
                 href="/admin/zoo-zones"
-                class="rounded-lg border border-sidebar-border px-4 py-2.5 text-center text-sm font-medium transition hover:bg-accent"
+                class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-center text-sm font-medium transition hover:bg-accent"
             >
+                <ArrowLeft class="h-4 w-4" />
                 Volver
             </Link>
 
             <Link
                 :href="editUrl"
-                class="rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground transition hover:opacity-90"
             >
+                <Edit class="h-4 w-4" />
                 Editar zona
             </Link>
         </div>

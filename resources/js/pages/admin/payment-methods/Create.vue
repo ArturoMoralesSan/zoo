@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import {
+    ArrowLeft,
+    Check,
+    CreditCard,
+    Hash,
+    Save,
+    Text,
+    ToggleLeft,
+} from 'lucide-vue-next';
 import admin from '@/routes/admin';
 
 const form = useForm({
@@ -40,44 +49,74 @@ defineOptions({
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
+        <!-- Encabezado -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1 class="text-2xl font-semibold">
-                        Nuevo método de pago
-                    </h1>
+                <div class="flex items-start gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <CreditCard class="h-5 w-5" />
+                    </div>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Registra un nuevo método de pago para las órdenes de
-                        boletos.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Nuevo método de pago
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Registra un nuevo método de pago para las órdenes
+                            de boletos.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
                     :href="admin.paymentMethods.index().url"
-                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
+                    <ArrowLeft class="h-4 w-4" />
                     Regresar
                 </Link>
             </div>
         </div>
 
+        <!-- Formulario -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <form
                 class="space-y-6"
                 @submit.prevent="submit"
             >
+                <!-- Información general -->
+                <div
+                    class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+                >
+                    <div class="flex items-center gap-2">
+                        <CreditCard class="h-4 w-4 text-primary" />
+
+                        <h2 class="text-base font-semibold">
+                            Información general
+                        </h2>
+                    </div>
+
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        Configura los datos principales del método de pago.
+                    </p>
+                </div>
+
+                <!-- Nombre -->
                 <div class="space-y-2">
                     <label
                         for="name"
-                        class="text-sm font-medium"
+                        class="flex items-center gap-2 text-sm font-medium"
                     >
+                        <CreditCard class="h-4 w-4 text-muted-foreground" />
                         Nombre
                     </label>
 
@@ -97,11 +136,13 @@ defineOptions({
                     </p>
                 </div>
 
+                <!-- Código -->
                 <div class="space-y-2">
                     <label
                         for="code"
-                        class="text-sm font-medium"
+                        class="flex items-center gap-2 text-sm font-medium"
                     >
+                        <Hash class="h-4 w-4 text-muted-foreground" />
                         Código
                     </label>
 
@@ -126,11 +167,13 @@ defineOptions({
                     </p>
                 </div>
 
+                <!-- Descripción -->
                 <div class="space-y-2">
                     <label
                         for="description"
-                        class="text-sm font-medium"
+                        class="flex items-center gap-2 text-sm font-medium"
                     >
+                        <Text class="h-4 w-4 text-muted-foreground" />
                         Descripción
                     </label>
 
@@ -150,11 +193,13 @@ defineOptions({
                     </p>
                 </div>
 
+                <!-- Orden -->
                 <div class="space-y-2">
                     <label
                         for="sort_order"
-                        class="text-sm font-medium"
+                        class="flex items-center gap-2 text-sm font-medium"
                     >
+                        <Hash class="h-4 w-4 text-muted-foreground" />
                         Orden
                     </label>
 
@@ -178,24 +223,33 @@ defineOptions({
                     </p>
                 </div>
 
+                <!-- Estado -->
                 <div
-                    class="flex items-center justify-between rounded-lg border border-sidebar-border p-4"
+                    class="flex items-center justify-between rounded-xl border border-sidebar-border bg-muted/20 p-4"
                 >
-                    <div>
-                        <p class="text-sm font-medium">
-                            Método activo
-                        </p>
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        >
+                            <ToggleLeft class="h-4 w-4" />
+                        </div>
 
-                        <p class="text-xs text-muted-foreground">
-                            Los métodos inactivos no estarán disponibles para
-                            nuevas órdenes.
-                        </p>
+                        <div>
+                            <p class="text-sm font-medium">
+                                Método activo
+                            </p>
+
+                            <p class="mt-1 text-xs text-muted-foreground">
+                                Los métodos inactivos no estarán disponibles
+                                para nuevas órdenes.
+                            </p>
+                        </div>
                     </div>
 
                     <input
                         v-model="form.is_active"
                         type="checkbox"
-                        class="h-4 w-4 rounded border-sidebar-border"
+                        class="h-4 w-4 rounded border-sidebar-border text-primary focus:ring-primary/20"
                     />
                 </div>
 
@@ -206,21 +260,25 @@ defineOptions({
                     {{ form.errors.is_active }}
                 </p>
 
+                <!-- Acciones -->
                 <div
                     class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
                 >
                     <Link
                         :href="admin.paymentMethods.index().url"
-                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <ArrowLeft class="h-4 w-4" />
                         Cancelar
                     </Link>
 
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
+                        <Save class="h-4 w-4" />
+
                         {{
                             form.processing
                                 ? 'Guardando...'

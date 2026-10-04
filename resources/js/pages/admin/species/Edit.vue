@@ -2,6 +2,19 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 import {
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    Image as ImageIcon,
+    Info,
+    Leaf,
+    MapPin,
+    Save,
+    Tags,
+    Trash2,
+} from 'lucide-vue-next';
+
+import {
     computed,
     onBeforeUnmount,
     ref,
@@ -85,22 +98,6 @@ interface Species {
 
     tags: SpeciesTag[];
     locations: SpeciesLocation[];
-
-    /**
-     * ----------------------------------------------------------------------
-     * Imágenes existentes
-     * ----------------------------------------------------------------------
-     *
-     * Las imágenes se encuentran en:
-     *
-     * species.images
-     *
-     * y pueden ser:
-     *
-     * main
-     * thumbnail
-     * gallery
-     */
     images: SpeciesImage[];
 }
 
@@ -123,18 +120,22 @@ const tabs = [
     {
         id: 'information',
         name: 'Información',
+        icon: Info,
     },
     {
         id: 'tags',
         name: 'Etiquetas',
+        icon: Tags,
     },
     {
         id: 'images',
         name: 'Imágenes',
+        icon: ImageIcon,
     },
     {
         id: 'location',
         name: 'Ubicación',
+        icon: MapPin,
     },
 ];
 
@@ -175,10 +176,6 @@ const existingImages = computed<SpeciesImage[]>(() => {
     return props.species.images ?? [];
 });
 
-/**
- * Convierte una ruta almacenada en Laravel
- * en una URL utilizable por el navegador.
- */
 const imageUrl = (
     path: string | null | undefined,
 ): string | null => {
@@ -205,9 +202,6 @@ const imageUrl = (
     return `/storage/${path}`;
 };
 
-/**
- * Imagen principal existente.
- */
 const existingMainImage = computed<SpeciesImage | null>(() => {
     return (
         existingImages.value.find(
@@ -218,9 +212,6 @@ const existingMainImage = computed<SpeciesImage | null>(() => {
     );
 });
 
-/**
- * Miniatura existente.
- */
 const existingThumbnailImage =
     computed<SpeciesImage | null>(() => {
         return (
@@ -232,9 +223,6 @@ const existingThumbnailImage =
         );
     });
 
-/**
- * Galería existente.
- */
 const existingGalleryImages =
     computed<SpeciesImage[]>(() => {
         return existingImages.value
@@ -249,9 +237,6 @@ const existingGalleryImages =
             );
     });
 
-/**
- * URLs de las imágenes existentes.
- */
 const existingMainImageUrl = computed<string | null>(() => {
     return imageUrl(
         existingMainImage.value?.path,
@@ -308,9 +293,6 @@ const form = useForm({
             (tag) => tag.id,
         ) ?? [],
 
-    /**
-     * Estos campos representan únicamente NUEVOS archivos.
-     */
     main_image:
         null as File | null,
 
@@ -344,12 +326,6 @@ const form = useForm({
 
 const deleteImageForm = useForm({});
 
-/**
- * Imagen que actualmente se está eliminando.
- *
- * Se utiliza para no permitir múltiples eliminaciones
- * simultáneas.
- */
 const deletingImageId =
     ref<number | null>(null);
 
@@ -494,9 +470,6 @@ const deleteGalleryImage = async (
  * --------------------------------------------------------------------------
  */
 
-/**
- * Imagen principal.
- */
 const setMainImage = (event: Event) => {
     const target =
         event.target as HTMLInputElement;
@@ -531,9 +504,6 @@ const setMainImage = (event: Event) => {
         existingMainImageUrl.value;
 };
 
-/**
- * Miniatura.
- */
 const setThumbnailImage = (
     event: Event,
 ) => {
@@ -570,12 +540,6 @@ const setThumbnailImage = (
         existingThumbnailUrl.value;
 };
 
-/**
- * Galería.
- *
- * Las imágenes nuevas se agregan a la galería
- * existente. No reemplazan las existentes.
- */
 const setGalleryImages = (
     event: Event,
 ) => {
@@ -713,32 +677,45 @@ onBeforeUnmount(() => {
         <!-- HEADER -->
 
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1 class="text-xl font-semibold">
-                        Editar especie
-                    </h1>
-
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
+                <div class="flex items-start gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
                     >
-                        Actualiza la información de
-                        <strong>
-                            {{ species.common_name }}
-                        </strong>
-                    </p>
+                        <Leaf class="h-5 w-5" />
+                    </div>
+
+                    <div>
+                        <h1
+                            class="text-2xl font-semibold"
+                        >
+                            Editar especie
+                        </h1>
+
+                        <p
+                            class="mt-1 text-sm text-muted-foreground"
+                        >
+                            Actualiza la información de
+                            <strong
+                                class="font-medium text-foreground"
+                            >
+                                {{ species.common_name }}
+                            </strong>
+                        </p>
+                    </div>
                 </div>
 
                 <Link
                     :href="
                         admin.species.index().url
                     "
-                    class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
+                    <ArrowLeft class="h-4 w-4" />
                     Regresar
                 </Link>
             </div>
@@ -747,7 +724,7 @@ onBeforeUnmount(() => {
         <!-- FORM -->
 
         <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
         >
             <form
                 class="flex flex-col"
@@ -756,7 +733,7 @@ onBeforeUnmount(() => {
                 <!-- TABS -->
 
                 <div
-                    class="border-b border-sidebar-border px-6 pt-6"
+                    class="border-b border-sidebar-border/70 px-6 pt-6 dark:border-sidebar-border"
                 >
                     <div
                         class="flex gap-2 overflow-x-auto"
@@ -767,7 +744,7 @@ onBeforeUnmount(() => {
                             ) in tabs"
                             :key="tab.id"
                             type="button"
-                            class="whitespace-nowrap rounded-t-lg px-4 py-3 text-sm font-medium transition"
+                            class="inline-flex items-center gap-2 whitespace-nowrap rounded-t-lg px-4 py-3 text-sm font-medium transition"
                             :class="
                                 activeTab ===
                                 tab.id
@@ -780,8 +757,13 @@ onBeforeUnmount(() => {
                                 )
                             "
                         >
+                            <component
+                                :is="tab.icon"
+                                class="h-4 w-4"
+                            />
+
                             <span
-                                class="mr-1.5 opacity-70"
+                                class="opacity-70"
                             >
                                 {{ index + 1 }}.
                             </span>
@@ -805,12 +787,22 @@ onBeforeUnmount(() => {
                         "
                         class="space-y-6"
                     >
-                        <div>
-                            <h2
-                                class="text-lg font-semibold"
+                        <div
+                            class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+                        >
+                            <div
+                                class="flex items-center gap-2"
                             >
-                                Información de la especie
-                            </h2>
+                                <Info
+                                    class="h-5 w-5 text-primary"
+                                />
+
+                                <h2
+                                    class="text-base font-semibold"
+                                >
+                                    Información de la especie
+                                </h2>
+                            </div>
 
                             <p
                                 class="mt-1 text-sm text-muted-foreground"
@@ -818,8 +810,6 @@ onBeforeUnmount(() => {
                                 Información principal de la especie.
                             </p>
                         </div>
-
-                        <!-- CATEGORÍA -->
 
                         <div>
                             <label
@@ -866,8 +856,6 @@ onBeforeUnmount(() => {
                                 }}
                             </p>
                         </div>
-
-                        <!-- NOMBRES -->
 
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
@@ -935,8 +923,6 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <!-- DESCRIPCIÓN -->
-
                         <div>
                             <label
                                 for="description"
@@ -954,8 +940,6 @@ onBeforeUnmount(() => {
                                 class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
-
-                        <!-- DATOS -->
 
                         <div
                             class="grid grid-cols-1 gap-6 md:grid-cols-2"
@@ -1033,25 +1017,54 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <!-- ACTIVO -->
-
-                        <label
-                            class="flex cursor-pointer items-center gap-3"
+                        <div
+                            class="flex items-center justify-between rounded-xl border border-sidebar-border bg-muted/20 p-4"
                         >
-                            <input
-                                v-model="
-                                    form.is_active
-                                "
-                                type="checkbox"
-                                class="h-4 w-4 rounded border-sidebar-border"
-                            />
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                                >
+                                    <Check
+                                        class="h-4 w-4"
+                                    />
+                                </div>
 
-                            <span
-                                class="text-sm font-medium"
+                                <div>
+                                    <p
+                                        class="text-sm font-medium"
+                                    >
+                                        Especie activa
+                                    </p>
+
+                                    <p
+                                        class="mt-1 text-xs text-muted-foreground"
+                                    >
+                                        Determina si la especie estará disponible
+                                        en el sistema.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <label
+                                class="relative inline-flex cursor-pointer items-center"
                             >
-                                Especie activa
-                            </span>
-                        </label>
+                                <input
+                                    v-model="
+                                        form.is_active
+                                    "
+                                    type="checkbox"
+                                    class="peer sr-only"
+                                />
+
+                                <span
+                                    class="h-6 w-11 rounded-full bg-muted transition peer-checked:bg-primary peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20"
+                                />
+
+                                <span
+                                    class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition peer-checked:translate-x-5"
+                                />
+                            </label>
+                        </div>
                     </div>
 
                     <!-- ================================================= -->
@@ -1065,12 +1078,22 @@ onBeforeUnmount(() => {
                         "
                         class="space-y-6"
                     >
-                        <div>
-                            <h2
-                                class="text-lg font-semibold"
+                        <div
+                            class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+                        >
+                            <div
+                                class="flex items-center gap-2"
                             >
-                                Etiquetas
-                            </h2>
+                                <Tags
+                                    class="h-5 w-5 text-primary"
+                                />
+
+                                <h2
+                                    class="text-base font-semibold"
+                                >
+                                    Etiquetas
+                                </h2>
+                            </div>
 
                             <p
                                 class="mt-1 text-sm text-muted-foreground"
@@ -1090,7 +1113,7 @@ onBeforeUnmount(() => {
                                 :key="
                                     tag.id
                                 "
-                                class="flex cursor-pointer items-center gap-3 rounded-lg border border-sidebar-border px-4 py-3 transition hover:bg-accent"
+                                class="flex cursor-pointer items-center gap-3 rounded-xl border border-sidebar-border bg-muted/10 px-4 py-3 transition hover:border-primary/40 hover:bg-accent"
                             >
                                 <input
                                     v-model="
@@ -1100,11 +1123,11 @@ onBeforeUnmount(() => {
                                     :value="
                                         tag.id
                                     "
-                                    class="h-4 w-4 rounded border-sidebar-border"
+                                    class="h-4 w-4 rounded border-sidebar-border text-primary focus:ring-primary"
                                 />
 
                                 <span
-                                    class="text-sm"
+                                    class="text-sm font-medium"
                                 >
                                     {{ tag.name }}
                                 </span>
@@ -1113,10 +1136,18 @@ onBeforeUnmount(() => {
 
                         <div
                             v-else
-                            class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                            class="rounded-xl border border-dashed border-sidebar-border p-8 text-center"
                         >
+                            <div
+                                class="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+                            >
+                                <Tags
+                                    class="h-5 w-5"
+                                />
+                            </div>
+
                             <p
-                                class="text-sm text-muted-foreground"
+                                class="mt-3 text-sm text-muted-foreground"
                             >
                                 No hay etiquetas activas disponibles.
                             </p>
@@ -1126,8 +1157,16 @@ onBeforeUnmount(() => {
                             v-if="
                                 form.tags.length
                             "
-                            class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                            class="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4"
                         >
+                            <div
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                            >
+                                <Tags
+                                    class="h-4 w-4"
+                                />
+                            </div>
+
                             <p class="text-sm">
                                 <strong>
                                     {{ form.tags.length }}
@@ -1154,12 +1193,22 @@ onBeforeUnmount(() => {
                         "
                         class="space-y-6"
                     >
-                        <div>
-                            <h2
-                                class="text-lg font-semibold"
+                        <div
+                            class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+                        >
+                            <div
+                                class="flex items-center gap-2"
                             >
-                                Imágenes
-                            </h2>
+                                <ImageIcon
+                                    class="h-5 w-5 text-primary"
+                                />
+
+                                <h2
+                                    class="text-base font-semibold"
+                                >
+                                    Imágenes
+                                </h2>
+                            </div>
 
                             <p
                                 class="mt-1 text-sm text-muted-foreground"
@@ -1176,20 +1225,28 @@ onBeforeUnmount(() => {
                             <!-- IMAGEN PRINCIPAL -->
 
                             <div
-                                class="rounded-xl border border-sidebar-border p-5"
+                                class="rounded-xl border border-sidebar-border bg-muted/10 p-5"
                             >
-                                <label
-                                    for="main_image"
-                                    class="mb-2 block text-sm font-medium"
+                                <div
+                                    class="mb-3 flex items-center gap-2"
                                 >
-                                    Imagen principal
-                                </label>
+                                    <ImageIcon
+                                        class="h-4 w-4 text-primary"
+                                    />
+
+                                    <label
+                                        for="main_image"
+                                        class="block text-sm font-semibold"
+                                    >
+                                        Imagen principal
+                                    </label>
+                                </div>
 
                                 <div
                                     v-if="
                                         mainPreviewUrl
                                     "
-                                    class="mb-4 overflow-hidden rounded-lg border border-sidebar-border bg-muted"
+                                    class="mb-4 overflow-hidden rounded-xl border border-sidebar-border bg-muted"
                                 >
                                     <img
                                         :src="
@@ -1202,20 +1259,28 @@ onBeforeUnmount(() => {
 
                                 <div
                                     v-else
-                                    class="mb-4 flex h-48 items-center justify-center rounded-lg border border-dashed border-sidebar-border bg-muted/30"
+                                    class="mb-4 flex h-48 items-center justify-center rounded-xl border border-dashed border-sidebar-border bg-muted/30"
                                 >
-                                    <p
-                                        class="text-sm text-muted-foreground"
+                                    <div
+                                        class="text-center"
                                     >
-                                        No hay imagen principal.
-                                    </p>
+                                        <ImageIcon
+                                            class="mx-auto h-7 w-7 text-muted-foreground"
+                                        />
+
+                                        <p
+                                            class="mt-2 text-sm text-muted-foreground"
+                                        >
+                                            No hay imagen principal.
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <input
                                     id="main_image"
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
-                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5 file:font-medium"
                                     @change="
                                         setMainImage
                                     "
@@ -1235,17 +1300,25 @@ onBeforeUnmount(() => {
                             <!-- MINIATURA -->
 
                             <div
-                                class="rounded-xl border border-sidebar-border p-5"
+                                class="rounded-xl border border-sidebar-border bg-muted/10 p-5"
                             >
-                                <label
-                                    for="thumbnail_image"
-                                    class="mb-2 block text-sm font-medium"
+                                <div
+                                    class="mb-3 flex items-center gap-2"
                                 >
-                                    Miniatura
-                                </label>
+                                    <ImageIcon
+                                        class="h-4 w-4 text-primary"
+                                    />
+
+                                    <label
+                                        for="thumbnail_image"
+                                        class="block text-sm font-semibold"
+                                    >
+                                        Miniatura
+                                    </label>
+                                </div>
 
                                 <div
-                                    class="flex min-h-48 items-center justify-center rounded-lg border border-sidebar-border bg-muted/30"
+                                    class="flex min-h-48 items-center justify-center rounded-xl border border-sidebar-border bg-muted/30"
                                 >
                                     <div
                                         v-if="
@@ -1276,19 +1349,27 @@ onBeforeUnmount(() => {
                                         </p>
                                     </div>
 
-                                    <p
+                                    <div
                                         v-else
-                                        class="text-sm text-muted-foreground"
+                                        class="text-center"
                                     >
-                                        Esta especie no tiene miniatura.
-                                    </p>
+                                        <ImageIcon
+                                            class="mx-auto h-7 w-7 text-muted-foreground"
+                                        />
+
+                                        <p
+                                            class="mt-2 text-sm text-muted-foreground"
+                                        >
+                                            Esta especie no tiene miniatura.
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <input
                                     id="thumbnail_image"
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
-                                    class="mt-4 block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
+                                    class="mt-4 block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5 file:font-medium"
                                     @change="
                                         setThumbnailImage
                                     "
@@ -1305,8 +1386,12 @@ onBeforeUnmount(() => {
                                     v-if="
                                         thumbnailPreviewUrl
                                     "
-                                    class="mt-4 rounded-lg border border-sidebar-border bg-accent/30 p-3"
+                                    class="mt-4 flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3"
                                 >
+                                    <MapPin
+                                        class="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                                    />
+
                                     <p
                                         class="text-xs text-muted-foreground"
                                     >
@@ -1319,14 +1404,22 @@ onBeforeUnmount(() => {
                             <!-- GALERÍA -->
 
                             <div
-                                class="rounded-xl border border-sidebar-border p-5 md:col-span-2"
+                                class="rounded-xl border border-sidebar-border bg-muted/10 p-5 md:col-span-2"
                             >
-                                <label
-                                    for="gallery_images"
-                                    class="mb-2 block text-sm font-medium"
+                                <div
+                                    class="mb-3 flex items-center gap-2"
                                 >
-                                    Galería
-                                </label>
+                                    <ImageIcon
+                                        class="h-4 w-4 text-primary"
+                                    />
+
+                                    <label
+                                        for="gallery_images"
+                                        class="block text-sm font-semibold"
+                                    >
+                                        Galería
+                                    </label>
+                                </div>
 
                                 <!-- GALERÍA EXISTENTE -->
 
@@ -1366,8 +1459,6 @@ onBeforeUnmount(() => {
                                                 class="h-full w-full object-cover"
                                             />
 
-                                            <!-- BOTÓN ELIMINAR -->
-
                                             <button
                                                 type="button"
                                                 :disabled="
@@ -1381,35 +1472,10 @@ onBeforeUnmount(() => {
                                                     )
                                                 "
                                             >
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="2"
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
+                                                <Trash2
                                                     class="h-4 w-4"
-                                                >
-                                                    <path
-                                                        d="M3 6h18"
-                                                    />
-                                                    <path
-                                                        d="M8 6V4h8v2"
-                                                    />
-                                                    <path
-                                                        d="M19 6l-1 14H6L5 6"
-                                                    />
-                                                    <path
-                                                        d="M10 11v5"
-                                                    />
-                                                    <path
-                                                        d="M14 11v5"
-                                                    />
-                                                </svg>
+                                                />
                                             </button>
-
-                                            <!-- INDICADOR DE ELIMINACIÓN -->
 
                                             <div
                                                 v-if="
@@ -1430,8 +1496,12 @@ onBeforeUnmount(() => {
                                     v-else
                                     class="mb-5 rounded-lg border border-dashed border-sidebar-border p-4 text-center"
                                 >
+                                    <ImageIcon
+                                        class="mx-auto h-5 w-5 text-muted-foreground"
+                                    />
+
                                     <p
-                                        class="text-xs text-muted-foreground"
+                                        class="mt-2 text-xs text-muted-foreground"
                                     >
                                         No hay imágenes en la galería actual.
                                     </p>
@@ -1475,7 +1545,7 @@ onBeforeUnmount(() => {
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
                                     multiple
-                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5"
+                                    class="block w-full rounded-lg border border-sidebar-border bg-background text-sm file:mr-4 file:border-0 file:bg-accent file:px-4 file:py-2.5 file:font-medium"
                                     @change="
                                         setGalleryImages
                                     "
@@ -1494,7 +1564,7 @@ onBeforeUnmount(() => {
                                         form.gallery_images
                                             .length
                                     "
-                                    class="mt-2 text-xs"
+                                    class="mt-2 text-xs font-medium"
                                 >
                                     {{
                                         form
@@ -1523,12 +1593,22 @@ onBeforeUnmount(() => {
                         "
                         class="space-y-6"
                     >
-                        <div>
-                            <h2
-                                class="text-lg font-semibold"
+                        <div
+                            class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+                        >
+                            <div
+                                class="flex items-center gap-2"
                             >
-                                Ubicación
-                            </h2>
+                                <MapPin
+                                    class="h-5 w-5 text-primary"
+                                />
+
+                                <h2
+                                    class="text-base font-semibold"
+                                >
+                                    Ubicación
+                                </h2>
+                            </div>
 
                             <p
                                 class="mt-1 text-sm text-muted-foreground"
@@ -1583,29 +1663,43 @@ onBeforeUnmount(() => {
                                 }}
                             </p>
 
-                            <p
+                            <div
                                 v-if="
                                     selectedZone &&
                                     !selectedZone.map_image
                                 "
-                                class="mt-2 text-xs text-amber-600"
+                                class="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3"
                             >
-                                Esta zona no tiene un plano configurado.
-                                Podrás colocar la especie dentro del área
-                                delimitada por la zona.
-                            </p>
+                                <p
+                                    class="text-xs text-amber-600 dark:text-amber-400"
+                                >
+                                    Esta zona no tiene un plano configurado.
+                                    Podrás colocar la especie dentro del área
+                                    delimitada por la zona.
+                                </p>
+                            </div>
                         </div>
 
                         <div
                             v-if="selectedZone"
-                            class="space-y-3"
+                            class="space-y-4"
                         >
-                            <div>
-                                <h3
-                                    class="text-sm font-semibold"
+                            <div
+                                class="rounded-xl border border-sidebar-border bg-muted/10 p-4"
+                            >
+                                <div
+                                    class="flex items-center gap-2"
                                 >
-                                    Ubicación en el mapa
-                                </h3>
+                                    <MapPin
+                                        class="h-4 w-4 text-primary"
+                                    />
+
+                                    <h3
+                                        class="text-sm font-semibold"
+                                    >
+                                        Ubicación en el mapa
+                                    </h3>
+                                </div>
 
                                 <p
                                     class="mt-1 text-xs text-muted-foreground"
@@ -1642,7 +1736,7 @@ onBeforeUnmount(() => {
                                 v-if="
                                     thumbnailPreviewUrl
                                 "
-                                class="flex items-center gap-3 rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                                class="flex items-center gap-3 rounded-xl border border-sidebar-border bg-muted/20 p-4"
                             >
                                 <div
                                     class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-sidebar-border bg-background"
@@ -1677,7 +1771,7 @@ onBeforeUnmount(() => {
 
                             <div
                                 v-else
-                                class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                                class="rounded-xl border border-sidebar-border bg-muted/20 p-4"
                             >
                                 <p
                                     class="text-sm text-muted-foreground"
@@ -1689,7 +1783,7 @@ onBeforeUnmount(() => {
                             </div>
 
                             <div
-                                class="rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                                class="rounded-xl border border-sidebar-border bg-muted/20 p-4"
                             >
                                 <p
                                     class="text-sm text-muted-foreground"
@@ -1704,10 +1798,18 @@ onBeforeUnmount(() => {
 
                         <div
                             v-else
-                            class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                            class="rounded-xl border border-dashed border-sidebar-border p-8 text-center"
                         >
+                            <div
+                                class="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+                            >
+                                <MapPin
+                                    class="h-5 w-5"
+                                />
+                            </div>
+
                             <p
-                                class="text-sm text-muted-foreground"
+                                class="mt-3 text-sm font-medium"
                             >
                                 Esta especie no tiene una zona asignada.
                             </p>
@@ -1868,7 +1970,7 @@ onBeforeUnmount(() => {
                 <!-- FOOTER -->
 
                 <div
-                    class="flex flex-col gap-3 border-t border-sidebar-border px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
+                    class="flex flex-col gap-3 border-t border-sidebar-border/70 px-6 py-5 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between"
                 >
                     <div>
                         <button
@@ -1877,11 +1979,15 @@ onBeforeUnmount(() => {
                                 'information'
                             "
                             type="button"
-                            class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                             @click="
                                 previousTab
                             "
                         >
+                            <ArrowLeft
+                                class="h-4 w-4"
+                            />
+
                             Anterior
                         </button>
                     </div>
@@ -1895,12 +2001,16 @@ onBeforeUnmount(() => {
                                 'location'
                             "
                             type="button"
-                            class="rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                             @click="
                                 nextTab
                             "
                         >
                             Siguiente
+
+                            <ArrowRight
+                                class="h-4 w-4"
+                            />
                         </button>
 
                         <button
@@ -1912,8 +2022,12 @@ onBeforeUnmount(() => {
                             :disabled="
                                 form.processing
                             "
-                            class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
+                            <Save
+                                class="h-4 w-4"
+                            />
+
                             {{
                                 form.processing
                                     ? 'Guardando...'

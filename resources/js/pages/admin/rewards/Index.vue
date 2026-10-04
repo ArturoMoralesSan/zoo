@@ -2,6 +2,16 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
+import {
+    Gift,
+    Hash,
+    Package,
+    Pencil,
+    Plus,
+    Search,
+    Star,
+    Trash2,
+} from 'lucide-vue-next';
 
 import admin from '@/routes/admin';
 
@@ -75,7 +85,6 @@ const deleteReward = async (
         admin.rewards.destroy(reward.id).url,
         {
             preserveScroll: true,
-
             onSuccess: () => {
                 Swal.fire({
                     title: 'Eliminada',
@@ -85,7 +94,6 @@ const deleteReward = async (
                     showConfirmButton: false,
                 });
             },
-
             onError: () => {
                 Swal.fire({
                     title: 'Error',
@@ -102,31 +110,38 @@ const deleteReward = async (
 <template>
     <Head title="Recompensas" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
+    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
         <!-- Encabezado -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1 class="text-2xl font-semibold">
-                        Recompensas
-                    </h1>
+                <div class="flex items-start gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <Gift class="h-5 w-5" />
+                    </div>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Administra las recompensas que los usuarios pueden
-                        canjear con sus puntos.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Recompensas
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Administra las recompensas que los usuarios pueden
+                            canjear con sus puntos.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
                     :href="admin.rewards.create().url"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                 >
+                    <Plus class="h-4 w-4" />
                     Nueva recompensa
                 </Link>
             </div>
@@ -134,27 +149,34 @@ const deleteReward = async (
 
         <!-- Tabla -->
         <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
         >
             <!-- Buscador -->
             <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
+                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
             >
                 <form
-                    @submit.prevent="submitSearch"
                     class="flex w-full gap-2 md:max-w-md"
+                    @submit.prevent="submitSearch"
                 >
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Buscar recompensa..."
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
+                    <div class="relative flex-1">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Buscar recompensa..."
+                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pl-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
 
                     <button
                         type="submit"
-                        class="rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <Search class="h-4 w-4" />
                         Buscar
                     </button>
                 </form>
@@ -208,52 +230,75 @@ const deleteReward = async (
                         >
                             <!-- Recompensa -->
                             <td class="px-6 py-4">
-                                <div class="font-medium">
-                                    {{ reward.name }}
-                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-primary/10 text-primary"
+                                    >
+                                        <Gift class="h-4 w-4" />
+                                    </div>
 
-                                <div class="text-xs text-muted-foreground">
-                                    ID: {{ reward.id }}
-                                </div>
+                                    <div class="min-w-0">
+                                        <div class="font-medium">
+                                            {{ reward.name }}
+                                        </div>
 
-                                <div
-                                    v-if="reward.description"
-                                    class="mt-1 max-w-md text-xs text-muted-foreground"
-                                >
-                                    {{ reward.description }}
+                                        <div
+                                            class="flex items-center gap-1 text-xs text-muted-foreground"
+                                        >
+                                            <Hash class="h-3 w-3" />
+                                            ID: {{ reward.id }}
+                                        </div>
+
+                                        <div
+                                            v-if="reward.description"
+                                            class="mt-1 max-w-md text-xs text-muted-foreground"
+                                        >
+                                            {{ reward.description }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
                             <!-- Puntos -->
                             <td class="px-6 py-4">
                                 <span
-                                    class="font-semibold text-primary"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
                                 >
+                                    <Star class="h-3.5 w-3.5" />
                                     {{ reward.points }} pts
                                 </span>
                             </td>
 
                             <!-- Stock -->
                             <td class="px-6 py-4">
-                                <span
-                                    :class="
-                                        reward.stock > 0
-                                            ? 'text-green-600 dark:text-green-400'
-                                            : 'text-red-600 dark:text-red-400'
-                                    "
-                                    class="font-semibold"
-                                >
-                                    {{ reward.stock }}
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/40 text-muted-foreground"
+                                    >
+                                        <Package class="h-4 w-4" />
+                                    </span>
 
-                                <div
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    {{
-                                        reward.stock > 0
-                                            ? 'Disponible'
-                                            : 'Agotada'
-                                    }}
+                                    <div>
+                                        <div
+                                            :class="
+                                                reward.stock > 0
+                                                    ? 'font-semibold text-green-600 dark:text-green-400'
+                                                    : 'font-semibold text-red-600 dark:text-red-400'
+                                            "
+                                        >
+                                            {{ reward.stock }}
+                                        </div>
+
+                                        <div
+                                            class="text-xs text-muted-foreground"
+                                        >
+                                            {{
+                                                reward.stock > 0
+                                                    ? 'Disponible'
+                                                    : 'Agotada'
+                                            }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
@@ -261,14 +306,14 @@ const deleteReward = async (
                             <td class="px-6 py-4">
                                 <span
                                     v-if="reward.is_active"
-                                    class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                    class="inline-flex items-center rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                                 >
                                     Activa
                                 </span>
 
                                 <span
                                     v-else
-                                    class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
+                                    class="inline-flex items-center rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium text-muted-foreground"
                                 >
                                     Inactiva
                                 </span>
@@ -283,16 +328,18 @@ const deleteReward = async (
                                                 reward.id,
                                             ).url
                                         "
-                                        class="rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
+                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
                                     >
+                                        <Pencil class="h-3.5 w-3.5" />
                                         Editar
                                     </Link>
 
                                     <button
                                         type="button"
-                                        class="rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
+                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
                                         @click="deleteReward(reward)"
                                     >
+                                        <Trash2 class="h-3.5 w-3.5" />
                                         Eliminar
                                     </button>
                                 </div>
@@ -303,9 +350,30 @@ const deleteReward = async (
                         <tr v-if="rewards.data.length === 0">
                             <td
                                 colspan="5"
-                                class="px-6 py-12 text-center text-sm text-muted-foreground"
+                                class="px-6 py-12"
                             >
-                                No se encontraron recompensas.
+                                <div
+                                    class="flex flex-col items-center justify-center text-center"
+                                >
+                                    <div
+                                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+                                    >
+                                        <Gift class="h-6 w-6" />
+                                    </div>
+
+                                    <h3
+                                        class="mt-4 text-sm font-semibold text-foreground"
+                                    >
+                                        No se encontraron recompensas
+                                    </h3>
+
+                                    <p
+                                        class="mt-1 max-w-md text-sm text-muted-foreground"
+                                    >
+                                        No hay recompensas que coincidan con la
+                                        búsqueda realizada.
+                                    </p>
+                                </div>
                             </td>
                         </tr>
                     </tbody>

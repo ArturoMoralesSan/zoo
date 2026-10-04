@@ -1,13 +1,10 @@
 <script setup lang="ts">
-
 import {
     Head,
     Link,
     useForm,
 } from '@inertiajs/vue3';
-
 import { Html5Qrcode } from 'html5-qrcode';
-
 import Swal from 'sweetalert2';
 import {
     computed,
@@ -15,6 +12,18 @@ import {
     onBeforeUnmount,
     ref,
 } from 'vue';
+import {
+    ArrowLeft,
+    CheckCircle2,
+    Coins,
+    Gift,
+    QrCode,
+    Search,
+    ShieldCheck,
+    User,
+    UserRoundCheck,
+    XCircle,
+} from 'lucide-vue-next';
 
 import admin from '@/routes/admin';
 
@@ -46,40 +55,29 @@ const props = defineProps<{
     rewards: Reward[];
 }>();
 
-/*
-|--------------------------------------------------------------------------
-| Formulario
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Formulario
+// --------------------------------------------------------------------------
 
 const form = useForm({
     user_id: null as number | null,
     reward_id: null as number | null,
 });
 
-/*
-|--------------------------------------------------------------------------
-| Usuario / QR
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Usuario / QR
+// --------------------------------------------------------------------------
 
 const identifiedUser = ref<User | null>(null);
-
 const qrScanner = ref<Html5Qrcode | null>(null);
-
 const scanning = ref(false);
-
 const qrError = ref<string | null>(null);
-
 const searchingUser = ref(false);
-
 const manualQrToken = ref('');
 
-/*
-|--------------------------------------------------------------------------
-| Selecciones
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Selecciones
+// --------------------------------------------------------------------------
 
 const selectedUser = computed(() => {
     if (!form.user_id) {
@@ -107,11 +105,9 @@ const selectedReward = computed(() => {
     );
 });
 
-/*
-|--------------------------------------------------------------------------
-| Validaciones del canje
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Validaciones del canje
+// --------------------------------------------------------------------------
 
 const hasEnoughPoints = computed(() => {
     if (
@@ -156,11 +152,9 @@ const missingPoints = computed(() => {
     );
 });
 
-/*
-|--------------------------------------------------------------------------
-| Formato
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Formato
+// --------------------------------------------------------------------------
 
 const formatPoints = (
     value: number,
@@ -168,11 +162,9 @@ const formatPoints = (
     return value.toLocaleString('es-MX');
 };
 
-/*
-|--------------------------------------------------------------------------
-| Usuario / QR
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Usuario / QR
+// --------------------------------------------------------------------------
 
 const findUserByQr = async (
     token: string,
@@ -191,14 +183,11 @@ const findUserByQr = async (
             '/admin/reward-redemptions/user-by-qr',
             {
                 method: 'POST',
-
                 headers: {
                     'Content-Type':
                         'application/json',
-
                     Accept:
                         'application/json',
-
                     'X-CSRF-TOKEN':
                         document
                             .querySelector(
@@ -208,7 +197,6 @@ const findUserByQr = async (
                                 'content',
                             ) ?? '',
                 },
-
                 body: JSON.stringify({
                     qr_token: cleanToken,
                 }),
@@ -236,7 +224,6 @@ const findUserByQr = async (
         await stopQrScanner();
     } catch (error) {
         identifiedUser.value = null;
-
         form.user_id = null;
 
         qrError.value =
@@ -248,11 +235,9 @@ const findUserByQr = async (
     }
 };
 
-/*
-|--------------------------------------------------------------------------
-| Iniciar lector QR
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Iniciar lector QR
+// --------------------------------------------------------------------------
 
 const startQrScanner =
     async (): Promise<void> => {
@@ -290,12 +275,10 @@ const startQrScanner =
                 },
                 {
                     fps: 10,
-
                     qrbox: {
                         width: 230,
                         height: 230,
                     },
-
                     aspectRatio: 1,
                 },
                 async (decodedText) => {
@@ -312,7 +295,6 @@ const startQrScanner =
             );
 
             scanning.value = false;
-
             qrScanner.value = null;
 
             if (error instanceof Error) {
@@ -325,17 +307,14 @@ const startQrScanner =
         }
     };
 
-/*
-|--------------------------------------------------------------------------
-| Detener lector QR
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Detener lector QR
+// --------------------------------------------------------------------------
 
 const stopQrScanner =
     async (): Promise<void> => {
         if (!qrScanner.value) {
             scanning.value = false;
-
             return;
         }
 
@@ -353,34 +332,26 @@ const stopQrScanner =
         }
 
         qrScanner.value = null;
-
         scanning.value = false;
     };
 
-/*
-|--------------------------------------------------------------------------
-| Quitar usuario
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Quitar usuario
+// --------------------------------------------------------------------------
 
 const clearIdentifiedUser =
     async (): Promise<void> => {
         await stopQrScanner();
 
         identifiedUser.value = null;
-
         form.user_id = null;
-
         qrError.value = null;
-
         manualQrToken.value = '';
     };
 
-/*
-|--------------------------------------------------------------------------
-| Buscar QR manualmente
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Buscar QR manualmente
+// --------------------------------------------------------------------------
 
 const searchManualQr =
     async (): Promise<void> => {
@@ -389,21 +360,17 @@ const searchManualQr =
         );
     };
 
-/*
-|--------------------------------------------------------------------------
-| Limpiar cámara al salir
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Limpiar cámara al salir
+// --------------------------------------------------------------------------
 
 onBeforeUnmount(async () => {
     await stopQrScanner();
 });
 
-/*
-|--------------------------------------------------------------------------
-| Submit
-|--------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Submit
+// --------------------------------------------------------------------------
 
 const submit = async (): Promise<void> => {
     if (!canRedeem.value) {
@@ -440,27 +407,30 @@ const submit = async (): Promise<void> => {
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
-        <!-- Header -->
+        <!-- Encabezado -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1
-                        class="text-2xl font-semibold"
+                <div class="flex items-start gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
                     >
-                        Nuevo canje de recompensa
-                    </h1>
+                        <Gift class="h-5 w-5" />
+                    </div>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Registra el canje de una
-                        recompensa por parte de un
-                        visitante.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Nuevo canje de recompensa
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Registra el canje de una recompensa por parte de
+                            un visitante.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
@@ -468,8 +438,9 @@ const submit = async (): Promise<void> => {
                         admin.rewardRedemptions
                             .index().url
                     "
-                    class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                 >
+                    <ArrowLeft class="h-4 w-4" />
                     Regresar
                 </Link>
             </div>
@@ -481,46 +452,47 @@ const submit = async (): Promise<void> => {
         >
             <!-- Usuario -->
             <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
             >
                 <div
                     class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
                 >
-                    <div>
-                        <h2
-                            class="text-lg font-semibold"
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                         >
-                            Usuario
-                        </h2>
+                            <User class="h-4 w-4" />
+                        </div>
 
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Escanea el código QR del
-                            visitante para identificar
-                            su cuenta.
-                        </p>
+                        <div>
+                            <h2 class="text-base font-semibold">
+                                Usuario
+                            </h2>
+
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Escanea el código QR del visitante para
+                                identificar su cuenta.
+                            </p>
+                        </div>
                     </div>
 
                     <button
                         v-if="!scanning"
                         type="button"
-                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                        @click="
-                            startQrScanner
-                        "
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        @click="startQrScanner"
                     >
+                        <QrCode class="h-4 w-4" />
                         Escanear QR
                     </button>
 
                     <button
                         v-else
                         type="button"
-                        class="inline-flex items-center justify-center rounded-lg border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
-                        @click="
-                            stopQrScanner
-                        "
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
+                        @click="stopQrScanner"
                     >
+                        <XCircle class="h-4 w-4" />
                         Detener cámara
                     </button>
                 </div>
@@ -569,7 +541,7 @@ const submit = async (): Promise<void> => {
                                 ></span>
 
                                 <span
-                                    class="absolute left-3 right-3 top-1/2 h-0.5 -translate-y-1/2 bg-primary opacity-90 shadow-[0_0_8px_currentColor] animate-pulse"
+                                    class="absolute left-3 right-3 top-1/2 h-0.5 -translate-y-1/2 animate-pulse bg-primary opacity-90 shadow-[0_0_8px_currentColor]"
                                 ></span>
                             </div>
 
@@ -588,8 +560,7 @@ const submit = async (): Promise<void> => {
                             <span
                                 class="rounded-full bg-black/60 px-3 py-1 text-xs text-white backdrop-blur-sm"
                             >
-                                Coloca el QR dentro
-                                del recuadro
+                                Coloca el QR dentro del recuadro
                             </span>
                         </div>
                     </div>
@@ -603,17 +574,19 @@ const submit = async (): Promise<void> => {
                     <div
                         class="flex flex-col gap-2 sm:flex-row"
                     >
-                        <input
-                            v-model="
-                                manualQrToken
-                            "
-                            type="text"
-                            placeholder="También puedes ingresar el código QR manualmente"
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            @keyup.enter="
-                                searchManualQr
-                            "
-                        />
+                        <div class="relative flex-1">
+                            <QrCode
+                                class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                            />
+
+                            <input
+                                v-model="manualQrToken"
+                                type="text"
+                                placeholder="También puedes ingresar el código QR manualmente"
+                                class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                @keyup.enter="searchManualQr"
+                            />
+                        </div>
 
                         <button
                             type="button"
@@ -621,11 +594,11 @@ const submit = async (): Promise<void> => {
                                 searchingUser ||
                                 !manualQrToken.trim()
                             "
-                            class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-                            @click="
-                                searchManualQr
-                            "
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                            @click="searchManualQr"
                         >
+                            <Search class="h-4 w-4" />
+
                             {{
                                 searchingUser
                                     ? 'Buscando...'
@@ -638,68 +611,73 @@ const submit = async (): Promise<void> => {
                 <!-- Usuario identificado -->
                 <div
                     v-if="identifiedUser"
-                    class="mt-4 rounded-lg border border-green-500/30 bg-green-500/10 p-4"
+                    class="mt-4 rounded-xl border border-green-500/30 bg-green-500/10 p-4"
                 >
                     <div
                         class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                     >
-                        <div>
-                            <p
-                                class="text-sm font-medium text-green-700 dark:text-green-400"
-                            >
-                                Usuario identificado
-                            </p>
-
-                            <p
-                                class="mt-1 text-lg font-semibold"
-                            >
-                                {{
-                                    identifiedUser.name
-                                }}
-                            </p>
-
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                {{
-                                    identifiedUser.email
-                                }}
-                            </p>
-
+                        <div class="flex items-start gap-3">
                             <div
-                                class="mt-2 flex flex-wrap gap-2"
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-600 dark:text-green-400"
                             >
-                                <span
-                                    class="rounded-full border border-sidebar-border px-3 py-1 text-xs"
-                                >
-                                    {{
-                                        identifiedUser
-                                            .level
-                                            ?.name ??
-                                        'Sin nivel'
-                                    }}
-                                </span>
+                                <UserRoundCheck class="h-4 w-4" />
+                            </div>
 
-                                <span
-                                    class="rounded-full border border-sidebar-border px-3 py-1 text-xs"
+                            <div>
+                                <p
+                                    class="text-sm font-medium text-green-700 dark:text-green-400"
                                 >
-                                    {{
-                                        formatPoints(
-                                            identifiedUser.points,
-                                        )
-                                    }}
-                                    puntos
-                                </span>
+                                    Usuario identificado
+                                </p>
+
+                                <p
+                                    class="mt-1 text-lg font-semibold"
+                                >
+                                    {{ identifiedUser.name }}
+                                </p>
+
+                                <p
+                                    class="mt-1 text-sm text-muted-foreground"
+                                >
+                                    {{ identifiedUser.email }}
+                                </p>
+
+                                <div
+                                    class="mt-2 flex flex-wrap gap-2"
+                                >
+                                    <span
+                                        class="inline-flex items-center rounded-full border border-sidebar-border bg-background/60 px-3 py-1 text-xs"
+                                    >
+                                        {{
+                                            identifiedUser
+                                                .level
+                                                ?.name ??
+                                            'Sin nivel'
+                                        }}
+                                    </span>
+
+                                    <span
+                                        class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-background/60 px-3 py-1 text-xs"
+                                    >
+                                        <Coins class="h-3.5 w-3.5 text-muted-foreground" />
+
+                                        {{
+                                            formatPoints(
+                                                identifiedUser.points,
+                                            )
+                                        }}
+                                        puntos
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
                         <button
                             type="button"
-                            class="inline-flex items-center justify-center rounded-lg border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
-                            @click="
-                                clearIdentifiedUser
-                            "
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
+                            @click="clearIdentifiedUser"
                         >
+                            <XCircle class="h-4 w-4" />
                             Quitar usuario
                         </button>
                     </div>
@@ -708,13 +686,19 @@ const submit = async (): Promise<void> => {
                 <!-- Error -->
                 <div
                     v-if="qrError"
-                    class="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4"
+                    class="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4"
                 >
-                    <p
-                        class="text-sm font-medium text-red-600 dark:text-red-400"
-                    >
-                        {{ qrError }}
-                    </p>
+                    <div class="flex items-start gap-3">
+                        <XCircle
+                            class="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400"
+                        />
+
+                        <p
+                            class="text-sm font-medium text-red-600 dark:text-red-400"
+                        >
+                            {{ qrError }}
+                        </p>
+                    </div>
                 </div>
 
                 <p
@@ -727,41 +711,41 @@ const submit = async (): Promise<void> => {
 
             <!-- Recompensa -->
             <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
             >
-                <div class="mb-6">
-                    <h2
-                        class="text-lg font-semibold"
+                <div class="mb-6 flex items-start gap-3">
+                    <div
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                     >
-                        Recompensa
-                    </h2>
+                        <Gift class="h-4 w-4" />
+                    </div>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Selecciona la recompensa que
-                        deseas entregar.
-                    </p>
+                    <div>
+                        <h2 class="text-base font-semibold">
+                            Recompensa
+                        </h2>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Selecciona la recompensa que deseas entregar.
+                        </p>
+                    </div>
                 </div>
 
                 <div class="space-y-2">
                     <label
                         for="reward"
-                        class="text-sm font-medium"
+                        class="flex items-center gap-2 text-sm font-medium"
                     >
+                        <Gift class="h-4 w-4 text-muted-foreground" />
                         Recompensa
                     </label>
 
                     <select
                         id="reward"
-                        v-model="
-                            form.reward_id
-                        "
+                        v-model="form.reward_id"
                         class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     >
-                        <option
-                            :value="null"
-                        >
+                        <option :value="null">
                             Selecciona una recompensa
                         </option>
 
@@ -782,47 +766,37 @@ const submit = async (): Promise<void> => {
                     </select>
 
                     <p
-                        v-if="
-                            form.errors.reward_id
-                        "
+                        v-if="form.errors.reward_id"
                         class="text-sm text-red-500"
                     >
-                        {{
-                            form.errors.reward_id
-                        }}
+                        {{ form.errors.reward_id }}
                     </p>
                 </div>
 
                 <!-- Información recompensa -->
                 <div
                     v-if="selectedReward"
-                    class="mt-4 rounded-lg border border-sidebar-border p-4"
+                    class="mt-4 rounded-xl border border-sidebar-border bg-muted/20 p-4"
                 >
-                    <p
-                        class="text-lg font-semibold"
-                    >
-                        {{
-                            selectedReward.name
-                        }}
+                    <p class="text-lg font-semibold">
+                        {{ selectedReward.name }}
                     </p>
 
                     <p
-                        v-if="
-                            selectedReward.description
-                        "
+                        v-if="selectedReward.description"
                         class="mt-1 text-sm text-muted-foreground"
                     >
-                        {{
-                            selectedReward.description
-                        }}
+                        {{ selectedReward.description }}
                     </p>
 
                     <div
                         class="mt-3 flex flex-wrap gap-2"
                     >
                         <span
-                            class="rounded-full border border-sidebar-border px-3 py-1 text-xs"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-background px-3 py-1 text-xs"
                         >
+                            <Coins class="h-3.5 w-3.5 text-muted-foreground" />
+
                             {{
                                 formatPoints(
                                     selectedReward.points,
@@ -832,7 +806,7 @@ const submit = async (): Promise<void> => {
                         </span>
 
                         <span
-                            class="rounded-full border border-sidebar-border px-3 py-1 text-xs"
+                            class="inline-flex items-center rounded-full border border-sidebar-border bg-background px-3 py-1 text-xs"
                         >
                             Stock:
                             {{
@@ -847,14 +821,25 @@ const submit = async (): Promise<void> => {
 
             <!-- Resumen -->
             <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+                class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
             >
-                <div class="mb-6">
-                    <h2
-                        class="text-lg font-semibold"
+                <div class="mb-6 flex items-start gap-3">
+                    <div
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                     >
-                        Resumen del canje
-                    </h2>
+                        <ShieldCheck class="h-4 w-4" />
+                    </div>
+
+                    <div>
+                        <h2 class="text-base font-semibold">
+                            Resumen del canje
+                        </h2>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Verifica la información antes de registrar el
+                            canje.
+                        </p>
+                    </div>
                 </div>
 
                 <div
@@ -865,35 +850,25 @@ const submit = async (): Promise<void> => {
                     class="space-y-3"
                 >
                     <div
-                        class="flex justify-between text-sm"
+                        class="flex justify-between gap-4 text-sm"
                     >
-                        <span
-                            class="text-muted-foreground"
-                        >
+                        <span class="text-muted-foreground">
                             Usuario
                         </span>
 
-                        <span
-                            class="font-medium"
-                        >
-                            {{
-                                selectedUser.name
-                            }}
+                        <span class="text-right font-medium">
+                            {{ selectedUser.name }}
                         </span>
                     </div>
 
                     <div
-                        class="flex justify-between text-sm"
+                        class="flex justify-between gap-4 text-sm"
                     >
-                        <span
-                            class="text-muted-foreground"
-                        >
+                        <span class="text-muted-foreground">
                             Puntos disponibles
                         </span>
 
-                        <span
-                            class="font-medium"
-                        >
+                        <span class="font-medium">
                             {{
                                 formatPoints(
                                     selectedUser.points,
@@ -903,17 +878,13 @@ const submit = async (): Promise<void> => {
                     </div>
 
                     <div
-                        class="flex justify-between text-sm"
+                        class="flex justify-between gap-4 text-sm"
                     >
-                        <span
-                            class="text-muted-foreground"
-                        >
+                        <span class="text-muted-foreground">
                             Puntos requeridos
                         </span>
 
-                        <span
-                            class="font-medium"
-                        >
+                        <span class="font-medium">
                             {{
                                 formatPoints(
                                     selectedReward.points,
@@ -924,25 +895,27 @@ const submit = async (): Promise<void> => {
 
                     <!-- Sin puntos suficientes -->
                     <div
-                        v-if="
-                            !hasEnoughPoints
-                        "
-                        class="rounded-lg border border-red-500/30 bg-red-500/10 p-4"
+                        v-if="!hasEnoughPoints"
+                        class="rounded-xl border border-red-500/30 bg-red-500/10 p-4"
                     >
-                        <p
-                            class="text-sm font-medium text-red-600 dark:text-red-400"
-                        >
-                            El usuario no tiene
-                            suficientes puntos.
+                        <div class="flex items-start gap-3">
+                            <XCircle
+                                class="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400"
+                            />
 
-                            Le faltan
-                            {{
-                                formatPoints(
-                                    missingPoints,
-                                )
-                            }}
-                            puntos.
-                        </p>
+                            <p
+                                class="text-sm font-medium text-red-600 dark:text-red-400"
+                            >
+                                El usuario no tiene suficientes puntos.
+                                Le faltan
+                                {{
+                                    formatPoints(
+                                        missingPoints,
+                                    )
+                                }}
+                                puntos.
+                            </p>
+                        </div>
                     </div>
 
                     <!-- Sin stock -->
@@ -951,48 +924,65 @@ const submit = async (): Promise<void> => {
                             selectedReward.stock <=
                             0
                         "
-                        class="rounded-lg border border-red-500/30 bg-red-500/10 p-4"
+                        class="rounded-xl border border-red-500/30 bg-red-500/10 p-4"
                     >
-                        <p
-                            class="text-sm font-medium text-red-600 dark:text-red-400"
-                        >
-                            Esta recompensa está
-                            agotada.
-                        </p>
+                        <div class="flex items-start gap-3">
+                            <XCircle
+                                class="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400"
+                            />
+
+                            <p
+                                class="text-sm font-medium text-red-600 dark:text-red-400"
+                            >
+                                Esta recompensa está agotada.
+                            </p>
+                        </div>
                     </div>
 
                     <!-- Puede canjear -->
                     <div
                         v-else
-                        class="rounded-lg border border-green-500/30 bg-green-500/10 p-4"
+                        class="rounded-xl border border-green-500/30 bg-green-500/10 p-4"
                     >
-                        <p
-                            class="text-sm font-medium text-green-700 dark:text-green-400"
-                        >
-                            El usuario puede canjear
-                            esta recompensa.
-                        </p>
+                        <div class="flex items-start gap-3">
+                            <CheckCircle2
+                                class="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-400"
+                            />
 
-                        <p
-                            class="mt-1 text-xs text-muted-foreground"
-                        >
-                            Los puntos son acumulativos
-                            y no se descontarán al
-                            realizar el canje.
-                        </p>
+                            <div>
+                                <p
+                                    class="text-sm font-medium text-green-700 dark:text-green-400"
+                                >
+                                    El usuario puede canjear esta
+                                    recompensa.
+                                </p>
+
+                                <p
+                                    class="mt-1 text-xs text-muted-foreground"
+                                >
+                                    Los puntos son acumulativos y no se
+                                    descontarán al realizar el canje.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div
                     v-else
-                    class="rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                    class="rounded-xl border border-dashed border-sidebar-border p-6 text-center"
                 >
-                    <p
-                        class="text-sm text-muted-foreground"
+                    <div
+                        class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
                     >
-                        Identifica un usuario y
-                        selecciona una recompensa para
-                        continuar.
+                        <Gift class="h-6 w-6" />
+                    </div>
+
+                    <p
+                        class="mt-3 text-sm text-muted-foreground"
+                    >
+                        Identifica un usuario y selecciona una recompensa
+                        para continuar.
                     </p>
                 </div>
 
@@ -1005,8 +995,9 @@ const submit = async (): Promise<void> => {
                             admin.rewardRedemptions
                                 .index().url
                         "
-                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <ArrowLeft class="h-4 w-4" />
                         Cancelar
                     </Link>
 
@@ -1016,8 +1007,10 @@ const submit = async (): Promise<void> => {
                             form.processing ||
                             !canRedeem
                         "
-                        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
+                        <Gift class="h-4 w-4" />
+
                         {{
                             form.processing
                                 ? 'Procesando...'

@@ -2,7 +2,14 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
-
+import {
+    ArrowRight,
+    ClipboardList,
+    Eye,
+    Search,
+    Store,
+    Trash2,
+} from 'lucide-vue-next';
 import admin from '@/routes/admin';
 
 interface User {
@@ -76,16 +83,13 @@ const props = defineProps<{
     };
 }>();
 
-const search = ref(
-    props.filters?.search ?? '',
-);
+const search = ref(props.filters?.search ?? '');
 
 /*
 |--------------------------------------------------------------------------
 | Búsqueda
 |--------------------------------------------------------------------------
 */
-
 const submitSearch = (): void => {
     router.get(
         admin.ticketOrders.index().url,
@@ -104,7 +108,6 @@ const submitSearch = (): void => {
 | Eliminar orden
 |--------------------------------------------------------------------------
 */
-
 const deleteOrder = async (
     order: TicketOrder,
 ): Promise<void> => {
@@ -127,7 +130,6 @@ const deleteOrder = async (
         admin.ticketOrders.destroy(order.id).url,
         {
             preserveScroll: true,
-
             onSuccess: () => {
                 Swal.fire({
                     title: 'Eliminada',
@@ -137,7 +139,6 @@ const deleteOrder = async (
                     showConfirmButton: false,
                 });
             },
-
             onError: () => {
                 Swal.fire({
                     title: 'Error',
@@ -155,7 +156,6 @@ const deleteOrder = async (
 | Formato de moneda
 |--------------------------------------------------------------------------
 */
-
 const formatCurrency = (
     value: string | number,
 ): string => {
@@ -173,7 +173,6 @@ const formatCurrency = (
 | Formato de fecha
 |--------------------------------------------------------------------------
 */
-
 const formatDate = (
     value: string,
 ): string => {
@@ -192,7 +191,6 @@ const formatDate = (
 | Estado
 |--------------------------------------------------------------------------
 */
-
 const statusLabel = (
     status: string,
 ): string => {
@@ -211,7 +209,6 @@ const statusLabel = (
 | Breadcrumbs
 |--------------------------------------------------------------------------
 */
-
 defineOptions({
     layout: {
         breadcrumbs: [
@@ -236,26 +233,35 @@ defineOptions({
     >
         <!-- Encabezado -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1 class="text-2xl font-semibold">
-                        Órdenes de boletos
-                    </h1>
+                <div class="flex items-center gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <ClipboardList class="h-5 w-5" />
+                    </div>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Administra las ventas de boletos realizadas desde
-                        taquilla y la aplicación.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Órdenes de boletos
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Administra las ventas de boletos realizadas desde
+                            taquilla y la aplicación.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
                     :href="admin.ticketOrders.create().url"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                 >
+                    <ClipboardList class="h-4 w-4" />
                     Nueva orden
                 </Link>
             </div>
@@ -263,27 +269,34 @@ defineOptions({
 
         <!-- Tabla -->
         <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
         >
             <!-- Buscador -->
             <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
+                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
             >
                 <form
                     @submit.prevent="submitSearch"
                     class="flex w-full gap-2 md:max-w-xl"
                 >
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Buscar folio, comprador, vendedor, origen..."
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
+                    <div class="relative flex-1">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Buscar folio, comprador, vendedor, origen..."
+                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
 
                     <button
                         type="submit"
-                        class="rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <Search class="h-4 w-4" />
                         Buscar
                     </button>
                 </form>
@@ -344,12 +357,24 @@ defineOptions({
                         >
                             <!-- Folio -->
                             <td class="px-6 py-4">
-                                <div class="font-medium">
-                                    {{ order.folio }}
-                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                                    >
+                                        <ClipboardList class="h-4 w-4" />
+                                    </div>
 
-                                <div class="text-xs text-muted-foreground">
-                                    ID: {{ order.id }}
+                                    <div>
+                                        <div class="font-medium">
+                                            {{ order.folio }}
+                                        </div>
+
+                                        <div
+                                            class="text-xs text-muted-foreground"
+                                        >
+                                            ID: {{ order.id }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
@@ -357,15 +382,16 @@ defineOptions({
                             <td class="px-6 py-4">
                                 <span
                                     v-if="order.source === 'app'"
-                                    class="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400"
                                 >
                                     App
                                 </span>
 
                                 <span
                                     v-else
-                                    class="rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-600 dark:text-purple-400"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-600 dark:text-purple-400"
                                 >
+                                    <Store class="h-3.5 w-3.5" />
                                     Taquilla
                                 </span>
                             </td>
@@ -411,43 +437,47 @@ defineOptions({
                             </td>
 
                             <!-- Total -->
-                            <td class="px-6 py-4 font-medium">
-                                {{ formatCurrency(order.total) }}
+                            <td class="px-6 py-4">
+                                <span class="font-semibold">
+                                    {{ formatCurrency(order.total) }}
+                                </span>
                             </td>
 
                             <!-- Estado -->
                             <td class="px-6 py-4">
                                 <span
                                     v-if="order.status === 'paid'"
-                                    class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
+                                    class="inline-flex rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                                 >
                                     {{ statusLabel(order.status) }}
                                 </span>
 
                                 <span
                                     v-else-if="order.status === 'pending'"
-                                    class="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-600 dark:text-yellow-400"
+                                    class="inline-flex rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-600 dark:text-yellow-400"
                                 >
                                     {{ statusLabel(order.status) }}
                                 </span>
 
                                 <span
                                     v-else-if="order.status === 'refunded'"
-                                    class="rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-xs font-medium text-orange-600 dark:text-orange-400"
+                                    class="inline-flex rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-xs font-medium text-orange-600 dark:text-orange-400"
                                 >
                                     {{ statusLabel(order.status) }}
                                 </span>
 
                                 <span
                                     v-else
-                                    class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
+                                    class="inline-flex rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
                                 >
                                     {{ statusLabel(order.status) }}
                                 </span>
                             </td>
 
                             <!-- Fecha -->
-                            <td class="px-6 py-4 text-muted-foreground">
+                            <td
+                                class="px-6 py-4 text-muted-foreground"
+                            >
                                 {{ formatDate(order.created_at) }}
                             </td>
 
@@ -462,17 +492,19 @@ defineOptions({
                                                 order.id,
                                             ).url
                                         "
-                                        class="rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
+                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
                                     >
+                                        <Eye class="h-3.5 w-3.5" />
                                         Ver
                                     </Link>
 
                                     <button
                                         v-if="order.status !== 'paid'"
                                         type="button"
-                                        class="rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
+                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
                                         @click="deleteOrder(order)"
                                     >
+                                        <Trash2 class="h-3.5 w-3.5" />
                                         Eliminar
                                     </button>
                                 </div>
@@ -485,7 +517,21 @@ defineOptions({
                                 colspan="8"
                                 class="px-6 py-12 text-center text-sm text-muted-foreground"
                             >
-                                No se encontraron órdenes de boletos.
+                                <div
+                                    class="flex flex-col items-center justify-center gap-3"
+                                >
+                                    <div
+                                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-muted/50"
+                                    >
+                                        <ClipboardList
+                                            class="h-5 w-5 text-muted-foreground"
+                                        />
+                                    </div>
+
+                                    <span>
+                                        No se encontraron órdenes de boletos.
+                                    </span>
+                                </div>
                             </td>
                         </tr>
                     </tbody>

@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 
+import {
+    ArrowLeft,
+    Edit,
+    ExternalLink,
+    Image,
+    Leaf,
+    MapPin,
+    Tags,
+} from 'lucide-vue-next';
+
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 
 import admin from '@/routes/admin';
@@ -143,35 +153,41 @@ const thumbnailMarkerUrl = thumbnailImage
         <!-- ===================================================== -->
 
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1
-                        class="text-2xl font-semibold"
+                <div class="flex items-center gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
                     >
-                        Detalles de la especie
-                    </h1>
+                        <Leaf class="h-5 w-5" />
+                    </div>
 
-                    <p
-                        class="mt-1 text-sm text-muted-foreground"
-                    >
-                        Información completa de
-                        {{ species.common_name }}.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Detalles de la especie
+                        </h1>
+
+                        <p
+                            class="mt-1 text-sm text-muted-foreground"
+                        >
+                            Información completa de
+                            {{ species.common_name }}.
+                        </p>
+                    </div>
                 </div>
 
                 <div
                     class="flex flex-col gap-2 sm:flex-row"
                 >
                     <Link
-                        :href="
-                            admin.species.index().url
-                        "
-                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        :href="admin.species.index().url"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <ArrowLeft class="h-4 w-4" />
+
                         Volver
                     </Link>
 
@@ -181,8 +197,10 @@ const thumbnailMarkerUrl = thumbnailImage
                                 species.id,
                             ).url
                         "
-                        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                     >
+                        <Edit class="h-4 w-4" />
+
                         Editar
                     </Link>
                 </div>
@@ -194,28 +212,33 @@ const thumbnailMarkerUrl = thumbnailImage
         <!-- ===================================================== -->
 
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="grid gap-6 lg:grid-cols-3"
             >
                 <!-- DATOS -->
 
-                <div
-                    class="lg:col-span-2"
-                >
-                    <div>
-                        <h2
-                            class="text-lg font-semibold"
-                        >
-                            Información general
-                        </h2>
+                <div class="lg:col-span-2">
+                    <div
+                        class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+                    >
+                        <div class="flex items-center gap-2">
+                            <Leaf
+                                class="h-4 w-4 text-primary"
+                            />
+
+                            <h2
+                                class="text-base font-semibold"
+                            >
+                                Información general
+                            </h2>
+                        </div>
 
                         <p
                             class="mt-1 text-sm text-muted-foreground"
                         >
-                            Datos principales de la
-                            especie.
+                            Datos principales de la especie.
                         </p>
                     </div>
 
@@ -247,9 +270,7 @@ const thumbnailMarkerUrl = thumbnailImage
                                 Nombre científico
                             </p>
 
-                            <p
-                                class="mt-1 text-sm italic"
-                            >
+                            <p class="mt-1 text-sm italic">
                                 {{
                                     species.scientific_name ||
                                     'Sin especificar'
@@ -266,9 +287,7 @@ const thumbnailMarkerUrl = thumbnailImage
                                 Categoría
                             </p>
 
-                            <p
-                                class="mt-1 text-sm"
-                            >
+                            <p class="mt-1 text-sm">
                                 {{
                                     species.category?.name ||
                                     'Sin categoría'
@@ -285,9 +304,7 @@ const thumbnailMarkerUrl = thumbnailImage
                                 ID
                             </p>
 
-                            <p
-                                class="mt-1 text-sm"
-                            >
+                            <p class="mt-1 text-sm">
                                 {{ species.id }}
                             </p>
                         </div>
@@ -317,9 +334,7 @@ const thumbnailMarkerUrl = thumbnailImage
                                 Hábitat
                             </p>
 
-                            <p
-                                class="mt-1 text-sm"
-                            >
+                            <p class="mt-1 text-sm">
                                 {{
                                     species.habitat ||
                                     'Sin especificar'
@@ -336,9 +351,7 @@ const thumbnailMarkerUrl = thumbnailImage
                                 Origen
                             </p>
 
-                            <p
-                                class="mt-1 text-sm"
-                            >
+                            <p class="mt-1 text-sm">
                                 {{
                                     species.origin ||
                                     'Sin especificar'
@@ -355,9 +368,7 @@ const thumbnailMarkerUrl = thumbnailImage
                                 Alimentación
                             </p>
 
-                            <p
-                                class="mt-1 text-sm"
-                            >
+                            <p class="mt-1 text-sm">
                                 {{
                                     species.diet ||
                                     'Sin especificar'
@@ -374,9 +385,7 @@ const thumbnailMarkerUrl = thumbnailImage
                                 Estado de conservación
                             </p>
 
-                            <p
-                                class="mt-1 text-sm"
-                            >
+                            <p class="mt-1 text-sm">
                                 {{
                                     species.conservation_status ||
                                     'Sin especificar'
@@ -393,21 +402,17 @@ const thumbnailMarkerUrl = thumbnailImage
                                 Estado
                             </p>
 
-                            <div
-                                class="mt-1"
-                            >
+                            <div class="mt-1">
                                 <span
-                                    v-if="
-                                        species.is_active
-                                    "
-                                    class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
+                                    v-if="species.is_active"
+                                    class="inline-flex rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                                 >
                                     Activa
                                 </span>
 
                                 <span
                                     v-else
-                                    class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
+                                    class="inline-flex rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
                                 >
                                     Inactiva
                                 </span>
@@ -438,14 +443,20 @@ const thumbnailMarkerUrl = thumbnailImage
                 <!-- IMAGEN PRINCIPAL -->
 
                 <div>
-                    <p
-                        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Imagen principal
-                    </p>
+                    <div class="flex items-center gap-2">
+                        <Image
+                            class="h-4 w-4 text-primary"
+                        />
+
+                        <p
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                        >
+                            Imagen principal
+                        </p>
+                    </div>
 
                     <div
-                        class="mt-2 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+                        class="mt-2 overflow-hidden rounded-xl border border-sidebar-border/70 bg-muted/20 dark:border-sidebar-border"
                     >
                         <img
                             v-if="mainImage"
@@ -477,31 +488,40 @@ const thumbnailMarkerUrl = thumbnailImage
         <!-- ===================================================== -->
 
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
             >
                 <div>
-                    <h2
-                        class="text-lg font-semibold"
-                    >
-                        Etiquetas
-                    </h2>
+                    <div class="flex items-center gap-2">
+                        <Tags
+                            class="h-4 w-4 text-primary"
+                        />
+
+                        <h2
+                            class="text-base font-semibold"
+                        >
+                            Etiquetas
+                        </h2>
+                    </div>
 
                     <p
                         class="mt-1 text-sm text-muted-foreground"
                     >
-                        Etiquetas asociadas a esta
-                        especie.
+                        Etiquetas asociadas a esta especie.
                     </p>
                 </div>
 
                 <span
-                    class="w-fit rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                    class="w-fit rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium"
                 >
                     {{ species.tags.length }}
-                    etiquetas
+                    {{
+                        species.tags.length === 1
+                            ? 'etiqueta'
+                            : 'etiquetas'
+                    }}
                 </span>
             </div>
 
@@ -512,7 +532,7 @@ const thumbnailMarkerUrl = thumbnailImage
                 <span
                     v-for="tag in species.tags"
                     :key="tag.id"
-                    class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                    class="rounded-full border border-sidebar-border bg-muted/20 px-2.5 py-1 text-xs font-medium transition hover:bg-accent"
                 >
                     {{ tag.name }}
                 </span>
@@ -531,20 +551,27 @@ const thumbnailMarkerUrl = thumbnailImage
         <!-- ===================================================== -->
 
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
-            <div>
-                <h2
-                    class="text-lg font-semibold"
-                >
-                    Imágenes
-                </h2>
+            <div
+                class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+            >
+                <div class="flex items-center gap-2">
+                    <Image
+                        class="h-4 w-4 text-primary"
+                    />
+
+                    <h2
+                        class="text-base font-semibold"
+                    >
+                        Imágenes
+                    </h2>
+                </div>
 
                 <p
                     class="mt-1 text-sm text-muted-foreground"
                 >
-                    Recursos gráficos registrados
-                    para esta especie.
+                    Recursos gráficos registrados para esta especie.
                 </p>
             </div>
 
@@ -561,7 +588,7 @@ const thumbnailMarkerUrl = thumbnailImage
                     </p>
 
                     <div
-                        class="mt-2 overflow-hidden rounded-lg border border-sidebar-border/70 dark:border-sidebar-border"
+                        class="mt-2 overflow-hidden rounded-xl border border-sidebar-border/70 bg-muted/20 dark:border-sidebar-border"
                     >
                         <img
                             v-if="mainImage"
@@ -596,7 +623,7 @@ const thumbnailMarkerUrl = thumbnailImage
                     </p>
 
                     <div
-                        class="mt-2 overflow-hidden rounded-lg border border-sidebar-border/70 dark:border-sidebar-border"
+                        class="mt-2 overflow-hidden rounded-xl border border-sidebar-border/70 bg-muted/20 dark:border-sidebar-border"
                     >
                         <img
                             v-if="thumbnailImage"
@@ -640,7 +667,7 @@ const thumbnailMarkerUrl = thumbnailImage
                                 4,
                             )"
                             :key="image.id"
-                            class="overflow-hidden rounded-lg border border-sidebar-border/70 dark:border-sidebar-border"
+                            class="overflow-hidden rounded-lg border border-sidebar-border/70 bg-muted/20 dark:border-sidebar-border"
                         >
                             <img
                                 :src="
@@ -652,14 +679,14 @@ const thumbnailMarkerUrl = thumbnailImage
                                     image.alt_text ||
                                     species.common_name
                                 "
-                                class="aspect-square w-full object-cover"
+                                class="aspect-square w-full object-cover transition duration-300 hover:scale-105"
                             />
                         </div>
                     </div>
 
                     <div
                         v-else
-                        class="mt-2 flex aspect-square items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground"
+                        class="mt-2 flex aspect-square items-center justify-center rounded-xl bg-muted text-xs text-muted-foreground"
                     >
                         Sin imágenes
                     </div>
@@ -672,29 +699,34 @@ const thumbnailMarkerUrl = thumbnailImage
         <!-- ===================================================== -->
 
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
-                class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
+                class="flex flex-col gap-3 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
             >
                 <div>
-                    <h2
-                        class="text-lg font-semibold"
-                    >
-                        Ubicación
-                    </h2>
+                    <div class="flex items-center gap-2">
+                        <MapPin
+                            class="h-4 w-4 text-primary"
+                        />
+
+                        <h2
+                            class="text-base font-semibold"
+                        >
+                            Ubicación
+                        </h2>
+                    </div>
 
                     <p
                         class="mt-1 text-sm text-muted-foreground"
                     >
-                        Ubicación registrada dentro del
-                        zoológico.
+                        Ubicación registrada dentro del zoológico.
                     </p>
                 </div>
 
                 <span
                     v-if="currentLocation?.zone"
-                    class="w-fit rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                    class="w-fit rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium"
                 >
                     {{ currentLocation.zone.name }}
                 </span>
@@ -714,7 +746,7 @@ const thumbnailMarkerUrl = thumbnailImage
                     <!-- ZONA -->
 
                     <div
-                        class="rounded-lg border border-sidebar-border bg-accent/30 p-4 sm:col-span-2"
+                        class="rounded-xl border border-sidebar-border bg-muted/20 p-4 sm:col-span-2"
                     >
                         <p
                             class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -739,9 +771,7 @@ const thumbnailMarkerUrl = thumbnailImage
                         </p>
 
                         <p
-                            v-if="
-                                currentLocation.zone?.type
-                            "
+                            v-if="currentLocation.zone?.type"
                             class="mt-1 text-xs text-muted-foreground"
                         >
                             Tipo:
@@ -781,14 +811,14 @@ const thumbnailMarkerUrl = thumbnailImage
                                 v-if="
                                     currentLocation.is_active
                                 "
-                                class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
+                                class="inline-flex rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                             >
                                 Activa
                             </span>
 
                             <span
                                 v-else
-                                class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
+                                class="inline-flex rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
                             >
                                 Inactiva
                             </span>
@@ -804,9 +834,7 @@ const thumbnailMarkerUrl = thumbnailImage
                             Latitud
                         </p>
 
-                        <p
-                            class="mt-1 text-sm"
-                        >
+                        <p class="mt-1 text-sm">
                             {{ currentLocation.latitude }}
                         </p>
                     </div>
@@ -820,9 +848,7 @@ const thumbnailMarkerUrl = thumbnailImage
                             Longitud
                         </p>
 
-                        <p
-                            class="mt-1 text-sm"
-                        >
+                        <p class="mt-1 text-sm">
                             {{ currentLocation.longitude }}
                         </p>
                     </div>
@@ -873,7 +899,7 @@ const thumbnailMarkerUrl = thumbnailImage
 
                     <div
                         v-if="currentLocation.zone?.geometry"
-                        class="mt-4"
+                        class="mt-4 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
                     >
                         <MapMarkerMap
                             :geometry="
@@ -902,10 +928,14 @@ const thumbnailMarkerUrl = thumbnailImage
 
                     <div
                         v-else
-                        class="mt-4 rounded-lg border border-dashed border-sidebar-border p-6 text-center"
+                        class="mt-4 rounded-xl border border-dashed border-sidebar-border p-6 text-center"
                     >
+                        <MapPin
+                            class="mx-auto h-6 w-6 text-muted-foreground"
+                        />
+
                         <p
-                            class="text-sm text-muted-foreground"
+                            class="mt-2 text-sm text-muted-foreground"
                         >
                             La zona de esta especie no tiene
                             un área definida en el mapa.
@@ -917,7 +947,7 @@ const thumbnailMarkerUrl = thumbnailImage
                             currentLocation.zone &&
                             !currentLocation.zone.map_image
                         "
-                        class="mt-2 text-xs text-amber-600"
+                        class="mt-2 text-xs text-amber-600 dark:text-amber-400"
                     >
                         Esta zona no tiene un plano configurado.
                         La ubicación se muestra sobre el mapa
@@ -926,10 +956,10 @@ const thumbnailMarkerUrl = thumbnailImage
 
                     <div
                         v-if="thumbnailMarkerUrl"
-                        class="mt-4 flex items-center gap-3 rounded-lg border border-sidebar-border bg-accent/30 p-4"
+                        class="mt-4 flex items-center gap-3 rounded-xl border border-sidebar-border bg-muted/20 p-4"
                     >
                         <div
-                            class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white shadow-sm"
+                            class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-background shadow-sm"
                         >
                             <img
                                 :src="thumbnailMarkerUrl"
@@ -968,8 +998,10 @@ const thumbnailMarkerUrl = thumbnailImage
                         :href="`https://www.google.com/maps?q=${currentLocation.latitude},${currentLocation.longitude}`"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="inline-flex items-center justify-center rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <ExternalLink class="h-4 w-4" />
+
                         Ver en Google Maps
                     </a>
                 </div>
@@ -977,10 +1009,18 @@ const thumbnailMarkerUrl = thumbnailImage
 
             <div
                 v-else
-                class="mt-6 rounded-lg border border-dashed border-sidebar-border p-6 text-center text-sm text-muted-foreground"
+                class="mt-6 rounded-xl border border-dashed border-sidebar-border p-6 text-center"
             >
-                No hay una ubicación registrada
-                para esta especie.
+                <MapPin
+                    class="mx-auto h-6 w-6 text-muted-foreground"
+                />
+
+                <p
+                    class="mt-2 text-sm text-muted-foreground"
+                >
+                    No hay una ubicación registrada
+                    para esta especie.
+                </p>
             </div>
         </div>
 
@@ -989,15 +1029,15 @@ const thumbnailMarkerUrl = thumbnailImage
         <!-- ===================================================== -->
 
         <div
-            class="flex flex-col gap-3 rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between"
+            class="flex flex-col gap-3 rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between"
         >
             <Link
-                :href="
-                    admin.species.index().url
-                "
-                class="text-sm text-muted-foreground transition hover:text-foreground"
+                :href="admin.species.index().url"
+                class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
             >
-                ← Volver al listado
+                <ArrowLeft class="h-4 w-4" />
+
+                Volver al listado
             </Link>
 
             <Link
@@ -1006,8 +1046,10 @@ const thumbnailMarkerUrl = thumbnailImage
                         species.id,
                     ).url
                 "
-                class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
             >
+                <Edit class="h-4 w-4" />
+
                 Editar especie
             </Link>
         </div>

@@ -2,6 +2,15 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
+import {
+    Edit,
+    KeyRound,
+    Plus,
+    Search,
+    ShieldCheck,
+    Trash2,
+} from 'lucide-vue-next';
+
 import admin from '@/routes/admin';
 
 interface Permission {
@@ -44,7 +53,7 @@ const submitSearch = () => {
         {
             preserveState: true,
             replace: true,
-        }
+        },
     );
 };
 
@@ -63,7 +72,7 @@ const deletePermission = (permission: Permission) => {
                 admin.permissions.destroy(permission.id).url,
                 {
                     preserveScroll: true,
-                }
+                },
             );
         }
     });
@@ -86,25 +95,34 @@ const actionOf = (name: string) => {
     >
         <!-- Encabezado -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1 class="text-2xl font-semibold">
-                        Permisos
-                    </h1>
+                <div class="flex items-start gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <KeyRound class="h-5 w-5" />
+                    </div>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Administra los permisos disponibles en el sistema.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Permisos
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Administra los permisos disponibles en el sistema.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
                     :href="admin.permissions.create().url"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                 >
+                    <Plus class="h-4 w-4" />
                     Nuevo permiso
                 </Link>
             </div>
@@ -112,33 +130,50 @@ const actionOf = (name: string) => {
 
         <!-- Tabla -->
         <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
         >
             <!-- Buscador -->
             <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
+                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
             >
                 <form
-                    @submit.prevent="submitSearch"
                     class="flex w-full gap-2 md:max-w-md"
+                    @submit.prevent="submitSearch"
                 >
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Buscar permiso..."
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
+                    <div class="relative flex-1">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Buscar permiso..."
+                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
 
                     <button
                         type="submit"
-                        class="rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <Search class="h-4 w-4" />
                         Buscar
                     </button>
                 </form>
 
-                <div class="text-sm text-muted-foreground">
-                    {{ permissions.total }} permisos
+                <div
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                    <ShieldCheck class="h-4 w-4" />
+
+                    {{ permissions.total }}
+
+                    {{
+                        permissions.total === 1
+                            ? 'permiso'
+                            : 'permisos'
+                    }}
                 </div>
             </div>
 
@@ -165,7 +200,9 @@ const actionOf = (name: string) => {
                                 Guard
                             </th>
 
-                            <th class="px-6 py-4 text-right font-semibold">
+                            <th
+                                class="px-6 py-4 text-right font-semibold"
+                            >
                                 Acciones
                             </th>
                         </tr>
@@ -181,19 +218,31 @@ const actionOf = (name: string) => {
                         >
                             <!-- Permiso -->
                             <td class="px-6 py-4">
-                                <div class="font-medium">
-                                    {{ permission.name }}
-                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-primary/10 text-primary"
+                                    >
+                                        <KeyRound class="h-4 w-4" />
+                                    </span>
 
-                                <div class="text-xs text-muted-foreground">
-                                    ID: {{ permission.id }}
+                                    <div class="min-w-0">
+                                        <div class="font-medium">
+                                            {{ permission.name }}
+                                        </div>
+
+                                        <div
+                                            class="text-xs text-muted-foreground"
+                                        >
+                                            ID: {{ permission.id }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
                             <!-- Módulo -->
                             <td class="px-6 py-4">
                                 <span
-                                    class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                                    class="inline-flex rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium"
                                 >
                                     {{ moduleOf(permission.name) }}
                                 </span>
@@ -201,41 +250,53 @@ const actionOf = (name: string) => {
 
                             <!-- Acción -->
                             <td class="px-6 py-4">
-                                <span class="text-muted-foreground">
+                                <span
+                                    class="inline-flex rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                                >
                                     {{ actionOf(permission.name) }}
                                 </span>
                             </td>
 
                             <!-- Guard -->
                             <td class="px-6 py-4">
-                                <span
-                                    class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs"
-                                >
-                                    {{ permission.guard_name }}
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <ShieldCheck
+                                        class="h-4 w-4 text-muted-foreground"
+                                    />
+
+                                    <span
+                                        class="inline-flex rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                                    >
+                                        {{ permission.guard_name }}
+                                    </span>
+                                </div>
                             </td>
 
                             <!-- Acciones -->
                             <td class="px-6 py-4">
-                                <div class="flex justify-end gap-2">
+                                <div
+                                    class="flex justify-end gap-2"
+                                >
                                     <Link
                                         :href="
                                             admin.permissions.edit(
-                                                permission.id
+                                                permission.id,
                                             ).url
                                         "
-                                        class="rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
+                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
                                     >
+                                        <Edit class="h-4 w-4" />
                                         Editar
                                     </Link>
 
                                     <button
                                         type="button"
-                                        class="rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
+                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
                                         @click="
                                             deletePermission(permission)
                                         "
                                     >
+                                        <Trash2 class="h-4 w-4" />
                                         Eliminar
                                     </button>
                                 </div>
@@ -243,12 +304,35 @@ const actionOf = (name: string) => {
                         </tr>
 
                         <!-- Sin resultados -->
-                        <tr v-if="permissions.data.length === 0">
+                        <tr
+                            v-if="permissions.data.length === 0"
+                        >
                             <td
                                 colspan="5"
-                                class="px-6 py-12 text-center text-sm text-muted-foreground"
+                                class="px-6 py-16 text-center"
                             >
-                                No se encontraron permisos.
+                                <div
+                                    class="flex flex-col items-center justify-center"
+                                >
+                                    <div
+                                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+                                    >
+                                        <KeyRound class="h-6 w-6" />
+                                    </div>
+
+                                    <h3
+                                        class="mt-4 text-sm font-semibold text-foreground"
+                                    >
+                                        No se encontraron permisos
+                                    </h3>
+
+                                    <p
+                                        class="mt-1 text-sm text-muted-foreground"
+                                    >
+                                        No hay permisos que coincidan con la
+                                        búsqueda.
+                                    </p>
+                                </div>
                             </td>
                         </tr>
                     </tbody>

@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+
+import {
+    Edit,
+    Eye,
+    Leaf,
+    Plus,
+    Search,
+    Trash2,
+} from 'lucide-vue-next';
+
 import Swal from 'sweetalert2';
+
 import { ref } from 'vue';
 
 import admin from '@/routes/admin';
@@ -100,37 +111,52 @@ const deleteSpecies = (item: Species) => {
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
-        <!-- Encabezado -->
+        <!-- HEADER -->
+
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1 class="text-2xl font-semibold">
-                        Especies
-                    </h1>
+                <div class="flex items-center gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <Leaf class="h-5 w-5" />
+                    </div>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Administra el catálogo de especies del zoológico.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Especies
+                        </h1>
+
+                        <p
+                            class="mt-1 text-sm text-muted-foreground"
+                        >
+                            Administra el catálogo de especies del zoológico.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
                     :href="admin.species.create().url"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                 >
+                    <Plus class="h-4 w-4" />
+
                     Nueva especie
                 </Link>
             </div>
         </div>
 
-        <!-- Tabla -->
+        <!-- TABLA -->
+
         <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
         >
-            <!-- Buscador -->
+            <!-- BUSCADOR -->
+
             <div
                 class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
             >
@@ -138,16 +164,22 @@ const deleteSpecies = (item: Species) => {
                     class="flex w-full flex-col gap-2 md:max-w-2xl md:flex-row"
                     @submit.prevent="submitSearch"
                 >
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Buscar especie..."
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
+                    <div class="relative flex-1">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Buscar especie..."
+                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
 
                     <select
                         v-model="categoryId"
-                        class="rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        class="rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     >
                         <option value="">
                             Todas las categorías
@@ -164,18 +196,24 @@ const deleteSpecies = (item: Species) => {
 
                     <button
                         type="submit"
-                        class="rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <Search class="h-4 w-4" />
+
                         Buscar
                     </button>
                 </form>
 
-                <div class="text-sm text-muted-foreground">
-                    {{ species.total }} especies
+                <div
+                    class="text-sm text-muted-foreground"
+                >
+                    {{ species.total }}
+                    {{ species.total === 1 ? 'especie' : 'especies' }}
                 </div>
             </div>
 
-            <!-- Tabla -->
+            <!-- TABLA -->
+
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead
@@ -202,7 +240,9 @@ const deleteSpecies = (item: Species) => {
                                 Estado
                             </th>
 
-                            <th class="px-6 py-4 text-right font-semibold">
+                            <th
+                                class="px-6 py-4 text-right font-semibold"
+                            >
                                 Acciones
                             </th>
                         </tr>
@@ -216,35 +256,48 @@ const deleteSpecies = (item: Species) => {
                             :key="item.id"
                             class="transition hover:bg-muted/30"
                         >
-                            <!-- Especie -->
+                            <!-- ESPECIE -->
+
                             <td class="px-6 py-4">
-                                <div class="font-medium">
-                                    {{ item.common_name }}
-                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-primary/10 text-primary"
+                                    >
+                                        <Leaf class="h-4 w-4" />
+                                    </div>
 
-                                <div
-                                    class="text-xs italic text-muted-foreground"
-                                >
-                                    {{ item.scientific_name }}
-                                </div>
+                                    <div class="min-w-0">
+                                        <div class="font-medium">
+                                            {{ item.common_name }}
+                                        </div>
 
-                                <div
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    ID: {{ item.id }}
+                                        <div
+                                            class="text-xs italic text-muted-foreground"
+                                        >
+                                            {{ item.scientific_name }}
+                                        </div>
+
+                                        <div
+                                            class="mt-0.5 text-xs text-muted-foreground"
+                                        >
+                                            ID: {{ item.id }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
-                            <!-- Categoría -->
+                            <!-- CATEGORÍA -->
+
                             <td class="px-6 py-4">
                                 <span
-                                    class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
+                                    class="inline-flex items-center rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium"
                                 >
                                     {{ item.category.name }}
                                 </span>
                             </td>
 
-                            <!-- Hábitat -->
+                            <!-- HÁBITAT -->
+
                             <td class="px-6 py-4">
                                 <span
                                     v-if="item.habitat"
@@ -261,11 +314,12 @@ const deleteSpecies = (item: Species) => {
                                 </span>
                             </td>
 
-                            <!-- Conservación -->
+                            <!-- CONSERVACIÓN -->
+
                             <td class="px-6 py-4">
                                 <span
                                     v-if="item.conservation_status"
-                                    class="text-sm"
+                                    class="inline-flex items-center rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium"
                                 >
                                     {{ item.conservation_status }}
                                 </span>
@@ -278,76 +332,114 @@ const deleteSpecies = (item: Species) => {
                                 </span>
                             </td>
 
-                            <!-- Estado -->
+                            <!-- ESTADO -->
+
                             <td class="px-6 py-4">
                                 <span
                                     v-if="item.is_active"
-                                    class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
+                                    class="inline-flex items-center rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                                 >
                                     Activa
                                 </span>
 
                                 <span
                                     v-else
-                                    class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
+                                    class="inline-flex items-center rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
                                 >
                                     Inactiva
                                 </span>
                             </td>
 
-                            <!-- Acciones -->
+                            <!-- ACCIONES -->
+
                             <td class="px-6 py-4">
-                                <div class="flex justify-end gap-2">
-                                    <!-- Detalles -->
+                                <div
+                                    class="flex justify-end gap-2"
+                                >
+                                    <!-- DETALLES -->
+
                                     <Link
                                         :href="
                                             admin.species.show(
                                                 item.id,
                                             ).url
                                         "
-                                        class="rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
+                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
                                     >
+                                        <Eye class="h-3.5 w-3.5" />
+
                                         Detalles
                                     </Link>
 
-                                    <!-- Editar -->
+                                    <!-- EDITAR -->
+
                                     <Link
                                         :href="
                                             admin.species.edit(
                                                 item.id,
                                             ).url
                                         "
-                                        class="rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
+                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
                                     >
+                                        <Edit class="h-3.5 w-3.5" />
+
                                         Editar
                                     </Link>
 
-                                    <!-- Eliminar -->
+                                    <!-- ELIMINAR -->
+
                                     <button
                                         type="button"
-                                        class="rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                        @click="deleteSpecies(item)"
+                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
+                                        @click="
+                                            deleteSpecies(item)
+                                        "
                                     >
+                                        <Trash2 class="h-3.5 w-3.5" />
+
                                         Eliminar
                                     </button>
                                 </div>
                             </td>
                         </tr>
 
-                        <!-- Sin resultados -->
+                        <!-- SIN RESULTADOS -->
+
                         <tr v-if="species.data.length === 0">
                             <td
                                 colspan="6"
-                                class="px-6 py-12 text-center text-sm text-muted-foreground"
+                                class="px-6 py-12"
                             >
-                                No se encontraron especies.
+                                <div
+                                    class="flex flex-col items-center justify-center text-center"
+                                >
+                                    <div
+                                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+                                    >
+                                        <Leaf class="h-6 w-6" />
+                                    </div>
+
+                                    <h3
+                                        class="mt-4 text-sm font-semibold text-foreground"
+                                    >
+                                        No se encontraron especies
+                                    </h3>
+
+                                    <p
+                                        class="mt-1 max-w-md text-sm text-muted-foreground"
+                                    >
+                                        No hay especies que coincidan con los
+                                        criterios de búsqueda seleccionados.
+                                    </p>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- Paginación -->
+            <!-- PAGINACIÓN -->
+
             <div
                 v-if="species.last_page > 1"
                 class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"

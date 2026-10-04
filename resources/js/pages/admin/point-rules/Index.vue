@@ -2,6 +2,15 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
+import {
+    Coins,
+    Edit,
+    Plus,
+    Search,
+    Trash2,
+    ToggleLeft,
+    ToggleRight,
+} from 'lucide-vue-next';
 
 import admin from '@/routes/admin';
 
@@ -74,7 +83,6 @@ const deleteRule = async (
         admin.pointRules.destroy(rule.id).url,
         {
             preserveScroll: true,
-
             onSuccess: () => {
                 Swal.fire({
                     title: 'Eliminada',
@@ -84,7 +92,6 @@ const deleteRule = async (
                     showConfirmButton: false,
                 });
             },
-
             onError: () => {
                 Swal.fire({
                     title: 'Error',
@@ -106,25 +113,35 @@ const deleteRule = async (
     >
         <!-- Encabezado -->
         <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
+            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
         >
             <div
                 class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
-                <div>
-                    <h1 class="text-2xl font-semibold">
-                        Reglas de puntos
-                    </h1>
+                <div class="flex items-start gap-4">
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <Coins class="h-5 w-5" />
+                    </div>
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Administra las reglas que generan o descuentan puntos.
-                    </p>
+                    <div>
+                        <h1 class="text-2xl font-semibold">
+                            Reglas de puntos
+                        </h1>
+
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Administra las reglas que generan o descuentan
+                            puntos.
+                        </p>
+                    </div>
                 </div>
 
                 <Link
                     :href="admin.pointRules.create().url"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                 >
+                    <Plus class="h-4 w-4" />
                     Nueva regla
                 </Link>
             </div>
@@ -132,33 +149,50 @@ const deleteRule = async (
 
         <!-- Tabla -->
         <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
         >
             <!-- Buscador -->
             <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
+                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
             >
                 <form
-                    @submit.prevent="submitSearch"
                     class="flex w-full gap-2 md:max-w-md"
+                    @submit.prevent="submitSearch"
                 >
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Buscar regla..."
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
+                    <div class="relative flex-1">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Buscar regla..."
+                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
 
                     <button
                         type="submit"
-                        class="rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
                     >
+                        <Search class="h-4 w-4" />
                         Buscar
                     </button>
                 </form>
 
-                <div class="text-sm text-muted-foreground">
-                    {{ rules.total }} reglas
+                <div
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                    <Coins class="h-4 w-4" />
+
+                    {{ rules.total }}
+
+                    {{
+                        rules.total === 1
+                            ? 'regla'
+                            : 'reglas'
+                    }}
                 </div>
             </div>
 
@@ -185,7 +219,9 @@ const deleteRule = async (
                                 Estado
                             </th>
 
-                            <th class="px-6 py-4 text-right font-semibold">
+                            <th
+                                class="px-6 py-4 text-right font-semibold"
+                            >
                                 Acciones
                             </th>
                         </tr>
@@ -201,26 +237,38 @@ const deleteRule = async (
                         >
                             <!-- Regla -->
                             <td class="px-6 py-4">
-                                <div class="font-medium">
-                                    {{ rule.name }}
-                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span
+                                        class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-primary/10 text-primary"
+                                    >
+                                        <Coins class="h-4 w-4" />
+                                    </span>
 
-                                <div class="text-xs text-muted-foreground">
-                                    ID: {{ rule.id }}
-                                </div>
+                                    <div class="min-w-0">
+                                        <div class="font-medium">
+                                            {{ rule.name }}
+                                        </div>
 
-                                <div
-                                    v-if="rule.description"
-                                    class="mt-1 max-w-md text-xs text-muted-foreground"
-                                >
-                                    {{ rule.description }}
+                                        <div
+                                            class="text-xs text-muted-foreground"
+                                        >
+                                            ID: {{ rule.id }}
+                                        </div>
+
+                                        <div
+                                            v-if="rule.description"
+                                            class="mt-1 max-w-md text-xs text-muted-foreground"
+                                        >
+                                            {{ rule.description }}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
                             <!-- Tipo -->
                             <td class="px-6 py-4">
                                 <code
-                                    class="rounded bg-muted px-2 py-1 text-xs"
+                                    class="inline-flex rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium"
                                 >
                                     {{ rule.type }}
                                 </code>
@@ -229,18 +277,17 @@ const deleteRule = async (
                             <!-- Puntos -->
                             <td class="px-6 py-4">
                                 <span
-                                    :class="
-                                        rule.points > 0
-                                            ? 'text-green-600 dark:text-green-400'
-                                            : 'text-red-600 dark:text-red-400'
-                                    "
-                                    class="font-semibold"
+                                    v-if="rule.points > 0"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-semibold text-green-600 dark:text-green-400"
                                 >
-                                    {{
-                                        rule.points > 0
-                                            ? '+'
-                                            : ''
-                                    }}{{ rule.points }}
+                                    +{{ rule.points }}
+                                </span>
+
+                                <span
+                                    v-else
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400"
+                                >
+                                    {{ rule.points }}
                                 </span>
                             </td>
 
@@ -248,36 +295,46 @@ const deleteRule = async (
                             <td class="px-6 py-4">
                                 <span
                                     v-if="rule.is_active"
-                                    class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
                                 >
+                                    <ToggleRight class="h-3.5 w-3.5" />
+
                                     Activa
                                 </span>
 
                                 <span
                                     v-else
-                                    class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium text-muted-foreground"
                                 >
+                                    <ToggleLeft class="h-3.5 w-3.5" />
+
                                     Inactiva
                                 </span>
                             </td>
 
                             <!-- Acciones -->
                             <td class="px-6 py-4">
-                                <div class="flex justify-end gap-2">
+                                <div
+                                    class="flex justify-end gap-2"
+                                >
                                     <Link
                                         :href="
-                                            admin.pointRules.edit(rule.id).url
+                                            admin.pointRules.edit(
+                                                rule.id,
+                                            ).url
                                         "
-                                        class="rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
+                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
                                     >
+                                        <Edit class="h-4 w-4" />
                                         Editar
                                     </Link>
 
                                     <button
                                         type="button"
-                                        class="rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
+                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
                                         @click="deleteRule(rule)"
                                     >
+                                        <Trash2 class="h-4 w-4" />
                                         Eliminar
                                     </button>
                                 </div>
@@ -285,12 +342,35 @@ const deleteRule = async (
                         </tr>
 
                         <!-- Sin resultados -->
-                        <tr v-if="rules.data.length === 0">
+                        <tr
+                            v-if="rules.data.length === 0"
+                        >
                             <td
                                 colspan="5"
-                                class="px-6 py-12 text-center text-sm text-muted-foreground"
+                                class="px-6 py-16 text-center"
                             >
-                                No se encontraron reglas de puntos.
+                                <div
+                                    class="flex flex-col items-center justify-center"
+                                >
+                                    <div
+                                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+                                    >
+                                        <Coins class="h-6 w-6" />
+                                    </div>
+
+                                    <h3
+                                        class="mt-4 text-sm font-semibold text-foreground"
+                                    >
+                                        No se encontraron reglas de puntos
+                                    </h3>
+
+                                    <p
+                                        class="mt-1 text-sm text-muted-foreground"
+                                    >
+                                        No hay reglas que coincidan con la
+                                        búsqueda.
+                                    </p>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
