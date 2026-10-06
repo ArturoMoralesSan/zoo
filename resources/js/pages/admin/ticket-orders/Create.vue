@@ -151,6 +151,7 @@ const addTicket = (
 
     if (item) {
         item.quantity++;
+
         return;
     }
 
@@ -171,6 +172,7 @@ const removeTicket = (
 
     if (item.quantity > 1) {
         item.quantity--;
+
         return;
     }
 
@@ -615,6 +617,7 @@ const stopQrScanner =
     async (): Promise<void> => {
         if (!qrScanner.value) {
             scanning.value = false;
+
             return;
         }
 

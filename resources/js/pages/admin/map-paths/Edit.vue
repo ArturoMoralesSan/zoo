@@ -556,6 +556,7 @@ function submit(): void {
     if (!form.zone_id) {
         zoneError.value =
             'Debes seleccionar una zona antes de actualizar el camino.';
+
         return;
     }
 
@@ -565,6 +566,7 @@ function submit(): void {
     ) {
         zoneError.value =
             'Debes tener al menos 2 nodos.';
+
         return;
     }
 
@@ -574,6 +576,7 @@ function submit(): void {
     ) {
         zoneError.value =
             'Debes tener al menos una conexión entre nodos.';
+
         return;
     }
 

@@ -98,8 +98,7 @@ class DonationController extends Controller
         if (! $paymentMethod) {
             return response()->json([
                 'success' => false,
-                'message' =>
-                    'El pago con tarjeta no está disponible actualmente.',
+                'message' => 'El pago con tarjeta no está disponible actualmente.',
             ], 422);
         }
 

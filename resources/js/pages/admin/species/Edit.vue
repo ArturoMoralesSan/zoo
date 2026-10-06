@@ -14,6 +14,7 @@ import {
     Trash2,
 } from 'lucide-vue-next';
 
+import Swal from 'sweetalert2';
 import {
     computed,
     onBeforeUnmount,
@@ -21,7 +22,6 @@ import {
     watch,
 } from 'vue';
 
-import Swal from 'sweetalert2';
 
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 

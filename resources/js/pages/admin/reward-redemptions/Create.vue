@@ -5,13 +5,6 @@ import {
     useForm,
 } from '@inertiajs/vue3';
 import { Html5Qrcode } from 'html5-qrcode';
-import Swal from 'sweetalert2';
-import {
-    computed,
-    nextTick,
-    onBeforeUnmount,
-    ref,
-} from 'vue';
 import {
     ArrowLeft,
     CheckCircle2,
@@ -24,6 +17,13 @@ import {
     UserRoundCheck,
     XCircle,
 } from 'lucide-vue-next';
+import Swal from 'sweetalert2';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    ref,
+} from 'vue';
 
 import admin from '@/routes/admin';
 
@@ -315,6 +315,7 @@ const stopQrScanner =
     async (): Promise<void> => {
         if (!qrScanner.value) {
             scanning.value = false;
+
             return;
         }
 

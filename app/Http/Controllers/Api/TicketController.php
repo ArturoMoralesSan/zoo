@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\PaymentMethod;
 use App\Models\Ticket;
 use App\Models\TicketOrder;
 use App\Models\TicketType;
-use App\Models\PaymentMethod;
 use App\Services\PointService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,8 +17,7 @@ class TicketController extends Controller
 {
     public function __construct(
         private PointService $pointService
-    ) {
-    }
+    ) {}
 
     /**
      * Tipos de boletos disponibles para la aplicación.
@@ -133,7 +132,7 @@ class TicketController extends Controller
                 ->orderBy('sort_order')
                 ->first();
 
-            if (!$paymentMethod) {
+            if (! $paymentMethod) {
                 abort(
                     422,
                     'No existe un método de pago activo para tarjeta.'
@@ -229,7 +228,7 @@ class TicketController extends Controller
 
                 'amount' => $subtotal,
 
-                'reference' => 'APP-SIMULATED-' . Str::upper(
+                'reference' => 'APP-SIMULATED-'.Str::upper(
                     Str::random(12)
                 ),
             ]);
@@ -403,7 +402,6 @@ class TicketController extends Controller
         ]);
     }
 
-
     /**
      * Obtener todos los boletos del usuario autenticado,
      * agrupados posteriormente por compra en la aplicación.
@@ -467,7 +465,6 @@ class TicketController extends Controller
         ]);
     }
 
-
     /**
      * Generar folio único.
      */
@@ -475,9 +472,9 @@ class TicketController extends Controller
     {
         do {
             $folio = 'ZOO-'
-                . now()->format('Ymd')
-                . '-'
-                . str_pad(
+                .now()->format('Ymd')
+                .'-'
+                .str_pad(
                     (string) random_int(1, 99999),
                     5,
                     '0',

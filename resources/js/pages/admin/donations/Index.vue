@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     CircleDollarSign,
@@ -7,7 +8,6 @@ import {
     Plus,
     Search,
 } from 'lucide-vue-next';
-import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 import admin from '@/routes/admin';

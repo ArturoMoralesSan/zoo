@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
 import {
     ArrowLeft,
     Check,
@@ -18,6 +17,7 @@ import {
     Undo2,
     X,
 } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
 import MapPathMap from '@/components/admin/MapPathMap.vue';
 import admin from '@/routes/admin';

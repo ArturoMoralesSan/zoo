@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
 import {
     ArrowLeft,
     Check,
@@ -10,6 +9,7 @@ import {
     Map,
     MapPinned,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 import ZooZoneMap from '@/components/admin/ZooZoneMap.vue';
 

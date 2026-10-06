@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CardController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DonationController;
 use App\Http\Controllers\Admin\EventController;
@@ -20,7 +21,6 @@ use App\Http\Controllers\Admin\TicketOrderController;
 use App\Http\Controllers\Admin\TicketTypeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZooZoneController;
-use App\Http\Controllers\Admin\CardController;
 use App\Http\Controllers\MapController;
 use Illuminate\Support\Facades\Route;
 
@@ -117,7 +117,7 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:species.edit',
                 'destroy' => 'permission:species.delete',
             ]);
-        
+
         Route::delete(
             '/species/{species}/images/{image}',
             [SpeciesController::class, 'destroyImage']

@@ -989,6 +989,7 @@ watch(
                 undefined
         ) {
             clearMarker();
+
             return;
         }
 

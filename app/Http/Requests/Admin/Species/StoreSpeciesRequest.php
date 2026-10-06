@@ -117,8 +117,6 @@ class StoreSpeciesRequest extends FormRequest
                 'max:5120',
             ],
 
-            
-
             'gallery_images' => [
                 'nullable',
                 'array',
@@ -129,7 +127,6 @@ class StoreSpeciesRequest extends FormRequest
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
             ],
-
 
             /*
             |--------------------------------------------------------------------------

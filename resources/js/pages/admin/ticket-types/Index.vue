@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import Swal from 'sweetalert2';
-import { ref } from 'vue';
 import {
     Edit,
     Plus,
@@ -9,6 +7,8 @@ import {
     Ticket,
     Trash2,
 } from 'lucide-vue-next';
+import Swal from 'sweetalert2';
+import { ref } from 'vue';
 import admin from '@/routes/admin';
 
 interface TicketType {

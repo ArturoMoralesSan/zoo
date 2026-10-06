@@ -81,7 +81,6 @@ class ProfileController extends Controller
          * Actualizar usuario
          * -------------------------------------------------------------
          */
-
         $user->fill([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -101,7 +100,6 @@ class ProfileController extends Controller
          * Crear perfil si no existe
          * -------------------------------------------------------------
          */
-
         $profile = $user->profile()->firstOrCreate([
             'user_id' => $user->id,
         ]);
@@ -111,7 +109,6 @@ class ProfileController extends Controller
          * Actualizar datos del perfil
          * -------------------------------------------------------------
          */
-
         $profile->fill([
             'phone' => $validated['phone'] ?? null,
             'birth_date' => $validated['birth_date'] ?? null,
@@ -126,7 +123,6 @@ class ProfileController extends Controller
          * Recargar relaciones
          * -------------------------------------------------------------
          */
-
         $user->load([
             'level',
             'profile',
@@ -164,7 +160,6 @@ class ProfileController extends Controller
          * Crear perfil si no existe
          * -------------------------------------------------------------
          */
-
         $profile = $user->profile()->firstOrCreate([
             'user_id' => $user->id,
         ]);
@@ -174,7 +169,6 @@ class ProfileController extends Controller
          * Eliminar avatar anterior
          * -------------------------------------------------------------
          */
-
         if ($profile->avatar) {
             Storage::disk('public')->delete(
                 $profile->avatar
@@ -186,7 +180,6 @@ class ProfileController extends Controller
          * Generar nombre único
          * -------------------------------------------------------------
          */
-
         $avatar = $validated['avatar'];
 
         $filename =
@@ -199,7 +192,6 @@ class ProfileController extends Controller
          * Asegurar que exista el directorio
          * -------------------------------------------------------------
          */
-
         $directory = storage_path(
             'app/public/avatars'
         );
@@ -217,7 +209,6 @@ class ProfileController extends Controller
          * Guardar físicamente
          * -------------------------------------------------------------
          */
-
         $avatar->move(
             $directory,
             $filename
@@ -228,7 +219,6 @@ class ProfileController extends Controller
          * Guardar ruta en BD
          * -------------------------------------------------------------
          */
-
         $profile->avatar =
             'avatars/'.$filename;
 
@@ -239,7 +229,6 @@ class ProfileController extends Controller
          * Recargar perfil
          * -------------------------------------------------------------
          */
-
         $user->load([
             'level',
             'profile',
@@ -271,7 +260,6 @@ class ProfileController extends Controller
          * Nivel actual
          * -------------------------------------------------------------
          */
-
         $currentLevel = $user->level;
 
         /**
@@ -279,7 +267,6 @@ class ProfileController extends Controller
          * Siguiente nivel
          * -------------------------------------------------------------
          */
-
         $nextLevel = Level::query()
             ->where('min_points', '>', $points)
             ->orderBy('min_points')
@@ -290,7 +277,6 @@ class ProfileController extends Controller
          * Progreso
          * -------------------------------------------------------------
          */
-
         $progress = 0;
         $pointsToNextLevel = 0;
 
@@ -329,7 +315,6 @@ class ProfileController extends Controller
              * Usuario
              * ---------------------------------------------------------
              */
-
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
@@ -343,7 +328,6 @@ class ProfileController extends Controller
              * Nivel
              * ---------------------------------------------------------
              */
-
             'level' => $currentLevel
                 ? [
                     'id' => $currentLevel->id,
@@ -361,7 +345,6 @@ class ProfileController extends Controller
              * Perfil
              * ---------------------------------------------------------
              */
-
             'profile' => $user->profile
                 ? [
                     'phone' => $user->profile->phone,
@@ -379,7 +362,6 @@ class ProfileController extends Controller
              * Gamificación
              * ---------------------------------------------------------
              */
-
             'gamification' => [
                 'points' => $points,
 

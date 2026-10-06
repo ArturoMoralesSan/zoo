@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     CalendarDays,
@@ -14,7 +15,6 @@ import {
     Users,
     X,
 } from 'lucide-vue-next';
-import { Head, Link, useForm } from '@inertiajs/vue3';
 
 import admin from '@/routes/admin';
 

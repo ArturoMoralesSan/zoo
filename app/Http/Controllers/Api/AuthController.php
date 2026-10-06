@@ -40,7 +40,7 @@ class AuthController extends Controller
 
         $level = Level::where('name', 'Bronce')->first();
 
-        if (!$level) {
+        if (! $level) {
             return response()->json([
                 'success' => false,
                 'message' => 'El nivel Bronce no está configurado.',
@@ -83,7 +83,7 @@ class AuthController extends Controller
             ],
         ]);
 
-        if (!Auth::attempt($credentials)) {
+        if (! Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
                 'email' => [
                     'Las credenciales proporcionadas no son correctas.',

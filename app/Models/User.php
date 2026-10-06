@@ -13,8 +13,8 @@ use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
-use Spatie\Permission\Traits\HasRoles;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 #[Hidden([
     'password',
@@ -25,11 +25,11 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable implements PasskeyUser
 {
     use HasApiTokens,
-    HasFactory,
-    HasRoles,
-    Notifiable,
-    PasskeyAuthenticatable,
-    TwoFactorAuthenticatable;
+        HasFactory,
+        HasRoles,
+        Notifiable,
+        PasskeyAuthenticatable,
+        TwoFactorAuthenticatable;
 
     protected $fillable = [
         'name',

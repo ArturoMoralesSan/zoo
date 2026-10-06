@@ -186,7 +186,7 @@ let accuracyCircle: L.Circle | null = null
 let destinationMarker: L.Marker | null = null
 let routeLayer: L.LayerGroup | null = null
 
-let watchId: number | null = null
+const watchId: number | null = null
 
 const WALKING_SPEED = 1.4
 

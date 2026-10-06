@@ -555,8 +555,8 @@ class MapPathController extends Controller
 
             $edgeKey =
                 min($from, $to)
-                . '-'
-                . max($from, $to);
+                .'-'
+                .max($from, $to);
 
             if (
                 isset(

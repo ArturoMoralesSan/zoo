@@ -1,12 +1,12 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\DonationController;
 use App\Http\Controllers\Api\ExploreController;
 use App\Http\Controllers\Api\MapController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SpeciesController;
 use App\Http\Controllers\Api\TicketController;
-use App\Http\Controllers\Api\DonationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -32,9 +32,8 @@ Route::middleware('auth:sanctum')->group(function () {
      */
     Route::get('/explore', [ExploreController::class, 'index']);
 
-
-    Route::get('/map', [ MapController::class, 'index', ])->name('api.map.index');
-    Route::get('/map/zone/{zooZone}', [ MapController::class, 'zone', ])->name('api.map.zone');
+    Route::get('/map', [MapController::class, 'index'])->name('api.map.index');
+    Route::get('/map/zone/{zooZone}', [MapController::class, 'zone'])->name('api.map.zone');
 
     Route::get('/species', [SpeciesController::class, 'index']);
     Route::get('/species/{species}', [SpeciesController::class, 'show']);
@@ -65,8 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
         'myTickets',
     ])->name('api.tickets.index');
 
-
-   Route::get('/donations', [ DonationController::class, 'index', ]); 
-   Route::post('/donations', [ DonationController::class, 'store', ]); 
-   Route::get('/donations/{donation}', [ DonationController::class, 'show', ]);
+    Route::get('/donations', [DonationController::class, 'index']);
+    Route::post('/donations', [DonationController::class, 'store']);
+    Route::get('/donations/{donation}', [DonationController::class, 'show']);
 });
