@@ -63,9 +63,18 @@ class MenuSeeder extends Seeder
 
         $this->link(
             $zoo,
+            'Tarjetas',
+            'CreditCard',
+            3,
+            'admin.cards.index',
+            'cards.view'
+        );
+
+        $this->link(
+            $zoo,
             'Etiquetas',
             'Tag',
-            3,
+            4,
             'admin.species-tags.index',
             'species_tags.view'
         );
@@ -74,7 +83,7 @@ class MenuSeeder extends Seeder
             $zoo,
             'Zonas',
             'Map',
-            4,
+            5,
             'admin.zoo-zones.index',
             'zoo-zones.view'
         );
@@ -83,7 +92,7 @@ class MenuSeeder extends Seeder
             $zoo,
             'Marcadores del mapa',
             'MapPin',
-            5,
+            6,
             'admin.map-markers.index',
             'map-markers.view'
         );
@@ -92,7 +101,7 @@ class MenuSeeder extends Seeder
             $zoo,
             'Caminos del mapa',
             'Route',
-            6,
+            7,
             'admin.map-paths.index',
             'map_paths.view'
         );
@@ -101,7 +110,7 @@ class MenuSeeder extends Seeder
             $zoo,
             'Mapa',
             'Map',
-            7,
+            8,
             'map.index',
             'map_paths.view'
         );

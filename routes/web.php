@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\TicketOrderController;
 use App\Http\Controllers\Admin\TicketTypeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZooZoneController;
+use App\Http\Controllers\Admin\QuizQuestionController;
 use App\Http\Controllers\MapController;
 use Illuminate\Support\Facades\Route;
 
@@ -322,7 +323,36 @@ Route::middleware(['auth', 'verified'])
             [CardController::class, 'destroyModel']
         )->middleware('permission:cards.edit')
             ->name('cards.model.destroy');
+        
+        /*
+        |--------------------------------------------------------------------------
+        | Quiz de Cards
+        |--------------------------------------------------------------------------
+        |
+        | El quiz pertenece directamente a una Card.
+        | Se reutilizan los permisos de Cards.
+        |
+        */
 
+        Route::prefix('cards/{card}')
+            ->name('cards.')
+            ->group(function () {
+                Route::resource('quiz', QuizQuestionController::class)
+                    ->parameters([
+                        'quiz' => 'quizQuestion',
+                    ])
+                    ->middleware([
+                        'index' => 'permission:cards.view',
+                        'create' => 'permission:cards.edit',
+                        'store' => 'permission:cards.edit',
+                        'show' => 'permission:cards.view',
+                        'edit' => 'permission:cards.edit',
+                        'update' => 'permission:cards.edit',
+                        'destroy' => 'permission:cards.delete',
+                    ]);
+            });
     });
+
+
 
 require __DIR__.'/settings.php';

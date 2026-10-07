@@ -7,11 +7,10 @@ import {
     Eye,
     Pencil,
     Trash2,
-    ImageOff,
+    HelpCircle,
     FilterX,
     CheckCircle2,
     CircleOff,
-    HelpCircle,
 } from 'lucide-vue-next';
 
 import Swal from 'sweetalert2';
@@ -28,19 +27,30 @@ interface Species {
 
 interface Card {
     id: number;
-    species_id: number;
+    species_id?: number;
     name: string;
-    rarity: string;
-    edition: string | null;
-    description: string | null;
-    card_image: string | null;
-    model_name: string | null;
-    model_file: string | null;
-    model_url: string | null;
-    model_format: string | null;
+    rarity?: string;
+    edition?: string | null;
+    description?: string | null;
+    card_image?: string | null;
+    species?: Species | null;
+}
+
+interface Answer {
+    id: number;
+    quiz_question_id: number;
+    answer: string;
+    is_correct: boolean;
+    sort_order: number;
+}
+
+interface Question {
+    id: number;
+    card_id: number;
+    question: string;
     is_active: boolean;
     sort_order: number;
-    species: Species;
+    answers: Answer[];
 }
 
 interface PaginationLink {
@@ -49,8 +59,8 @@ interface PaginationLink {
     active: boolean;
 }
 
-interface CardsPagination {
-    data: Card[];
+interface QuestionsPagination {
+    data: Question[];
     links: PaginationLink[];
     current_page: number;
     last_page: number;
@@ -60,28 +70,36 @@ interface CardsPagination {
 }
 
 const props = defineProps<{
-    cards: CardsPagination;
+    card: Card;
+
+    questions: QuestionsPagination;
+
     filters: {
         search?: string;
-        species_id?: string;
-        rarity?: string;
+        is_active?: string | boolean | null;
     };
-    species: Species[];
 }>();
 
 const search = ref(props.filters?.search ?? '');
 
-const speciesId = ref(props.filters?.species_id ?? '');
-
-const rarity = ref(props.filters?.rarity ?? '');
+const isActive = ref(
+    props.filters?.is_active === true ||
+    props.filters?.is_active === '1' ||
+    props.filters?.is_active === 'true'
+        ? '1'
+        : props.filters?.is_active === false ||
+            props.filters?.is_active === '0' ||
+            props.filters?.is_active === 'false'
+          ? '0'
+          : '',
+);
 
 const submitSearch = () => {
     router.get(
-        admin.cards.index().url,
+        admin.cards.quiz.index(props.card.id).url,
         {
             search: search.value || undefined,
-            species_id: speciesId.value || undefined,
-            rarity: rarity.value || undefined,
+            is_active: isActive.value || undefined,
         },
         {
             preserveState: true,
@@ -92,11 +110,10 @@ const submitSearch = () => {
 
 const applyFilters = () => {
     router.get(
-        admin.cards.index().url,
+        admin.cards.quiz.index(props.card.id).url,
         {
             search: search.value || undefined,
-            species_id: speciesId.value || undefined,
-            rarity: rarity.value || undefined,
+            is_active: isActive.value || undefined,
         },
         {
             preserveState: true,
@@ -107,10 +124,7 @@ const applyFilters = () => {
 
 const clearFilters = () => {
     search.value = '';
-
-    speciesId.value = '';
-
-    rarity.value = '';
+    isActive.value = '';
 
     applyFilters();
 };
@@ -118,15 +132,14 @@ const clearFilters = () => {
 const hasFilters = () => {
     return Boolean(
         search.value ||
-        speciesId.value ||
-        rarity.value,
+        isActive.value,
     );
 };
 
-const deleteCard = (card: Card) => {
+const deleteQuestion = (question: Question) => {
     Swal.fire({
-        title: '¿Eliminar tarjeta?',
-        text: `Se eliminará la tarjeta "${card.name}". Esta acción no se puede deshacer.`,
+        title: '¿Eliminar pregunta?',
+        text: `Se eliminará la pregunta "${question.question}". También se eliminarán sus respuestas. Esta acción no se puede deshacer.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
@@ -135,7 +148,10 @@ const deleteCard = (card: Card) => {
     }).then((result) => {
         if (result.isConfirmed) {
             router.delete(
-                admin.cards.destroy(card.id).url,
+                admin.cards.quiz.destroy({
+                    card: props.card.id,
+                    quizQuestion: question.id,
+                }).url,
                 {
                     preserveScroll: true,
                 },
@@ -144,79 +160,23 @@ const deleteCard = (card: Card) => {
     });
 };
 
-const getRarityLabel = (value: string) => {
-    const labels: Record<string, string> = {
-        comun: 'Común',
-        rara: 'Rara',
-        epica: 'Épica',
-        edicion_especial: 'Edición especial',
-    };
-
-    return labels[value] ?? value;
+const answerLabel = (index: number) => {
+    return String.fromCharCode(65 + index);
 };
 
-const getRarityClasses = (value: string) => {
-    const classes: Record<string, string> = {
-        comun:
-            'border-sidebar-border bg-muted/40 text-muted-foreground',
+const getAnswerCount = (question: Question) => {
+    return question.answers?.length ?? 0;
+};
 
-        rara:
-            'border-blue-500/30 bg-blue-500/5 text-blue-500',
-
-        epica:
-            'border-purple-500/30 bg-purple-500/5 text-purple-500',
-
-        edicion_especial:
-            'border-yellow-500/30 bg-yellow-500/5 text-yellow-600',
-    };
-
-    return (
-        classes[value] ??
-        'border-sidebar-border bg-muted/40 text-muted-foreground'
+const getCorrectAnswer = (question: Question) => {
+    return question.answers?.find(
+        (answer) => answer.is_correct,
     );
-};
-
-const getModelLabel = (card: Card) => {
-    if (card.model_file) {
-        return card.model_format
-            ? card.model_format.toUpperCase()
-            : 'Archivo';
-    }
-
-    if (card.model_url) {
-        return 'URL';
-    }
-
-    return 'Sin modelo';
-};
-
-const getModelClasses = (card: Card) => {
-    if (card.model_file || card.model_url) {
-        return 'border-green-500/30 bg-green-500/5 text-green-500';
-    }
-
-    return 'border-sidebar-border bg-muted/40 text-muted-foreground';
-};
-
-const cardImageUrl = (path: string | null) => {
-    if (!path) {
-        return null;
-    }
-
-    if (
-        path.startsWith('http://') ||
-        path.startsWith('https://') ||
-        path.startsWith('/')
-    ) {
-        return path;
-    }
-
-    return `/storage/${path}`;
 };
 </script>
 
 <template>
-    <Head title="Tarjetas" />
+    <Head title="Quiz de card" />
 
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
@@ -233,31 +193,35 @@ const cardImageUrl = (path: string | null) => {
                         <div
                             class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"
                         >
-                            <ImageOff :size="20" />
+                            <HelpCircle :size="20" />
                         </div>
 
                         <span
                             class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                         >
-                            Colección
+                            Quiz de card
                         </span>
                     </div>
 
                     <h1 class="text-2xl font-semibold tracking-tight">
-                        Tarjetas
+                        {{ card.name }}
                     </h1>
 
                     <p class="mt-1 text-sm text-muted-foreground">
-                        Administra las tarjetas coleccionables de las especies.
+                        {{ card.species?.common_name ?? 'Sin especie' }}
+
+                        <span v-if="card.edition">
+                            · {{ card.edition }}
+                        </span>
                     </p>
                 </div>
 
                 <Link
-                    :href="admin.cards.create().url"
+                    :href="admin.cards.quiz.create(card.id).url"
                     class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
                     <Plus :size="18" />
-                    Nueva tarjeta
+                    Nueva pregunta
                 </Link>
             </div>
         </div>
@@ -287,54 +251,27 @@ const cardImageUrl = (path: string | null) => {
                             <input
                                 v-model="search"
                                 type="search"
-                                placeholder="Buscar tarjeta..."
+                                placeholder="Buscar pregunta o respuesta..."
                                 class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
 
-                        <!-- Especie -->
+                        <!-- Estado -->
                         <select
-                            v-model="speciesId"
+                            v-model="isActive"
                             class="rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             @change="applyFilters"
                         >
                             <option value="">
-                                Todas las especies
+                                Todos los estados
                             </option>
 
-                            <option
-                                v-for="item in species"
-                                :key="item.id"
-                                :value="String(item.id)"
-                            >
-                                {{ item.common_name }}
-                            </option>
-                        </select>
-
-                        <!-- Rareza -->
-                        <select
-                            v-model="rarity"
-                            class="rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            @change="applyFilters"
-                        >
-                            <option value="">
-                                Todas las rarezas
+                            <option value="1">
+                                Activas
                             </option>
 
-                            <option value="comun">
-                                Común
-                            </option>
-
-                            <option value="rara">
-                                Rara
-                            </option>
-
-                            <option value="epica">
-                                Épica
-                            </option>
-
-                            <option value="edicion_especial">
-                                Edición especial
+                            <option value="0">
+                                Inactivas
                             </option>
                         </select>
 
@@ -348,12 +285,13 @@ const cardImageUrl = (path: string | null) => {
                         </button>
                     </form>
 
+                    <!-- Total -->
                     <div class="text-sm text-muted-foreground">
-                        {{ cards.total }}
+                        {{ questions.total }}
                         {{
-                            cards.total === 1
-                                ? 'tarjeta'
-                                : 'tarjetas'
+                            questions.total === 1
+                                ? 'donación'
+                                : 'donaciones'
                         }}
                     </div>
                 </div>
@@ -375,23 +313,17 @@ const cardImageUrl = (path: string | null) => {
                     </span>
 
                     <span
-                        v-if="speciesId"
-                        class="rounded-full border border-sidebar-border bg-muted/40 px-2.5 py-1 text-xs"
+                        v-if="isActive === '1'"
+                        class="rounded-full border border-green-500/30 bg-green-500/5 px-2.5 py-1 text-xs text-green-600 dark:text-green-500"
                     >
-                        Especie:
-                        {{
-                            species.find(
-                                (item) =>
-                                    String(item.id) === speciesId,
-                            )?.common_name
-                        }}
+                        Estado: Activas
                     </span>
 
                     <span
-                        v-if="rarity"
+                        v-if="isActive === '0'"
                         class="rounded-full border border-sidebar-border bg-muted/40 px-2.5 py-1 text-xs"
                     >
-                        Rareza: {{ getRarityLabel(rarity) }}
+                        Estado: Inactivas
                     </span>
 
                     <button
@@ -413,23 +345,19 @@ const cardImageUrl = (path: string | null) => {
                     >
                         <tr>
                             <th class="px-6 py-4 font-semibold">
-                                Tarjeta
+                                Pregunta
                             </th>
 
                             <th class="px-6 py-4 font-semibold">
-                                Especie
+                                Respuestas
                             </th>
 
                             <th class="px-6 py-4 font-semibold">
-                                Rareza
+                                Correcta
                             </th>
 
                             <th class="px-6 py-4 font-semibold">
-                                Edición
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Modelo 3D
+                                Orden
                             </th>
 
                             <th class="px-6 py-4 font-semibold">
@@ -448,126 +376,117 @@ const cardImageUrl = (path: string | null) => {
                         class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
                     >
                         <tr
-                            v-for="card in cards.data"
-                            :key="card.id"
+                            v-for="question in questions.data"
+                            :key="question.id"
                             class="transition hover:bg-muted/30"
                         >
-                            <!-- Tarjeta -->
+                            <!-- Pregunta -->
                             <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-start gap-3">
                                     <div
-                                        class="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-sidebar-border bg-muted"
+                                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                                     >
-                                        <img
-                                            v-if="card.card_image"
-                                            :src="
-                                                cardImageUrl(
-                                                    card.card_image,
-                                                ) ?? ''
-                                            "
-                                            :alt="card.name"
-                                            class="h-full w-full object-cover"
-                                        />
-
-                                        <div
-                                            v-else
-                                            class="flex h-full w-full items-center justify-center text-muted-foreground"
-                                            title="Sin imagen"
-                                        >
-                                            <ImageOff :size="20" />
-                                        </div>
+                                        <HelpCircle :size="19" />
                                     </div>
 
                                     <div class="min-w-0">
-                                        <div class="font-medium">
-                                            {{ card.name }}
-                                        </div>
-
                                         <div
-                                            v-if="card.description"
-                                            class="max-w-xs truncate text-xs text-muted-foreground"
+                                            class="max-w-xl font-medium"
                                         >
-                                            {{ card.description }}
+                                            {{ question.question }}
                                         </div>
 
                                         <div
                                             class="text-xs text-muted-foreground"
                                         >
-                                            ID: {{ card.id }}
+                                            ID: {{ question.id }}
                                         </div>
                                     </div>
                                 </div>
                             </td>
 
-                            <!-- Especie -->
+                            <!-- Respuestas -->
                             <td class="px-6 py-4">
-                                <div>
-                                    <div class="font-medium">
-                                        {{ card.species?.common_name }}
-                                    </div>
-
-                                    <div
-                                        class="text-xs italic text-muted-foreground"
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span
+                                        v-for="(
+                                            answer, answerIndex
+                                        ) in question.answers"
+                                        :key="answer.id"
+                                        class="inline-flex max-w-[180px] items-center gap-1.5 truncate rounded-full border px-2.5 py-1 text-xs font-medium"
+                                        :class="
+                                            answer.is_correct
+                                                ? 'border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-500'
+                                                : 'border-sidebar-border bg-muted/40 text-muted-foreground'
+                                        "
+                                        :title="answer.answer"
                                     >
-                                        {{
-                                            card.species
-                                                ?.scientific_name
-                                        }}
-                                    </div>
+                                        <span
+                                            class="font-semibold"
+                                        >
+                                            {{ answerLabel(answerIndex) }}
+                                        </span>
+
+                                        <span class="truncate">
+                                            {{ answer.answer }}
+                                        </span>
+                                    </span>
+                                </div>
+
+                                <div
+                                    v-if="getAnswerCount(question) !== 3"
+                                    class="mt-1 text-xs text-red-500"
+                                >
+                                    {{ getAnswerCount(question) }}
+                                    respuestas
                                 </div>
                             </td>
 
-                            <!-- Rareza -->
+                            <!-- Correcta -->
                             <td class="px-6 py-4">
-                                <span
-                                    class="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium"
-                                    :class="
-                                        getRarityClasses(
-                                            card.rarity,
-                                        )
-                                    "
+                                <div
+                                    v-if="getCorrectAnswer(question)"
+                                    class="max-w-xs"
                                 >
-                                    {{
-                                        getRarityLabel(
-                                            card.rarity,
-                                        )
-                                    }}
-                                </span>
-                            </td>
+                                    <span
+                                        class="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-green-500/30 bg-green-500/5 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-500"
+                                        :title="
+                                            getCorrectAnswer(question)?.answer
+                                        "
+                                    >
+                                        <CheckCircle2 :size="14" />
 
-                            <!-- Edición -->
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="card.edition"
-                                    class="inline-flex rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
-                                >
-                                    {{ card.edition }}
-                                </span>
+                                        <span class="truncate">
+                                            {{
+                                                getCorrectAnswer(question)
+                                                    ?.answer
+                                            }}
+                                        </span>
+                                    </span>
+                                </div>
 
                                 <span
                                     v-else
-                                    class="text-muted-foreground"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/5 px-2.5 py-1 text-xs font-medium text-red-500"
                                 >
-                                    —
+                                    <CircleOff :size="14" />
+                                    Sin correcta
                                 </span>
                             </td>
 
-                            <!-- Modelo 3D -->
+                            <!-- Orden -->
                             <td class="px-6 py-4">
                                 <span
-                                    class="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium"
-                                    :class="
-                                        getModelClasses(card)
-                                    "
+                                    class="inline-flex rounded-full border border-sidebar-border bg-muted/40 px-2.5 py-1 text-xs font-medium"
                                 >
-                                    {{ getModelLabel(card) }}
+                                    {{ question.sort_order }}
                                 </span>
                             </td>
 
                             <!-- Estado -->
                             <td class="px-6 py-4">
                                 <span
-                                    v-if="card.is_active"
+                                    v-if="question.is_active"
                                     class="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/5 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-500"
                                 >
                                     <CheckCircle2 :size="14" />
@@ -586,60 +505,44 @@ const cardImageUrl = (path: string | null) => {
                             <!-- Acciones -->
                             <td class="px-6 py-4">
                                 <div
-                                    class="flex flex-wrap justify-end gap-1.5"
+                                    class="flex justify-end gap-1.5"
                                 >
-                                    <!-- Preguntas -->
                                     <Link
                                         :href="
-                                            admin.cards.quiz.index(
-                                                card.id,
-                                            ).url
+                                            admin.cards.quiz.show({
+                                                card: card.id,
+                                                quizQuestion: question.id,
+                                            }).url
                                         "
-                                        title="Administrar preguntas"
-                                        aria-label="Administrar preguntas"
-                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                    >
-                                        <HelpCircle :size="16" />
-                                        <span>Preguntas</span>
-                                    </Link>
-
-                                    <!-- Ver -->
-                                    <Link
-                                        :href="
-                                            admin.cards.show(
-                                                card.id,
-                                            ).url
-                                        "
-                                        title="Ver tarjeta"
-                                        aria-label="Ver tarjeta"
+                                        title="Ver pregunta"
+                                        aria-label="Ver pregunta"
                                         class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     >
                                         <Eye :size="16" />
                                         <span>Ver</span>
                                     </Link>
 
-                                    <!-- Editar -->
                                     <Link
                                         :href="
-                                            admin.cards.edit(
-                                                card.id,
-                                            ).url
+                                            admin.cards.quiz.edit({
+                                                card: card.id,
+                                                quizQuestion: question.id,
+                                            }).url
                                         "
-                                        title="Editar tarjeta"
-                                        aria-label="Editar tarjeta"
+                                        title="Editar pregunta"
+                                        aria-label="Editar pregunta"
                                         class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     >
                                         <Pencil :size="16" />
                                         <span>Editar</span>
                                     </Link>
 
-                                    <!-- Eliminar -->
                                     <button
                                         type="button"
-                                        title="Eliminar tarjeta"
-                                        aria-label="Eliminar tarjeta"
+                                        title="Eliminar pregunta"
+                                        aria-label="Eliminar pregunta"
                                         class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10 focus:outline-none focus:ring-2 focus:ring-red-500/20"
-                                        @click="deleteCard(card)"
+                                        @click="deleteQuestion(question)"
                                     >
                                         <Trash2 :size="16" />
                                         <span>Eliminar</span>
@@ -649,9 +552,9 @@ const cardImageUrl = (path: string | null) => {
                         </tr>
 
                         <!-- Estado vacío -->
-                        <tr v-if="cards.data.length === 0">
+                        <tr v-if="questions.data.length === 0">
                             <td
-                                colspan="7"
+                                colspan="6"
                                 class="px-6 py-16"
                             >
                                 <div
@@ -666,7 +569,7 @@ const cardImageUrl = (path: string | null) => {
                                             :size="30"
                                         />
 
-                                        <ImageOff
+                                        <HelpCircle
                                             v-else
                                             :size="30"
                                         />
@@ -677,7 +580,7 @@ const cardImageUrl = (path: string | null) => {
                                         {{
                                             hasFilters()
                                                 ? 'No se encontraron resultados'
-                                                : 'Aún no hay tarjetas'
+                                                : 'Aún no hay preguntas'
                                         }}
                                     </h3>
 
@@ -687,37 +590,10 @@ const cardImageUrl = (path: string | null) => {
                                     >
                                         {{
                                             hasFilters()
-                                                ? 'No encontramos tarjetas que coincidan con los filtros seleccionados. Intenta cambiar los criterios de búsqueda.'
-                                                : 'Todavía no has registrado ninguna tarjeta coleccionable. Comienza creando la primera.'
+                                                ? 'No encontramos preguntas que coincidan con los filtros seleccionados. Intenta cambiar los criterios de búsqueda.'
+                                                : 'Todavía no has registrado ninguna pregunta para este quiz. Comienza creando la primera.'
                                         }}
-                                    </p>
-
-                                    <!-- Acciones -->
-                                    <div
-                                        class="mt-5 flex flex-wrap items-center justify-center gap-2"
-                                    >
-                                        <button
-                                            v-if="hasFilters()"
-                                            type="button"
-                                            class="inline-flex items-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                            @click="clearFilters"
-                                        >
-                                            <FilterX :size="17" />
-                                            Limpiar filtros
-                                        </button>
-
-                                        <Link
-                                            v-else
-                                            :href="
-                                                admin.cards.create()
-                                                    .url
-                                            "
-                                            class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                        >
-                                            <Plus :size="18" />
-                                            Crear primera tarjeta
-                                        </Link>
-                                    </div>
+                                    </p>                                    
                                 </div>
                             </td>
                         </tr>
@@ -727,11 +603,11 @@ const cardImageUrl = (path: string | null) => {
 
             <!-- Paginación -->
             <div
-                v-if="cards.last_page > 1"
+                v-if="questions.last_page > 1"
                 class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
             >
                 <template
-                    v-for="(link, index) in cards.links"
+                    v-for="(link, index) in questions.links"
                     :key="index"
                 >
                     <Link

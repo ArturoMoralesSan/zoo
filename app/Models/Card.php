@@ -45,4 +45,9 @@ class Card extends Model
             CardCapture::class
         );
     }
+
+    public function quizQuestions(): HasMany 
+    { 
+        return $this->hasMany(QuizQuestion::class) ->orderBy('sort_order') ->orderBy('id'); 
+    }
 }

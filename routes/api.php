@@ -7,50 +7,98 @@ use App\Http\Controllers\Api\DonationController;
 use App\Http\Controllers\Api\ExploreController;
 use App\Http\Controllers\Api\MapController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\QuizController;
 use App\Http\Controllers\Api\SpeciesController;
 use App\Http\Controllers\Api\TicketController;
+
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register', [
+    AuthController::class,
+    'register',
+]);
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [
+    AuthController::class,
+    'login',
+]);
 
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('/user', [AuthController::class, 'user']);
+    Route::get('/user', [
+        AuthController::class,
+        'user',
+    ]);
 
-    Route::post('/logout', [AuthController::class, 'logout']);
-
-    /*
-     * Perfil
-     */
-    Route::get('/profile', [ProfileController::class, 'show']);
-
-    Route::put('/profile', [ProfileController::class, 'update']);
-
-    /*
-     * Avatar independiente.
-     */
-    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
+    Route::post('/logout', [
+        AuthController::class,
+        'logout',
+    ]);
 
     /*
-     * Explorar
-     */
-    Route::get('/explore', [ExploreController::class, 'index']);
+    |--------------------------------------------------------------------------
+    | Perfil
+    |--------------------------------------------------------------------------
+    */
 
-    Route::get('/map', [MapController::class, 'index'])
-        ->name('api.map.index');
+    Route::get('/profile', [
+        ProfileController::class,
+        'show',
+    ]);
 
-    Route::get('/map/zone/{zooZone}', [MapController::class, 'zone'])
-        ->name('api.map.zone');
-
-    Route::get('/species', [SpeciesController::class, 'index']);
-
-    Route::get('/species/{species}', [SpeciesController::class, 'show']);
+    Route::put('/profile', [
+        ProfileController::class,
+        'update',
+    ]);
 
     /*
-     * Cards
-     */
+    |--------------------------------------------------------------------------
+    | Avatar independiente
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post('/profile/avatar', [
+        ProfileController::class,
+        'updateAvatar',
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Explorar
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/explore', [
+        ExploreController::class,
+        'index',
+    ]);
+
+    Route::get('/map', [
+        MapController::class,
+        'index',
+    ])->name('api.map.index');
+
+    Route::get('/map/zone/{zooZone}', [
+        MapController::class,
+        'zone',
+    ])->name('api.map.zone');
+
+    Route::get('/species', [
+        SpeciesController::class,
+        'index',
+    ]);
+
+    Route::get('/species/{species}', [
+        SpeciesController::class,
+        'show',
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cards
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/cards', [
         CardController::class,
         'index',
@@ -62,8 +110,27 @@ Route::middleware('auth:sanctum')->group(function () {
     ])->name('api.cards.show');
 
     /*
-     * Cards capturadas por el usuario
-     */
+    |--------------------------------------------------------------------------
+    | Quiz de Cards
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/cards/{card}/quiz', [
+        QuizController::class,
+        'show',
+    ])->name('api.cards.quiz.show');
+
+    Route::post('/cards/{card}/quiz/submit', [
+        QuizController::class,
+        'submit',
+    ])->name('api.cards.quiz.submit');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cards capturadas por el usuario
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/my-cards', [
         CardCaptureController::class,
         'index',
@@ -80,10 +147,10 @@ Route::middleware('auth:sanctum')->group(function () {
     ])->name('api.card-captures.store');
 
     /*
-     |--------------------------------------------------------------------------
-     | Boletos
-     |--------------------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | Boletos
+    |--------------------------------------------------------------------------
+    */
 
     Route::get('/tickets/types', [
         TicketController::class,
@@ -106,8 +173,11 @@ Route::middleware('auth:sanctum')->group(function () {
     ])->name('api.tickets.index');
 
     /*
-     * Donaciones
-     */
+    |--------------------------------------------------------------------------
+    | Donaciones
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/donations', [
         DonationController::class,
         'index',

@@ -153,6 +153,12 @@ class RolesAndPermissionsSeeder extends Seeder
             // Donaciones
             'donations.view',
             'donations.create',
+
+            // Cards
+            'cards.view',
+            'cards.create',
+            'cards.edit',
+            'cards.delete',
         ];
 
         /*
@@ -174,7 +180,6 @@ class RolesAndPermissionsSeeder extends Seeder
         |--------------------------------------------------------------------------
         |
         | SuperAdmin NO necesita permisos.
-        |
         | Su acceso total se obtiene mediante Gate::before().
         |
         */
@@ -249,6 +254,11 @@ class RolesAndPermissionsSeeder extends Seeder
             // Donaciones
             'donations.view',
             'donations.create',
+
+            // Cards
+            'cards.view',
+            'cards.create',
+            'cards.edit',
         ]);
 
         /*
