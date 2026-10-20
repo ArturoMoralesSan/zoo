@@ -1,17 +1,18 @@
+
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
-    Edit,
-    Eye,
+    FilterX,
     MapPin,
     Plus,
-    Search,
-    Trash2,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
 
 import admin from '@/routes/admin';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import DataTable from '@/components/admin/DataTable.vue';
+import TableActions from '@/components/admin/TableActions.vue';
 
 interface ZooZone {
     id: number;
@@ -56,14 +57,31 @@ const props = defineProps<{
 
 const search = ref(props.filters?.search ?? '');
 
+const hasFilters = () => Boolean(search.value.trim());
+
 const submitSearch = () => {
     router.get(
         admin.mapMarkers.index().url,
         {
-            search: search.value || undefined,
+            search: search.value.trim() || undefined,
         },
         {
             preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const clearFilters = () => {
+    search.value = '';
+
+    router.get(
+        admin.mapMarkers.index().url,
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
             replace: true,
         },
     );
@@ -71,346 +89,245 @@ const submitSearch = () => {
 
 const deleteMarker = (marker: MapMarker) => {
     Swal.fire({
-        title: '¿Eliminar marker?',
-        text: `Se eliminará el marker "${marker.name}". Esta acción no se puede deshacer.`,
+        title: '¿Eliminar marcador?',
+        text: `Se eliminará el marcador "${marker.name}". Esta acción no se puede deshacer.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#84958a',
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(
-                admin.mapMarkers.destroy(marker.id).url,
-                {
-                    preserveScroll: true,
-                },
-            );
+            router.delete(admin.mapMarkers.destroy(marker.id).url, {
+                preserveScroll: true,
+            });
         }
     });
 };
+
+const formatCoordinate = (value: number) =>
+    Number(value).toFixed(7);
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Panel',
+                href: admin.dashboard(),
+            },
+            {
+                title: 'Marcadores',
+                href: admin.mapMarkers.index,
+            },
+        ],
+    },
+});
 </script>
 
 <template>
-    <Head title="Markers" />
+    <Head title="Marcadores del mapa" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+    <div
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-6 lg:px-8"
+    >
+        <PageHeader
+            title="Marcadores del mapa"
+            description="Administra los puntos y ubicaciones del mapa del zoológico."
+            section="Administración"
+            :icon="MapPin"
+            :action-icon="Plus"
+            action-label="Nuevo marcador"
+            :action-href="admin.mapMarkers.create().url"
+        />
+
+        <DataTable
+            v-model:search="search"
+            :pagination="markers"
+            :is-empty="markers.data.length === 0"
+            :empty-colspan="6"
+            search-placeholder="Buscar marcador..."
+            :has-filters="hasFilters()"
+            @search="submitSearch"
+            @clear-filters="clearFilters"
         >
-            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <MapPin class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Markers
-                        </h1>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Administra los puntos y ubicaciones del mapa del
-                            zoológico.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.mapMarkers.create().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+            <template #active-filters>
+                <span
+                    v-if="search.trim()"
+                    class="rounded-full border border-[#dce7df] bg-[#f2f7f4] px-3 py-1.5 text-xs text-[#244334]"
                 >
-                    <Plus class="h-4 w-4" />
-                    Nuevo marker
-                </Link>
-            </div>
-        </div>
+                    Búsqueda: "{{ search.trim() }}"
+                </span>
+            </template>
 
-        <!-- Tabla -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <!-- Buscador -->
-            <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
-            >
-                <form
-                    class="flex w-full gap-2 md:max-w-md"
-                    @submit.prevent="submitSearch"
+            <template #table-head>
+                <tr>
+                    <th
+                        v-for="heading in [
+                            'Marcador',
+                            'Tipo',
+                            'Zona',
+                            'Coordenadas',
+                            'Estado',
+                            'Acciones',
+                        ]"
+                        :key="heading"
+                        class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6"
+                        :class="heading === 'Acciones' ? 'text-right' : ''"
+                    >
+                        {{ heading }}
+                    </th>
+                </tr>
+            </template>
+
+            <template #table-body>
+                <tr
+                    v-for="marker in markers.data"
+                    :key="marker.id"
+                    class="transition-colors hover:bg-[#f7faf8]"
                 >
-                    <div class="relative flex-1">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                        />
-
-                        <input
-                            v-model="search"
-                            type="search"
-                            placeholder="Buscar marker..."
-                            class="w-full rounded-lg border border-sidebar-border bg-background py-2 pl-9 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <Search class="h-4 w-4" />
-                        Buscar
-                    </button>
-                </form>
-
-                <div class="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin class="h-4 w-4" />
-                    {{ markers.total }} markers
-                </div>
-            </div>
-
-            <!-- Tabla -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead
-                        class="border-b border-sidebar-border/70 bg-muted/40 dark:border-sidebar-border"
-                    >
-                        <tr>
-                            <th class="px-6 py-4 font-semibold">
-                                Marker
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Tipo
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Zona
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Coordenadas
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Estado
-                            </th>
-
-                            <th class="px-6 py-4 text-right font-semibold">
-                                Acciones
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody
-                        class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
-                    >
-                        <tr
-                            v-for="marker in markers.data"
-                            :key="marker.id"
-                            class="transition hover:bg-muted/30"
-                        >
-                            <!-- Marker -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sidebar-border"
-                                        :style="
-                                            marker.color
-                                                ? {
-                                                      backgroundColor:
-                                                          marker.color,
-                                                  }
-                                                : undefined
-                                        "
-                                    >
-                                        <img
-                                            v-if="marker.icon"
-                                            :src="`/storage/markers/${marker.icon}`"
-                                            :alt="marker.name"
-                                            class="h-6 w-6 object-contain"
-                                        />
-
-                                        <MapPin
-                                            v-else
-                                            class="h-5 w-5"
-                                        />
-                                    </span>
-
-                                    <div class="min-w-0">
-                                        <div class="font-medium">
-                                            {{ marker.name }}
-                                        </div>
-
-                                        <div
-                                            v-if="marker.description"
-                                            class="max-w-xs truncate text-xs text-muted-foreground"
-                                        >
-                                            {{ marker.description }}
-                                        </div>
-
-                                        <div class="text-xs text-muted-foreground">
-                                            ID: {{ marker.id }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <!-- Tipo -->
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="marker.type"
-                                    class="inline-flex items-center rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
-                                >
-                                    {{ marker.type }}
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="text-muted-foreground"
-                                >
-                                    Sin tipo
-                                </span>
-                            </td>
-
-                            <!-- Zona -->
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="marker.zone"
-                                    class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
-                                >
-                                    <MapPin class="h-3 w-3" />
-                                    {{ marker.zone.name }}
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="text-muted-foreground"
-                                >
-                                    Sin zona
-                                </span>
-                            </td>
-
-                            <!-- Coordenadas -->
-                            <td class="px-6 py-4">
-                                <div class="font-mono text-xs">
-                                    {{ Number(marker.latitude).toFixed(7) }}
-                                </div>
-
-                                <div class="font-mono text-xs text-muted-foreground">
-                                    {{ Number(marker.longitude).toFixed(7) }}
-                                </div>
-                            </td>
-
-                            <!-- Estado -->
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="marker.is_active"
-                                    class="inline-flex items-center rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
-                                >
-                                    Activo
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="inline-flex items-center rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
-                                >
-                                    Inactivo
-                                </span>
-                            </td>
-
-                            <!-- Acciones -->
-                            <td class="px-6 py-4">
-                                <div class="flex justify-end gap-2">
-                                    <Link
-                                        :href="
-                                            admin.mapMarkers.show(
-                                                marker.id,
-                                            ).url
-                                        "
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Eye class="h-4 w-4" />
-                                        Ver
-                                    </Link>
-
-                                    <Link
-                                        :href="
-                                            admin.mapMarkers.edit(
-                                                marker.id,
-                                            ).url
-                                        "
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Edit class="h-4 w-4" />
-                                        Editar
-                                    </Link>
-
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                        @click="deleteMarker(marker)"
-                                    >
-                                        <Trash2 class="h-4 w-4" />
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Sin resultados -->
-                        <tr v-if="markers.data.length === 0">
-                            <td
-                                colspan="6"
-                                class="px-6 py-12 text-center"
+                    <!-- Marcador -->
+                    <td class="px-5 py-4 sm:px-6">
+                        <div class="flex min-w-[220px] items-center gap-3">
+                            <span
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#dce7df]"
+                                :style="
+                                    marker.color
+                                        ? { backgroundColor: marker.color }
+                                        : { backgroundColor: '#f2f7f4' }
+                                "
                             >
-                                <div
-                                    class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"
+                                <img
+                                    v-if="marker.icon"
+                                    :src="`/storage/markers/${marker.icon}`"
+                                    :alt="marker.name"
+                                    class="h-6 w-6 object-contain"
+                                />
+
+                                <MapPin
+                                    v-else
+                                    :size="20"
+                                    class="text-[#187744]"
+                                />
+                            </span>
+
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-[#244334]">
+                                    {{ marker.name }}
+                                </p>
+
+                                <p
+                                    v-if="marker.description"
+                                    class="mt-1 max-w-xs truncate text-xs text-[#718477]"
                                 >
-                                    <MapPin class="h-5 w-5" />
-                                </div>
-
-                                <p class="mt-3 text-sm font-medium">
-                                    No se encontraron markers.
+                                    {{ marker.description }}
                                 </p>
 
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    Prueba con otro término de búsqueda.
+                                <p class="mt-1 text-xs text-[#84958a]">
+                                    ID: {{ marker.id }}
                                 </p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                            </div>
+                        </div>
+                    </td>
 
-            <!-- Paginación -->
-            <div
-                v-if="markers.last_page > 1"
-                class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
-            >
-                <template
-                    v-for="(link, index) in markers.links"
-                    :key="index"
+                    <!-- Tipo -->
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            v-if="marker.type"
+                            class="inline-flex items-center rounded-full border border-[#dce7df] bg-[#f7faf8] px-2.5 py-1 text-xs font-medium text-[#435d4c]"
+                        >
+                            {{ marker.type }}
+                        </span>
+
+                        <span v-else class="text-sm text-[#84958a]">
+                            Sin tipo
+                        </span>
+                    </td>
+
+                    <!-- Zona -->
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            v-if="marker.zone"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-[#dce7df] bg-[#f7faf8] px-2.5 py-1 text-xs font-medium text-[#435d4c]"
+                        >
+                            <MapPin :size="13" />
+                            {{ marker.zone.name }}
+                        </span>
+
+                        <span v-else class="text-sm text-[#84958a]">
+                            Sin zona
+                        </span>
+                    </td>
+
+                    <!-- Coordenadas -->
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <p class="font-mono text-xs text-[#244334]">
+                            {{ formatCoordinate(marker.latitude) }}
+                        </p>
+
+                        <p class="mt-1 font-mono text-xs text-[#718477]">
+                            {{ formatCoordinate(marker.longitude) }}
+                        </p>
+                    </td>
+
+                    <!-- Estado -->
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <span
+                            v-if="marker.is_active"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-[#c9e4d2] bg-[#dcefe2] px-3 py-1.5 text-xs font-semibold text-[#176b3d]"
+                        >
+                            <span class="h-1.5 w-1.5 rounded-full bg-[#187744]" />
+                            Activo
+                        </span>
+
+                        <span
+                            v-else
+                            class="inline-flex items-center gap-1.5 rounded-full border border-[#f0cccc] bg-[#fceaea] px-3 py-1.5 text-xs font-semibold text-[#b42323]"
+                        >
+                            <span class="h-1.5 w-1.5 rounded-full bg-[#c24141]" />
+                            Inactivo
+                        </span>
+                    </td>
+
+                    <!-- Acciones reutilizables -->
+                    <TableActions
+                        :view-url="admin.mapMarkers.show(marker.id).url"
+                        :edit-url="admin.mapMarkers.edit(marker.id).url"
+                        item-name="marcador"
+                        @delete="deleteMarker(marker)"
+                    />
+                </tr>
+            </template>
+
+            <template #empty>
+                <div
+                    class="mx-auto flex max-w-md flex-col items-center justify-center py-6 text-center"
                 >
-                    <Link
-                        v-if="link.url"
-                        :href="link.url"
-                        class="rounded-lg border px-3 py-2 text-sm transition"
-                        :class="
-                            link.active
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-sidebar-border hover:bg-accent'
-                        "
-                        v-html="link.label"
-                    />
+                    <div
+                        class="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#edf4ef] text-[#187744]"
+                    >
+                        <FilterX v-if="hasFilters()" :size="27" />
+                        <MapPin v-else :size="27" />
+                    </div>
 
-                    <span
-                        v-else
-                        class="rounded-lg border border-sidebar-border px-3 py-2 text-sm opacity-50"
-                        v-html="link.label"
-                    />
-                </template>
-            </div>
-        </div>
+                    <h3 class="text-base font-semibold text-[#244334]">
+                        {{
+                            hasFilters()
+                                ? 'No se encontraron resultados'
+                                : 'Aún no hay marcadores'
+                        }}
+                    </h3>
+
+                    <p class="mt-2 max-w-sm text-sm leading-6 text-[#718477]">
+                        {{
+                            hasFilters()
+                                ? 'No encontramos marcadores que coincidan con tu búsqueda. Intenta con otro término.'
+                                : 'Todavía no hay marcadores registrados para mostrar en el mapa.'
+                        }}
+                    </p>
+                </div>
+            </template>
+        </DataTable>
     </div>
 </template>

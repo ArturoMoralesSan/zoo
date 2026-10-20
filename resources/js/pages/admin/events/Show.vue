@@ -12,6 +12,7 @@ import {
     Users,
     X,
 } from 'lucide-vue-next';
+import PageHeader from '@/components/admin/PageHeader.vue';
 import admin from '@/routes/admin';
 
 interface Zone {
@@ -42,18 +43,12 @@ const props = defineProps<{
     event: EventItem;
 }>();
 
-const formatDate = (
-    value: string | null,
-): string => {
-    if (!value) {
-        return '—';
-    }
+const formatDate = (value: string | null): string => {
+    if (!value) return '—';
 
     const date = new Date(value);
 
-    if (Number.isNaN(date.getTime())) {
-        return '—';
-    }
+    if (Number.isNaN(date.getTime())) return '—';
 
     return new Intl.DateTimeFormat('es-MX', {
         dateStyle: 'medium',
@@ -62,13 +57,8 @@ const formatDate = (
 };
 
 const getStatusLabel = (): string => {
-    if (!props.event.is_active) {
-        return 'Inactivo';
-    }
-
-    if (!props.event.start_at) {
-        return 'Sin fecha';
-    }
+    if (!props.event.is_active) return 'Inactivo';
+    if (!props.event.start_at) return 'Sin fecha';
 
     const now = new Date();
     const start = new Date(props.event.start_at);
@@ -76,24 +66,15 @@ const getStatusLabel = (): string => {
         ? new Date(props.event.end_at)
         : null;
 
-    if (start > now) {
-        return 'Próximo';
-    }
-
-    if (end && end < now) {
-        return 'Finalizado';
-    }
+    if (start > now) return 'Próximo';
+    if (end && end < now) return 'Finalizado';
 
     return 'En curso';
 };
 
 const getStatusClasses = (): string => {
-    if (!props.event.is_active) {
-        return 'border-sidebar-border text-muted-foreground';
-    }
-
-    if (!props.event.start_at) {
-        return 'border-sidebar-border text-muted-foreground';
+    if (!props.event.is_active || !props.event.start_at) {
+        return 'status-neutral';
     }
 
     const now = new Date();
@@ -102,378 +83,249 @@ const getStatusClasses = (): string => {
         ? new Date(props.event.end_at)
         : null;
 
-    if (start > now) {
-        return 'border-blue-500/30 text-blue-500';
+    if (start > now) return 'status-upcoming';
+    if (end && end < now) return 'status-finished';
+
+    return 'status-active';
+};
+
+const getImageUrl = (image: string | null): string | null => {
+    if (!image) return null;
+
+    if (
+        image.startsWith('http://') ||
+        image.startsWith('https://') ||
+        image.startsWith('/')
+    ) {
+        return image;
     }
 
-    if (end && end < now) {
-        return 'border-sidebar-border text-muted-foreground';
-    }
-
-    return 'border-green-500/30 text-green-500';
+    return `/storage/${image}`;
 };
 </script>
 
 <template>
     <Head :title="event.name" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <CalendarDays class="h-5 w-5" />
-                    </div>
+    <div class="admin-page">
+        <PageHeader
+            :title="event.name"
+            description="Información y detalles del evento."
+            section="Eventos"
+            :icon="CalendarDays"
+            action-label="Regresar"
+            :action-icon="ArrowLeft"
+            :action-href="admin.events.index().url"
+        />
 
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h1 class="text-2xl font-semibold">
-                                {{ event.name }}
-                            </h1>
+        <!-- Estado del evento -->
+        <div class="event-badges">
+            <span class="event-status" :class="getStatusClasses()">
+                <span class="event-status-dot" />
+                {{ getStatusLabel() }}
+            </span>
 
-                            <span
-                                class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium"
-                                :class="getStatusClasses()"
-                            >
-                                {{ getStatusLabel() }}
-                            </span>
-
-                            <span
-                                v-if="event.is_featured"
-                                class="inline-flex items-center gap-1 rounded-full border border-yellow-500/30 px-2.5 py-1 text-xs font-medium text-yellow-600"
-                            >
-                                <Star class="h-3.5 w-3.5" />
-                                Destacado
-                            </span>
-                        </div>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Información y detalles del evento.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.events.index().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Regresar
-                </Link>
-            </div>
+            <span v-if="event.is_featured" class="event-featured">
+                <Star class="h-3.5 w-3.5" />
+                Destacado
+            </span>
         </div>
 
         <!-- Información principal -->
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div class="event-layout">
             <!-- Imagen -->
-            <div
-                class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-            >
-                <div
-                    class="mb-5 flex items-center gap-3 border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border"
-                >
-                    <div
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                    >
+            <section class="detail-card event-image-card">
+                <div class="detail-card-header">
+                    <div class="detail-icon">
                         <ImageIcon class="h-5 w-5" />
                     </div>
 
                     <div>
-                        <h2 class="text-base font-semibold">
-                            Imagen
-                        </h2>
-
-                        <p class="text-sm text-muted-foreground">
-                            Imagen principal del evento.
+                        <h2 class="detail-title">Imagen del evento</h2>
+                        <p class="detail-description">
+                            Imagen principal utilizada para identificar el evento.
                         </p>
                     </div>
                 </div>
 
-                <div
-                    v-if="event.image"
-                    class="overflow-hidden rounded-lg border border-sidebar-border bg-muted"
-                >
+                <div v-if="event.image" class="event-image-wrapper">
                     <img
-                        :src="`/storage/${event.image}`"
+                        :src="getImageUrl(event.image) ?? ''"
                         :alt="event.name"
-                        class="aspect-[4/3] h-full w-full object-cover"
+                        class="event-image"
                     />
                 </div>
 
-                <div
-                    v-else
-                    class="flex aspect-[4/3] items-center justify-center rounded-lg border border-dashed border-sidebar-border bg-muted/20"
-                >
-                    <div class="text-center text-muted-foreground">
-                        <ImageIcon class="mx-auto h-10 w-10" />
-
-                        <p class="mt-3 text-sm">
-                            Sin imagen
-                        </p>
-                    </div>
+                <div v-else class="event-image-empty">
+                    <ImageIcon class="h-10 w-10" />
+                    <p>Sin imagen disponible</p>
                 </div>
-            </div>
+            </section>
 
-            <!-- Información -->
-            <div
-                class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border lg:col-span-2"
-            >
-                <div
-                    class="mb-6 flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                >
-                    <div
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                    >
+            <!-- Datos generales -->
+            <section class="detail-card">
+                <div class="detail-card-header">
+                    <div class="detail-icon">
                         <Info class="h-5 w-5" />
                     </div>
 
                     <div>
-                        <h2 class="text-base font-semibold">
-                            Información del evento
-                        </h2>
-
-                        <p class="text-sm text-muted-foreground">
+                        <h2 class="detail-title">Información del evento</h2>
+                        <p class="detail-description">
                             Datos principales y configuración del evento.
                         </p>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <!-- Tipo -->
-                    <div>
-                        <p
-                            class="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                        >
-                            Tipo
-                        </p>
-
-                        <p class="text-sm">
-                            {{ event.type || '—' }}
-                        </p>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Tipo</span>
+                        <p class="detail-value">{{ event.type || '—' }}</p>
                     </div>
 
-                    <!-- Zona -->
-                    <div>
-                        <p
-                            class="mb-1 flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                        >
+                    <div class="detail-item">
+                        <span class="detail-label">
                             <MapPin class="h-3.5 w-3.5" />
                             Zona
+                        </span>
+                        <p class="detail-value">
+                            {{ event.zone?.name ?? 'Sin zona asignada' }}
                         </p>
-
-                        <p class="text-sm">
-                            {{ event.zone?.name ?? 'Sin zona' }}
-                        </p>
-
-                        <p
-                            v-if="event.zone?.type"
-                            class="mt-1 text-xs text-muted-foreground"
-                        >
+                        <p v-if="event.zone?.type" class="detail-muted">
                             {{ event.zone.type }}
                         </p>
                     </div>
 
-                    <!-- Inicio -->
-                    <div>
-                        <p
-                            class="mb-1 flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                        >
+                    <div class="detail-item">
+                        <span class="detail-label">
                             <CalendarDays class="h-3.5 w-3.5" />
-                            Inicio
-                        </p>
-
-                        <p class="text-sm">
+                            Fecha de inicio
+                        </span>
+                        <p class="detail-value">
                             {{ formatDate(event.start_at) }}
                         </p>
                     </div>
 
-                    <!-- Finalización -->
-                    <div>
-                        <p
-                            class="mb-1 flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                        >
+                    <div class="detail-item">
+                        <span class="detail-label">
                             <Clock class="h-3.5 w-3.5" />
-                            Finalización
-                        </p>
-
-                        <p class="text-sm">
+                            Fecha de finalización
+                        </span>
+                        <p class="detail-value">
                             {{ formatDate(event.end_at) }}
                         </p>
                     </div>
 
-                    <!-- Capacidad -->
-                    <div>
-                        <p
-                            class="mb-1 flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                        >
+                    <div class="detail-item">
+                        <span class="detail-label">
                             <Users class="h-3.5 w-3.5" />
                             Capacidad
-                        </p>
-
-                        <p class="text-sm">
+                        </span>
+                        <p class="detail-value">
                             {{
-                                event.capacity
+                                event.capacity !== null
                                     ? event.capacity.toLocaleString('es-MX')
                                     : 'Ilimitada'
                             }}
                         </p>
                     </div>
 
-                    <!-- Estado -->
-                    <div>
-                        <p
-                            class="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                        >
-                            Estado
-                        </p>
-
-                        <span
-                            class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium"
-                            :class="getStatusClasses()"
-                        >
+                    <div class="detail-item">
+                        <span class="detail-label">Estado</span>
+                        <span class="event-status" :class="getStatusClasses()">
+                            <span class="event-status-dot" />
                             {{ getStatusLabel() }}
                         </span>
                     </div>
+
+                    <div class="detail-item">
+                        <span class="detail-label">Visibilidad</span>
+                        <p class="detail-value">
+                            {{ event.is_active ? 'Activo' : 'Inactivo' }}
+                        </p>
+                    </div>
+
+                    <div class="detail-item">
+                        <span class="detail-label">Evento destacado</span>
+                        <p class="detail-value">
+                            {{ event.is_featured ? 'Sí' : 'No' }}
+                        </p>
+                    </div>
                 </div>
-            </div>
+            </section>
         </div>
 
         <!-- Descripción -->
-        <div
-            class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="mb-5 flex items-center gap-3 border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border"
-            >
-                <div
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                >
+        <section class="detail-card">
+            <div class="detail-card-header">
+                <div class="detail-icon">
                     <Info class="h-5 w-5" />
                 </div>
 
                 <div>
-                    <h2 class="text-base font-semibold">
-                        Descripción
-                    </h2>
-
-                    <p class="text-sm text-muted-foreground">
-                        Información proporcionada para describir el evento.
+                    <h2 class="detail-title">Descripción</h2>
+                    <p class="detail-description">
+                        Información descriptiva del evento.
                     </p>
                 </div>
             </div>
 
-            <div
-                v-if="event.description"
-                class="whitespace-pre-line text-sm leading-6 text-muted-foreground"
-            >
+            <p v-if="event.description" class="event-description">
                 {{ event.description }}
-            </div>
+            </p>
 
-            <p
-                v-else
-                class="text-sm text-muted-foreground"
-            >
+            <p v-else class="detail-empty-text">
                 No se ha agregado una descripción para este evento.
             </p>
-        </div>
+        </section>
 
         <!-- Información del registro -->
-        <div
-            class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="mb-5 flex items-center gap-3 border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border"
-            >
-                <div
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                >
+        <section class="detail-card">
+            <div class="detail-card-header">
+                <div class="detail-icon">
                     <CalendarDays class="h-5 w-5" />
                 </div>
 
                 <div>
-                    <h2 class="text-base font-semibold">
-                        Información del registro
-                    </h2>
-
-                    <p class="text-sm text-muted-foreground">
+                    <h2 class="detail-title">Información del registro</h2>
+                    <p class="detail-description">
                         Identificación y fechas de registro del evento.
                     </p>
                 </div>
             </div>
 
-            <div
-                class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
-            >
-                <!-- ID -->
-                <div>
-                    <p
-                        class="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        ID
-                    </p>
-
-                    <p class="text-sm">
-                        #{{ event.id }}
-                    </p>
+            <div class="detail-grid detail-grid-four">
+                <div class="detail-item">
+                    <span class="detail-label">ID</span>
+                    <p class="detail-value">#{{ event.id }}</p>
                 </div>
 
-                <!-- Slug -->
-                <div>
-                    <p
-                        class="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Slug
-                    </p>
-
-                    <p class="break-all text-sm">
-                        {{ event.slug }}
-                    </p>
+                <div class="detail-item">
+                    <span class="detail-label">Slug</span>
+                    <p class="detail-value break-all">{{ event.slug }}</p>
                 </div>
 
-                <!-- Creado -->
-                <div>
-                    <p
-                        class="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Creado
-                    </p>
-
-                    <p class="text-sm">
+                <div class="detail-item">
+                    <span class="detail-label">Creado</span>
+                    <p class="detail-value">
                         {{ formatDate(event.created_at) }}
                     </p>
                 </div>
 
-                <!-- Actualizado -->
-                <div>
-                    <p
-                        class="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                        Actualizado
-                    </p>
-
-                    <p class="text-sm">
+                <div class="detail-item">
+                    <span class="detail-label">Última actualización</span>
+                    <p class="detail-value">
                         {{ formatDate(event.updated_at) }}
                     </p>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- Acciones -->
-        <div
-            class="flex flex-col-reverse gap-2 border-t border-sidebar-border/70 pt-6 sm:flex-row sm:justify-end dark:border-sidebar-border"
-        >
+        <div class="detail-actions">
             <Link
                 :href="admin.events.index().url"
-                class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                class="form-button form-button-secondary"
             >
                 <X class="h-4 w-4" />
                 Cancelar
@@ -481,7 +333,7 @@ const getStatusClasses = (): string => {
 
             <Link
                 :href="admin.events.edit(event.id).url"
-                class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                class="form-button form-button-primary"
             >
                 <Edit class="h-4 w-4" />
                 Editar evento

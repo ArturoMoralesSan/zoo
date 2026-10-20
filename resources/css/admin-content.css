@@ -1,0 +1,216 @@
+
+/* =========================================================
+   ZOOAPP
+   ADMIN CONTENT / SIDEBAR INSET
+   Laravel + Inertia + Vue 3 + Tailwind
+   ========================================================= */
+
+:root {
+    --zoo-content-bg: #F2F7F4;
+    --zoo-content-surface: #ffffff;
+    --zoo-content-border: #e3ebe5;
+
+    --zoo-content-text: #244334;
+    --zoo-content-muted: #84958a;
+
+    --zoo-content-radius: 14px;
+}
+
+/* =========================================================
+   CONTENEDOR PRINCIPAL
+   ========================================================= */
+
+[data-slot="sidebar-inset"] {
+    position: relative;
+    isolation: isolate;
+
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+
+    min-width: 0;
+    min-height: 100vh;
+
+    background: var(--zoo-content-bg);
+    color: var(--zoo-content-text);
+
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+
+    transition:
+        background-color 180ms ease,
+        margin 200ms ease;
+    margin:0;
+    border-radius: 0;
+}
+
+/* =========================================================
+   CONTENIDO INTERNO
+   ========================================================= */
+
+[data-slot="sidebar-inset"] > * {
+    min-width: 0;
+}
+
+/* Evitar que tablas, formularios y tarjetas desborden */
+
+[data-slot="sidebar-inset"] img,
+[data-slot="sidebar-inset"] video,
+[data-slot="sidebar-inset"] canvas {
+    max-width: 100%;
+}
+
+/* =========================================================
+   CONTENEDOR ALTERNATIVO
+   Se aplica al main cuando variant !== sidebar.
+   ========================================================= */
+
+main.mx-auto.flex.h-full.w-full.max-w-7xl {
+    position: relative;
+
+    min-width: 0;
+    min-height: 100vh;
+
+    padding: 24px;
+
+    color: var(--zoo-content-text);
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* =========================================================
+   ENCABEZADOS
+   ========================================================= */
+
+[data-slot="sidebar-inset"] h1,
+main.mx-auto.flex.h-full.w-full.max-w-7xl h1 {
+    color: var(--zoo-content-text);
+    font-weight: 750;
+    letter-spacing: -0.035em;
+    line-height: 1.2;
+}
+
+[data-slot="sidebar-inset"] h2,
+main.mx-auto.flex.h-full.w-full.max-w-7xl h2 {
+    color: var(--zoo-content-text);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+/* =========================================================
+   SUPERFICIES
+   Tarjetas, paneles y bloques con fondo blanco explícito.
+   No altera sus dimensiones ni su estructura.
+   ========================================================= */
+
+[data-slot="sidebar-inset"] .bg-card,
+main.mx-auto.flex.h-full.w-full.max-w-7xl .bg-card {
+    border-color: var(--zoo-content-border);
+}
+
+/* =========================================================
+   FORMULARIOS
+   ========================================================= */
+
+[data-slot="sidebar-inset"] input,
+[data-slot="sidebar-inset"] select,
+[data-slot="sidebar-inset"] textarea,
+main.mx-auto.flex.h-full.w-full.max-w-7xl input,
+main.mx-auto.flex.h-full.w-full.max-w-7xl select,
+main.mx-auto.flex.h-full.w-full.max-w-7xl textarea {
+    max-width: 100%;
+}
+
+[data-slot="sidebar-inset"] input:focus-visible,
+[data-slot="sidebar-inset"] select:focus-visible,
+[data-slot="sidebar-inset"] textarea:focus-visible,
+main.mx-auto.flex.h-full.w-full.max-w-7xl input:focus-visible,
+main.mx-auto.flex.h-full.w-full.max-w-7xl select:focus-visible,
+main.mx-auto.flex.h-full.w-full.max-w-7xl textarea:focus-visible {
+    outline-color: #75ad89;
+}
+
+/* =========================================================
+   TABLAS
+   ========================================================= */
+
+[data-slot="sidebar-inset"] table,
+main.mx-auto.flex.h-full.w-full.max-w-7xl table {
+    width: 100%;
+    max-width: 100%;
+    border-color: var(--zoo-content-border);
+}
+
+/* Permitir desplazamiento horizontal en tablas anchas.
+   El wrapper de la tabla conserva su comportamiento. */
+
+[data-slot="sidebar-inset"] th,
+main.mx-auto.flex.h-full.w-full.max-w-7xl th {
+    color: #627568;
+    font-weight: 650;
+}
+
+/* =========================================================
+   ENLACES
+   ========================================================= */
+
+[data-slot="sidebar-inset"] a,
+main.mx-auto.flex.h-full.w-full.max-w-7xl a {
+    text-underline-offset: 3px;
+}
+
+/* =========================================================
+   RESPONSIVE — TABLET
+   ========================================================= */
+
+@media (max-width: 1023px) {
+    main.mx-auto.flex.h-full.w-full.max-w-7xl {
+        padding: 20px;
+    }
+}
+
+/* =========================================================
+   RESPONSIVE — MÓVIL
+   ========================================================= */
+
+@media (max-width: 767px) {
+    [data-slot="sidebar-inset"] {
+        width: 100%;
+        min-width: 0;
+        min-height: 100dvh;
+    }
+
+    main.mx-auto.flex.h-full.w-full.max-w-7xl {
+        width: 100%;
+        min-width: 0;
+        min-height: 100dvh;
+
+        padding: 14px;
+        gap: 14px;
+    }
+
+    [data-slot="sidebar-inset"] h1,
+    main.mx-auto.flex.h-full.w-full.max-w-7xl h1 {
+        font-size: clamp(1.25rem, 5vw, 1.65rem);
+    }
+
+    /* Mantener tablas utilizables en pantallas pequeñas */
+
+    [data-slot="sidebar-inset"] table,
+    main.mx-auto.flex.h-full.w-full.max-w-7xl table {
+        white-space: nowrap;
+    }
+}
+
+/* =========================================================
+   ACCESIBILIDAD
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    [data-slot="sidebar-inset"] {
+        transition: none !important;
+    }
+}
+
+/* Header blanco */
+[data-slot="sidebar-inset"] header {
+    background-color: #fff !important;
+}

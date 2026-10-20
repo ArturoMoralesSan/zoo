@@ -1,7 +1,16 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, KeyRound, Save } from 'lucide-vue-next';
+import { Head, useForm } from '@inertiajs/vue3';
+import {
+    ArrowLeft,
+    Info,
+    KeyRound,
+    Save,
+} from 'lucide-vue-next';
 
+import AdminButton from '@/components/admin/AdminButton.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
 import admin from '@/routes/admin';
 import permissions from '@/routes/admin/permissions';
 
@@ -10,9 +19,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(
-        permissions.store().url,
-    );
+    form.post(permissions.store().url);
 };
 
 defineOptions({
@@ -39,127 +46,109 @@ defineOptions({
     <Head title="Nuevo permiso" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+        <PageHeader
+            title="Nuevo permiso"
+            description="Crea un nuevo permiso para asignarlo posteriormente a un rol."
+            section="Seguridad y acceso"
+            :icon="KeyRound"
+            :action-icon="ArrowLeft"
+            action-label="Volver a permisos"
+            :action-href="permissions.index().url"
+        />
+
+        <form
+            class="space-y-5"
+            @submit.prevent="submit"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+            <!-- Información del permiso -->
+            <AdminCard
+                title="Información del permiso"
+                description="Define el nombre que identificará este permiso dentro del sistema."
+                :icon="KeyRound"
             >
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <KeyRound class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Nuevo permiso
-                        </h1>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Crea un nuevo permiso para asignarlo posteriormente
-                            a un rol.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="permissions.index().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Regresar
-                </Link>
-            </div>
-        </div>
-
-        <!-- Formulario -->
-        <div
-            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <form
-                class="space-y-6"
-                @submit.prevent="submit"
-            >
-                <!-- Información general -->
-                <div
-                    class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                >
-                    <div class="flex items-center gap-2">
-                        <KeyRound class="h-4 w-4 text-primary" />
-
-                        <h2 class="text-base font-semibold">
-                            Información del permiso
-                        </h2>
-                    </div>
-
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Define el nombre que identificará este permiso dentro
-                        del sistema.
-                    </p>
-                </div>
-
-                <!-- Nombre -->
-                <div class="space-y-2">
-                    <label
-                        for="name"
-                        class="flex items-center gap-2 text-sm font-medium"
-                    >
-                        <KeyRound class="h-4 w-4 text-muted-foreground" />
+                <div class="form-field">
+                    <label for="name" class="form-label">
                         Nombre del permiso
+                        <span class="text-red-500">*</span>
                     </label>
 
                     <input
                         id="name"
                         v-model="form.name"
                         type="text"
+                        class="form-input"
+                        :class="{
+                            'form-input-error': form.errors.name,
+                        }"
                         placeholder="Ejemplo: users.view"
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        autocomplete="off"
+                        required
                     />
-
-                    <p class="text-xs text-muted-foreground">
-                        Recomendado: modulo.accion
-                    </p>
 
                     <p
                         v-if="form.errors.name"
-                        class="text-sm text-red-500"
+                        class="form-error"
                     >
                         {{ form.errors.name }}
                     </p>
-                </div>
 
-                <!-- Acciones -->
+                    <p v-else class="form-help">
+                        Se recomienda utilizar el formato
+                        <code
+                            class="rounded bg-[#E8F0EA] px-1.5 py-0.5 text-xs text-[#187744]"
+                        >
+                            modulo.accion
+                        </code>,
+                        por ejemplo: users.view, users.create o users.delete.
+                    </p>
+                </div>
+            </AdminCard>
+
+            <!-- Recomendación -->
+            <div
+                class="flex items-start gap-3 rounded-xl border border-[#DCE7DF] bg-white p-4"
+            >
                 <div
-                    class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF3ED] text-[#187744]"
                 >
-                    <Link
-                        :href="permissions.index().url"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <ArrowLeft class="h-4 w-4" />
-                        Cancelar
-                    </Link>
-
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Save class="h-4 w-4" />
-
-                        {{
-                            form.processing
-                                ? 'Guardando...'
-                                : 'Guardar permiso'
-                        }}
-                    </button>
+                    <Info class="h-5 w-5" />
                 </div>
-            </form>
-        </div>
+
+                <div>
+                    <p class="text-sm font-semibold text-[#244334]">
+                        Recomendación
+                    </p>
+
+                    <p class="mt-1 text-sm leading-6 text-[#718477]">
+                        Utiliza nombres claros y consistentes para facilitar la
+                        asignación de permisos a los roles y el mantenimiento
+                        de las reglas de acceso.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div
+                class="flex flex-col-reverse gap-3 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:justify-end"
+            >
+                <CancelButton
+                    :href="permissions.index().url"
+                    :icon="ArrowLeft"
+                    label="Cancelar"
+                />
+
+                <AdminButton
+                    type="submit"
+                    variant="primary"
+                    :icon="Save"
+                    :loading="form.processing"
+                    loading-text="Guardando..."
+                >
+                    Guardar permiso
+                </AdminButton>
+            </div>
+        </form>
     </div>
 </template>

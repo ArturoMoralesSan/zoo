@@ -1,16 +1,18 @@
+
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
     Award,
-    Edit,
     Plus,
-    Search,
-    Trash2,
     Users,
+    FilterX,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
 import admin from '@/routes/admin';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import DataTable from '@/components/admin/DataTable.vue';
+import TableActions from '@/components/admin/TableActions.vue';
 
 interface Level {
     id: number;
@@ -37,23 +39,42 @@ interface LevelsPagination {
     total: number;
 }
 
+interface Filters {
+    search?: string;
+}
+
 const props = defineProps<{
     levels: LevelsPagination;
-    filters: {
-        search?: string;
-    };
+    filters: Filters;
 }>();
 
 const search = ref(props.filters?.search ?? '');
+
+const hasFilters = () => Boolean(search.value.trim());
 
 const submitSearch = () => {
     router.get(
         admin.levels.index().url,
         {
-            search: search.value || undefined,
+            search: search.value.trim() || undefined,
         },
         {
             preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const clearFilters = () => {
+    search.value = '';
+
+    router.get(
+        admin.levels.index().url,
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
             replace: true,
         },
     );
@@ -68,6 +89,8 @@ const deleteLevel = (level: Level) => {
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#84958a',
     }).then((result) => {
         if (result.isConfirmed) {
             router.delete(admin.levels.destroy(level.id).url, {
@@ -76,259 +99,193 @@ const deleteLevel = (level: Level) => {
         }
     });
 };
+
+const formatPoints = (points: number) =>
+    new Intl.NumberFormat('es-MX').format(points);
+
+defineOptions({
+layout: {
+    breadcrumbs: [
+        {
+            title: 'Panel',
+            href: admin.dashboard(),
+        },
+        {
+            title: 'Niveles',
+            href: admin.levels.index,
+        },
+    ],
+},
+});
 </script>
 
 <template>
     <Head title="Niveles" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-6 lg:px-8"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+        <PageHeader
+            title="Niveles"
+            description="Administra los niveles y puntos de los visitantes."
+            section="Administración"
+            :icon="Award"
+            :action-icon="Plus"
+            action-label="Nuevo nivel"
+            :action-href="admin.levels.create().url"
+        />
+
+        <DataTable
+            v-model:search="search"
+            :pagination="levels"
+            :is-empty="levels.data.length === 0"
+            :empty-colspan="4"
+            search-placeholder="Buscar nivel..."
+            :has-filters="hasFilters()"
+            @search="submitSearch"
+            @clear-filters="clearFilters"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <Award class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Niveles
-                        </h1>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Administra los niveles y puntos de los visitantes.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.levels.create().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+            <template #active-filters>
+                <span
+                    v-if="search.trim()"
+                    class="rounded-full border border-[#dce7df] bg-[#f2f7f4] px-3 py-1.5 text-xs text-[#244334]"
                 >
-                    <Plus class="h-4 w-4" />
-                    Nuevo nivel
-                </Link>
-            </div>
-        </div>
+                    Búsqueda: "{{ search.trim() }}"
+                </span>
+            </template>
 
-        <!-- Tabla -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <!-- Buscador -->
-            <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
-            >
-                <form
-                    @submit.prevent="submitSearch"
-                    class="flex w-full gap-2 md:max-w-md"
+            <template #table-head>
+                <tr>
+                    <th
+                        class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6"
+                    >
+                        Nivel
+                    </th>
+
+                    <th
+                        class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6"
+                    >
+                        Rango de puntos
+                    </th>
+
+                    <th
+                        class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6"
+                    >
+                        Usuarios
+                    </th>
+
+                    <th
+                        class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-right text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6"
+                    >
+                        Acciones
+                    </th>
+                </tr>
+            </template>
+
+            <template #table-body>
+                <tr
+                    v-for="level in levels.data"
+                    :key="level.id"
+                    class="transition-colors hover:bg-[#f7faf8]"
                 >
-                    <div class="relative flex-1">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                        />
-
-                        <input
-                            v-model="search"
-                            type="search"
-                            placeholder="Buscar nivel..."
-                            class="w-full rounded-lg border border-sidebar-border bg-background py-2 pl-9 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <Search class="h-4 w-4" />
-                        Buscar
-                    </button>
-                </form>
-
-                <div
-                    class="flex items-center gap-2 text-sm text-muted-foreground"
-                >
-                    <Award class="h-4 w-4" />
-                    {{ levels.total }} niveles
-                </div>
-            </div>
-
-            <!-- Tabla -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead
-                        class="border-b border-sidebar-border/70 bg-muted/40 dark:border-sidebar-border"
-                    >
-                        <tr>
-                            <th class="px-6 py-4 font-semibold">
-                                Nivel
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Rango de puntos
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Usuarios
-                            </th>
-
-                            <th class="px-6 py-4 text-right font-semibold">
-                                Acciones
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody
-                        class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
-                    >
-                        <tr
-                            v-for="level in levels.data"
-                            :key="level.id"
-                            class="transition hover:bg-muted/30"
-                        >
-                            <!-- Nivel -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                                    >
-                                        <Award class="h-4 w-4" />
-                                    </div>
-
-                                    <div>
-                                        <div class="font-medium">
-                                            {{ level.name }}
-                                        </div>
-
-                                        <div
-                                            v-if="level.description"
-                                            class="mt-0.5 max-w-md text-xs text-muted-foreground"
-                                        >
-                                            {{ level.description }}
-                                        </div>
-
-                                        <div
-                                            class="mt-0.5 text-xs text-muted-foreground"
-                                        >
-                                            ID: {{ level.id }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <!-- Rango de puntos -->
-                            <td class="px-6 py-4">
-                                <span
-                                    class="inline-flex items-center rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
-                                >
-                                    {{ level.min_points }}
-                                    -
-                                    {{ level.max_points ?? '∞' }}
-                                </span>
-                            </td>
-
-                            <!-- Usuarios -->
-                            <td class="px-6 py-4">
-                                <span
-                                    class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
-                                >
-                                    <Users class="h-3.5 w-3.5" />
-                                    {{ level.users_count }}
-                                </span>
-                            </td>
-
-                            <!-- Acciones -->
-                            <td class="px-6 py-4">
-                                <div class="flex justify-end gap-2">
-                                    <Link
-                                        :href="admin.levels.edit(level.id).url"
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Edit class="h-4 w-4" />
-                                        Editar
-                                    </Link>
-
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                        @click="deleteLevel(level)"
-                                    >
-                                        <Trash2 class="h-4 w-4" />
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Sin resultados -->
-                        <tr v-if="levels.data.length === 0">
-                            <td
-                                colspan="4"
-                                class="px-6 py-12 text-center"
+                    <td class="px-5 py-4 sm:px-6">
+                        <div class="flex min-w-[200px] items-center gap-3">
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#e4f2e8] text-[#187744]"
                             >
-                                <div
-                                    class="flex flex-col items-center justify-center gap-3"
+                                <Award :size="19" />
+                            </div>
+
+                            <div class="min-w-0">
+                                <p
+                                    class="text-sm font-semibold text-[#244334]"
                                 >
-                                    <div
-                                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground"
-                                    >
-                                        <Award class="h-5 w-5" />
-                                    </div>
+                                    {{ level.name }}
+                                </p>
 
-                                    <div>
-                                        <p class="text-sm font-medium">
-                                            No se encontraron niveles.
-                                        </p>
+                                <p
+                                    v-if="level.description"
+                                    class="mt-1 max-w-sm text-xs leading-5 text-[#718477]"
+                                >
+                                    {{ level.description }}
+                                </p>
 
-                                        <p
-                                            class="mt-1 text-xs text-muted-foreground"
-                                        >
-                                            Intenta con otro término de búsqueda.
-                                        </p>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                                <p class="mt-1 text-xs text-[#84958a]">
+                                    ID: {{ level.id }}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
 
-            <!-- Paginación -->
-            <div
-                v-if="levels.last_page > 1"
-                class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
-            >
-                <template
-                    v-for="(link, index) in levels.links"
-                    :key="index"
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <span
+                            class="inline-flex items-center rounded-full border border-[#c9e4d2] bg-[#edf5ef] px-3 py-1.5 text-xs font-semibold text-[#176b3d]"
+                        >
+                            {{ formatPoints(level.min_points) }}
+                            –
+                            {{
+                                level.max_points !== null
+                                    ? formatPoints(level.max_points)
+                                    : '∞'
+                            }}
+                            pts
+                        </span>
+                    </td>
+
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <span
+                            class="inline-flex items-center gap-1.5 rounded-full border border-[#dce7df] bg-[#f7faf8] px-3 py-1.5 text-xs font-semibold text-[#435d4c]"
+                        >
+                            <Users :size="14" />
+
+                            {{ formatPoints(level.users_count) }}
+
+                            {{
+                                level.users_count === 1
+                                    ? 'usuario'
+                                    : 'usuarios'
+                            }}
+                        </span>
+                    </td>
+
+                    <TableActions
+                        :edit-url="admin.levels.edit(level.id).url"
+                        item-name="nivel"
+                        @delete="deleteLevel(level)"
+                    />
+                </tr>
+            </template>
+
+            <template #empty>
+                <div
+                    class="mx-auto flex max-w-md flex-col items-center justify-center py-6 text-center"
                 >
-                    <Link
-                        v-if="link.url"
-                        :href="link.url"
-                        class="rounded-lg border px-3 py-2 text-sm transition"
-                        :class="
-                            link.active
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-sidebar-border hover:bg-accent'
-                        "
-                        v-html="link.label"
-                    />
+                    <div
+                        class="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#edf4ef] text-[#187744]"
+                    >
+                        <FilterX v-if="hasFilters()" :size="27" />
+                        <Award v-else :size="27" />
+                    </div>
 
-                    <span
-                        v-else
-                        class="rounded-lg border border-sidebar-border px-3 py-2 text-sm opacity-50"
-                        v-html="link.label"
-                    />
-                </template>
-            </div>
-        </div>
+                    <h3 class="text-base font-semibold text-[#244334]">
+                        {{
+                            hasFilters()
+                                ? 'No se encontraron resultados'
+                                : 'Aún no hay niveles'
+                        }}
+                    </h3>
+
+                    <p
+                        class="mt-2 max-w-sm text-sm leading-6 text-[#718477]"
+                    >
+                        {{
+                            hasFilters()
+                                ? 'No encontramos niveles que coincidan con tu búsqueda. Intenta con otro término.'
+                                : 'Todavía no hay niveles registrados para mostrar.'
+                        }}
+                    </p>
+                </div>
+            </template>
+        </DataTable>
     </div>
 </template>

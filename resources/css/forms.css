@@ -1,0 +1,275 @@
+@layer components {
+    /* =========================================
+       CONTENEDORES DE FORMULARIOS
+    ========================================= */
+
+    .form-container {
+        @apply space-y-6;
+    }
+
+    .form-section {
+        @apply rounded-2xl border border-[#E1EBE4] bg-white p-5 sm:p-6;
+    }
+
+    .form-section-header {
+        @apply mb-6 flex items-start gap-3;
+    }
+
+    .form-section-icon {
+        @apply flex h-10 w-10 shrink-0 items-center justify-center
+               rounded-xl bg-[#EDF5EF] text-[#187744];
+    }
+
+    .form-section-title {
+        @apply text-base font-semibold text-[#244334];
+    }
+
+    .form-section-description {
+        @apply mt-1 text-sm leading-5 text-[#718477];
+    }
+
+    .form-grid {
+        @apply grid grid-cols-1 gap-5 md:grid-cols-2;
+    }
+
+    .form-field {
+        @apply min-w-0 space-y-2;
+    }
+
+    .form-field-full {
+        @apply md:col-span-2;
+    }
+
+
+    /* =========================================
+       ETIQUETAS Y TEXTOS
+    ========================================= */
+
+    .form-label {
+        @apply block text-sm font-medium text-[#435D4C];
+    }
+
+    .form-required {
+        @apply ml-1 text-[#187744];
+    }
+
+    .form-help {
+        @apply text-xs leading-5 text-[#718477];
+    }
+
+    .form-error {
+        @apply text-xs font-medium text-red-600;
+    }
+
+
+    /* =========================================
+       INPUTS, SELECTS Y TEXTAREAS
+    ========================================= */
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        @apply block w-full rounded-xl border border-[#C8DCCF]
+               bg-[#FCFEFC] px-4 py-3 text-sm text-[#244334]
+               outline-none transition-colors duration-200
+               placeholder:text-[#84958A]
+               hover:border-[#A9CBB5]
+               focus:border-[#187744]
+               focus:ring-2 focus:ring-[#187744]/10
+               disabled:cursor-not-allowed disabled:opacity-60;
+    }
+
+    .form-input,
+    .form-select {
+        @apply min-h-11;
+    }
+
+    .form-select {
+        @apply cursor-pointer pr-10;
+    }
+
+    .form-textarea {
+        @apply min-h-28 resize-y;
+    }
+
+    .form-input-error,
+    .form-select-error,
+    .form-textarea-error {
+        @apply border-red-300
+               hover:border-red-400
+               focus:border-red-500
+               focus:ring-red-500/10;
+    }
+
+    .form-input:disabled,
+    .form-select:disabled,
+    .form-textarea:disabled {
+        @apply bg-[#F2F7F4];
+    }
+
+
+    /* =========================================
+       SELECT CON ICONO
+    ========================================= */
+
+    .form-select-wrapper {
+        @apply relative;
+    }
+
+    .form-select-icon {
+        @apply pointer-events-none absolute right-4 top-1/2
+               -translate-y-1/2 text-[#718477];
+    }
+
+
+    /* =========================================
+       ÁREAS PARA SUBIR ARCHIVOS
+    ========================================= */
+
+    .form-upload {
+        @apply relative flex min-h-36 cursor-pointer flex-col
+               items-center justify-center gap-3 rounded-xl
+               border border-dashed border-[#B8D2C1]
+               bg-[#F7FAF8] p-6 text-center
+               transition-colors duration-200
+               hover:border-[#187744] hover:bg-[#EDF5EF];
+    }
+
+    .form-upload-icon {
+        @apply flex h-12 w-12 items-center justify-center
+               rounded-xl bg-white text-[#187744];
+    }
+
+    .form-upload-title {
+        @apply text-sm font-medium text-[#244334];
+    }
+
+    .form-upload-description {
+        @apply text-xs leading-5 text-[#718477];
+    }
+
+    .form-upload-input {
+        @apply absolute inset-0 h-full w-full cursor-pointer opacity-0;
+    }
+
+    .form-upload-selected {
+        @apply rounded-lg border border-[#C8DCCF]
+               bg-[#F7FAF8] p-3;
+    }
+
+    .form-upload-selected-name {
+        @apply truncate text-sm font-medium text-[#244334];
+    }
+
+    .form-upload-selected-size {
+        @apply mt-1 text-xs text-[#718477];
+    }
+
+
+    /* =========================================
+       IMAGEN / ARCHIVO PREVIEW
+    ========================================= */
+
+    .form-preview {
+        @apply overflow-hidden rounded-xl border border-[#E1EBE4]
+               bg-[#F7FAF8];
+    }
+
+    .form-preview-image {
+        @apply h-48 w-full object-contain;
+    }
+
+    .form-preview-footer {
+        @apply flex items-center justify-between gap-3
+               border-t border-[#E1EBE4] px-4 py-3;
+    }
+
+    .form-preview-name {
+        @apply truncate text-sm font-medium text-[#244334];
+    }
+
+    .form-remove-button {
+        @apply inline-flex h-9 w-9 shrink-0 items-center
+               justify-center rounded-lg text-[#718477]
+               transition-colors hover:bg-red-50
+               hover:text-red-600;
+    }
+
+
+    /* =========================================
+       CHECKBOX PERSONALIZADO
+    ========================================= */
+
+    .form-checkbox-row {
+        @apply flex items-start gap-3 rounded-xl
+               border border-[#DCE7DF] bg-[#FCFEFC] p-4
+               transition-colors hover:border-[#A9CBB5];
+    }
+
+    .form-checkbox {
+        @apply mt-0.5 h-4 w-4 shrink-0 cursor-pointer
+               rounded border-[#B8D2C1] accent-[#187744]
+               focus:ring-2 focus:ring-[#187744]/20;
+    }
+
+    .form-checkbox-title {
+        @apply text-sm font-medium text-[#244334];
+    }
+
+    .form-checkbox-description {
+        @apply mt-1 text-xs leading-5 text-[#718477];
+    }
+
+
+    /* =========================================
+       BOTONES DE ACCIÓN DEL FORMULARIO
+    ========================================= */
+
+    .form-actions {
+        @apply flex flex-col-reverse gap-3 border-t
+               border-[#E1EBE4] pt-5 sm:flex-row
+               sm:items-center sm:justify-end;
+    }
+
+    .form-button {
+        @apply inline-flex min-h-11 items-center justify-center
+               gap-2 rounded-xl px-5 py-3 text-sm font-medium
+               transition-colors duration-200
+               focus:outline-none focus:ring-2
+               focus:ring-[#187744]/20
+               disabled:cursor-not-allowed disabled:opacity-60;
+    }
+
+    .form-button-primary {
+        @apply bg-[#187744] text-white
+               hover:bg-[#126238];
+    }
+
+    .form-button-secondary {
+        @apply border border-[#C8DCCF] bg-white
+               text-[#435D4C]
+               hover:border-[#A9CBB5] hover:bg-[#F7FAF8];
+    }
+
+    .form-button-danger {
+        @apply bg-red-600 text-white hover:bg-red-700;
+    }
+
+
+    /* =========================================
+       MENSAJE INFORMATIVO
+    ========================================= */
+
+    .form-info {
+        @apply flex items-start gap-3 rounded-xl
+               border border-[#DCE7DF] bg-[#F7FAF8] p-4;
+    }
+
+    .form-info-icon {
+        @apply mt-0.5 shrink-0 text-[#187744];
+    }
+
+    .form-info-text {
+        @apply text-sm leading-6 text-[#435D4C];
+    }
+}

@@ -62,7 +62,7 @@ class SpeciesController extends Controller
                 )
             )
             ->orderBy('common_name')
-            ->paginate(10)
+            ->paginate(3)
             ->withQueryString();
 
         return Inertia::render(

@@ -66,7 +66,7 @@ class CardController extends Controller
             )
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->paginate(10)
+            ->paginate(1)
             ->withQueryString();
 
         return Inertia::render(

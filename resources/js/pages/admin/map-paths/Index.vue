@@ -1,22 +1,22 @@
+
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
-    ArrowLeft,
     CircleDot,
     Clock3,
-    Edit,
-    Eye,
+    FilterX,
     GitBranch,
-    Map,
     Plus,
     Route,
     Ruler,
-    Search,
-    Trash2,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
+
 import admin from '@/routes/admin';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import DataTable from '@/components/admin/DataTable.vue';
+import TableActions from '@/components/admin/TableActions.vue';
 
 interface PathNode {
     id: number;
@@ -71,14 +71,31 @@ const props = defineProps<{
 
 const search = ref(props.filters?.search ?? '');
 
+const hasFilters = () => Boolean(search.value.trim());
+
 const submitSearch = () => {
     router.get(
         admin.mapPaths.index().url,
         {
-            search: search.value || undefined,
+            search: search.value.trim() || undefined,
         },
         {
             preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const clearFilters = () => {
+    search.value = '';
+
+    router.get(
+        admin.mapPaths.index().url,
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
             replace: true,
         },
     );
@@ -93,14 +110,13 @@ const deleteMapPath = (mapPath: MapPath) => {
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#84958a',
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(
-                admin.mapPaths.destroy(mapPath.id).url,
-                {
-                    preserveScroll: true,
-                },
-            );
+            router.delete(admin.mapPaths.destroy(mapPath.id).url, {
+                preserveScroll: true,
+            });
         }
     });
 };
@@ -136,370 +152,226 @@ const formatTime = (minutes: number | null) => {
 
     return `${minutes} minutos`;
 };
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Panel',
+                href: admin.dashboard(),
+            },
+            {
+                title: 'Caminos',
+                href: admin.mapPaths.index,
+            },
+        ],
+    },
+});
 </script>
 
 <template>
     <Head title="Caminos" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-6 lg:px-8"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+        <PageHeader
+            title="Caminos"
+            description="Administra la red de caminos peatonales internos del zoológico."
+            section="Administración"
+            :icon="Route"
+            :action-icon="Plus"
+            action-label="Nuevo camino"
+            :action-href="admin.mapPaths.create().url"
+        />
+
+        <DataTable
+            v-model:search="search"
+            :pagination="mapPaths"
+            :is-empty="mapPaths.data.length === 0"
+            :empty-colspan="7"
+            search-placeholder="Buscar camino..."
+            :has-filters="hasFilters()"
+            @search="submitSearch"
+            @clear-filters="clearFilters"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <Route class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Caminos
-                        </h1>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Administra la red de caminos peatonales
-                            internos del zoológico.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.mapPaths.create().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+            <template #active-filters>
+                <span
+                    v-if="search.trim()"
+                    class="rounded-full border border-[#dce7df] bg-[#f2f7f4] px-3 py-1.5 text-xs text-[#244334]"
                 >
-                    <Plus class="h-4 w-4" />
-                    Nuevo camino
-                </Link>
-            </div>
-        </div>
+                    Búsqueda: "{{ search.trim() }}"
+                </span>
+            </template>
 
-        <!-- Tabla -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <!-- Buscador -->
-            <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
-            >
-                <form
-                    class="flex w-full gap-2 md:max-w-md"
-                    @submit.prevent="submitSearch"
-                >
-                    <div class="relative flex-1">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                        />
-
-                        <input
-                            v-model="search"
-                            type="search"
-                            placeholder="Buscar camino..."
-                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+            <template #table-head>
+                <tr>
+                    <th
+                        v-for="heading in [
+                            'Camino',
+                            'Nodos',
+                            'Conexiones',
+                            'Distancia',
+                            'Tiempo',
+                            'Estado',
+                            'Acciones',
+                        ]"
+                        :key="heading"
+                        class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6"
+                        :class="heading === 'Acciones' ? 'text-right' : ''"
                     >
-                        <Search class="h-4 w-4" />
-                        Buscar
-                    </button>
-                </form>
+                        {{ heading }}
+                    </th>
+                </tr>
+            </template>
 
+            <template #table-body>
+                <tr
+                    v-for="mapPath in mapPaths.data"
+                    :key="mapPath.id"
+                    class="transition-colors hover:bg-[#f7faf8]"
+                >
+                    <!-- Camino -->
+                    <td class="px-5 py-4 sm:px-6">
+                        <div class="flex min-w-[200px] items-center gap-3">
+                            <span
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#dce7df] bg-[#e4f2e8] text-[#187744]"
+                            >
+                                <Route :size="18" />
+                            </span>
+
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-[#244334]">
+                                    {{ mapPath.name }}
+                                </p>
+
+                                <p
+                                    v-if="mapPath.description"
+                                    class="mt-1 max-w-xs truncate text-xs text-[#718477]"
+                                >
+                                    {{ mapPath.description }}
+                                </p>
+
+                                <p class="mt-1 text-xs text-[#84958a]">
+                                    ID: {{ mapPath.id }}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Nodos -->
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <div class="flex items-center gap-2">
+                            <CircleDot
+                                :size="16"
+                                class="text-[#718477]"
+                            />
+
+                            <span
+                                class="inline-flex min-w-8 items-center justify-center rounded-full border border-[#dce7df] bg-[#f7faf8] px-2.5 py-1 text-xs font-semibold text-[#435d4c]"
+                            >
+                                {{ getNodeCount(mapPath) }}
+                            </span>
+                        </div>
+                    </td>
+
+                    <!-- Conexiones -->
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <div class="flex items-center gap-2">
+                            <GitBranch
+                                :size="16"
+                                class="text-[#718477]"
+                            />
+
+                            <span
+                                class="inline-flex min-w-8 items-center justify-center rounded-full border border-[#dce7df] bg-[#f7faf8] px-2.5 py-1 text-xs font-semibold text-[#435d4c]"
+                            >
+                                {{ getConnectionCount(mapPath) }}
+                            </span>
+                        </div>
+                    </td>
+
+                    <!-- Distancia -->
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <div class="flex items-center gap-2 text-sm text-[#435d4c]">
+                            <Ruler
+                                :size="16"
+                                class="shrink-0 text-[#718477]"
+                            />
+
+                            {{ formatDistance(mapPath.distance) }}
+                        </div>
+                    </td>
+
+                    <!-- Tiempo -->
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <div class="flex items-center gap-2 text-sm text-[#435d4c]">
+                            <Clock3
+                                :size="16"
+                                class="shrink-0 text-[#718477]"
+                            />
+
+                            {{ formatTime(mapPath.estimated_time) }}
+                        </div>
+                    </td>
+
+                    <!-- Estado -->
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <span
+                            v-if="mapPath.is_active"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-[#c9e4d2] bg-[#dcefe2] px-3 py-1.5 text-xs font-semibold text-[#176b3d]"
+                        >
+                            <span class="h-1.5 w-1.5 rounded-full bg-[#187744]" />
+                            Activo
+                        </span>
+
+                        <span
+                            v-else
+                            class="inline-flex items-center gap-1.5 rounded-full border border-[#f0cccc] bg-[#fceaea] px-3 py-1.5 text-xs font-semibold text-[#b42323]"
+                        >
+                            <span class="h-1.5 w-1.5 rounded-full bg-[#c24141]" />
+                            Inactivo
+                        </span>
+                    </td>
+
+                    <!-- Acciones -->
+                    <TableActions
+                        :view-url="admin.mapPaths.show(mapPath.id).url"
+                        :edit-url="admin.mapPaths.edit(mapPath.id).url"
+                        item-name="camino"
+                        @delete="deleteMapPath(mapPath)"
+                    />
+                </tr>
+            </template>
+
+            <template #empty>
                 <div
-                    class="flex items-center gap-2 text-sm text-muted-foreground"
+                    class="mx-auto flex max-w-md flex-col items-center justify-center py-6 text-center"
                 >
-                    <Route class="h-4 w-4" />
-                    {{ mapPaths.total }}
-                    {{ mapPaths.total === 1 ? 'camino' : 'caminos' }}
+                    <div
+                        class="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#edf4ef] text-[#187744]"
+                    >
+                        <FilterX v-if="hasFilters()" :size="27" />
+                        <Route v-else :size="27" />
+                    </div>
+
+                    <h3 class="text-base font-semibold text-[#244334]">
+                        {{
+                            hasFilters()
+                                ? 'No se encontraron resultados'
+                                : 'Aún no hay caminos'
+                        }}
+                    </h3>
+
+                    <p class="mt-2 max-w-sm text-sm leading-6 text-[#718477]">
+                        {{
+                            hasFilters()
+                                ? 'No encontramos caminos que coincidan con tu búsqueda. Intenta con otro término.'
+                                : 'Todavía no hay caminos registrados para mostrar en el mapa.'
+                        }}
+                    </p>
                 </div>
-            </div>
-
-            <!-- Tabla -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead
-                        class="border-b border-sidebar-border/70 bg-muted/40 dark:border-sidebar-border"
-                    >
-                        <tr>
-                            <th class="px-6 py-4 font-semibold">
-                                Camino
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Nodos
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Conexiones
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Distancia
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Tiempo
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Estado
-                            </th>
-
-                            <th
-                                class="px-6 py-4 text-right font-semibold"
-                            >
-                                Acciones
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody
-                        class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
-                    >
-                        <tr
-                            v-for="mapPath in mapPaths.data"
-                            :key="mapPath.id"
-                            class="transition hover:bg-muted/30"
-                        >
-                            <!-- Camino -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-primary/10 text-primary"
-                                    >
-                                        <Route class="h-4 w-4" />
-                                    </span>
-
-                                    <div class="min-w-0">
-                                        <div class="font-medium">
-                                            {{ mapPath.name }}
-                                        </div>
-
-                                        <div
-                                            v-if="mapPath.description"
-                                            class="max-w-xs truncate text-xs text-muted-foreground"
-                                        >
-                                            {{ mapPath.description }}
-                                        </div>
-
-                                        <div
-                                            class="text-xs text-muted-foreground"
-                                        >
-                                            ID: {{ mapPath.id }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <!-- Nodos -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-2">
-                                    <CircleDot
-                                        class="h-4 w-4 text-muted-foreground"
-                                    />
-
-                                    <span
-                                        class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
-                                    >
-                                        {{ getNodeCount(mapPath) }}
-                                    </span>
-                                </div>
-                            </td>
-
-                            <!-- Conexiones -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-2">
-                                    <GitBranch
-                                        class="h-4 w-4 text-muted-foreground"
-                                    />
-
-                                    <span
-                                        class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
-                                    >
-                                        {{ getConnectionCount(mapPath) }}
-                                    </span>
-                                </div>
-                            </td>
-
-                            <!-- Distancia -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-2">
-                                    <Ruler
-                                        class="h-4 w-4 text-muted-foreground"
-                                    />
-
-                                    <span>
-                                        {{
-                                            formatDistance(
-                                                mapPath.distance,
-                                            )
-                                        }}
-                                    </span>
-                                </div>
-                            </td>
-
-                            <!-- Tiempo -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-2">
-                                    <Clock3
-                                        class="h-4 w-4 text-muted-foreground"
-                                    />
-
-                                    <span>
-                                        {{
-                                            formatTime(
-                                                mapPath.estimated_time,
-                                            )
-                                        }}
-                                    </span>
-                                </div>
-                            </td>
-
-                            <!-- Estado -->
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="mapPath.is_active"
-                                    class="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
-                                >
-                                    <span
-                                        class="h-1.5 w-1.5 rounded-full bg-green-500"
-                                    />
-                                    Activo
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
-                                >
-                                    <span
-                                        class="h-1.5 w-1.5 rounded-full bg-red-500"
-                                    />
-                                    Inactivo
-                                </span>
-                            </td>
-
-                            <!-- Acciones -->
-                            <td class="px-6 py-4">
-                                <div
-                                    class="flex justify-end gap-2"
-                                >
-                                    <Link
-                                        :href="
-                                            admin.mapPaths.show(
-                                                mapPath.id,
-                                            ).url
-                                        "
-                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Eye class="h-4 w-4" />
-                                        Ver
-                                    </Link>
-
-                                    <Link
-                                        :href="
-                                            admin.mapPaths.edit(
-                                                mapPath.id,
-                                            ).url
-                                        "
-                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Edit class="h-4 w-4" />
-                                        Editar
-                                    </Link>
-
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                        @click="
-                                            deleteMapPath(
-                                                mapPath,
-                                            )
-                                        "
-                                    >
-                                        <Trash2 class="h-4 w-4" />
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Sin resultados -->
-                        <tr
-                            v-if="
-                                mapPaths.data.length === 0
-                            "
-                        >
-                            <td
-                                colspan="7"
-                                class="px-6 py-16 text-center"
-                            >
-                                <div
-                                    class="flex flex-col items-center justify-center"
-                                >
-                                    <div
-                                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
-                                    >
-                                        <Route
-                                            class="h-6 w-6"
-                                        />
-                                    </div>
-
-                                    <h3
-                                        class="mt-4 text-sm font-semibold text-foreground"
-                                    >
-                                        No se encontraron caminos
-                                    </h3>
-
-                                    <p
-                                        class="mt-1 text-sm text-muted-foreground"
-                                    >
-                                        No hay caminos que coincidan
-                                        con la búsqueda.
-                                    </p>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Paginación -->
-            <div
-                v-if="mapPaths.last_page > 1"
-                class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
-            >
-                <template
-                    v-for="(link, index) in mapPaths.links"
-                    :key="index"
-                >
-                    <Link
-                        v-if="link.url"
-                        :href="link.url"
-                        class="rounded-lg border px-3 py-2 text-sm transition"
-                        :class="
-                            link.active
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-sidebar-border hover:bg-accent'
-                        "
-                        v-html="link.label"
-                    />
-
-                    <span
-                        v-else
-                        class="rounded-lg border border-sidebar-border px-3 py-2 text-sm opacity-50"
-                        v-html="link.label"
-                    />
-                </template>
-            </div>
-        </div>
+            </template>
+        </DataTable>
     </div>
 </template>

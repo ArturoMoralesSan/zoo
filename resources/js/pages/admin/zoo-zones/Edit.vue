@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     Check,
@@ -12,6 +12,11 @@ import {
 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref } from 'vue';
 
+import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
 import ZooZoneMap from '@/components/admin/ZooZoneMap.vue';
 
 interface PolygonGeometry {
@@ -41,15 +46,6 @@ const props = defineProps<{
     zone: ZooZone;
 }>();
 
-/*
-|--------------------------------------------------------------------------
-| Normalizar bounds
-|--------------------------------------------------------------------------
-|
-| Laravel puede enviar los valores del JSON como string.
-| Los convertimos a number para evitar errores con toFixed().
-|
-*/
 const normalizeBounds = (
     bounds: MapImageBounds | null,
 ): MapImageBounds | null => {
@@ -82,16 +78,9 @@ const form = useForm<{
     map_image_bounds: normalizeBounds(
         props.zone.map_image_bounds,
     ),
-    is_active: Boolean(
-        props.zone.is_active,
-    ),
+    is_active: Boolean(props.zone.is_active),
 });
 
-/*
-|--------------------------------------------------------------------------
-| Imagen existente
-|--------------------------------------------------------------------------
-*/
 const existingImageUrl = computed(() => {
     if (!props.zone.map_image) {
         return null;
@@ -100,26 +89,7 @@ const existingImageUrl = computed(() => {
     return `/storage/${props.zone.map_image}`;
 });
 
-/*
-|--------------------------------------------------------------------------
-| Imagen que debe utilizar el mapa
-|--------------------------------------------------------------------------
-|
-| IMPORTANTE:
-|
-| - Si el usuario seleccionó una imagen nueva,
-|   utilizamos el File.
-|
-| - Si no seleccionó una imagen nueva,
-|   utilizamos la imagen existente de la BD.
-|
-| Esto permite que ZooZoneMap funcione tanto
-| en Crear como en Editar.
-|
-*/
-const mapImageForMap = computed<
-    File | string | null
->(() => {
+const mapImageForMap = computed<File | string | null>(() => {
     if (form.map_image) {
         return form.map_image;
     }
@@ -127,14 +97,9 @@ const mapImageForMap = computed<
     return props.zone.map_image;
 });
 
-/*
-|--------------------------------------------------------------------------
-| Imagen nueva
-|--------------------------------------------------------------------------
-*/
 const imagePreview = ref<string | null>(null);
 
-const handleImageChange = (event: Event) => {
+const handleImageChange = (event: Event): void => {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
 
@@ -142,77 +107,40 @@ const handleImageChange = (event: Event) => {
         return;
     }
 
-    /*
-     * Liberar preview anterior.
-     */
     if (imagePreview.value) {
-        URL.revokeObjectURL(
-            imagePreview.value,
-        );
-
+        URL.revokeObjectURL(imagePreview.value);
         imagePreview.value = null;
     }
 
     form.map_image = file;
-
-    /*
-     * Al seleccionar una nueva imagen,
-     * se eliminan los bounds anteriores.
-     *
-     * ZooZoneMap calculará unos nuevos
-     * automáticamente.
-     */
     form.map_image_bounds = null;
-
     imagePreview.value = URL.createObjectURL(file);
 };
 
-const removeNewImage = () => {
+const removeNewImage = (): void => {
     form.map_image = null;
-
-    form.map_image_bounds =
-        normalizeBounds(
-            props.zone.map_image_bounds,
-        );
+    form.map_image_bounds = normalizeBounds(
+        props.zone.map_image_bounds,
+    );
 
     if (imagePreview.value) {
-        URL.revokeObjectURL(
-            imagePreview.value,
-        );
-
+        URL.revokeObjectURL(imagePreview.value);
         imagePreview.value = null;
     }
 };
 
 const updateMapImageBounds = (
     bounds: MapImageBounds | null,
-) => {
-    form.map_image_bounds =
-        normalizeBounds(bounds);
+): void => {
+    form.map_image_bounds = normalizeBounds(bounds);
 };
 
-/*
-|--------------------------------------------------------------------------
-| Imagen que se está mostrando
-|--------------------------------------------------------------------------
-*/
 const hasImage = computed(() => {
-    return Boolean(
-        mapImageForMap.value,
-    );
+    return Boolean(mapImageForMap.value);
 });
 
-/*
-|--------------------------------------------------------------------------
-| Puede guardar
-|--------------------------------------------------------------------------
-*/
 const canSubmit = computed(() => {
-    if (form.processing) {
-        return false;
-    }
-
-    if (!form.name.trim()) {
+    if (form.processing || !form.name.trim()) {
         return false;
     }
 
@@ -220,39 +148,22 @@ const canSubmit = computed(() => {
         return false;
     }
 
-    /*
-     * Si hay una imagen nueva,
-     * debe tener bounds.
-     */
-    if (
-        form.map_image &&
-        !form.map_image_bounds
-    ) {
+    if (form.map_image && !form.map_image_bounds) {
         return false;
     }
 
     return true;
 });
 
-/*
-|--------------------------------------------------------------------------
-| Actualizar
-|--------------------------------------------------------------------------
-*/
-const submit = () => {
-    form.put(
-        `/admin/zoo-zones/${props.zone.id}`,
-        {
-            forceFormData: true,
-        },
-    );
+const submit = (): void => {
+    form.put(`/admin/zoo-zones/${props.zone.id}`, {
+        forceFormData: true,
+    });
 };
 
 onBeforeUnmount(() => {
     if (imagePreview.value) {
-        URL.revokeObjectURL(
-            imagePreview.value,
-        );
+        URL.revokeObjectURL(imagePreview.value);
     }
 });
 </script>
@@ -261,779 +172,382 @@ onBeforeUnmount(() => {
     <Head title="Editar zona" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-center gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <MapPinned class="h-6 w-6" />
-                    </div>
-
-                    <div>
-                        <h1
-                            class="text-2xl font-semibold tracking-tight"
-                        >
-                            Editar zona
-                        </h1>
-
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Actualiza la información y configuración
-                            del plano de la zona.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    href="/admin/zoo-zones"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Regresar
-                </Link>
-            </div>
-        </div>
+        <PageHeader
+            title="Editar zona"
+            description="Actualiza la información y configuración del plano de la zona."
+            section="Zoológico"
+            :icon="MapPinned"
+            :action-icon="ArrowLeft"
+            action-label="Volver a zonas"
+            action-href="/admin/zoo-zones"
+        />
 
         <form
-            class="flex flex-col gap-6"
+            class="flex flex-col gap-5"
             @submit.prevent="submit"
         >
-            <!-- Información -->
-            <div
-                class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
+            <!-- Información general -->
+            <AdminCard
+                title="Información de la zona"
+                description="Modifica los datos generales de la zona."
+                :icon="Info"
             >
-                <div class="p-6">
-                    <div
-                        class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                    >
-                        <div class="flex items-center gap-3">
-                            <Info class="h-5 w-5 text-primary" />
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <div class="form-field">
+                        <label for="name" class="form-label">
+                            Nombre de la zona
+                            <span class="form-required">*</span>
+                        </label>
 
-                            <div>
-                                <h2 class="text-base font-semibold">
-                                    Información de la zona
-                                </h2>
+                        <input
+                            id="name"
+                            v-model="form.name"
+                            type="text"
+                            placeholder="Ej. Zona principal"
+                            autocomplete="off"
+                            required
+                            class="form-input"
+                            :class="{
+                                'form-input-error': form.errors.name,
+                            }"
+                        />
 
-                                <p
-                                    class="mt-1 text-sm text-muted-foreground"
-                                >
-                                    Modifica los datos generales de la zona.
-                                </p>
-                            </div>
-                        </div>
+                        <p v-if="form.errors.name" class="form-error">
+                            {{ form.errors.name }}
+                        </p>
                     </div>
 
-                    <div class="mt-6 grid gap-6 md:grid-cols-2">
-                        <!-- Nombre -->
-                        <div class="space-y-2">
-                            <label
-                                for="name"
-                                class="text-sm font-medium"
-                            >
-                                Nombre
-                            </label>
+                    <div class="form-field">
+                        <label for="type" class="form-label">
+                            Tipo de zona
+                        </label>
 
-                            <input
-                                id="name"
-                                v-model="form.name"
-                                type="text"
-                                placeholder="Ej. Zona principal"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            />
+                        <input
+                            id="type"
+                            v-model="form.type"
+                            type="text"
+                            placeholder="Ej. Zoológico"
+                            class="form-input"
+                            :class="{
+                                'form-input-error': form.errors.type,
+                            }"
+                        />
 
-                            <p
-                                v-if="form.errors.name"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.name }}
-                            </p>
-                        </div>
-
-                        <!-- Tipo -->
-                        <div class="space-y-2">
-                            <label
-                                for="type"
-                                class="text-sm font-medium"
-                            >
-                                Tipo
-                            </label>
-
-                            <input
-                                id="type"
-                                v-model="form.type"
-                                type="text"
-                                placeholder="Ej. Zoológico"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            />
-
-                            <p
-                                v-if="form.errors.type"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.type }}
-                            </p>
-                        </div>
-
-                        <!-- Descripción -->
-                        <div
-                            class="space-y-2 md:col-span-2"
-                        >
-                            <label
-                                for="description"
-                                class="text-sm font-medium"
-                            >
-                                Descripción
-                            </label>
-
-                            <textarea
-                                id="description"
-                                v-model="form.description"
-                                rows="4"
-                                placeholder="Describe esta zona..."
-                                class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            />
-
-                            <p
-                                v-if="form.errors.description"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.description }}
-                            </p>
-                        </div>
-
-                        <!-- Estado -->
-                        <div class="md:col-span-2">
-                            <div
-                                class="flex items-center justify-between rounded-xl border border-sidebar-border bg-muted/10 p-4"
-                            >
-                                <label
-                                    class="flex cursor-pointer items-center gap-3"
-                                >
-                                    <input
-                                        v-model="form.is_active"
-                                        type="checkbox"
-                                        class="h-4 w-4 rounded border-sidebar-border"
-                                    />
-
-                                    <span>
-                                        <span
-                                            class="block text-sm font-medium"
-                                        >
-                                            Zona activa
-                                        </span>
-
-                                        <span
-                                            class="block text-xs text-muted-foreground"
-                                        >
-                                            La zona estará disponible para
-                                            utilizarse en el mapa.
-                                        </span>
-                                    </span>
-                                </label>
-
-                                <div
-                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                                >
-                                    <Check class="h-4 w-4" />
-                                </div>
-                            </div>
-
-                            <p
-                                v-if="form.errors.is_active"
-                                class="mt-1 text-sm text-red-500"
-                            >
-                                {{ form.errors.is_active }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Área -->
-            <div
-                class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-            >
-                <div class="p-6">
-                    <div
-                        class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                    >
-                        <div class="flex items-center gap-3">
-                            <Map class="h-5 w-5 text-primary" />
-
-                            <div>
-                                <h2 class="text-base font-semibold">
-                                    Área de la zona
-                                </h2>
-
-                                <p
-                                    class="mt-1 text-sm text-muted-foreground"
-                                >
-                                    Modifica el área real de la zona
-                                    directamente sobre el mapa.
-                                </p>
-                            </div>
-                        </div>
+                        <p v-if="form.errors.type" class="form-error">
+                            {{ form.errors.type }}
+                        </p>
                     </div>
 
-                    <div class="mt-6">
-                        <ZooZoneMap
-                            v-model="form.geometry"
-                            :map-image="mapImageForMap"
-                            :map-image-bounds="form.map_image_bounds"
-                            :height="'600px'"
-                            @update:map-image-bounds="updateMapImageBounds"
+                    <div class="form-field md:col-span-2">
+                        <label for="description" class="form-label">
+                            Descripción
+                        </label>
+
+                        <textarea
+                            id="description"
+                            v-model="form.description"
+                            rows="4"
+                            placeholder="Describe esta zona..."
+                            class="form-textarea"
+                            :class="{
+                                'form-textarea-error': form.errors.description,
+                            }"
                         />
 
                         <p
-                            v-if="form.errors.geometry"
-                            class="mt-2 text-sm text-red-500"
+                            v-if="form.errors.description"
+                            class="form-error"
                         >
-                            {{ form.errors.geometry }}
+                            {{ form.errors.description }}
                         </p>
                     </div>
+
+                    <div class="md:col-span-2">
+                        <ActiveSwitch
+                            v-model="form.is_active"
+                            label="Zona activa"
+                            description="La zona estará disponible para utilizarse en el mapa."
+                            :error="form.errors.is_active"
+                        />
+                    </div>
                 </div>
-            </div>
+            </AdminCard>
 
-            <!-- Plano -->
-            <div
-                class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
+            <!-- Área interactiva -->
+            <AdminCard
+                title="Área de la zona"
+                description="Modifica el área real de la zona directamente sobre el mapa."
+                :icon="Map"
             >
-                <div class="p-6">
+                <div class="overflow-hidden rounded-xl border border-[#E1EBE4]">
+                    <ZooZoneMap
+                        v-model="form.geometry"
+                        :map-image="mapImageForMap"
+                        :map-image-bounds="form.map_image_bounds"
+                        height="600px"
+                        @update:map-image-bounds="updateMapImageBounds"
+                    />
+                </div>
+
+                <p v-if="form.errors.geometry" class="form-error">
+                    {{ form.errors.geometry }}
+                </p>
+            </AdminCard>
+
+            <!-- Plano del zoológico -->
+            <AdminCard
+                title="Plano del zoológico"
+                description="Consulta el plano actual o selecciona uno nuevo para reemplazarlo."
+                :icon="ImageIcon"
+            >
+                <div class="space-y-4">
+                    <!-- Plano existente -->
                     <div
-                        class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+                        v-if="existingImageUrl && !form.map_image"
+                        class="space-y-4"
                     >
-                        <div class="flex items-center gap-3">
-                            <ImageIcon class="h-5 w-5 text-primary" />
-
-                            <div>
-                                <h2 class="text-base font-semibold">
-                                    Plano del zoológico
-                                </h2>
-
-                                <p
-                                    class="mt-1 text-sm text-muted-foreground"
+                        <div
+                            class="flex flex-col gap-4 rounded-xl border border-[#DCE7DF] bg-[#F8FBF9] p-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div
+                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF3ED] text-[#187744]"
                                 >
-                                    Consulta el plano actual o selecciona uno
-                                    nuevo para reemplazarlo.
-                                </p>
+                                    <ImageIcon class="h-5 w-5" />
+                                </div>
+
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-[#244334]">
+                                        Plano actual
+                                    </p>
+
+                                    <p class="mt-1 truncate text-xs text-[#718477]">
+                                        {{ props.zone.map_image }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <label
+                                for="map_image"
+                                class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#187744] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#14663A]"
+                            >
+                                <ImageIcon class="h-4 w-4" />
+                                Reemplazar imagen
+
+                                <input
+                                    id="map_image"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    class="hidden"
+                                    @change="handleImageChange"
+                                />
+                            </label>
+                        </div>
+
+                        <div class="form-preview">
+                            <div class="flex items-center gap-3 px-4 py-3">
+                                <ImageIcon class="h-4 w-4 shrink-0 text-[#187744]" />
+
+                                <div>
+                                    <p class="form-preview-name">
+                                        Vista previa del plano actual
+                                    </p>
+
+                                    <p class="form-upload-description">
+                                        Imagen actualmente asociada a la zona.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                class="flex max-h-[400px] items-center justify-center overflow-auto border-t border-[#E1EBE4] p-4"
+                            >
+                                <img
+                                    :src="existingImageUrl"
+                                    alt="Plano actual del zoológico"
+                                    class="max-h-[350px] max-w-full rounded-lg object-contain"
+                                />
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-6">
-                        <!-- Imagen existente y sin imagen nueva -->
-                        <div
-                            v-if="
-                                existingImageUrl &&
-                                !form.map_image
-                            "
-                            class="space-y-4"
-                        >
-                            <div
-                                class="flex flex-col gap-4 rounded-xl border border-sidebar-border bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between"
-                            >
-                                <div class="flex min-w-0 items-center gap-3">
-                                    <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                                    >
-                                        <ImageIcon class="h-4 w-4" />
-                                    </div>
+                    <!-- No existe un plano -->
+                    <label
+                        v-else-if="!existingImageUrl && !form.map_image"
+                        for="map_image"
+                        class="form-upload"
+                    >
+                        <span class="form-upload-icon">
+                            <ImageIcon class="h-6 w-6" />
+                        </span>
 
-                                    <div class="min-w-0">
-                                        <p
-                                            class="text-sm font-medium"
-                                        >
-                                            Plano actual
-                                        </p>
+                        <span class="form-upload-title">
+                            Selecciona el plano del zoológico
+                        </span>
 
-                                        <p
-                                            class="mt-1 truncate text-xs text-muted-foreground"
-                                        >
-                                            {{ props.zone.map_image }}
-                                        </p>
-                                    </div>
+                        <span class="form-upload-description">
+                            JPG, JPEG, PNG o WEBP. Máximo 10 MB.
+                        </span>
+
+                        <span class="form-button form-button-primary">
+                            <ImageIcon class="h-4 w-4" />
+                            Seleccionar imagen
+                        </span>
+
+                        <input
+                            id="map_image"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            class="form-upload-input"
+                            @change="handleImageChange"
+                        />
+                    </label>
+
+                    <!-- Nueva imagen seleccionada -->
+                    <div v-else class="space-y-4">
+                        <div class="form-upload-selected">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div class="form-upload-icon h-10 w-10 shrink-0">
+                                    <ImageIcon class="h-5 w-5" />
                                 </div>
 
-                                <label
-                                    for="map_image"
-                                    class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-                                >
-                                    <ImageIcon class="h-4 w-4" />
-                                    Reemplazar imagen
-
-                                    <input
-                                        id="map_image"
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        class="hidden"
-                                        @change="handleImageChange"
-                                    />
-                                </label>
-                            </div>
-
-                            <div
-                                class="overflow-hidden rounded-xl border border-sidebar-border bg-muted/20"
-                            >
-                                <div
-                                    class="flex items-center gap-3 border-b border-sidebar-border px-4 py-3"
-                                >
-                                    <ImageIcon
-                                        class="h-4 w-4 text-primary"
-                                    />
-
-                                    <div>
-                                        <p
-                                            class="text-sm font-medium"
-                                        >
-                                            Plano actual
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-xs text-muted-foreground"
-                                        >
-                                            Este es el archivo actualmente
-                                            asociado a la zona.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div
-                                    class="flex max-h-[400px] items-center justify-center overflow-auto p-4"
-                                >
-                                    <img
-                                        :src="existingImageUrl"
-                                        alt="Plano actual del zoológico"
-                                        class="max-h-[350px] max-w-full rounded-lg object-contain shadow-sm"
-                                    />
-                                </div>
-                            </div>
-
-                            <!-- Bounds actuales -->
-                            <div
-                                v-if="form.map_image_bounds"
-                                class="grid gap-3 rounded-xl border border-sidebar-border bg-background p-4 sm:grid-cols-2 lg:grid-cols-4"
-                            >
-                                <div>
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Norte
+                                <div class="min-w-0 flex-1">
+                                    <p class="form-upload-selected-name">
+                                        Nueva imagen seleccionada
                                     </p>
 
-                                    <p
-                                        class="mt-1 text-sm font-medium"
-                                    >
+                                    <p class="form-upload-selected-size">
+                                        {{ form.map_image?.name }}
+                                    </p>
+
+                                    <p class="form-upload-selected-size">
                                         {{
-                                            Number(
-                                                form.map_image_bounds.north,
-                                            ).toFixed(7)
+                                            (
+                                                (form.map_image?.size ?? 0) /
+                                                1024 /
+                                                1024
+                                            ).toFixed(2)
                                         }}
+                                        MB
                                     </p>
-                                </div>
-
-                                <div>
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Sur
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-sm font-medium"
-                                    >
-                                        {{
-                                            Number(
-                                                form.map_image_bounds.south,
-                                            ).toFixed(7)
-                                        }}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Este
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-sm font-medium"
-                                    >
-                                        {{
-                                            Number(
-                                                form.map_image_bounds.east,
-                                            ).toFixed(7)
-                                        }}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Oeste
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-sm font-medium"
-                                    >
-                                        {{
-                                            Number(
-                                                form.map_image_bounds.west,
-                                            ).toFixed(7)
-                                        }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div
-                                class="rounded-xl border border-sidebar-border bg-muted/10 p-4"
-                            >
-                                <div class="flex items-start gap-3">
-                                    <div
-                                        class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                                    >
-                                        <Check class="h-4 w-4" />
-                                    </div>
-
-                                    <div>
-                                        <p
-                                            class="text-sm font-medium"
-                                        >
-                                            Plano configurado
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-xs text-muted-foreground"
-                                        >
-                                            El plano actual conserva su
-                                            posición geográfica guardada.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- No existe imagen -->
-                        <div
-                            v-else-if="
-                                !existingImageUrl &&
-                                !form.map_image
-                            "
-                            class="rounded-xl border-2 border-dashed border-sidebar-border p-8 text-center transition hover:border-primary/50"
-                        >
-                            <div class="mx-auto max-w-md">
-                                <div
-                                    class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground"
-                                >
-                                    <ImageIcon class="h-7 w-7" />
-                                </div>
-
-                                <h3 class="text-sm font-semibold">
-                                    Selecciona el plano
-                                </h3>
-
-                                <p
-                                    class="mt-1 text-xs text-muted-foreground"
-                                >
-                                    JPG, JPEG, PNG o WEBP. Máximo 10 MB.
-                                </p>
-
-                                <label
-                                    for="map_image"
-                                    class="mt-5 inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-                                >
-                                    <ImageIcon class="h-4 w-4" />
-                                    Seleccionar imagen
-
-                                    <input
-                                        id="map_image"
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        class="hidden"
-                                        @change="handleImageChange"
-                                    />
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Imagen nueva -->
-                        <div
-                            v-else
-                            class="space-y-4"
-                        >
-                            <div
-                                class="flex flex-col gap-4 rounded-xl border border-sidebar-border bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between"
-                            >
-                                <div class="flex min-w-0 items-center gap-3">
-                                    <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                                    >
-                                        <ImageIcon class="h-4 w-4" />
-                                    </div>
-
-                                    <div class="min-w-0">
-                                        <p
-                                            class="text-sm font-medium"
-                                        >
-                                            Nueva imagen seleccionada
-                                        </p>
-
-                                        <p
-                                            class="mt-1 truncate text-sm"
-                                        >
-                                            {{ form.map_image?.name }}
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-xs text-muted-foreground"
-                                        >
-                                            {{
-                                                (
-                                                    (form.map_image?.size ?? 0) /
-                                                    1024 /
-                                                    1024
-                                                ).toFixed(2)
-                                            }}
-                                            MB
-                                        </p>
-                                    </div>
                                 </div>
 
                                 <button
                                     type="button"
-                                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                                    class="form-remove-button"
+                                    aria-label="Cancelar cambio de imagen"
+                                    title="Cancelar cambio de imagen"
                                     @click="removeNewImage"
                                 >
                                     <Trash2 class="h-4 w-4" />
-                                    Cancelar cambio
                                 </button>
                             </div>
+                        </div>
 
-                            <!-- Preview -->
-                            <div
-                                v-if="imagePreview"
-                                class="overflow-hidden rounded-xl border border-sidebar-border bg-muted/20"
-                            >
-                                <div
-                                    class="flex items-center gap-3 border-b border-sidebar-border px-4 py-3"
-                                >
-                                    <ImageIcon
-                                        class="h-4 w-4 text-primary"
-                                    />
+                        <div v-if="imagePreview" class="form-preview">
+                            <div class="flex items-center gap-3 px-4 py-3">
+                                <ImageIcon class="h-4 w-4 shrink-0 text-[#187744]" />
 
-                                    <div>
-                                        <p
-                                            class="text-sm font-medium"
-                                        >
-                                            Vista previa del nuevo plano
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-xs text-muted-foreground"
-                                        >
-                                            El nuevo plano aparecerá sobre el
-                                            mapa para que puedas acomodarlo.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div
-                                    class="flex max-h-[300px] items-center justify-center overflow-auto p-4"
-                                >
-                                    <img
-                                        :src="imagePreview"
-                                        alt="Vista previa del nuevo plano"
-                                        class="max-h-[250px] max-w-full rounded-lg object-contain shadow-sm"
-                                    />
-                                </div>
-                            </div>
-
-                            <!-- Información -->
-                            <div
-                                class="rounded-xl border border-sidebar-border bg-muted/10 p-4"
-                            >
-                                <div class="flex items-start gap-3">
-                                    <div
-                                        class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                                    >
-                                        <Check class="h-4 w-4" />
-                                    </div>
-
-                                    <div>
-                                        <p
-                                            class="text-sm font-medium"
-                                        >
-                                            Nuevo plano listo para posicionar
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-xs text-muted-foreground"
-                                        >
-                                            Usa el mapa para mover el plano y
-                                            ajustar su tamaño. Las coordenadas
-                                            se generan automáticamente.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Bounds -->
-                            <div
-                                v-if="form.map_image_bounds"
-                                class="grid gap-3 rounded-xl border border-sidebar-border bg-background p-4 sm:grid-cols-2 lg:grid-cols-4"
-                            >
-                                <div>
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Norte
+                                <div class="min-w-0">
+                                    <p class="form-preview-name">
+                                        Vista previa del nuevo plano
                                     </p>
 
-                                    <p
-                                        class="mt-1 text-sm font-medium"
-                                    >
-                                        {{
-                                            Number(
-                                                form.map_image_bounds.north,
-                                            ).toFixed(7)
-                                        }}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Sur
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-sm font-medium"
-                                    >
-                                        {{
-                                            Number(
-                                                form.map_image_bounds.south,
-                                            ).toFixed(7)
-                                        }}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Este
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-sm font-medium"
-                                    >
-                                        {{
-                                            Number(
-                                                form.map_image_bounds.east,
-                                            ).toFixed(7)
-                                        }}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Oeste
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-sm font-medium"
-                                    >
-                                        {{
-                                            Number(
-                                                form.map_image_bounds.west,
-                                            ).toFixed(7)
-                                        }}
+                                    <p class="form-upload-description">
+                                        El plano aparecerá sobre el mapa para que puedas ajustar su posición.
                                     </p>
                                 </div>
                             </div>
 
-                            <p
-                                v-if="form.errors.map_image"
-                                class="text-sm text-red-500"
+                            <div
+                                class="flex max-h-[300px] items-center justify-center overflow-auto border-t border-[#E1EBE4] p-4"
                             >
-                                {{ form.errors.map_image }}
-                            </p>
+                                <img
+                                    :src="imagePreview"
+                                    alt="Vista previa del nuevo plano"
+                                    class="max-h-[250px] max-w-full rounded-lg object-contain"
+                                />
+                            </div>
+                        </div>
 
-                            <p
-                                v-if="form.errors.map_image_bounds"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.map_image_bounds }}
+                        <div class="form-info">
+                            <Check class="form-info-icon h-5 w-5" />
+
+                            <p class="form-info-text">
+                                Usa el mapa para mover el plano y ajustar su tamaño. Las coordenadas geográficas se generan automáticamente.
                             </p>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Botones -->
-            <div
-                class="flex flex-col gap-3 border-t border-sidebar-border/70 px-0 pt-6 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-end"
-            >
-                <Link
-                    href="/admin/zoo-zones"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Cancelar
-                </Link>
-
-                <button
-                    type="submit"
-                    :disabled="!canSubmit"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    <svg
-                        v-if="form.processing"
-                        class="h-4 w-4 animate-spin"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
+                    <!-- Coordenadas del plano -->
+                    <div
+                        v-if="form.map_image_bounds"
+                        class="grid grid-cols-1 gap-4 rounded-xl border border-[#E1EBE4] bg-[#FCFEFC] p-4 sm:grid-cols-2 lg:grid-cols-4"
                     >
-                        <circle
-                            class="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            stroke-width="4"
-                        />
+                        <div>
+                            <p class="form-help">Norte</p>
+                            <p class="mt-1 break-all text-sm font-medium text-[#244334]">
+                                {{ form.map_image_bounds.north.toFixed(7) }}
+                            </p>
+                        </div>
 
-                        <path
-                            class="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                        />
-                    </svg>
+                        <div>
+                            <p class="form-help">Sur</p>
+                            <p class="mt-1 break-all text-sm font-medium text-[#244334]">
+                                {{ form.map_image_bounds.south.toFixed(7) }}
+                            </p>
+                        </div>
 
-                    <Save
-                        v-else
-                        class="h-4 w-4"
-                    />
+                        <div>
+                            <p class="form-help">Este</p>
+                            <p class="mt-1 break-all text-sm font-medium text-[#244334]">
+                                {{ form.map_image_bounds.east.toFixed(7) }}
+                            </p>
+                        </div>
 
-                    {{
-                        form.processing
-                            ? 'Guardando...'
-                            : 'Guardar cambios'
-                    }}
-                </button>
+                        <div>
+                            <p class="form-help">Oeste</p>
+                            <p class="mt-1 break-all text-sm font-medium text-[#244334]">
+                                {{ form.map_image_bounds.west.toFixed(7) }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <p v-if="form.errors.map_image" class="form-error">
+                        {{ form.errors.map_image }}
+                    </p>
+
+                    <p
+                        v-if="form.errors.map_image_bounds"
+                        class="form-error"
+                    >
+                        {{ form.errors.map_image_bounds }}
+                    </p>
+                </div>
+            </AdminCard>
+
+            <!-- Acciones -->
+            <div
+                class="flex flex-col-reverse gap-3 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:justify-end"
+            >
+                <CancelButton
+                    href="/admin/zoo-zones"
+                    :icon="ArrowLeft"
+                    label="Cancelar"
+                />
+
+                <AdminButton
+                    type="submit"
+                    variant="primary"
+                    :icon="Save"
+                    :loading="form.processing"
+                    loading-text="Guardando..."
+                    :disabled="!canSubmit"
+                >
+                    Guardar cambios
+                </AdminButton>
             </div>
         </form>
     </div>

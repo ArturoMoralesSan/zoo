@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
+    Info,
     KeyRound,
     LockKeyhole,
     Save,
 } from 'lucide-vue-next';
 
+import AdminButton from '@/components/admin/AdminButton.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
 import admin from '@/routes/admin';
 
 interface Permission {
@@ -32,151 +37,132 @@ const submit = () => {
     <Head title="Editar permiso" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+        <PageHeader
+            title="Editar permiso"
+            :description="`Modifica la información del permiso ${permission.name}.`"
+            section="Seguridad y acceso"
+            :icon="KeyRound"
+            :action-icon="ArrowLeft"
+            action-label="Volver a permisos"
+            :action-href="admin.permissions.index().url"
+        />
+
+        <form class="space-y-5" @submit.prevent="submit">
+            <!-- Información del permiso -->
+            <AdminCard
+                title="Información del permiso"
+                description="Actualiza los datos del permiso. El guard utilizado por el sistema no puede modificarse."
+                :icon="KeyRound"
             >
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <KeyRound class="h-5 w-5" />
+                <div class="grid grid-cols-1 gap-5">
+                    <!-- Nombre -->
+                    <div class="form-field">
+                        <label for="name" class="form-label">
+                            Nombre del permiso
+                            <span class="text-red-500">*</span>
+                        </label>
+
+                        <input
+                            id="name"
+                            v-model="form.name"
+                            type="text"
+                            placeholder="Ejemplo: users.view"
+                            autocomplete="off"
+                            required
+                            class="form-input"
+                            :class="{
+                                'form-input-error': form.errors.name,
+                            }"
+                        />
+
+                        <p v-if="form.errors.name" class="form-error">
+                            {{ form.errors.name }}
+                        </p>
+
+                        <p v-else class="form-help">
+                            Utiliza el formato módulo.acción, por ejemplo:
+                            <code
+                                class="rounded bg-[#E8F0EA] px-1.5 py-0.5 text-xs text-[#187744]"
+                            >
+                                users.view
+                            </code>
+                        </p>
                     </div>
 
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Editar permiso
-                        </h1>
+                    <!-- Guard -->
+                    <div class="form-field">
+                        <label for="guard_name" class="form-label">
+                            Guard de autenticación
+                        </label>
 
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Modifica la información del permiso.
+                        <div class="relative">
+                            <LockKeyhole
+                                class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-[#84958A]"
+                            />
+
+                            <input
+                                id="guard_name"
+                                :value="permission.guard_name"
+                                type="text"
+                                disabled
+                                class="form-input cursor-not-allowed bg-[#EDF1EE] pl-10 opacity-80"
+                            />
+                        </div>
+
+                        <p class="form-help">
+                            El guard está definido por la configuración de
+                            autenticación y no puede modificarse desde aquí.
                         </p>
                     </div>
                 </div>
+            </AdminCard>
 
-                <Link
-                    :href="admin.permissions.index().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Regresar
-                </Link>
-            </div>
-        </div>
-
-        <!-- Formulario -->
-        <div
-            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <form
-                class="space-y-6"
-                @submit.prevent="submit"
+            <!-- Información adicional -->
+            <div
+                class="flex items-start gap-3 rounded-xl border border-[#DCE7DF] bg-white p-4"
             >
-                <!-- Información general -->
                 <div
-                    class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF3ED] text-[#187744]"
                 >
-                    <div class="flex items-center gap-2">
-                        <KeyRound class="h-4 w-4 text-primary" />
-
-                        <h2 class="text-base font-semibold">
-                            Información del permiso
-                        </h2>
-                    </div>
-
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Actualiza los datos del permiso. El guard utilizado
-                        por el sistema no puede modificarse.
-                    </p>
+                    <Info class="h-5 w-5" />
                 </div>
 
-                <!-- Nombre -->
-                <div class="space-y-2">
-                    <label
-                        for="name"
-                        class="flex items-center gap-2 text-sm font-medium"
-                    >
-                        <KeyRound class="h-4 w-4 text-muted-foreground" />
-                        Nombre del permiso
-                    </label>
-
-                    <input
-                        id="name"
-                        v-model="form.name"
-                        type="text"
-                        placeholder="Ejemplo: users.view"
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-
-                    <p class="text-xs text-muted-foreground">
-                        Utiliza el formato módulo.acción, por ejemplo:
-                        <strong>users.view</strong>
+                <div>
+                    <p class="text-sm font-semibold text-[#244334]">
+                        Información importante
                     </p>
 
-                    <p
-                        v-if="form.errors.name"
-                        class="text-sm text-red-500"
-                    >
-                        {{ form.errors.name }}
+                    <p class="mt-1 text-sm leading-6 text-[#718477]">
+                        El nombre del permiso puede actualizarse, pero los
+                        cambios deben respetar la convención de nombres
+                        utilizada por los roles y las reglas de acceso de tu
+                        aplicación.
                     </p>
                 </div>
+            </div>
 
-                <!-- Guard -->
-                <div class="space-y-2">
-                    <label
-                        for="guard_name"
-                        class="flex items-center gap-2 text-sm font-medium"
-                    >
-                        <LockKeyhole class="h-4 w-4 text-muted-foreground" />
-                        Guard
-                    </label>
+            <!-- Acciones -->
+            <div
+                class="flex flex-col-reverse gap-3 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:justify-end"
+            >
+                <CancelButton
+                    :href="admin.permissions.index().url"
+                    :icon="ArrowLeft"
+                    label="Cancelar"
+                />
 
-                    <input
-                        id="guard_name"
-                        :value="permission.guard_name"
-                        type="text"
-                        disabled
-                        class="w-full rounded-lg border border-sidebar-border bg-muted px-4 py-2.5 text-sm outline-none transition disabled:cursor-not-allowed disabled:opacity-60"
-                    />
-
-                    <p class="text-xs text-muted-foreground">
-                        El guard está definido por la configuración de
-                        autenticación y no puede modificarse desde aquí.
-                    </p>
-                </div>
-
-                <!-- Acciones -->
-                <div
-                    class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
+                <AdminButton
+                    type="submit"
+                    variant="primary"
+                    :icon="Save"
+                    :loading="form.processing"
+                    loading-text="Guardando..."
                 >
-                    <Link
-                        :href="admin.permissions.index().url"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <ArrowLeft class="h-4 w-4" />
-                        Cancelar
-                    </Link>
-
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Save class="h-4 w-4" />
-
-                        {{
-                            form.processing
-                                ? 'Guardando...'
-                                : 'Guardar cambios'
-                        }}
-                    </button>
-                </div>
-            </form>
-        </div>
+                    Guardar cambios
+                </AdminButton>
+            </div>
+        </form>
     </div>
 </template>

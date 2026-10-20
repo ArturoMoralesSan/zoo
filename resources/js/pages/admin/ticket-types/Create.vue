@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
-    Check,
     Info,
     Save,
     Ticket,
+    Wallet,
+    AlignLeft,
 } from 'lucide-vue-next';
+
+import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
 import admin from '@/routes/admin';
 
 const form = useForm({
@@ -17,9 +24,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(
-        admin.ticketTypes.store().url,
-    );
+    form.post(admin.ticketTypes.store().url);
 };
 </script>
 
@@ -27,83 +32,33 @@ const submit = () => {
     <Head title="Nuevo tipo de boleto" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+        <PageHeader
+            title="Nuevo tipo de boleto"
+            description="Registra un nuevo tipo de boleto para el zoológico."
+            section="Taquilla"
+            :icon="Ticket"
+            :action-icon="ArrowLeft"
+            action-label="Volver a tipos de boleto"
+            :action-href="admin.ticketTypes.index().url"
+        />
+
+        <form
+            class="flex flex-col gap-5"
+            @submit.prevent="submit"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+            <AdminCard
+                title="Información del boleto"
+                description="Define los datos principales, el precio y la disponibilidad del tipo de boleto."
+                :icon="Info"
             >
-                <div class="flex items-center gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <Ticket class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Nuevo tipo de boleto
-                        </h1>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Registra un nuevo tipo de boleto para el zoológico.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.ticketTypes.index().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Regresar
-                </Link>
-            </div>
-        </div>
-
-        <!-- Formulario -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <form
-                class="flex flex-col"
-                @submit.prevent="submit"
-            >
-                <div class="space-y-6 p-6">
-                    <!-- Información -->
-                    <div
-                        class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                    >
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                            >
-                                <Info class="h-5 w-5" />
-                            </div>
-
-                            <div>
-                                <h2 class="text-base font-semibold">
-                                    Información del boleto
-                                </h2>
-
-                                <p class="mt-1 text-sm text-muted-foreground">
-                                    Define los datos principales y el precio
-                                    del tipo de boleto.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                     <!-- Nombre -->
-                    <div class="space-y-2">
-                        <label
-                            for="name"
-                            class="text-sm font-medium"
-                        >
+                    <div class="form-field">
+                        <label for="name" class="form-label">
                             Nombre
+                            <span class="text-red-500">*</span>
                         </label>
 
                         <input
@@ -111,29 +66,31 @@ const submit = () => {
                             v-model="form.name"
                             type="text"
                             placeholder="Ej. Adulto"
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            required
+                            :class="[
+                                'form-input',
+                                form.errors.name && 'form-input-error',
+                            ]"
                         />
 
                         <p
                             v-if="form.errors.name"
-                            class="text-sm text-red-500"
+                            class="form-error"
                         >
                             {{ form.errors.name }}
                         </p>
                     </div>
 
                     <!-- Precio -->
-                    <div class="space-y-2">
-                        <label
-                            for="price"
-                            class="text-sm font-medium"
-                        >
+                    <div class="form-field">
+                        <label for="price" class="form-label">
                             Precio
+                            <span class="text-red-500">*</span>
                         </label>
 
                         <div class="relative">
                             <span
-                                class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
+                                class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#718477]"
                             >
                                 $
                             </span>
@@ -145,24 +102,29 @@ const submit = () => {
                                 min="0"
                                 step="0.01"
                                 placeholder="80.00"
-                                class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-8 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                required
+                                :class="[
+                                    'form-input pl-8',
+                                    form.errors.price && 'form-input-error',
+                                ]"
                             />
                         </div>
 
+                        <p class="form-help">
+                            Indica el precio en pesos mexicanos (MXN).
+                        </p>
+
                         <p
                             v-if="form.errors.price"
-                            class="text-sm text-red-500"
+                            class="form-error"
                         >
                             {{ form.errors.price }}
                         </p>
                     </div>
 
                     <!-- Descripción -->
-                    <div class="space-y-2">
-                        <label
-                            for="description"
-                            class="text-sm font-medium"
-                        >
+                    <div class="form-field md:col-span-2">
+                        <label for="description" class="form-label">
                             Descripción
                         </label>
 
@@ -171,96 +133,57 @@ const submit = () => {
                             v-model="form.description"
                             rows="4"
                             placeholder="Describe este tipo de boleto..."
-                            class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            :class="[
+                                'form-textarea',
+                                form.errors.description &&
+                                    'form-textarea-error',
+                            ]"
                         />
 
                         <p
                             v-if="form.errors.description"
-                            class="text-sm text-red-500"
+                            class="form-error"
                         >
                             {{ form.errors.description }}
                         </p>
                     </div>
-
-                    <!-- Estado -->
-                    <div
-                        class="flex items-center justify-between rounded-xl border border-sidebar-border bg-muted/10 p-4"
-                    >
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                            >
-                                <Check class="h-4 w-4" />
-                            </div>
-
-                            <div>
-                                <div class="text-sm font-medium">
-                                    Estado
-                                </div>
-
-                                <div
-                                    class="mt-1 text-xs text-muted-foreground"
-                                >
-                                    Determina si este tipo de boleto puede
-                                    utilizarse.
-                                </div>
-                            </div>
-                        </div>
-
-                        <label
-                            class="relative inline-flex cursor-pointer items-center"
-                        >
-                            <input
-                                v-model="form.is_active"
-                                type="checkbox"
-                                class="peer sr-only"
-                            />
-
-                            <div
-                                class="h-6 w-11 rounded-full bg-muted transition peer-checked:bg-primary peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20"
-                            >
-                                <div
-                                    class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"
-                                />
-                            </div>
-                        </label>
-                    </div>
-
-                    <p
-                        v-if="form.errors.is_active"
-                        class="text-sm text-red-500"
-                    >
-                        {{ form.errors.is_active }}
-                    </p>
                 </div>
+            </AdminCard>
 
-                <!-- Acciones -->
-                <div
-                    class="flex flex-col gap-3 border-t border-sidebar-border/70 px-6 py-5 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-end"
+            <!-- Estado -->
+            <AdminCard
+                title="Disponibilidad"
+                description="Controla si este tipo de boleto puede utilizarse al registrar ventas."
+                :icon="Ticket"
+            >
+                <ActiveSwitch
+                    v-model="form.is_active"
+                    label="Tipo de boleto activo"
+                    description="Cuando está activo, el tipo de boleto puede utilizarse en las ventas de taquilla."
+                    :error="form.errors.is_active"
+                />
+            </AdminCard>
+
+            <!-- Acciones -->
+            <div
+                class="flex flex-col-reverse gap-3 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:items-center sm:justify-end"
+            >
+                <CancelButton
+                    :href="admin.ticketTypes.index().url"
+                    :icon="ArrowLeft"
+                    label="Cancelar"
+                />
+
+                <AdminButton
+                    type="submit"
+                    variant="primary"
+                    :icon="Save"
+                    :loading="form.processing"
+                    loading-text="Guardando..."
                 >
-                    <Link
-                        :href="admin.ticketTypes.index().url"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <ArrowLeft class="h-4 w-4" />
-                        Cancelar
-                    </Link>
-
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Save class="h-4 w-4" />
-
-                        {{
-                            form.processing
-                                ? 'Guardando...'
-                                : 'Guardar tipo de boleto'
-                        }}
-                    </button>
-                </div>
-            </form>
-        </div>
+                    Guardar tipo de boleto
+                </AdminButton>
+            </div>
+        </form>
     </div>
 </template>

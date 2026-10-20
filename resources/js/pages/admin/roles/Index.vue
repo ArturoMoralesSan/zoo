@@ -1,18 +1,20 @@
+
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
-    Edit,
+    FilterX,
     KeyRound,
     Plus,
-    Search,
     ShieldCheck,
-    Trash2,
     Users,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
 
 import admin from '@/routes/admin';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import DataTable from '@/components/admin/DataTable.vue';
+import TableActions from '@/components/admin/TableActions.vue';
 
 interface Role {
     id: number;
@@ -45,21 +47,44 @@ const props = defineProps<{
 
 const search = ref(props.filters?.search ?? '');
 
-const submitSearch = () => {
+const hasFilters = (): boolean => {
+    return Boolean(search.value.trim());
+};
+
+const submitSearch = (): void => {
     router.get(
         admin.roles.index().url,
         {
-            search: search.value || undefined,
+            search: search.value.trim() || undefined,
         },
         {
             preserveState: true,
+            preserveScroll: true,
             replace: true,
         },
     );
 };
 
-const deleteRole = (role: Role) => {
-    Swal.fire({
+const clearFilters = (): void => {
+    search.value = '';
+
+    router.get(
+        admin.roles.index().url,
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const deleteRole = async (role: Role): Promise<void> => {
+    if (role.name === 'admin') {
+        return;
+    }
+
+    const result = await Swal.fire({
         title: '¿Eliminar rol?',
         text: `Se eliminará el rol "${role.name}". Esta acción no se puede deshacer.`,
         icon: 'warning',
@@ -67,261 +92,163 @@ const deleteRole = (role: Role) => {
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
-    }).then((result) => {
-        if (result.isConfirmed) {
-            router.delete(
-                admin.roles.destroy(role.id).url,
-                {
-                    preserveScroll: true,
-                },
-            );
-        }
+        focusCancel: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#6B7280',
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
+    router.delete(admin.roles.destroy(role.id).url, {
+        preserveScroll: true,
     });
 };
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Panel',
+                href: admin.dashboard(),
+            },
+            {
+                title: 'Roles',
+                href: admin.roles.index,
+            },
+        ],
+    },
+});
 </script>
 
 <template>
     <Head title="Roles" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+    <div class="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader
+            title="Roles"
+            description="Administra los roles y sus permisos."
+            section="Administración"
+            :icon="ShieldCheck"
+            :action-icon="Plus"
+            action-label="Nuevo rol"
+            :action-href="admin.roles.create().url"
+        />
+
+        <DataTable
+            :pagination="roles"
+            :is-empty="roles.data.length === 0"
+            :empty-colspan="3"
+            :search="search"
+            search-placeholder="Buscar rol..."
+            :has-filters="hasFilters()"
+            @update:search="search = $event"
+            @search="submitSearch"
+            @clear-filters="clearFilters"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <ShieldCheck class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Roles
-                        </h1>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Administra los roles y sus permisos.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.roles.create().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+            <template #active-filters>
+                <span
+                    v-if="search.trim()"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F9F6] px-3 py-1 text-xs font-medium text-[#42604C]"
                 >
-                    <Plus class="h-4 w-4" />
-                    Nuevo rol
-                </Link>
-            </div>
-        </div>
+                    <FilterX class="h-3.5 w-3.5" />
+                    Búsqueda: {{ search }}
+                </span>
+            </template>
 
-        <!-- Tabla -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <!-- Buscador -->
-            <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
-            >
-                <form
-                    class="flex w-full gap-2 md:max-w-md"
-                    @submit.prevent="submitSearch"
+            <template #table-head>
+                <tr>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Rol
+                    </th>
+
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Usuarios
+                    </th>
+
+                    <th class="px-5 py-4 text-right font-semibold sm:px-6">
+                        Acciones
+                    </th>
+                </tr>
+            </template>
+
+            <template #table-body>
+                <tr
+                    v-for="role in roles.data"
+                    :key="role.id"
+                    class="transition-colors hover:bg-[#F5F9F6]"
                 >
-                    <div class="relative flex-1">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                        />
+                    <td class="px-5 py-4 sm:px-6">
+                        <div class="flex items-center gap-3">
+                            <span
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E4F2E8] text-[#187744]"
+                            >
+                                <ShieldCheck class="h-5 w-5" />
+                            </span>
 
-                        <input
-                            v-model="search"
-                            type="search"
-                            placeholder="Buscar rol..."
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pl-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <Search class="h-4 w-4" />
-                        Buscar
-                    </button>
-                </form>
-
-                <div class="text-sm text-muted-foreground">
-                    {{ roles.total }}
-                    {{ roles.total === 1 ? 'rol' : 'roles' }}
-                </div>
-            </div>
-
-            <!-- Tabla -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead
-                        class="border-b border-sidebar-border/70 bg-muted/40 dark:border-sidebar-border"
-                    >
-                        <tr>
-                            <th class="px-6 py-4 font-semibold">
-                                Rol
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Usuarios
-                            </th>
-
-                            <th class="px-6 py-4 text-right font-semibold">
-                                Acciones
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody
-                        class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
-                    >
-                        <tr
-                            v-for="role in roles.data"
-                            :key="role.id"
-                            class="transition hover:bg-muted/30"
-                        >
-                            <!-- Rol -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-primary/10 text-primary"
-                                    >
-                                        <ShieldCheck class="h-4 w-4" />
-                                    </div>
-
-                                    <div class="min-w-0">
-                                        <div class="font-medium">
-                                            {{ role.name }}
-                                        </div>
-
-                                        <div
-                                            class="flex items-center gap-1 text-xs text-muted-foreground"
-                                        >
-                                            <KeyRound class="h-3 w-3" />
-                                            ID: {{ role.id }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <!-- Usuarios -->
-                            <td class="px-6 py-4">
-                                <span
-                                    class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium"
-                                >
-                                    <Users class="h-3.5 w-3.5 text-muted-foreground" />
-                                    {{ role.users_count }}
-                                </span>
-                            </td>
-
-                            <!-- Acciones -->
-                            <td class="px-6 py-4">
-                                <div class="flex justify-end gap-2">
-                                    <Link
-                                        :href="
-                                            admin.roles.edit(
-                                                role.id,
-                                            ).url
-                                        "
-                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Edit class="h-3.5 w-3.5" />
-                                        Editar
-                                    </Link>
-
-                                    <button
-                                        v-if="role.name !== 'admin'"
-                                        type="button"
-                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                        @click="deleteRole(role)"
-                                    >
-                                        <Trash2 class="h-3.5 w-3.5" />
-                                        Eliminar
-                                    </button>
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-medium text-[#244334]">
+                                        {{ role.name }}
+                                    </span>
 
                                     <span
-                                        v-else
-                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground"
+                                        v-if="role.name === 'admin'"
+                                        class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700"
                                     >
-                                        <ShieldCheck class="h-3.5 w-3.5" />
+                                        <ShieldCheck class="h-3 w-3" />
                                         Protegido
                                     </span>
                                 </div>
-                            </td>
-                        </tr>
 
-                        <!-- Sin resultados -->
-                        <tr v-if="roles.data.length === 0">
-                            <td
-                                colspan="3"
-                                class="px-6 py-12"
-                            >
-                                <div
-                                    class="flex flex-col items-center justify-center text-center"
-                                >
-                                    <div
-                                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
-                                    >
-                                        <ShieldCheck class="h-6 w-6" />
-                                    </div>
-
-                                    <h3
-                                        class="mt-4 text-sm font-semibold text-foreground"
-                                    >
-                                        No se encontraron roles
-                                    </h3>
-
-                                    <p
-                                        class="mt-1 max-w-md text-sm text-muted-foreground"
-                                    >
-                                        No hay roles que coincidan con la
-                                        búsqueda realizada.
-                                    </p>
+                                <div class="mt-0.5 flex items-center gap-1 text-xs text-[#718477]">
+                                    <KeyRound class="h-3 w-3" />
+                                    ID: {{ role.id }}
                                 </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                            </div>
+                        </div>
+                    </td>
 
-            <!-- Paginación -->
-            <div
-                v-if="roles.last_page > 1"
-                class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
-            >
-                <template
-                    v-for="(link, index) in roles.links"
-                    :key="index"
-                >
-                    <Link
-                        v-if="link.url"
-                        :href="link.url"
-                        class="rounded-lg border px-3 py-2 text-sm transition"
-                        :class="
-                            link.active
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-sidebar-border hover:bg-accent'
-                        "
-                        v-html="link.label"
-                    />
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F9F6] px-2.5 py-1 text-xs font-medium text-[#42604C]"
+                        >
+                            <Users class="h-3.5 w-3.5" />
+                            {{ role.users_count.toLocaleString('es-MX') }}
+                            {{ role.users_count === 1 ? 'usuario' : 'usuarios' }}
+                        </span>
+                    </td>
 
-                    <span
-                        v-else
-                        class="rounded-lg border border-sidebar-border px-3 py-2 text-sm opacity-50"
-                        v-html="link.label"
+                    <TableActions
+                        :edit-url="admin.roles.edit(role.id).url"
+                        :show-delete="role.name !== 'admin'"
+                        item-name="rol"
+                        @delete="deleteRole(role)"
                     />
-                </template>
-            </div>
-        </div>
+                </tr>
+            </template>
+
+            <template #empty>
+                <div class="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF2EC] text-[#66816F]"
+                    >
+                        <ShieldCheck class="h-6 w-6" />
+                    </div>
+
+                    <h3 class="mt-4 text-sm font-semibold text-[#244334]">
+                        No se encontraron roles
+                    </h3>
+
+                    <p class="mt-1 max-w-md text-sm text-[#718477]">
+                        {{
+                            hasFilters()
+                                ? 'No hay roles que coincidan con la búsqueda realizada.'
+                                : 'Todavía no hay roles registrados.'
+                        }}
+                    </p>
+                </div>
+            </template>
+        </DataTable>
     </div>
 </template>

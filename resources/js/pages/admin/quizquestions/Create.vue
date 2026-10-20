@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-
+import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
+    Check,
     CheckCircle2,
     HelpCircle,
     Save,
+    ToggleLeft,
 } from 'lucide-vue-next';
 
+import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
 import admin from '@/routes/admin';
 
 interface Species {
@@ -53,18 +59,9 @@ const form = useForm<{
     is_active: true,
     sort_order: 0,
     answers: [
-        {
-            answer: '',
-            is_correct: true,
-        },
-        {
-            answer: '',
-            is_correct: false,
-        },
-        {
-            answer: '',
-            is_correct: false,
-        },
+        { answer: '', is_correct: true },
+        { answer: '', is_correct: false },
+        { answer: '', is_correct: false },
     ],
 });
 
@@ -75,105 +72,84 @@ const selectCorrectAnswer = (index: number) => {
 };
 
 const submit = () => {
-    form.post(
-        admin.cards.quiz.store(props.card.id).url,
-        {
-            preserveScroll: true,
-        },
-    );
+    form.post(admin.cards.quiz.store(props.card.id).url, {
+        preserveScroll: true,
+    });
 };
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Panel',
+                href: admin.dashboard(),
+            },
+            {
+                title: 'Tarjetas',
+                href: admin.cards.index(),
+            },
+            {
+                title: 'Preguntas del quiz',
+                href: admin.cards.index(),
+            },
+            {
+                title: 'Nueva pregunta',
+                href: admin.cards.index(),
+            },
+        ],
+    },
+});
 </script>
 
 <template>
     <Head title="Nueva pregunta" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div>
-                    <Link
-                        :href="admin.cards.quiz.index(card.id).url"
-                        class="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-                    >
-                        <ArrowLeft :size="17" />
-                        Regresar al quiz
-                    </Link>
+        <PageHeader
+            title="Nueva pregunta"
+            description="Crea una pregunta y define sus respuestas para el quiz de la tarjeta."
+            section="Colección"
+            :icon="HelpCircle"
+            :action-icon="ArrowLeft"
+            action-label="Volver al quiz"
+            :action-href="admin.cards.quiz.index(card.id).url"
+        />
 
-                    <div class="mb-2 flex items-center gap-2">
-                        <div
-                            class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                        >
-                            <HelpCircle :size="20" />
-                        </div>
-
-                        <span
-                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                        >
-                            Quiz de card
-                        </span>
-                    </div>
-
-                    <h1 class="text-2xl font-semibold tracking-tight">
-                        Nueva pregunta
-                    </h1>
-
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        {{ card.name }}
-
-                        <span v-if="card.species?.common_name">
-                            · {{ card.species.common_name }}
-                        </span>
-
-                        <span v-if="card.edition">
-                            · {{ card.edition }}
-                        </span>
-                    </p>
-                </div>
+        <!-- Información de la tarjeta -->
+        <div class="form-info">
+            <div class="form-info-icon">
+                <CheckCircle2 class="h-5 w-5" />
             </div>
+
+            <p class="form-info-text">
+                <span class="font-semibold">{{ card.name }}</span>
+
+                <span v-if="card.species?.common_name">
+                    · {{ card.species.common_name }}
+                </span>
+
+                <span v-if="card.edition">
+                    · {{ card.edition }}
+                </span>
+
+                — La pregunta se asociará a esta tarjeta.
+            </p>
         </div>
 
-        <!-- Formulario -->
-        <form
-            @submit.prevent="submit"
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <div class="p-6">
-                <!-- Pregunta -->
-                <section>
-                    <div class="mb-5">
-                        <div class="flex items-center gap-2">
-                            <div
-                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                            >
-                                <HelpCircle :size="17" />
-                            </div>
-
-                            <h2 class="text-base font-semibold">
-                                Pregunta
-                            </h2>
-                        </div>
-
-                        <p
-                            class="mt-1 ml-10 text-sm text-muted-foreground"
-                        >
-                            Escribe la pregunta que verá el usuario.
-                        </p>
-                    </div>
-
-                    <div>
-                        <label
-                            for="question"
-                            class="mb-2 block text-sm font-medium"
-                        >
-                            Pregunta
-                            <span class="text-red-500">*</span>
+        <form class="form-container" @submit.prevent="submit">
+            <!-- Pregunta -->
+            <AdminCard
+                title="Pregunta"
+                description="Escribe la pregunta que verá el usuario al responder el quiz."
+                :icon="HelpCircle"
+            >
+                <div class="form-grid">
+                    <div class="form-field form-field-full">
+                        <label for="question" class="form-label">
+                            Texto de la pregunta
+                            <span class="form-required">*</span>
                         </label>
 
                         <textarea
@@ -181,252 +157,211 @@ const submit = () => {
                             v-model="form.question"
                             rows="4"
                             maxlength="5000"
+                            required
                             placeholder="Ej. ¿Cuál es el hábitat natural de esta especie?"
-                            class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            class="form-textarea"
                             :class="{
-                                'border-red-500 focus:border-red-500 focus:ring-red-500/20':
-                                    form.errors.question,
+                                'form-textarea-error': form.errors.question,
                             }"
                         />
 
-                        <p
-                            v-if="form.errors.question"
-                            class="mt-1.5 text-xs text-red-500"
-                        >
+                        <p v-if="form.errors.question" class="form-error">
                             {{ form.errors.question }}
                         </p>
-                    </div>
-                </section>
 
-                <!-- Respuestas -->
-                <section
-                    class="mt-8 border-t border-sidebar-border/70 pt-8 dark:border-sidebar-border"
-                >
-                    <div class="mb-5">
-                        <div class="flex items-center gap-2">
-                            <div
-                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                            >
-                                <CheckCircle2 :size="17" />
-                            </div>
-
-                            <h2 class="text-base font-semibold">
-                                Respuestas
-                            </h2>
-                        </div>
-
-                        <p
-                            class="mt-1 ml-10 text-sm text-muted-foreground"
-                        >
-                            Agrega exactamente tres respuestas y selecciona
-                            una como correcta.
+                        <p v-else class="form-help">
+                            Escribe una pregunta clara y relacionada con la
+                            especie de la tarjeta.
                         </p>
                     </div>
+                </div>
+            </AdminCard>
 
-                    <div class="space-y-3">
-                        <div
-                            v-for="(answer, index) in form.answers"
-                            :key="index"
-                            class="rounded-xl border p-4 transition"
-                            :class="
-                                answer.is_correct
-                                    ? 'border-green-500/30 bg-green-500/5'
-                                    : 'border-sidebar-border bg-background'
-                            "
-                        >
-                            <div
-                                class="flex flex-col gap-4 sm:flex-row sm:items-start"
-                            >
-                                <!-- Número -->
-                                <div
-                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-sm font-semibold"
-                                    :class="
-                                        answer.is_correct
-                                            ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-500'
-                                            : 'border-sidebar-border bg-muted/40 text-muted-foreground'
-                                    "
-                                >
-                                    {{ String.fromCharCode(65 + index) }}
-                                </div>
-
-                                <!-- Campo -->
-                                <div class="min-w-0 flex-1">
-                                    <label
-                                        :for="`answer-${index}`"
-                                        class="mb-2 block text-sm font-medium"
-                                    >
-                                        Respuesta
-                                        {{ String.fromCharCode(65 + index) }}
-
-                                        <span class="text-red-500">*</span>
-                                    </label>
-
-                                    <input
-                                        :id="`answer-${index}`"
-                                        v-model="answer.answer"
-                                        type="text"
-                                        maxlength="1000"
-                                        :placeholder="`Escribe la respuesta ${String.fromCharCode(65 + index)}`"
-                                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                        :class="{
-                                            'border-red-500 focus:border-red-500 focus:ring-red-500/20':
-                                                form.errors[
-                                                    `answers.${index}.answer`
-                                                ],
-                                        }"
-                                    />
-
-                                    <p
-                                        v-if="
-                                            form.errors[
-                                                `answers.${index}.answer`
-                                            ]
-                                        "
-                                        class="mt-1.5 text-xs text-red-500"
-                                    >
-                                        {{
-                                            form.errors[
-                                                `answers.${index}.answer`
-                                            ]
-                                        }}
-                                    </p>
-                                </div>
-
-                                <!-- Correcta -->
-                                <button
-                                    type="button"
-                                    class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition focus:outline-none focus:ring-2"
-                                    :class="
-                                        answer.is_correct
-                                            ? 'border-green-500/30 bg-green-500/10 text-green-600 hover:bg-green-500/15 focus:ring-green-500/20 dark:text-green-500'
-                                            : 'border-sidebar-border text-muted-foreground hover:bg-accent focus:ring-primary/20'
-                                    "
-                                    @click="selectCorrectAnswer(index)"
-                                >
-                                    <CheckCircle2 :size="16" />
-
-                                    {{
-                                        answer.is_correct
-                                            ? 'Correcta'
-                                            : 'Marcar correcta'
-                                    }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <p
-                        v-if="form.errors.answers"
-                        class="mt-3 text-sm text-red-500"
-                    >
-                        {{ form.errors.answers }}
-                    </p>
-                </section>
-
-                <!-- Configuración -->
-                <section
-                    class="mt-8 border-t border-sidebar-border/70 pt-8 dark:border-sidebar-border"
-                >
-                    <div class="mb-5">
-                        <h2 class="text-base font-semibold">
-                            Configuración
-                        </h2>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Define el orden y estado de la pregunta.
-                        </p>
-                    </div>
-
+            <!-- Respuestas -->
+            <AdminCard
+                title="Respuestas"
+                description="Agrega exactamente tres respuestas y selecciona una como correcta."
+                :icon="CheckCircle2"
+            >
+                <div class="flex flex-col gap-4">
                     <div
-                        class="grid gap-5 md:grid-cols-2"
+                        v-for="(answer, index) in form.answers"
+                        :key="index"
+                        class="rounded-xl border p-4 transition-colors"
+                        :class="
+                            answer.is_correct
+                                ? 'border-[#BFCFC6] bg-[#EAF5EE]'
+                                : 'border-[#DCE7DF] bg-white'
+                        "
                     >
-                        <!-- Orden -->
-                        <div>
-                            <label
-                                for="sort_order"
-                                class="mb-2 block text-sm font-medium"
+                        <div
+                            class="flex flex-col gap-4 sm:flex-row sm:items-start"
+                        >
+                            <!-- Identificador -->
+                            <div
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-sm font-semibold"
+                                :class="
+                                    answer.is_correct
+                                        ? 'border-[#BFCFC6] bg-[#D8EDE0] text-[#187744]'
+                                        : 'border-[#DCE7DF] bg-[#F2F7F4] text-[#718477]'
+                                "
                             >
-                                Orden
-                            </label>
+                                {{ String.fromCharCode(65 + index) }}
+                            </div>
 
-                            <input
-                                id="sort_order"
-                                v-model.number="form.sort_order"
-                                type="number"
-                                min="0"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                :class="{
-                                    'border-red-500 focus:border-red-500 focus:ring-red-500/20':
-                                        form.errors.sort_order,
-                                }"
-                            />
+                            <!-- Campo de respuesta -->
+                            <div class="form-field min-w-0 flex-1">
+                                <label
+                                    :for="`answer-${index}`"
+                                    class="form-label"
+                                >
+                                    Respuesta
+                                    {{ String.fromCharCode(65 + index) }}
+                                    <span class="form-required">*</span>
+                                </label>
 
-                            <p
-                                v-if="form.errors.sort_order"
-                                class="mt-1.5 text-xs text-red-500"
-                            >
-                                {{ form.errors.sort_order }}
-                            </p>
-                        </div>
-
-                        <!-- Estado -->
-                        <div>
-                            <span
-                                class="mb-2 block text-sm font-medium"
-                            >
-                                Estado
-                            </span>
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 rounded-lg border border-sidebar-border p-3 transition hover:bg-accent"
-                            >
                                 <input
-                                    v-model="form.is_active"
-                                    type="checkbox"
-                                    class="h-4 w-4 rounded border-sidebar-border text-primary focus:ring-primary/20"
+                                    :id="`answer-${index}`"
+                                    v-model="answer.answer"
+                                    type="text"
+                                    maxlength="1000"
+                                    required
+                                    :placeholder="`Escribe la respuesta ${String.fromCharCode(65 + index)}`"
+                                    class="form-input"
+                                    :class="{
+                                        'form-input-error':
+                                            form.errors[
+                                                `answers.${index}.answer`
+                                            ],
+                                    }"
                                 />
 
-                                <div>
-                                    <div class="text-sm font-medium">
-                                        Pregunta activa
-                                    </div>
+                                <p
+                                    v-if="
+                                        form.errors[
+                                            `answers.${index}.answer`
+                                        ]
+                                    "
+                                    class="form-error"
+                                >
+                                    {{
+                                        form.errors[
+                                            `answers.${index}.answer`
+                                        ]
+                                    }}
+                                </p>
+                            </div>
 
-                                    <div
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Disponible para los usuarios.
-                                    </div>
-                                </div>
-                            </label>
+                            <!-- Seleccionar respuesta correcta -->
+                            <button
+                                type="button"
+                                class="form-button shrink-0"
+                                :class="
+                                    answer.is_correct
+                                        ? 'border border-[#BFCFC6] bg-[#D8EDE0] text-[#187744]'
+                                        : 'form-button-secondary'
+                                "
+                                @click="selectCorrectAnswer(index)"
+                            >
+                                <CheckCircle2 class="h-4 w-4" />
+
+                                {{
+                                    answer.is_correct
+                                        ? 'Correcta'
+                                        : 'Marcar correcta'
+                                }}
+                            </button>
                         </div>
                     </div>
-                </section>
+                </div>
+
+                <p v-if="form.errors.answers" class="form-error mt-3">
+                    {{ form.errors.answers }}
+                </p>
+
+                <p class="form-help mt-3">
+                    Solo una respuesta puede marcarse como correcta.
+                </p>
+            </AdminCard>
+
+            <!-- Configuración -->
+            <AdminCard
+                title="Configuración"
+                description="Define el orden y el estado de la pregunta."
+                :icon="ToggleLeft"
+            >
+                <div class="form-grid">
+                    <!-- Orden -->
+                    <div class="form-field">
+                        <label for="sort_order" class="form-label">
+                            Orden
+                        </label>
+
+                        <input
+                            id="sort_order"
+                            v-model.number="form.sort_order"
+                            type="number"
+                            min="0"
+                            step="1"
+                            class="form-input"
+                            :class="{
+                                'form-input-error': form.errors.sort_order,
+                            }"
+                        />
+
+                        <p v-if="form.errors.sort_order" class="form-error">
+                            {{ form.errors.sort_order }}
+                        </p>
+
+                        <p v-else class="form-help">
+                            Determina la posición de la pregunta dentro del
+                            quiz.
+                        </p>
+                    </div>
+
+                    <!-- Estado -->
+                    <div class="form-field form-field-full">
+                        <ActiveSwitch
+                            v-model="form.is_active"
+                            label="Pregunta activa"
+                            description="Permite que esta pregunta esté disponible para los usuarios."
+                            :error="form.errors.is_active"
+                        />
+                    </div>
+                </div>
+            </AdminCard>
+
+            <!-- Información adicional -->
+            <div class="form-info">
+                <div class="form-info-icon">
+                    <Check class="h-5 w-5" />
+                </div>
+
+                <p class="form-info-text">
+                    Antes de guardar, revisa el texto de la pregunta, completa
+                    las tres respuestas y confirma cuál es la correcta.
+                </p>
             </div>
 
             <!-- Acciones -->
             <div
-                class="flex flex-col-reverse gap-2 border-t border-sidebar-border/70 bg-muted/20 p-4 sm:flex-row sm:justify-end dark:border-sidebar-border"
+                class="flex flex-col-reverse gap-3 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:justify-end"
             >
-                <Link
+                <CancelButton
                     :href="admin.cards.quiz.index(card.id).url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                    Cancelar
-                </Link>
+                    :icon="ArrowLeft"
+                    label="Cancelar"
+                />
 
-                <button
+                <AdminButton
                     type="submit"
-                    :disabled="form.processing"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
+                    variant="primary"
+                    :icon="Save"
+                    :loading="form.processing"
+                    loading-text="Guardando..."
                 >
-                    <Save :size="18" />
-
-                    {{
-                        form.processing
-                            ? 'Guardando...'
-                            : 'Guardar pregunta'
-                    }}
-                </button>
+                    Guardar pregunta
+                </AdminButton>
             </div>
         </form>
     </div>

@@ -1,16 +1,19 @@
+
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
-    ArrowRight,
     ClipboardList,
-    Eye,
-    Search,
+    FilterX,
+    Plus,
     Store,
-    Trash2,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
+
 import admin from '@/routes/admin';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import DataTable from '@/components/admin/DataTable.vue';
+import TableActions from '@/components/admin/TableActions.vue';
 
 interface User {
     id: number;
@@ -85,32 +88,39 @@ const props = defineProps<{
 
 const search = ref(props.filters?.search ?? '');
 
-/*
-|--------------------------------------------------------------------------
-| Búsqueda
-|--------------------------------------------------------------------------
-*/
+const hasFilters = (): boolean => {
+    return Boolean(search.value.trim());
+};
+
 const submitSearch = (): void => {
     router.get(
         admin.ticketOrders.index().url,
         {
-            search: search.value || undefined,
+            search: search.value.trim() || undefined,
         },
         {
             preserveState: true,
+            preserveScroll: true,
             replace: true,
         },
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| Eliminar orden
-|--------------------------------------------------------------------------
-*/
-const deleteOrder = async (
-    order: TicketOrder,
-): Promise<void> => {
+const clearFilters = (): void => {
+    search.value = '';
+
+    router.get(
+        admin.ticketOrders.index().url,
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const deleteOrder = async (order: TicketOrder): Promise<void> => {
     const result = await Swal.fire({
         title: '¿Eliminar orden?',
         text: `Se eliminará la orden "${order.folio}". Esta acción no se puede deshacer.`,
@@ -120,80 +130,52 @@ const deleteOrder = async (
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
         focusCancel: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#6B7280',
     });
 
     if (!result.isConfirmed) {
         return;
     }
 
-    router.delete(
-        admin.ticketOrders.destroy(order.id).url,
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                Swal.fire({
-                    title: 'Eliminada',
-                    text: 'La orden se eliminó correctamente.',
-                    icon: 'success',
-                    timer: 1800,
-                    showConfirmButton: false,
-                });
-            },
-            onError: () => {
-                Swal.fire({
-                    title: 'Error',
-                    text: 'No se pudo eliminar la orden.',
-                    icon: 'error',
-                    confirmButtonText: 'Aceptar',
-                });
-            },
+    router.delete(admin.ticketOrders.destroy(order.id).url, {
+        preserveScroll: true,
+        onSuccess: () => {
+            Swal.fire({
+                title: 'Eliminada',
+                text: 'La orden se eliminó correctamente.',
+                icon: 'success',
+                timer: 1800,
+                showConfirmButton: false,
+            });
         },
-    );
+        onError: () => {
+            Swal.fire({
+                title: 'Error',
+                text: 'No se pudo eliminar la orden.',
+                icon: 'error',
+                confirmButtonText: 'Aceptar',
+            });
+        },
+    });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Formato de moneda
-|--------------------------------------------------------------------------
-*/
-const formatCurrency = (
-    value: string | number,
-): string => {
-    return Number(value).toLocaleString(
-        'es-MX',
-        {
-            style: 'currency',
-            currency: 'MXN',
-        },
-    );
+const formatCurrency = (value: string | number): string => {
+    return Number(value).toLocaleString('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+    });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Formato de fecha
-|--------------------------------------------------------------------------
-*/
-const formatDate = (
-    value: string,
-): string => {
-    return new Date(value).toLocaleDateString(
-        'es-MX',
-        {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-        },
-    );
+const formatDate = (value: string): string => {
+    return new Date(value).toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Estado
-|--------------------------------------------------------------------------
-*/
-const statusLabel = (
-    status: string,
-): string => {
+const statusLabel = (status: string): string => {
     const labels: Record<string, string> = {
         pending: 'Pendiente',
         paid: 'Pagada',
@@ -204,11 +186,6 @@ const statusLabel = (
     return labels[status] ?? status;
 };
 
-/*
-|--------------------------------------------------------------------------
-| Breadcrumbs
-|--------------------------------------------------------------------------
-*/
 defineOptions({
     layout: {
         breadcrumbs: [
@@ -228,344 +205,212 @@ defineOptions({
 <template>
     <Head title="Órdenes de boletos" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+    <div class="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader
+            title="Órdenes de boletos"
+            description="Administra las ventas de boletos realizadas desde taquilla y la aplicación."
+            section="Taquilla"
+            :icon="ClipboardList"
+            :action-icon="Plus"
+            action-label="Nueva orden"
+            :action-href="admin.ticketOrders.create().url"
+        />
+
+        <DataTable
+            :pagination="orders"
+            :is-empty="orders.data.length === 0"
+            :empty-colspan="8"
+            :search="search"
+            search-placeholder="Buscar folio, comprador, vendedor u origen..."
+            :has-filters="hasFilters()"
+            @update:search="search = $event"
+            @search="submitSearch"
+            @clear-filters="clearFilters"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-center gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <ClipboardList class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Órdenes de boletos
-                        </h1>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Administra las ventas de boletos realizadas desde
-                            taquilla y la aplicación.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.ticketOrders.create().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+            <template #active-filters>
+                <span
+                    v-if="search.trim()"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F9F6] px-3 py-1 text-xs font-medium text-[#42604C]"
                 >
-                    <ClipboardList class="h-4 w-4" />
-                    Nueva orden
-                </Link>
-            </div>
-        </div>
+                    <FilterX class="h-3.5 w-3.5" />
+                    Búsqueda: {{ search }}
+                </span>
+            </template>
 
-        <!-- Tabla -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <!-- Buscador -->
-            <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
-            >
-                <form
-                    @submit.prevent="submitSearch"
-                    class="flex w-full gap-2 md:max-w-xl"
+            <template #table-head>
+                <tr>
+                    <th class="min-w-[170px] px-5 py-4 font-semibold sm:px-6">
+                        Folio
+                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Origen
+                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Comprador
+                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Vendedor
+                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Total
+                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Estado
+                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Fecha
+                    </th>
+                    <th class="px-5 py-4 text-right font-semibold sm:px-6">
+                        Acciones
+                    </th>
+                </tr>
+            </template>
+
+            <template #table-body>
+                <tr
+                    v-for="order in orders.data"
+                    :key="order.id"
+                    class="transition-colors hover:bg-[#F5F9F6]"
                 >
-                    <div class="relative flex-1">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                        />
+                    <td class="px-5 py-4 sm:px-6">
+                        <div class="flex items-center gap-3">
+                            <span
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E4F2E8] text-[#187744]"
+                            >
+                                <ClipboardList class="h-5 w-5" />
+                            </span>
 
-                        <input
-                            v-model="search"
-                            type="search"
-                            placeholder="Buscar folio, comprador, vendedor, origen..."
-                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
-                    </div>
+                            <div class="min-w-0">
+                                <p class="font-semibold text-[#244334]">
+                                    {{ order.folio }}
+                                </p>
+                                <p class="mt-0.5 text-xs text-[#718477]">
+                                    ID: {{ order.id }}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
 
-                    <button
-                        type="submit"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <Search class="h-4 w-4" />
-                        Buscar
-                    </button>
-                </form>
-
-                <div class="text-sm text-muted-foreground">
-                    {{ orders.total }} órdenes
-                </div>
-            </div>
-
-            <!-- Tabla -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead
-                        class="border-b border-sidebar-border/70 bg-muted/40 dark:border-sidebar-border"
-                    >
-                        <tr>
-                            <th class="px-6 py-4 font-semibold">
-                                Folio
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Origen
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Comprador
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Vendedor
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Total
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Estado
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Fecha
-                            </th>
-
-                            <th class="px-6 py-4 text-right font-semibold">
-                                Acciones
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody
-                        class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
-                    >
-                        <tr
-                            v-for="order in orders.data"
-                            :key="order.id"
-                            class="transition hover:bg-muted/30"
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            v-if="order.source === 'app'"
+                            class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
                         >
-                            <!-- Folio -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                                    >
-                                        <ClipboardList class="h-4 w-4" />
-                                    </div>
+                            Aplicación
+                        </span>
 
-                                    <div>
-                                        <div class="font-medium">
-                                            {{ order.folio }}
-                                        </div>
+                        <span
+                            v-else
+                            class="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-700"
+                        >
+                            <Store class="h-3.5 w-3.5" />
+                            Taquilla
+                        </span>
+                    </td>
 
-                                        <div
-                                            class="text-xs text-muted-foreground"
-                                        >
-                                            ID: {{ order.id }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <!-- Origen -->
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="order.source === 'app'"
-                                    class="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400"
-                                >
-                                    App
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-600 dark:text-purple-400"
-                                >
-                                    <Store class="h-3.5 w-3.5" />
-                                    Taquilla
-                                </span>
-                            </td>
-
-                            <!-- Comprador -->
-                            <td class="px-6 py-4">
-                                <div v-if="order.user">
-                                    <div class="font-medium">
-                                        {{ order.user.name }}
-                                    </div>
-
-                                    <div
-                                        v-if="order.user.email"
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        {{ order.user.email }}
-                                    </div>
-                                </div>
-
-                                <span
-                                    v-else
-                                    class="text-muted-foreground"
-                                >
-                                    Venta sin usuario
-                                </span>
-                            </td>
-
-                            <!-- Vendedor -->
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="order.seller"
-                                    class="font-medium"
-                                >
-                                    {{ order.seller.name }}
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="text-muted-foreground"
-                                >
-                                    —
-                                </span>
-                            </td>
-
-                            <!-- Total -->
-                            <td class="px-6 py-4">
-                                <span class="font-semibold">
-                                    {{ formatCurrency(order.total) }}
-                                </span>
-                            </td>
-
-                            <!-- Estado -->
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="order.status === 'paid'"
-                                    class="inline-flex rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
-                                >
-                                    {{ statusLabel(order.status) }}
-                                </span>
-
-                                <span
-                                    v-else-if="order.status === 'pending'"
-                                    class="inline-flex rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-600 dark:text-yellow-400"
-                                >
-                                    {{ statusLabel(order.status) }}
-                                </span>
-
-                                <span
-                                    v-else-if="order.status === 'refunded'"
-                                    class="inline-flex rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-xs font-medium text-orange-600 dark:text-orange-400"
-                                >
-                                    {{ statusLabel(order.status) }}
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="inline-flex rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
-                                >
-                                    {{ statusLabel(order.status) }}
-                                </span>
-                            </td>
-
-                            <!-- Fecha -->
-                            <td
-                                class="px-6 py-4 text-muted-foreground"
+                    <td class="px-5 py-4 sm:px-6">
+                        <template v-if="order.user">
+                            <p class="font-medium text-[#244334]">
+                                {{ order.user.name }}
+                            </p>
+                            <p
+                                v-if="order.user.email"
+                                class="mt-0.5 text-xs text-[#718477]"
                             >
-                                {{ formatDate(order.created_at) }}
-                            </td>
+                                {{ order.user.email }}
+                            </p>
+                        </template>
 
-                            <!-- Acciones -->
-                            <td class="px-6 py-4">
-                                <div
-                                    class="flex items-center justify-end gap-2"
-                                >
-                                    <Link
-                                        :href="
-                                            admin.ticketOrders.show(
-                                                order.id,
-                                            ).url
-                                        "
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Eye class="h-3.5 w-3.5" />
-                                        Ver
-                                    </Link>
+                        <span v-else class="text-sm text-[#718477]">
+                            Venta sin usuario
+                        </span>
+                    </td>
 
-                                    <button
-                                        v-if="order.status !== 'paid'"
-                                        type="button"
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                        @click="deleteOrder(order)"
-                                    >
-                                        <Trash2 class="h-3.5 w-3.5" />
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            v-if="order.seller"
+                            class="font-medium text-[#244334]"
+                        >
+                            {{ order.seller.name }}
+                        </span>
+                        <span v-else class="text-[#718477]">
+                            —
+                        </span>
+                    </td>
 
-                        <!-- Sin resultados -->
-                        <tr v-if="orders.data.length === 0">
-                            <td
-                                colspan="8"
-                                class="px-6 py-12 text-center text-sm text-muted-foreground"
-                            >
-                                <div
-                                    class="flex flex-col items-center justify-center gap-3"
-                                >
-                                    <div
-                                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-muted/50"
-                                    >
-                                        <ClipboardList
-                                            class="h-5 w-5 text-muted-foreground"
-                                        />
-                                    </div>
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <span class="font-semibold text-[#244334]">
+                            {{ formatCurrency(order.total) }}
+                        </span>
+                    </td>
 
-                                    <span>
-                                        No se encontraron órdenes de boletos.
-                                    </span>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            v-if="order.status === 'paid'"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700"
+                        >
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500" />
+                            {{ statusLabel(order.status) }}
+                        </span>
 
-            <!-- Paginación -->
-            <div
-                v-if="orders.last_page > 1"
-                class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
-            >
-                <template
-                    v-for="(link, index) in orders.links"
-                    :key="index"
-                >
-                    <Link
-                        v-if="link.url"
-                        :href="link.url"
-                        class="rounded-lg border px-3 py-2 text-sm transition"
-                        :class="
-                            link.active
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-sidebar-border hover:bg-accent'
-                        "
-                        v-html="link.label"
+                        <span
+                            v-else-if="order.status === 'pending'"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700"
+                        >
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                            {{ statusLabel(order.status) }}
+                        </span>
+
+                        <span
+                            v-else-if="order.status === 'refunded'"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700"
+                        >
+                            {{ statusLabel(order.status) }}
+                        </span>
+
+                        <span
+                            v-else
+                            class="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"
+                        >
+                            {{ statusLabel(order.status) }}
+                        </span>
+                    </td>
+
+                    <td class="whitespace-nowrap px-5 py-4 text-sm text-[#718477] sm:px-6">
+                        {{ formatDate(order.created_at) }}
+                    </td>
+
+                    <TableActions
+                        :view-url="admin.ticketOrders.show(order.id).url"
+                        :show-edit="false"
+                        :show-delete="order.status !== 'paid'"
+                        item-name="orden"
+                        @delete="deleteOrder(order)"
                     />
+                </tr>
+            </template>
 
-                    <span
-                        v-else
-                        class="rounded-lg border border-sidebar-border px-3 py-2 text-sm opacity-50"
-                        v-html="link.label"
-                    />
-                </template>
-            </div>
-        </div>
+            <template #empty>
+                <div class="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF2EC] text-[#66816F]"
+                    >
+                        <ClipboardList class="h-6 w-6" />
+                    </div>
+
+                    <h3 class="mt-4 text-sm font-semibold text-[#244334]">
+                        No se encontraron órdenes
+                    </h3>
+
+                    <p class="mt-1 max-w-md text-sm text-[#718477]">
+                        {{
+                            hasFilters()
+                                ? 'No hay órdenes que coincidan con la búsqueda realizada.'
+                                : 'Todavía no hay órdenes de boletos registradas.'
+                        }}
+                    </p>
+                </div>
+            </template>
+        </DataTable>
     </div>
 </template>

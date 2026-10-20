@@ -1,23 +1,32 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
+    ChevronDown,
     Info,
+    LockKeyhole,
+    Mail,
     Save,
+    UserRound,
     Users,
 } from 'lucide-vue-next';
+
+import AdminButton from '@/components/admin/AdminButton.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
 import admin from '@/routes/admin';
+
+interface Role {
+    id: number;
+    name: string;
+}
 
 interface User {
     id: number;
     name: string;
     email: string;
     roles: Role[];
-}
-
-interface Role {
-    id: number;
-    name: string;
 }
 
 const props = defineProps<{
@@ -33,12 +42,8 @@ const form = useForm({
     role: props.user.roles[0]?.name ?? '',
 });
 
-const submit = () => {
-    form.put(
-        admin.users.update(
-            props.user.id,
-        ).url,
-    );
+const submit = (): void => {
+    form.put(admin.users.update(props.user.id).url);
 };
 </script>
 
@@ -46,189 +51,171 @@ const submit = () => {
     <Head title="Editar usuario" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+        <PageHeader
+            title="Editar usuario"
+            description="Modifica la información y el rol del usuario."
+            section="Usuarios"
+            :icon="Users"
+            :action-icon="ArrowLeft"
+            action-label="Volver a usuarios"
+            :action-href="admin.users.index().url"
+        />
+
+        <form
+            class="flex flex-col gap-5"
+            @submit.prevent="submit"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+            <AdminCard
+                title="Información del usuario"
+                description="Actualiza los datos de acceso y el rol correspondiente."
+                :icon="Info"
             >
-                <div class="flex items-center gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <Users class="h-6 w-6" />
-                    </div>
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <!-- Nombre completo -->
+                    <div class="form-field">
+                        <label for="name" class="form-label">
+                            Nombre completo
+                            <span class="text-red-500">*</span>
+                        </label>
 
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Editar usuario
-                        </h1>
-
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Modifica la información y el rol del usuario.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="
-                        admin.users.index().url
-                    "
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Regresar
-                </Link>
-            </div>
-        </div>
-
-        <!-- Formulario -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <form
-                class="flex flex-col"
-                @submit.prevent="submit"
-            >
-                <div class="p-6">
-                    <!-- Información -->
-                    <div
-                        class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                    >
-                        <div class="flex items-center gap-3">
-                            <Info
-                                class="h-5 w-5 text-primary"
+                        <div class="relative">
+                            <UserRound
+                                class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#718477]"
                             />
-
-                            <div>
-                                <h2 class="text-base font-semibold">
-                                    Información del usuario
-                                </h2>
-
-                                <p
-                                    class="mt-1 text-sm text-muted-foreground"
-                                >
-                                    Modifica los datos de acceso y el rol correspondiente.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-6 space-y-6">
-                        <!-- Nombre -->
-                        <div class="space-y-2">
-                            <label
-                                for="name"
-                                class="text-sm font-medium"
-                            >
-                                Nombre
-                            </label>
 
                             <input
                                 id="name"
                                 v-model="form.name"
                                 type="text"
+                                autocomplete="name"
                                 placeholder="Nombre completo"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                required
+                                :class="[
+                                    'form-input pl-11',
+                                    form.errors.name && 'form-input-error',
+                                ]"
                             />
-
-                            <p
-                                v-if="form.errors.name"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.name }}
-                            </p>
                         </div>
 
-                        <!-- Correo electrónico -->
-                        <div class="space-y-2">
-                            <label
-                                for="email"
-                                class="text-sm font-medium"
-                            >
-                                Correo electrónico
-                            </label>
+                        <p v-if="form.errors.name" class="form-error">
+                            {{ form.errors.name }}
+                        </p>
+                    </div>
+
+                    <!-- Correo electrónico -->
+                    <div class="form-field">
+                        <label for="email" class="form-label">
+                            Correo electrónico
+                            <span class="text-red-500">*</span>
+                        </label>
+
+                        <div class="relative">
+                            <Mail
+                                class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#718477]"
+                            />
 
                             <input
                                 id="email"
                                 v-model="form.email"
                                 type="email"
+                                autocomplete="email"
                                 placeholder="usuario@ejemplo.com"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                required
+                                :class="[
+                                    'form-input pl-11',
+                                    form.errors.email && 'form-input-error',
+                                ]"
                             />
-
-                            <p
-                                v-if="form.errors.email"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.email }}
-                            </p>
                         </div>
 
-                        <!-- Nueva contraseña -->
-                        <div class="space-y-2">
-                            <label
-                                for="password"
-                                class="text-sm font-medium"
-                            >
-                                Nueva contraseña
-                            </label>
+                        <p v-if="form.errors.email" class="form-error">
+                            {{ form.errors.email }}
+                        </p>
+                    </div>
+
+                    <!-- Nueva contraseña -->
+                    <div class="form-field">
+                        <label for="password" class="form-label">
+                            Nueva contraseña
+                        </label>
+
+                        <div class="relative">
+                            <LockKeyhole
+                                class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#718477]"
+                            />
 
                             <input
                                 id="password"
                                 v-model="form.password"
                                 type="password"
-                                placeholder="Dejar vacío para conservar la actual"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                autocomplete="new-password"
+                                placeholder="Nueva contraseña"
+                                :class="[
+                                    'form-input pl-11',
+                                    form.errors.password && 'form-input-error',
+                                ]"
                             />
-
-                            <p
-                                v-if="form.errors.password"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.password }}
-                            </p>
                         </div>
 
-                        <!-- Confirmar contraseña -->
-                        <div class="space-y-2">
-                            <label
-                                for="password_confirmation"
-                                class="text-sm font-medium"
-                            >
-                                Confirmar nueva contraseña
-                            </label>
+                        <p class="form-help">
+                            Deja este campo vacío para conservar la contraseña actual.
+                        </p>
+
+                        <p v-if="form.errors.password" class="form-error">
+                            {{ form.errors.password }}
+                        </p>
+                    </div>
+
+                    <!-- Confirmar contraseña -->
+                    <div class="form-field">
+                        <label
+                            for="password_confirmation"
+                            class="form-label"
+                        >
+                            Confirmar nueva contraseña
+                        </label>
+
+                        <div class="relative">
+                            <LockKeyhole
+                                class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#718477]"
+                            />
 
                             <input
                                 id="password_confirmation"
                                 v-model="form.password_confirmation"
                                 type="password"
+                                autocomplete="new-password"
                                 placeholder="Repite la nueva contraseña"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                class="form-input pl-11"
                             />
                         </div>
+                    </div>
 
-                        <!-- Rol -->
-                        <div class="space-y-2">
-                            <label
-                                for="role"
-                                class="text-sm font-medium"
-                            >
-                                Rol
-                            </label>
+                    <!-- Rol -->
+                    <div class="form-field md:col-span-2">
+                        <label for="role" class="form-label">
+                            Rol del usuario
+                            <span class="text-red-500">*</span>
+                        </label>
 
+                        <div class="form-select-wrapper">
                             <select
                                 id="role"
                                 v-model="form.role"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                required
+                                :class="[
+                                    'form-select',
+                                    form.errors.role && 'form-select-error',
+                                ]"
                             >
+                                <option value="" disabled>
+                                    Selecciona un rol
+                                </option>
+
                                 <option
-                                    v-for="role in roles"
+                                    v-for="role in props.roles"
                                     :key="role.id"
                                     :value="role.name"
                                 >
@@ -236,45 +223,52 @@ const submit = () => {
                                 </option>
                             </select>
 
-                            <p
-                                v-if="form.errors.role"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.role }}
-                            </p>
+                            <ChevronDown
+                                class="form-select-icon h-4 w-4"
+                            />
                         </div>
+
+                        <p class="form-help">
+                            El rol determina los permisos y las funciones
+                            disponibles para el usuario.
+                        </p>
+
+                        <p v-if="form.errors.role" class="form-error">
+                            {{ form.errors.role }}
+                        </p>
+
+                        <p
+                            v-if="props.roles.length === 0"
+                            class="form-error"
+                        >
+                            No hay roles disponibles. Crea un rol antes de
+                            asignarlo al usuario.
+                        </p>
                     </div>
                 </div>
+            </AdminCard>
 
-                <!-- Acciones -->
-                <div
-                    class="flex flex-col gap-3 border-t border-sidebar-border/70 px-6 py-5 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-end"
+            <!-- Acciones -->
+            <div
+                class="flex flex-col-reverse gap-3 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:items-center sm:justify-end"
+            >
+                <CancelButton
+                    :href="admin.users.index().url"
+                    :icon="ArrowLeft"
+                    label="Cancelar"
+                />
+
+                <AdminButton
+                    type="submit"
+                    variant="primary"
+                    :icon="Save"
+                    :loading="form.processing"
+                    loading-text="Guardando..."
+                    :disabled="props.roles.length === 0"
                 >
-                    <Link
-                        :href="
-                            admin.users.index().url
-                        "
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <ArrowLeft class="h-4 w-4" />
-                        Cancelar
-                    </Link>
-
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Save class="h-4 w-4" />
-
-                        {{
-                            form.processing
-                                ? 'Guardando...'
-                                : 'Guardar cambios'
-                        }}
-                    </button>
-                </div>
-            </form>
-        </div>
+                    Guardar cambios
+                </AdminButton>
+            </div>
+        </form>
     </div>
 </template>

@@ -1,14 +1,12 @@
+
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import {
-    Edit,
-    Plus,
-    Search,
-    Trash2,
-    Users,
-} from 'lucide-vue-next';
+import { Head, router } from '@inertiajs/vue3';
+import { FilterX, Plus, Users } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import DataTable from '@/components/admin/DataTable.vue';
+import TableActions from '@/components/admin/TableActions.vue';
 import admin from '@/routes/admin';
 
 interface Role {
@@ -48,14 +46,31 @@ const props = defineProps<{
 
 const search = ref(props.filters?.search ?? '');
 
+const hasFilters = () => Boolean(search.value.trim());
+
 const submitSearch = () => {
     router.get(
         admin.users.index().url,
         {
-            search: search.value || undefined,
+            search: search.value.trim() || undefined,
         },
         {
             preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const clearFilters = () => {
+    search.value = '';
+
+    router.get(
+        admin.users.index().url,
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
             replace: true,
         },
     );
@@ -72,270 +87,163 @@ const deleteUser = (user: User) => {
         reverseButtons: true,
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(
-                admin.users.destroy(user.id).url,
-                {
-                    preserveScroll: true,
-                },
-            );
+            router.delete(admin.users.destroy(user.id).url, {
+                preserveScroll: true,
+            });
         }
     });
 };
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Panel',
+                href: admin.dashboard(),
+            },
+            {
+                title: 'Usuarios',
+                href: admin.users.index,
+            },
+        ],
+    },
+});
 </script>
 
 <template>
     <Head title="Usuarios" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+    <div class="flex h-full flex-1 flex-col gap-5 overflow-x-hidden p-4 sm:p-6">
+        <PageHeader
+            title="Usuarios"
+            description="Administra los usuarios y sus roles."
+            section="Administración"
+            :icon="Users"
+            :action-icon="Plus"
+            action-label="Nuevo usuario"
+            :action-href="admin.users.create().url"
+        />
+
+        <DataTable
+            :pagination="users"
+            :is-empty="users.data.length === 0"
+            :empty-colspan="4"
+            v-model:search="search"
+            search-placeholder="Buscar usuario..."
+            :has-filters="hasFilters()"
+            @search="submitSearch"
+            @clear-filters="clearFilters"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-center gap-4">
+            <template #active-filters>
+                <div
+                    v-if="search.trim()"
+                    class="flex flex-wrap items-center gap-2"
+                >
+                    <span
+                        class="inline-flex items-center gap-2 rounded-full border border-[#DCE7DF] bg-[#EDF4EF] px-3 py-1.5 text-xs font-medium text-[#244334]"
+                    >
+                        <FilterX class="h-3.5 w-3.5" />
+                        Búsqueda: {{ search }}
+                    </span>
+                </div>
+            </template>
+
+            <template #table-head>
+                <tr>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Usuario
+                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Correo
+                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Roles
+                    </th>
+                    <th class="px-5 py-4 text-right font-semibold sm:px-6">
+                        Acciones
+                    </th>
+                </tr>
+            </template>
+
+            <template #table-body>
+                <tr
+                    v-for="user in users.data"
+                    :key="user.id"
+                    class="transition-colors hover:bg-[#F6F9F6]"
+                >
+                    <td class="px-5 py-4 sm:px-6">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E4F2E8] text-[#187744]"
+                            >
+                                <Users class="h-5 w-5" />
+                            </div>
+
+                            <div class="min-w-0">
+                                <p class="font-medium text-[#244334]">
+                                    {{ user.name }}
+                                </p>
+                                <p class="mt-0.5 text-xs text-[#718277]">
+                                    ID: {{ user.id }}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="px-5 py-4 text-[#52665A] sm:px-6">
+                        <span class="break-all">{{ user.email }}</span>
+                    </td>
+
+                    <td class="px-5 py-4 sm:px-6">
+                        <div class="flex flex-wrap gap-2">
+                            <span
+                                v-for="role in user.roles"
+                                :key="role.id"
+                                class="inline-flex items-center rounded-full border border-[#DCE7DF] bg-[#F6F9F6] px-2.5 py-1 text-xs font-medium text-[#385644]"
+                            >
+                                {{ role.name }}
+                            </span>
+
+                            <span
+                                v-if="!user.roles.length"
+                                class="text-xs italic text-[#87958B]"
+                            >
+                                Sin rol asignado
+                            </span>
+                        </div>
+                    </td>
+
+                    <TableActions
+                        :edit-url="admin.users.edit(user.id).url"
+                        :show-view="false"
+                        item-name="usuario"
+                        @delete="deleteUser(user)"
+                    />
+                </tr>
+            </template>
+
+            <template #empty>
+                <div class="flex flex-col items-center justify-center gap-3 py-8">
                     <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E4F2E8] text-[#187744]"
                     >
                         <Users class="h-6 w-6" />
                     </div>
 
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Usuarios
-                        </h1>
-
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Administra los usuarios y sus roles.
+                    <div class="text-center">
+                        <p class="font-medium text-[#244334]">
+                            No se encontraron usuarios
+                        </p>
+                        <p class="mt-1 text-sm text-[#718277]">
+                            {{
+                                search.trim()
+                                    ? 'Prueba con otro término de búsqueda o limpia los filtros.'
+                                    : 'Todavía no hay usuarios registrados.'
+                            }}
                         </p>
                     </div>
                 </div>
-
-                <Link
-                    :href="admin.users.create().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-                >
-                    <Plus class="h-4 w-4" />
-                    Nuevo usuario
-                </Link>
-            </div>
-        </div>
-
-        <!-- Tabla -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <!-- Buscador -->
-            <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
-            >
-                <form
-                    @submit.prevent="submitSearch"
-                    class="flex w-full flex-col gap-2 md:max-w-2xl md:flex-row"
-                >
-                    <div class="relative w-full">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                        />
-
-                        <input
-                            v-model="search"
-                            type="search"
-                            placeholder="Buscar usuario..."
-                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <Search class="h-4 w-4" />
-                        Buscar
-                    </button>
-                </form>
-
-                <div
-                    class="text-sm text-muted-foreground"
-                >
-                    {{ users.total }} usuarios
-                </div>
-            </div>
-
-            <!-- Tabla -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead
-                        class="border-b border-sidebar-border/70 bg-muted/40 dark:border-sidebar-border"
-                    >
-                        <tr>
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
-                                Usuario
-                            </th>
-
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
-                                Correo
-                            </th>
-
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
-                                Rol
-                            </th>
-
-                            <th
-                                class="px-6 py-4 text-right font-semibold"
-                            >
-                                Acciones
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody
-                        class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
-                    >
-                        <tr
-                            v-for="user in users.data"
-                            :key="user.id"
-                            class="transition hover:bg-muted/30"
-                        >
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                                    >
-                                        <Users class="h-4 w-4" />
-                                    </div>
-
-                                    <div>
-                                        <div class="font-medium">
-                                            {{ user.name }}
-                                        </div>
-
-                                        <div
-                                            class="text-xs text-muted-foreground"
-                                        >
-                                            ID: {{ user.id }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <td
-                                class="px-6 py-4 text-muted-foreground"
-                            >
-                                {{ user.email }}
-                            </td>
-
-                            <td class="px-6 py-4">
-                                <div class="flex flex-wrap gap-2">
-                                    <span
-                                        v-for="role in user.roles"
-                                        :key="role.id"
-                                        class="rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"
-                                    >
-                                        {{ role.name }}
-                                    </span>
-
-                                    <span
-                                        v-if="!user.roles.length"
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Sin rol
-                                    </span>
-                                </div>
-                            </td>
-
-                            <td class="px-6 py-4">
-                                <div
-                                    class="flex justify-end gap-2"
-                                >
-                                    <Link
-                                        :href="
-                                            admin.users.edit(
-                                                user.id,
-                                            ).url
-                                        "
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Edit class="h-4 w-4" />
-                                        Editar
-                                    </Link>
-
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                        @click="deleteUser(user)"
-                                    >
-                                        <Trash2 class="h-4 w-4" />
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Sin resultados -->
-                        <tr v-if="users.data.length === 0">
-                            <td
-                                colspan="4"
-                                class="px-6 py-12 text-center text-sm text-muted-foreground"
-                            >
-                                <div
-                                    class="flex flex-col items-center justify-center gap-3"
-                                >
-                                    <div
-                                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-muted/60"
-                                    >
-                                        <Users class="h-5 w-5" />
-                                    </div>
-
-                                    <span>
-                                        No se encontraron usuarios.
-                                    </span>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Paginación -->
-            <div
-                v-if="users.last_page > 1"
-                class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
-            >
-                <template
-                    v-for="(link, index) in users.links"
-                    :key="index"
-                >
-                    <Link
-                        v-if="link.url"
-                        :href="link.url"
-                        class="rounded-lg border px-3 py-2 text-sm transition"
-                        :class="
-                            link.active
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-sidebar-border hover:bg-accent'
-                        "
-                        v-html="link.label"
-                    />
-
-                    <span
-                        v-else
-                        class="rounded-lg border border-sidebar-border px-3 py-2 text-sm opacity-50"
-                        v-html="link.label"
-                    />
-                </template>
-            </div>
-        </div>
+            </template>
+        </DataTable>
     </div>
 </template>

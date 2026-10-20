@@ -1,12 +1,6 @@
 <script setup lang="ts">
-import {
-    Head,
-    Link,
-    useForm,
-} from '@inertiajs/vue3';
-
+import { Head, useForm } from '@inertiajs/vue3';
 import { Html5Qrcode } from 'html5-qrcode';
-
 import {
     ArrowLeft,
     Camera,
@@ -26,16 +20,13 @@ import {
     X,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
-
-import {
-    computed,
-    nextTick,
-    onBeforeUnmount,
-    ref,
-} from 'vue';
-
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
 
 import admin from '@/routes/admin';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
 
 interface UserLevel {
     id: number;
@@ -57,16 +48,16 @@ interface PaymentMethod {
     code: string;
 }
 
-const props = defineProps<{
-    users: User[];
-    paymentMethods: PaymentMethod[];
-}>();
-
-/*
-|--------------------------------------------------------------------------
-| Formulario
-|--------------------------------------------------------------------------
-*/
+const props = withDefaults(
+    defineProps<{
+        users?: User[];
+        paymentMethods?: PaymentMethod[];
+    }>(),
+    {
+        users: () => [],
+        paymentMethods: () => [],
+    },
+);
 
 const form = useForm({
     user_id: null as number | null,
@@ -75,150 +66,86 @@ const form = useForm({
     reference: '',
 });
 
-/*
-|--------------------------------------------------------------------------
-| Usuario / QR
-|--------------------------------------------------------------------------
-*/
-
 const identifiedUser = ref<User | null>(null);
-
 const qrScanner = ref<Html5Qrcode | null>(null);
-
 const scanning = ref(false);
-
-const qrError = ref<string | null>(null);
-
+const qrError = ref('');
 const searchingUser = ref(false);
-
 const manualQrToken = ref('');
 
-/*
-|--------------------------------------------------------------------------
-| Selecciones
-|--------------------------------------------------------------------------
-*/
-
 const selectedUser = computed(() => {
-    if (!form.user_id) {
-        return null;
-    }
+    if (!form.user_id) return null;
 
     return (
         identifiedUser.value ??
-        props.users.find(
-            (user) => user.id === form.user_id,
-        ) ??
+        props.users.find((user) => user.id === form.user_id) ??
         null
     );
 });
 
 const selectedPaymentMethod = computed(() => {
-    if (!form.payment_method_id) {
-        return null;
-    }
+    if (!form.payment_method_id) return null;
 
     return (
         props.paymentMethods.find(
-            (method) =>
-                method.id === form.payment_method_id,
+            (method) => method.id === form.payment_method_id,
         ) ?? null
     );
 });
 
-/*
-|--------------------------------------------------------------------------
-| Validación
-|--------------------------------------------------------------------------
-*/
-
 const canRegister = computed(() => {
     return (
         !!selectedUser.value &&
-        !!form.payment_method_id &&
+        !!selectedPaymentMethod.value &&
         !!form.amount &&
-        Number(form.amount) > 0
+        form.amount > 0
     );
 });
 
-/*
-|--------------------------------------------------------------------------
-| Formato
-|--------------------------------------------------------------------------
-*/
-
-const formatCurrency = (
-    value: number | null,
-): string => {
-    if (value === null) {
-        return '$0.00';
-    }
-
+const formatCurrency = (amount: number | null | undefined) => {
     return new Intl.NumberFormat('es-MX', {
         style: 'currency',
         currency: 'MXN',
-    }).format(value);
+    }).format(amount ?? 0);
 };
 
-/*
-|--------------------------------------------------------------------------
-| Usuario / QR
-|--------------------------------------------------------------------------
-*/
-
-const findUserByQr = async (
-    token: string,
-): Promise<void> => {
+const findUserByQr = async (token: string) => {
     const cleanToken = token.trim();
 
-    if (!cleanToken) {
-        return;
-    }
+    if (!cleanToken) return;
 
     searchingUser.value = true;
-    qrError.value = null;
+    qrError.value = '';
 
     try {
-        const response = await fetch(
-            '/admin/donations/user-by-qr',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type':
-                        'application/json',
-                    Accept:
-                        'application/json',
-                    'X-CSRF-TOKEN':
-                        document
-                            .querySelector(
-                                'meta[name="csrf-token"]',
-                            )
-                            ?.getAttribute(
-                                'content',
-                            ) ?? '',
-                },
-                body: JSON.stringify({
-                    qr_token: cleanToken,
-                }),
+        const response = await fetch('/admin/donations/user-by-qr', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN':
+                    document
+                        .querySelector<HTMLMetaElement>(
+                            'meta[name="csrf-token"]',
+                        )
+                        ?.getAttribute('content') ?? '',
             },
-        );
+            body: JSON.stringify({
+                qr_token: cleanToken,
+            }),
+        });
 
-        const data =
-            await response.json();
+        const data = await response.json();
 
         if (!response.ok) {
             throw new Error(
-                data.message ??
-                    'No se pudo identificar al usuario.',
+                data.message ||
+                    'No se encontró un usuario con ese código QR.',
             );
         }
 
-        identifiedUser.value =
-            data.user;
-
-        form.user_id =
-            data.user.id;
-
+        identifiedUser.value = data.user;
+        form.user_id = data.user.id;
         manualQrToken.value = '';
 
         await stopQrScanner();
@@ -229,188 +156,109 @@ const findUserByQr = async (
         qrError.value =
             error instanceof Error
                 ? error.message
-                : 'No se pudo identificar al usuario.';
+                : 'No fue posible identificar al usuario.';
     } finally {
         searchingUser.value = false;
     }
 };
 
-/*
-|--------------------------------------------------------------------------
-| Iniciar lector QR
-|--------------------------------------------------------------------------
-*/
+const startQrScanner = async () => {
+    if (scanning.value) return;
 
-const startQrScanner =
-    async (): Promise<void> => {
-        if (scanning.value) {
-            return;
-        }
+    qrError.value = '';
+    scanning.value = true;
 
-        qrError.value = null;
+    await nextTick();
 
+    const reader = document.getElementById('user-qr-reader');
+
+    if (!reader) {
+        scanning.value = false;
+        qrError.value = 'No se pudo inicializar el lector QR.';
+        return;
+    }
+
+    try {
+        qrScanner.value = new Html5Qrcode('user-qr-reader');
+
+        await qrScanner.value.start(
+            { facingMode: 'environment' },
+            {
+                fps: 10,
+                qrbox: {
+                    width: 230,
+                    height: 230,
+                },
+                aspectRatio: 1,
+            },
+            async (decodedText) => {
+                await findUserByQr(decodedText);
+            },
+            () => {},
+        );
+    } catch {
+        qrError.value =
+            'No se pudo activar la cámara. Verifica los permisos del navegador.';
+        scanning.value = false;
+        qrScanner.value = null;
+    }
+};
+
+const stopQrScanner = async () => {
+    if (qrScanner.value) {
         try {
-            scanning.value = true;
-
-            await nextTick();
-
-            const readerElement =
-                document.getElementById(
-                    'user-qr-reader',
-                );
-
-            if (!readerElement) {
-                throw new Error(
-                    'No se encontró el elemento #user-qr-reader.',
-                );
-            }
-
-            qrScanner.value =
-                new Html5Qrcode(
-                    'user-qr-reader',
-                );
-
-            await qrScanner.value.start(
-                {
-                    facingMode:
-                        'environment',
-                },
-                {
-                    fps: 10,
-                    qrbox: {
-                        width: 230,
-                        height: 230,
-                    },
-                    aspectRatio: 1,
-                },
-                async (decodedText) => {
-                    await findUserByQr(
-                        decodedText,
-                    );
-                },
-                () => {},
-            );
-        } catch (error) {
-            console.error(
-                'Error iniciando lector QR:',
-                error,
-            );
-
-            scanning.value = false;
-            qrScanner.value = null;
-
-            if (error instanceof Error) {
-                qrError.value =
-                    `Error de cámara: ${error.name} - ${error.message}`;
-            } else {
-                qrError.value =
-                    'No fue posible iniciar el lector QR.';
-            }
-        }
-    };
-
-/*
-|--------------------------------------------------------------------------
-| Detener lector QR
-|--------------------------------------------------------------------------
-*/
-
-const stopQrScanner =
-    async (): Promise<void> => {
-        if (!qrScanner.value) {
-            scanning.value = false;
-
-            return;
-        }
-
-        try {
-            if (scanning.value) {
+            if (qrScanner.value.isScanning) {
                 await qrScanner.value.stop();
             }
 
             await qrScanner.value.clear();
-        } catch (error) {
-            console.error(
-                'Error deteniendo lector QR:',
-                error,
-            );
+        } catch {
+            // Evita que un error al detener la cámara interrumpa el formulario.
         }
 
         qrScanner.value = null;
-        scanning.value = false;
-    };
+    }
 
-/*
-|--------------------------------------------------------------------------
-| Quitar usuario
-|--------------------------------------------------------------------------
-*/
+    scanning.value = false;
+};
 
-const clearIdentifiedUser =
-    async (): Promise<void> => {
-        await stopQrScanner();
+const clearIdentifiedUser = async () => {
+    await stopQrScanner();
 
-        identifiedUser.value = null;
-        form.user_id = null;
-        qrError.value = null;
-        manualQrToken.value = '';
-    };
+    identifiedUser.value = null;
+    form.user_id = null;
+    qrError.value = '';
+    manualQrToken.value = '';
+};
 
-/*
-|--------------------------------------------------------------------------
-| Buscar QR manualmente
-|--------------------------------------------------------------------------
-*/
-
-const searchManualQr =
-    async (): Promise<void> => {
-        await findUserByQr(
-            manualQrToken.value,
-        );
-    };
-
-/*
-|--------------------------------------------------------------------------
-| Limpiar cámara al salir
-|--------------------------------------------------------------------------
-*/
+const searchManualQr = async () => {
+    await findUserByQr(manualQrToken.value);
+};
 
 onBeforeUnmount(async () => {
     await stopQrScanner();
 });
 
-/*
-|--------------------------------------------------------------------------
-| Submit
-|--------------------------------------------------------------------------
-*/
+const submit = async () => {
+    if (!canRegister.value || form.processing) return;
 
-const submit = async (): Promise<void> => {
-    if (!canRegister.value) {
-        return;
-    }
+    const result = await Swal.fire({
+        title: '¿Registrar donación?',
+        text: `Se registrará una donación de ${formatCurrency(
+            form.amount,
+        )} para ${selectedUser.value?.name}.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, registrar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#718477',
+        reverseButtons: true,
+    });
 
-    const result =
-        await Swal.fire({
-            title: '¿Confirmar donación?',
-            text: `Se registrará una donación de ${formatCurrency(Number(form.amount))} para ${selectedUser.value?.name}.`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText:
-                'Sí, registrar',
-            cancelButtonText:
-                'Cancelar',
-            reverseButtons: true,
-        });
+    if (!result.isConfirmed) return;
 
-    if (!result.isConfirmed) {
-        return;
-    }
-
-    form.post(
-        admin.donations
-            .store().url,
-    );
+    form.post(admin.donations.store().url);
 };
 </script>
 
@@ -418,804 +266,502 @@ const submit = async (): Promise<void> => {
     <Head title="Registrar donación" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
-        <!-- Header -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+        <PageHeader
+            title="Registrar donación"
+            description="Registra una aportación y vincúlala con un usuario."
+            section="Donaciones"
+            :icon="CircleDollarSign"
+            :action-icon="ArrowLeft"
+            action-label="Volver a donaciones"
+            :action-href="admin.donations.index().url"
+        />
+
+        <form class="space-y-5" @submit.prevent="submit">
+            <!-- Identificación del usuario -->
+            <AdminCard
+                title="Identificación del usuario"
+                description="Escanea el código QR o introduce el token del usuario."
+                :icon="UserRound"
             >
-                <div class="flex items-start gap-3">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <CircleDollarSign
-                            class="h-6 w-6"
-                        />
-                    </div>
-
-                    <div>
-                        <h1
-                            class="text-2xl font-semibold"
-                        >
-                            Registrar donación
-                        </h1>
-
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Registra una donación realizada por un visitante.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="
-                        admin.donations
-                            .index().url
-                    "
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft
-                        class="h-4 w-4"
-                    />
-                    Regresar
-                </Link>
-            </div>
-        </div>
-
-        <form
-            class="space-y-4"
-            @submit.prevent="submit"
-        >
-            <!-- Usuario -->
-            <div
-                class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-            >
-                <div
-                    class="mb-6 flex flex-col gap-4 border-b border-sidebar-border/70 pb-6 md:flex-row md:items-center md:justify-between dark:border-sidebar-border"
-                >
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                        >
-                            <UserRound
-                                class="h-5 w-5"
-                            />
-                        </div>
-
-                        <div>
-                            <h2
-                                class="text-lg font-semibold"
-                            >
-                                Usuario
-                            </h2>
-
-                            <p
-                                class="mt-1 text-sm text-muted-foreground"
-                            >
-                                Identifica al visitante mediante su código QR.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col gap-2 sm:flex-row">
-                        <button
+                <div class="space-y-5">
+                    <!-- Acciones del lector -->
+                    <div class="flex flex-wrap gap-3">
+                        <AdminButton
                             v-if="!scanning"
                             type="button"
-                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                            @click="
-                                startQrScanner
-                            "
+                            :icon="Camera"
+                            @click="startQrScanner"
                         >
-                            <QrCode
-                                class="h-4 w-4"
-                            />
-                            Escanear QR
-                        </button>
+                            Escanear código QR
+                        </AdminButton>
 
-                        <button
+                        <AdminButton
                             v-else
                             type="button"
-                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                            @click="
-                                stopQrScanner
-                            "
+                            variant="secondary"
+                            :icon="CameraOff"
+                            @click="stopQrScanner"
                         >
-                            <X
-                                class="h-4 w-4"
-                            />
-                            Detener cámara
-                        </button>
-                    </div>
-                </div>
+                            Cerrar cámara
+                        </AdminButton>
 
-                <!-- Lector QR -->
-                <div
-                    v-if="scanning"
-                    class="flex justify-center"
-                >
-                    <div
-                        class="relative h-[320px] w-[320px] max-w-full overflow-hidden rounded-xl border border-sidebar-border bg-black shadow-lg"
-                    >
-                        <div
-                            id="user-qr-reader"
-                            class="absolute inset-0"
-                        ></div>
-
-                        <div
-                            class="pointer-events-none absolute inset-0 z-20 grid grid-cols-[1fr_230px_1fr] grid-rows-[1fr_230px_1fr]"
+                        <CancelButton
+                            v-if="selectedUser"
+                            :href="admin.donations.create().url"
+                            :icon="X"
                         >
-                            <div
-                                class="col-span-3 bg-black/55"
-                            ></div>
-
-                            <div
-                                class="bg-black/55"
-                            ></div>
-
-                            <div
-                                class="relative"
-                            >
-                                <span
-                                    class="absolute left-0 top-0 h-9 w-9 rounded-tl-xl border-l-4 border-t-4 border-primary"
-                                ></span>
-
-                                <span
-                                    class="absolute right-0 top-0 h-9 w-9 rounded-tr-xl border-r-4 border-t-4 border-primary"
-                                ></span>
-
-                                <span
-                                    class="absolute bottom-0 left-0 h-9 w-9 rounded-bl-xl border-b-4 border-l-4 border-primary"
-                                ></span>
-
-                                <span
-                                    class="absolute bottom-0 right-0 h-9 w-9 rounded-br-xl border-b-4 border-r-4 border-primary"
-                                ></span>
-
-                                <span
-                                    class="absolute left-3 right-3 top-1/2 h-0.5 -translate-y-1/2 animate-pulse bg-primary opacity-90 shadow-[0_0_8px_currentColor]"
-                                ></span>
-                            </div>
-
-                            <div
-                                class="bg-black/55"
-                            ></div>
-
-                            <div
-                                class="col-span-3 bg-black/55"
-                            ></div>
-                        </div>
-
-                        <div
-                            class="pointer-events-none absolute bottom-3 left-0 right-0 z-30 text-center"
-                        >
-                            <span
-                                class="inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm"
-                            >
-                                <QrCode
-                                    class="h-3.5 w-3.5"
-                                />
-                                Coloca el QR dentro del recuadro
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Búsqueda manual -->
-                <div
-                    v-if="!identifiedUser"
-                    class="mt-6 rounded-xl border border-dashed border-sidebar-border bg-muted/20 p-4"
-                >
-                    <div
-                        class="mb-3 flex items-center gap-2"
-                    >
-                        <QrCode
-                            class="h-4 w-4 text-muted-foreground"
-                        />
-
-                        <p
-                            class="text-sm font-medium"
-                        >
-                            Identificación manual
-                        </p>
+                            Cambiar usuario
+                        </CancelButton>
                     </div>
 
+                    <!-- Lector QR -->
                     <div
-                        class="flex flex-col gap-2 sm:flex-row"
+                        v-if="scanning"
+                        class="overflow-hidden rounded-2xl border border-[#DCE7DF] bg-[#F7FAF8] p-4"
                     >
-                        <div
-                            class="relative flex-1"
-                        >
-                            <input
-                                v-model="
-                                    manualQrToken
-                                "
-                                type="text"
-                                placeholder="Ingresa el código QR manualmente"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                @keyup.enter="
-                                    searchManualQr
-                                "
-                            />
-
-                            <span
-                                class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground"
-                            >
-                                QR
-                            </span>
-                        </div>
-
-                        <button
-                            type="button"
-                            :disabled="
-                                searchingUser ||
-                                !manualQrToken.trim()
-                            "
-                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                            @click="
-                                searchManualQr
-                            "
-                        >
-                            <Search
-                                class="h-4 w-4"
-                            />
-
-                            {{
-                                searchingUser
-                                    ? 'Buscando...'
-                                    : 'Buscar'
-                            }}
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Usuario identificado -->
-                <div
-                    v-if="identifiedUser"
-                    class="mt-6 rounded-xl border border-green-500/30 bg-green-500/10 p-4"
-                >
-                    <div
-                        class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                        <div class="flex items-start gap-3">
+                        <div class="mb-4 flex items-center gap-3">
                             <div
-                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/15 text-green-600 dark:text-green-400"
+                                class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EDF5EF] text-[#187744]"
                             >
-                                <Check
-                                    class="h-5 w-5"
-                                />
+                                <QrCode :size="20" />
                             </div>
 
                             <div>
-                                <p
-                                    class="text-sm font-medium text-green-700 dark:text-green-400"
+                                <h3
+                                    class="text-sm font-semibold text-[#244334]"
                                 >
-                                    Usuario identificado
+                                    Escáner de código QR
+                                </h3>
+
+                                <p class="text-xs text-[#718477]">
+                                    Coloca el código dentro del área de lectura.
                                 </p>
-
-                                <p
-                                    class="mt-1 text-lg font-semibold"
-                                >
-                                    {{
-                                        identifiedUser.name
-                                    }}
-                                </p>
-
-                                <p
-                                    class="mt-1 text-sm text-muted-foreground"
-                                >
-                                    {{
-                                        identifiedUser.email
-                                    }}
-                                </p>
-
-                                <div
-                                    class="mt-2 flex flex-wrap gap-2"
-                                >
-                                    <span
-                                        class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border px-3 py-1 text-xs"
-                                    >
-                                        <ShieldCheck
-                                            class="h-3.5 w-3.5"
-                                        />
-
-                                        {{
-                                            identifiedUser
-                                                .level
-                                                ?.name ??
-                                            'Sin nivel'
-                                        }}
-                                    </span>
-
-                                    <span
-                                        class="inline-flex items-center gap-1.5 rounded-full border border-sidebar-border px-3 py-1 text-xs"
-                                    >
-                                        <CircleDollarSign
-                                            class="h-3.5 w-3.5"
-                                        />
-
-                                        {{
-                                            identifiedUser
-                                                .points
-                                                .toLocaleString(
-                                                    'es-MX',
-                                                )
-                                        }}
-                                        puntos
-                                    </span>
-                                </div>
                             </div>
                         </div>
 
-                        <button
-                            type="button"
-                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                            @click="
-                                clearIdentifiedUser
-                            "
+                        <div
+                            class="mx-auto w-full max-w-sm overflow-hidden rounded-xl bg-white p-2"
                         >
-                            <X
-                                class="h-4 w-4"
+                            <div
+                                id="user-qr-reader"
+                                class="min-h-[280px] w-full overflow-hidden rounded-lg"
                             />
-                            Quitar usuario
-                        </button>
-                    </div>
-                </div>
+                        </div>
 
-                <!-- Error -->
-                <div
-                    v-if="qrError"
-                    class="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4"
-                >
+                        <p class="mt-3 text-center text-xs text-[#718477]">
+                            Permite el acceso a la cámara si tu navegador lo
+                            solicita.
+                        </p>
+                    </div>
+
+                    <!-- Búsqueda manual -->
+                    <div class="form-field">
+                        <label for="manual_qr_token" class="form-label">
+                            Buscar por token QR
+                        </label>
+
+                        <div class="flex flex-col gap-3 sm:flex-row">
+                            <input
+                                id="manual_qr_token"
+                                v-model="manualQrToken"
+                                type="text"
+                                placeholder="Introduce el token del usuario"
+                                class="form-input min-w-0 flex-1"
+                                :disabled="searchingUser"
+                                @keydown.enter.prevent="searchManualQr"
+                            />
+
+                            <AdminButton
+                                type="button"
+                                :icon="searchingUser ? Sparkles : Search"
+                                :loading="searchingUser"
+                                loading-text="Buscando..."
+                                :disabled="
+                                    searchingUser || !manualQrToken.trim()
+                                "
+                                @click="searchManualQr"
+                            >
+                                Buscar usuario
+                            </AdminButton>
+                        </div>
+
+                        <p class="form-help">
+                            También puedes localizar al usuario con su token QR.
+                        </p>
+                    </div>
+
+                    <!-- Error del QR -->
                     <div
-                        class="flex items-start gap-3"
+                        v-if="qrError"
+                        class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4"
                     >
                         <Info
-                            class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400"
+                            :size="19"
+                            class="mt-0.5 shrink-0 text-red-600"
                         />
 
-                        <div>
-                            <p
-                                class="text-sm font-medium text-red-600 dark:text-red-400"
-                            >
-                                No se pudo identificar al usuario
-                            </p>
+                        <p class="text-sm text-red-700">
+                            {{ qrError }}
+                        </p>
+                    </div>
 
-                            <p
-                                class="mt-1 text-sm text-red-600/80 dark:text-red-400/80"
+                    <p v-if="form.errors.user_id" class="form-error">
+                        {{ form.errors.user_id }}
+                    </p>
+
+                    <!-- Usuario identificado -->
+                    <div
+                        v-if="selectedUser"
+                        class="rounded-2xl border border-[#C8DCCF] bg-[#F7FAF8] p-4 sm:p-5"
+                    >
+                        <div
+                            class="flex flex-col gap-4 sm:flex-row sm:items-start"
+                        >
+                            <div
+                                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#E3F1E7] text-[#187744]"
                             >
-                                {{ qrError }}
-                            </p>
+                                <Check :size="23" />
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                                <div
+                                    class="mb-3 flex flex-wrap items-center gap-2"
+                                >
+                                    <h3
+                                        class="text-base font-semibold text-[#244334]"
+                                    >
+                                        {{ selectedUser.name }}
+                                    </h3>
+
+                                    <span
+                                        class="inline-flex items-center gap-1 rounded-full bg-[#E3F1E7] px-2.5 py-1 text-xs font-medium text-[#187744]"
+                                    >
+                                        <ShieldCheck :size="13" />
+                                        Usuario identificado
+                                    </span>
+                                </div>
+
+                                <p class="break-all text-sm text-[#718477]">
+                                    {{ selectedUser.email }}
+                                </p>
+
+                                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                                    <div
+                                        class="rounded-xl border border-[#DCE7DF] bg-white p-3"
+                                    >
+                                        <p class="text-xs text-[#718477]">
+                                            Nivel
+                                        </p>
+
+                                        <p
+                                            class="mt-1 text-sm font-medium text-[#244334]"
+                                        >
+                                            {{
+                                                selectedUser.level?.name ??
+                                                'Sin nivel asignado'
+                                            }}
+                                        </p>
+                                    </div>
+
+                                    <div
+                                        class="rounded-xl border border-[#DCE7DF] bg-white p-3"
+                                    >
+                                        <p class="text-xs text-[#718477]">
+                                            Puntos acumulados
+                                        </p>
+
+                                        <p
+                                            class="mt-1 text-sm font-semibold text-[#187744]"
+                                        >
+                                            {{ selectedUser.points }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                title="Quitar usuario"
+                                aria-label="Quitar usuario"
+                                class="self-start rounded-lg p-2 text-[#718477] transition hover:bg-white hover:text-red-600"
+                                @click="clearIdentifiedUser"
+                            >
+                                <X :size="18" />
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <p
-                    v-if="form.errors.user_id"
-                    class="mt-3 text-sm text-red-500"
-                >
-                    {{ form.errors.user_id }}
-                </p>
-            </div>
-
-            <!-- Donación -->
-            <div
-                class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-            >
-                <div
-                    class="mb-6 flex items-start gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                >
                     <div
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        v-else
+                        class="flex items-start gap-3 rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4"
                     >
-                        <Wallet
-                            class="h-5 w-5"
+                        <Info
+                            :size="19"
+                            class="mt-0.5 shrink-0 text-[#187744]"
                         />
-                    </div>
 
-                    <div>
-                        <h2
-                            class="text-lg font-semibold"
-                        >
-                            Donación
-                        </h2>
-
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Ingresa el monto y selecciona el método de pago.
+                        <p class="text-sm leading-6 text-[#718477]">
+                            Identifica al usuario para continuar con el registro
+                            de la donación.
                         </p>
                     </div>
                 </div>
+            </AdminCard>
 
-                <div
-                    class="grid gap-6 md:grid-cols-2"
-                >
-                    <!-- Monto -->
-                    <div class="space-y-2">
-                        <label
-                            for="amount"
-                            class="flex items-center gap-2 text-sm font-medium"
-                        >
-                            <CircleDollarSign
-                                class="h-4 w-4 text-muted-foreground"
-                            />
-                            Monto
+            <!-- Datos de la donación -->
+            <AdminCard
+                title="Datos de la donación"
+                description="Indica el importe, el método de pago y la referencia."
+                :icon="Wallet"
+            >
+                <div class="form-grid">
+                    <!-- Importe -->
+                    <div class="form-field">
+                        <label for="amount" class="form-label">
+                            Importe de la donación
+                            <span class="form-required">*</span>
                         </label>
 
                         <div class="relative">
                             <span
-                                class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                                class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-medium text-[#718477]"
                             >
                                 $
                             </span>
 
                             <input
                                 id="amount"
-                                v-model.number="
-                                    form.amount
-                                "
+                                v-model.number="form.amount"
                                 type="number"
                                 min="0.01"
                                 step="0.01"
                                 placeholder="0.00"
-                                class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-8 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                class="form-input pl-9"
                             />
                         </div>
 
-                        <p
-                            v-if="form.amount"
-                            class="text-xs text-muted-foreground"
-                        >
-                            {{
-                                formatCurrency(
-                                    form.amount,
-                                )
-                            }}
+                        <p class="form-help">
+                            Introduce el importe en pesos mexicanos.
                         </p>
 
-                        <p
-                            v-if="
-                                form.errors.amount
-                            "
-                            class="text-sm text-red-500"
-                        >
-                            {{
-                                form.errors.amount
-                            }}
+                        <p v-if="form.errors.amount" class="form-error">
+                            {{ form.errors.amount }}
                         </p>
                     </div>
 
                     <!-- Método de pago -->
-                    <div class="space-y-2">
-                        <label
-                            for="payment_method"
-                            class="flex items-center gap-2 text-sm font-medium"
-                        >
-                            <Wallet
-                                class="h-4 w-4 text-muted-foreground"
-                            />
+                    <div class="form-field">
+                        <label for="payment_method_id" class="form-label">
                             Método de pago
+                            <span class="form-required">*</span>
                         </label>
 
-                        <div class="relative">
+                        <div class="form-select-wrapper">
                             <select
-                                id="payment_method"
-                                v-model="
-                                    form.payment_method_id
-                                "
-                                class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                id="payment_method_id"
+                                v-model="form.payment_method_id"
+                                class="form-select appearance-none"
                             >
-                                <option
-                                    :value="null"
-                                >
-                                    Selecciona un método de pago
+                                <option :value="null">
+                                    Selecciona un método
                                 </option>
 
                                 <option
-                                    v-for="method in paymentMethods"
+                                    v-for="method in props.paymentMethods"
                                     :key="method.id"
                                     :value="method.id"
                                 >
-                                    {{
-                                        method.name
-                                    }}
+                                    {{ method.name }}
                                 </option>
                             </select>
 
                             <ChevronDown
-                                class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                                :size="16"
+                                class="form-select-icon"
                             />
                         </div>
 
                         <p
-                            v-if="
-                                form.errors
-                                    .payment_method_id
-                            "
-                            class="text-sm text-red-500"
+                            v-if="form.errors.payment_method_id"
+                            class="form-error"
                         >
-                            {{
-                                form.errors
-                                    .payment_method_id
-                            }}
+                            {{ form.errors.payment_method_id }}
+                        </p>
+                    </div>
+
+                    <!-- Referencia -->
+                    <div class="form-field form-field-full">
+                        <label for="reference" class="form-label">
+                            Referencia
+                        </label>
+
+                        <input
+                            id="reference"
+                            v-model="form.reference"
+                            type="text"
+                            placeholder="Folio, número de operación o referencia"
+                            class="form-input"
+                        />
+
+                        <p class="form-help">
+                            Campo opcional para identificar la operación.
+                        </p>
+
+                        <p v-if="form.errors.reference" class="form-error">
+                            {{ form.errors.reference }}
                         </p>
                     </div>
                 </div>
-
-                <!-- Referencia -->
-                <div
-                    class="mt-6 space-y-2"
-                >
-                    <label
-                        for="reference"
-                        class="flex items-center gap-2 text-sm font-medium"
-                    >
-                        <FileText
-                            class="h-4 w-4 text-muted-foreground"
-                        />
-                        Referencia
-
-                        <span
-                            class="font-normal text-muted-foreground"
-                        >
-                            (opcional)
-                        </span>
-                    </label>
-
-                    <input
-                        id="reference"
-                        v-model="
-                            form.reference
-                        "
-                        type="text"
-                        maxlength="255"
-                        placeholder="Referencia de la operación"
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-
-                    <p
-                        v-if="
-                            form.errors.reference
-                        "
-                        class="text-sm text-red-500"
-                    >
-                        {{
-                            form.errors.reference
-                        }}
-                    </p>
-                </div>
-            </div>
+            </AdminCard>
 
             <!-- Resumen -->
-            <div
-                class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+            <AdminCard
+                title="Resumen de la donación"
+                description="Revisa los datos antes de registrar la aportación."
+                :icon="FileText"
             >
-                <div
-                    class="mb-6 flex items-start gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                >
-                    <div
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                    >
-                        <Info
-                            class="h-5 w-5"
-                        />
-                    </div>
-
-                    <div>
-                        <h2
-                            class="text-lg font-semibold"
-                        >
-                            Resumen de la donación
-                        </h2>
-
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Revisa la información antes de registrar la donación.
-                        </p>
-                    </div>
-                </div>
-
                 <div
                     v-if="
                         selectedUser &&
                         selectedPaymentMethod &&
-                        form.amount
+                        form.amount &&
+                        form.amount > 0
                     "
-                    class="space-y-4"
+                    class="overflow-hidden rounded-xl border border-[#DCE7DF] bg-[#F7FAF8]"
                 >
                     <div
-                        class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                        class="flex items-center justify-between gap-4 border-b border-[#DCE7DF] p-4"
                     >
-                        <!-- Usuario -->
-                        <div
-                            class="rounded-xl border border-sidebar-border/70 bg-muted/20 p-4"
-                        >
+                        <div class="flex min-w-0 items-center gap-3">
                             <div
-                                class="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#187744]"
                             >
-                                <UserRound
-                                    class="h-4 w-4"
-                                />
-                                Usuario
+                                <UserRound :size="19" />
                             </div>
 
-                            <p
-                                class="font-medium"
-                            >
-                                {{
-                                    selectedUser.name
-                                }}
-                            </p>
-                        </div>
+                            <div class="min-w-0">
+                                <p class="text-xs text-[#718477]">
+                                    Usuario
+                                </p>
 
-                        <!-- Monto -->
-                        <div
-                            class="rounded-xl border border-sidebar-border/70 bg-muted/20 p-4"
-                        >
-                            <div
-                                class="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
-                            >
-                                <CircleDollarSign
-                                    class="h-4 w-4"
-                                />
-                                Monto
+                                <p
+                                    class="break-words text-sm font-medium text-[#244334]"
+                                >
+                                    {{ selectedUser.name }}
+                                </p>
                             </div>
-
-                            <p
-                                class="text-lg font-semibold"
-                            >
-                                {{
-                                    formatCurrency(
-                                        form.amount,
-                                    )
-                                }}
-                            </p>
-                        </div>
-
-                        <!-- Método -->
-                        <div
-                            class="rounded-xl border border-sidebar-border/70 bg-muted/20 p-4"
-                        >
-                            <div
-                                class="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
-                            >
-                                <Wallet
-                                    class="h-4 w-4"
-                                />
-                                Método de pago
-                            </div>
-
-                            <p
-                                class="font-medium"
-                            >
-                                {{
-                                    selectedPaymentMethod
-                                        .name
-                                }}
-                            </p>
                         </div>
                     </div>
 
-                    <!-- Referencia -->
                     <div
-                        v-if="form.reference"
-                        class="rounded-xl border border-sidebar-border/70 bg-muted/20 p-4"
+                        class="flex items-center justify-between gap-4 border-b border-[#DCE7DF] p-4"
                     >
-                        <div
-                            class="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
-                        >
-                            <FileText
-                                class="h-4 w-4"
-                            />
-                            Referencia
+                        <div class="flex min-w-0 items-center gap-3">
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#187744]"
+                            >
+                                <Wallet :size="19" />
+                            </div>
+
+                            <div>
+                                <p class="text-xs text-[#718477]">
+                                    Método de pago
+                                </p>
+
+                                <p
+                                    class="text-sm font-medium text-[#244334]"
+                                >
+                                    {{ selectedPaymentMethod.name }}
+                                </p>
+                            </div>
                         </div>
+                    </div>
+
+                    <div
+                        class="flex items-center justify-between gap-4 border-b border-[#DCE7DF] p-4"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#187744]"
+                            >
+                                <FileText :size="19" />
+                            </div>
+
+                            <div>
+                                <p class="text-xs text-[#718477]">
+                                    Referencia
+                                </p>
+
+                                <p
+                                    class="break-words text-sm font-medium text-[#244334]"
+                                >
+                                    {{
+                                        form.reference.trim() ||
+                                        'Sin referencia'
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <p class="text-sm font-medium text-[#435D4C]">
+                            Total de la donación
+                        </p>
 
                         <p
-                            class="break-words text-sm font-medium"
+                            class="text-2xl font-semibold tracking-tight text-[#187744]"
                         >
-                            {{
-                                form.reference
-                            }}
+                            {{ formatCurrency(form.amount) }}
                         </p>
                     </div>
-
-                    <!-- Estado -->
-                    <div
-                        class="flex items-center gap-3 rounded-xl border border-green-500/30 bg-green-500/10 p-4"
-                    >
-                        <Check
-                            class="h-5 w-5 shrink-0 text-green-600 dark:text-green-400"
-                        />
-
-                        <div>
-                            <p
-                                class="text-sm font-medium text-green-700 dark:text-green-400"
-                            >
-                                La donación está lista para registrarse.
-                            </p>
-
-                            <p
-                                class="mt-0.5 text-xs text-green-700/70 dark:text-green-400/70"
-                            >
-                                Verifica los datos antes de confirmar.
-                            </p>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Vacío -->
                 <div
                     v-else
-                    class="rounded-xl border border-dashed border-sidebar-border bg-muted/20 p-8 text-center"
+                    class="flex items-start gap-3 rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4"
                 >
-                    <div
-                        class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"
-                    >
-                        <CircleDollarSign
-                            class="h-6 w-6"
-                        />
-                    </div>
+                    <Info
+                        :size="19"
+                        class="mt-0.5 shrink-0 text-[#187744]"
+                    />
 
-                    <h3
-                        class="mt-4 text-sm font-semibold"
-                    >
-                        Donación incompleta
-                    </h3>
-
-                    <p
-                        class="mx-auto mt-1 max-w-md text-sm text-muted-foreground"
-                    >
-                        Identifica un usuario, ingresa el monto y selecciona un método de pago para continuar.
+                    <p class="text-sm leading-6 text-[#718477]">
+                        Completa la identificación del usuario, el importe y el
+                        método de pago para visualizar el resumen.
                     </p>
                 </div>
+            </AdminCard>
 
-                <!-- Acciones -->
-                <div
-                    class="mt-6 flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
+            <!-- Acciones -->
+            <div
+                class="flex flex-col gap-3 rounded-2xl border border-[#DCE7DF] bg-white p-4 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+            >
+                <p class="form-help sm:mr-auto">
+                    <span class="form-required">*</span>
+                    Campos obligatorios.
+                </p>
+
+                <CancelButton
+                    :href="admin.donations.index().url"
+                    :icon="ArrowLeft"
                 >
-                    <Link
-                        :href="
-                            admin.donations
-                                .index().url
-                        "
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <ArrowLeft
-                            class="h-4 w-4"
-                        />
-                        Cancelar
-                    </Link>
+                    Cancelar
+                </CancelButton>
 
-                    <button
-                        type="submit"
-                        :disabled="
-                            form.processing ||
-                            !canRegister
-                        "
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Sparkles
-                            v-if="form.processing"
-                            class="h-4 w-4 animate-pulse"
-                        />
-
-                        <Save
-                            v-else
-                            class="h-4 w-4"
-                        />
-
-                        {{
-                            form.processing
-                                ? 'Procesando...'
-                                : 'Registrar donación'
-                        }}
-                    </button>
-                </div>
+                <AdminButton
+                    type="submit"
+                    :disabled="form.processing || !canRegister"
+                    :loading="form.processing"
+                    loading-text="Guardando donación..."
+                    :icon="Save"
+                >
+                    Registrar donación
+                </AdminButton>
             </div>
         </form>
     </div>

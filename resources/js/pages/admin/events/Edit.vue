@@ -1,22 +1,31 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     CalendarDays,
-    Check,
-    ChevronDown,
     Clock,
     FileImage,
     Info,
     MapPin,
     Save,
-    Sparkles,
     Star,
     Users,
     X,
 } from 'lucide-vue-next';
 
+import PageHeader from '@/components/admin/PageHeader.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
 import admin from '@/routes/admin';
+
+defineOptions({
+    breadcrumbs: [
+        { title: 'Panel', href: admin.dashboard().url },
+        { title: 'Eventos', href: admin.events.index().url },
+        { title: 'Editar evento', href: '' },
+    ],
+});
 
 interface Zone {
     id: number;
@@ -43,35 +52,18 @@ const props = defineProps<{
     zones: Zone[];
 }>();
 
-const formatDateTimeLocal = (
-    value: string | null,
-): string => {
-    if (!value) {
-        return '';
-    }
+const formatDateTimeLocal = (value: string | null): string => {
+    if (!value) return '';
 
     const date = new Date(value);
 
-    if (Number.isNaN(date.getTime())) {
-        return '';
-    }
+    if (Number.isNaN(date.getTime())) return '';
 
     const year = date.getFullYear();
-    const month = String(
-        date.getMonth() + 1,
-    ).padStart(2, '0');
-
-    const day = String(
-        date.getDate(),
-    ).padStart(2, '0');
-
-    const hours = String(
-        date.getHours(),
-    ).padStart(2, '0');
-
-    const minutes = String(
-        date.getMinutes(),
-    ).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
 
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
@@ -80,12 +72,8 @@ const form = useForm({
     name: props.event.name,
     description: props.event.description ?? '',
     type: props.event.type ?? '',
-    start_at: formatDateTimeLocal(
-        props.event.start_at,
-    ),
-    end_at: formatDateTimeLocal(
-        props.event.end_at,
-    ),
+    start_at: formatDateTimeLocal(props.event.start_at),
+    end_at: formatDateTimeLocal(props.event.end_at),
     zoo_zone_id:
         props.event.zoo_zone_id !== null
             ? String(props.event.zoo_zone_id)
@@ -98,17 +86,21 @@ const form = useForm({
 });
 
 const submit = () => {
-    form
-        .transform((data) => ({
-            ...data,
-            _method: 'put',
-        }))
-        .post(
-            admin.events.update(props.event.id).url,
-            {
-                forceFormData: true,
-            },
-        );
+    form.transform((data) => ({
+        ...data,
+        _method: 'put',
+    })).post(admin.events.update(props.event.id).url, {
+        forceFormData: true,
+    });
+};
+
+const handleImageChange = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    form.image = input.files?.[0] ?? null;
+};
+
+const restoreCurrentImage = () => {
+    form.remove_image = false;
 };
 </script>
 
@@ -116,81 +108,29 @@ const submit = () => {
     <Head :title="`Editar ${event.name}`" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+        <PageHeader
+            title="Editar evento"
+            :description="`Actualiza la información del evento «${event.name}».`"
+            section="Eventos"
+            :icon="CalendarDays"
+            :action-icon="ArrowLeft"
+            action-label="Volver a eventos"
+            :action-href="admin.events.index().url"
+        />
+
+        <form class="space-y-5" @submit.prevent="submit">
+            <!-- Información general -->
+            <AdminCard
+                title="Información general"
+                description="Actualiza los datos principales del evento."
+                :icon="Info"
             >
-                <div class="flex items-center gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <CalendarDays class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Editar evento
-                        </h1>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Actualiza la información del evento
-                            "{{ event.name }}".
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.events.index().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Regresar
-                </Link>
-            </div>
-        </div>
-
-        <!-- Formulario -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <form
-                class="space-y-8"
-                @submit.prevent="submit"
-            >
-                <!-- Información general -->
-                <div class="space-y-6">
-                    <div
-                        class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                    >
-                        <div
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                        >
-                            <Info class="h-4 w-4" />
-                        </div>
-
-                        <div>
-                            <h2 class="font-semibold">
-                                Información general
-                            </h2>
-
-                            <p class="mt-0.5 text-sm text-muted-foreground">
-                                Actualiza los datos principales del evento.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Nombre -->
-                    <div class="space-y-2">
-                        <label
-                            for="name"
-                            class="text-sm font-medium"
-                        >
-                            Nombre
+                <div class="space-y-5">
+                    <div class="form-field">
+                        <label for="name" class="form-label">
+                            Nombre <span class="form-required">*</span>
                         </label>
 
                         <input
@@ -198,25 +138,22 @@ const submit = () => {
                             v-model="form.name"
                             type="text"
                             placeholder="Ej. Alimentación de jirafas"
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            autocomplete="off"
+                            required
+                            :class="[
+                                'form-input',
+                                form.errors.name && 'form-input-error',
+                            ]"
                         />
 
-                        <p
-                            v-if="form.errors.name"
-                            class="text-sm text-red-500"
-                        >
+                        <p v-if="form.errors.name" class="form-error">
                             {{ form.errors.name }}
                         </p>
                     </div>
 
-                    <!-- Tipo y zona -->
-                    <div class="grid gap-6 md:grid-cols-2">
-                        <!-- Tipo -->
-                        <div class="space-y-2">
-                            <label
-                                for="type"
-                                class="text-sm font-medium"
-                            >
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="type" class="form-label">
                                 Tipo de evento
                             </label>
 
@@ -225,117 +162,93 @@ const submit = () => {
                                 v-model="form.type"
                                 type="text"
                                 placeholder="Ej. Educativo"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                :class="[
+                                    'form-input',
+                                    form.errors.type && 'form-input-error',
+                                ]"
                             />
 
-                            <p
-                                v-if="form.errors.type"
-                                class="text-sm text-red-500"
-                            >
+                            <p v-if="form.errors.type" class="form-error">
                                 {{ form.errors.type }}
                             </p>
                         </div>
 
-                        <!-- Zona -->
-                        <div class="space-y-2">
-                            <label
-                                for="zoo_zone_id"
-                                class="flex items-center gap-2 text-sm font-medium"
-                            >
-                                <MapPin
-                                    class="h-4 w-4 text-muted-foreground"
-                                />
-                                Zona
+                        <div class="form-field">
+                            <label for="zoo_zone_id" class="form-label">
+                                <span class="inline-flex items-center gap-2">
+                                    <MapPin :size="16" />
+                                    Zona
+                                </span>
                             </label>
 
-                            <div class="relative">
+                            <div class="form-select-wrapper">
                                 <select
                                     id="zoo_zone_id"
                                     v-model="form.zoo_zone_id"
-                                    class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    :class="[
+                                        'form-select appearance-none',
+                                        form.errors.zoo_zone_id &&
+                                            'form-select-error',
+                                    ]"
                                 >
-                                    <option value="">
-                                        Sin zona
-                                    </option>
+                                    <option value="">Sin zona</option>
 
                                     <option
-                                        v-for="zone in zones"
+                                        v-for="zone in props.zones"
                                         :key="zone.id"
                                         :value="String(zone.id)"
                                     >
                                         {{ zone.name }}
                                     </option>
                                 </select>
-
-                                <ChevronDown
-                                    class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                                />
                             </div>
 
                             <p
                                 v-if="form.errors.zoo_zone_id"
-                                class="text-sm text-red-500"
+                                class="form-error"
                             >
                                 {{ form.errors.zoo_zone_id }}
                             </p>
                         </div>
                     </div>
                 </div>
+            </AdminCard>
 
-                <!-- Fecha y capacidad -->
-                <div class="space-y-6">
-                    <div
-                        class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                    >
-                        <div
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                        >
-                            <Clock class="h-4 w-4" />
-                        </div>
-
-                        <div>
-                            <h2 class="font-semibold">
-                                Fecha y capacidad
-                            </h2>
-
-                            <p class="mt-0.5 text-sm text-muted-foreground">
-                                Actualiza el horario y la capacidad del evento.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Fechas -->
-                    <div class="grid gap-6 md:grid-cols-2">
-                        <!-- Inicio -->
-                        <div class="space-y-2">
-                            <label
-                                for="start_at"
-                                class="text-sm font-medium"
-                            >
+            <!-- Fecha y capacidad -->
+            <AdminCard
+                title="Fecha y capacidad"
+                description="Actualiza el horario y la capacidad del evento."
+                :icon="Clock"
+            >
+                <div class="space-y-5">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="start_at" class="form-label">
                                 Fecha y hora de inicio
+                                <span class="form-required">*</span>
                             </label>
 
                             <input
                                 id="start_at"
                                 v-model="form.start_at"
                                 type="datetime-local"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                required
+                                :class="[
+                                    'form-input',
+                                    form.errors.start_at && 'form-input-error',
+                                ]"
                             />
 
                             <p
                                 v-if="form.errors.start_at"
-                                class="text-sm text-red-500"
+                                class="form-error"
                             >
                                 {{ form.errors.start_at }}
                             </p>
                         </div>
 
-                        <!-- Fin -->
-                        <div class="space-y-2">
-                            <label
-                                for="end_at"
-                                class="text-sm font-medium"
-                            >
+                        <div class="form-field">
+                            <label for="end_at" class="form-label">
                                 Fecha y hora de finalización
                             </label>
 
@@ -343,33 +256,29 @@ const submit = () => {
                                 id="end_at"
                                 v-model="form.end_at"
                                 type="datetime-local"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                :class="[
+                                    'form-input',
+                                    form.errors.end_at && 'form-input-error',
+                                ]"
                             />
 
-                            <p class="text-xs text-muted-foreground">
+                            <p class="form-help">
                                 Déjalo vacío si el evento no tiene hora de
                                 finalización.
                             </p>
 
-                            <p
-                                v-if="form.errors.end_at"
-                                class="text-sm text-red-500"
-                            >
+                            <p v-if="form.errors.end_at" class="form-error">
                                 {{ form.errors.end_at }}
                             </p>
                         </div>
                     </div>
 
-                    <!-- Capacidad -->
-                    <div class="space-y-2">
-                        <label
-                            for="capacity"
-                            class="flex items-center gap-2 text-sm font-medium"
-                        >
-                            <Users
-                                class="h-4 w-4 text-muted-foreground"
-                            />
-                            Capacidad
+                    <div class="form-field">
+                        <label for="capacity" class="form-label">
+                            <span class="inline-flex items-center gap-2">
+                                <Users :size="16" />
+                                Capacidad
+                            </span>
                         </label>
 
                         <input
@@ -378,51 +287,33 @@ const submit = () => {
                             type="number"
                             min="1"
                             placeholder="Ej. 50"
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            :class="[
+                                'form-input',
+                                form.errors.capacity && 'form-input-error',
+                            ]"
                         />
 
-                        <p class="text-xs text-muted-foreground">
+                        <p class="form-help">
                             Déjalo vacío si el evento no tiene límite de
                             asistentes.
                         </p>
 
-                        <p
-                            v-if="form.errors.capacity"
-                            class="text-sm text-red-500"
-                        >
+                        <p v-if="form.errors.capacity" class="form-error">
                             {{ form.errors.capacity }}
                         </p>
                     </div>
                 </div>
+            </AdminCard>
 
-                <!-- Contenido -->
-                <div class="space-y-6">
-                    <div
-                        class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                    >
-                        <div
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                        >
-                            <FileImage class="h-4 w-4" />
-                        </div>
-
-                        <div>
-                            <h2 class="font-semibold">
-                                Contenido
-                            </h2>
-
-                            <p class="mt-0.5 text-sm text-muted-foreground">
-                                Actualiza la descripción y material visual.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Descripción -->
-                    <div class="space-y-2">
-                        <label
-                            for="description"
-                            class="text-sm font-medium"
-                        >
+            <!-- Contenido -->
+            <AdminCard
+                title="Contenido"
+                description="Actualiza la descripción y el material visual."
+                :icon="FileImage"
+            >
+                <div class="space-y-5">
+                    <div class="form-field">
+                        <label for="description" class="form-label">
                             Descripción
                         </label>
 
@@ -431,243 +322,201 @@ const submit = () => {
                             v-model="form.description"
                             rows="4"
                             placeholder="Describe el evento..."
-                            class="w-full resize-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        ></textarea>
+                            :class="[
+                                'form-textarea',
+                                form.errors.description &&
+                                    'form-textarea-error',
+                            ]"
+                        />
 
                         <p
                             v-if="form.errors.description"
-                            class="text-sm text-red-500"
+                            class="form-error"
                         >
                             {{ form.errors.description }}
                         </p>
                     </div>
 
-                    <!-- Imagen -->
-                    <div class="space-y-2">
-                        <label
-                            for="image"
-                            class="text-sm font-medium"
-                        >
-                            Imagen
-                        </label>
+                    <!-- Imagen actual -->
+                    <div class="form-field">
+                        <label class="form-label">Imagen del evento</label>
 
-                        <!-- Imagen actual -->
                         <div
                             v-if="event.image && !form.remove_image"
-                            class="rounded-xl border border-sidebar-border bg-muted/20 p-4"
+                            class="form-preview"
                         >
-                            <p class="mb-3 text-xs font-medium text-muted-foreground">
-                                Imagen actual:
-                            </p>
+                            <div class="p-4">
+                                <p class="form-help mb-3">Imagen actual</p>
 
-                            <img
-                                :src="`/storage/${event.image}`"
-                                :alt="event.name"
-                                class="h-48 w-full rounded-lg border border-sidebar-border object-cover md:w-80"
-                            />
+                                <img
+                                    :src="`/storage/${event.image}`"
+                                    :alt="event.name"
+                                    class="form-preview-image"
+                                />
+                            </div>
 
-                            <button
-                                type="button"
-                                class="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                @click="form.remove_image = true"
-                            >
-                                <X class="h-3.5 w-3.5" />
-                                Eliminar imagen actual
-                            </button>
+                            <div class="form-preview-footer">
+                                <p class="form-help">
+                                    Esta imagen está guardada actualmente.
+                                </p>
+
+                                <button
+                                    type="button"
+                                    class="form-remove-button"
+                                    title="Eliminar imagen actual"
+                                    aria-label="Eliminar imagen actual"
+                                    @click="form.remove_image = true"
+                                >
+                                    <X :size="18" />
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Imagen marcada para eliminar -->
                         <div
                             v-else-if="event.image && form.remove_image"
-                            class="rounded-xl border border-red-500/30 bg-red-500/5 p-4"
+                            class="form-upload-selected"
                         >
-                            <p class="text-sm text-muted-foreground">
-                                La imagen actual será eliminada al guardar.
-                            </p>
+                            <div class="flex items-start gap-3">
+                                <div class="form-upload-icon">
+                                    <FileImage :size="20" />
+                                </div>
 
-                            <button
-                                type="button"
-                                class="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                @click="form.remove_image = false"
-                            >
-                                <ArrowLeft class="h-3.5 w-3.5" />
-                                Conservar imagen
-                            </button>
+                                <div class="min-w-0 flex-1">
+                                    <p class="form-upload-title">
+                                        Imagen marcada para eliminar
+                                    </p>
+
+                                    <p class="form-upload-description">
+                                        La imagen actual se eliminará al guardar
+                                        los cambios.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="form-button form-button-secondary"
+                                    @click="restoreCurrentImage"
+                                >
+                                    <ArrowLeft :size="16" />
+                                    Conservar
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- Nueva imagen -->
-                        <div
-                            class="rounded-xl border border-dashed border-sidebar-border bg-muted/20 p-6 transition hover:bg-muted/30"
-                        >
+                        <!-- Seleccionar imagen nueva -->
+                        <div class="form-upload">
+                            <div class="form-upload-icon">
+                                <FileImage :size="22" />
+                            </div>
+
+                            <p class="form-upload-title">
+                                {{
+                                    form.image?.name ??
+                                    'Selecciona una imagen nueva'
+                                }}
+                            </p>
+
+                            <p class="form-upload-description">
+                                JPG, JPEG, PNG o WEBP. Máximo 5 MB.
+                                Selecciona una imagen solo si deseas reemplazar
+                                la actual.
+                            </p>
+
                             <input
                                 id="image"
                                 type="file"
                                 accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition file:mr-4 file:border-0 file:bg-muted file:px-4 file:py-2 file:text-sm"
-                                @change="
-                                    form.image =
-                                        ($event.target as HTMLInputElement)
-                                            .files?.[0] ?? null
-                                "
+                                class="form-upload-input"
+                                @change="handleImageChange"
                             />
-
-                            <p class="mt-2 text-xs text-muted-foreground">
-                                Selecciona una imagen nueva solamente si deseas
-                                reemplazar la actual. JPG, JPEG, PNG o WEBP.
-                                Máximo 5 MB.
-                            </p>
                         </div>
 
-                        <p
-                            v-if="form.errors.image"
-                            class="text-sm text-red-500"
-                        >
+                        <p v-if="form.errors.image" class="form-error">
                             {{ form.errors.image }}
                         </p>
 
-                        <p
-                            v-if="form.errors.remove_image"
-                            class="text-sm text-red-500"
-                        >
+                        <p v-if="form.errors.remove_image" class="form-error">
                             {{ form.errors.remove_image }}
                         </p>
                     </div>
                 </div>
+            </AdminCard>
 
-                <!-- Configuración -->
-                <div class="space-y-6">
-                    <div
-                        class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                    >
-                        <div
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                        >
-                            <Star class="h-4 w-4" />
-                        </div>
+            <!-- Configuración -->
+            <AdminCard
+                title="Configuración"
+                description="Define la visibilidad y el estado del evento."
+                :icon="Star"
+            >
+                <div class="form-grid">
+                    <label class="form-checkbox-row cursor-pointer">
+                        <input
+                            v-model="form.is_featured"
+                            type="checkbox"
+                            class="form-checkbox"
+                        />
 
-                        <div>
-                            <h2 class="font-semibold">
-                                Configuración
-                            </h2>
-
-                            <p class="mt-0.5 text-sm text-muted-foreground">
-                                Define la visibilidad y estado del evento.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="grid gap-6 md:grid-cols-2">
-                        <!-- Destacado -->
-                        <label
-                            class="flex cursor-pointer items-start gap-3 rounded-xl border border-sidebar-border p-4 transition hover:bg-accent/30"
-                        >
-                            <span
-                                class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-sidebar-border transition"
-                                :class="
-                                    form.is_featured
-                                        ? 'border-primary bg-primary text-primary-foreground'
-                                        : 'bg-background'
-                                "
-                            >
-                                <Check
-                                    v-if="form.is_featured"
-                                    class="h-3.5 w-3.5"
-                                />
-
-                                <input
-                                    v-model="form.is_featured"
-                                    type="checkbox"
-                                    class="sr-only"
-                                />
+                        <span>
+                            <span class="form-checkbox-title block">
+                                Evento destacado
                             </span>
 
-                            <span>
-                                <span class="block text-sm font-medium">
-                                    Evento destacado
-                                </span>
-
-                                <span
-                                    class="mt-1 block text-xs text-muted-foreground"
-                                >
-                                    Marca el evento como destacado.
-                                </span>
+                            <span class="form-checkbox-description block">
+                                Marca el evento para destacarlo frente a los
+                                demás.
                             </span>
-                        </label>
+                        </span>
+                    </label>
 
-                        <!-- Activo -->
-                        <label
-                            class="flex cursor-pointer items-start gap-3 rounded-xl border border-sidebar-border p-4 transition hover:bg-accent/30"
-                        >
-                            <span
-                                class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-sidebar-border transition"
-                                :class="
-                                    form.is_active
-                                        ? 'border-primary bg-primary text-primary-foreground'
-                                        : 'bg-background'
-                                "
-                            >
-                                <Check
-                                    v-if="form.is_active"
-                                    class="h-3.5 w-3.5"
-                                />
+                    <label class="form-checkbox-row cursor-pointer">
+                        <input
+                            v-model="form.is_active"
+                            type="checkbox"
+                            class="form-checkbox"
+                        />
 
-                                <input
-                                    v-model="form.is_active"
-                                    type="checkbox"
-                                    class="sr-only"
-                                />
+                        <span>
+                            <span class="form-checkbox-title block">
+                                Evento activo
                             </span>
 
-                            <span>
-                                <span class="block text-sm font-medium">
-                                    Evento activo
-                                </span>
-
-                                <span
-                                    class="mt-1 block text-xs text-muted-foreground"
-                                >
-                                    El evento estará disponible en el sistema.
-                                </span>
+                            <span class="form-checkbox-description block">
+                                El evento estará disponible en el sistema.
                             </span>
-                        </label>
-                    </div>
+                        </span>
+                    </label>
                 </div>
+            </AdminCard>
 
-                <!-- Acciones -->
-                <div
-                    class="flex flex-col-reverse gap-2 border-t border-sidebar-border/70 pt-6 sm:flex-row sm:justify-end dark:border-sidebar-border"
-                >
-                    <Link
+            <!-- Acciones -->
+            <div
+                class="flex flex-col gap-4 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:items-center"
+            >
+                <p class="form-help sm:mr-auto">
+                    <span class="form-required">*</span>
+                    Campos obligatorios
+                </p>
+
+                <div class="flex flex-col-reverse gap-3 sm:flex-row">
+                    <CancelButton
                         :href="admin.events.index().url"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <X class="h-4 w-4" />
-                        Cancelar
-                    </Link>
+                        :icon="X"
+                        label="Cancelar"
+                    />
 
-                    <button
+                    <AdminButton
                         type="submit"
+                        variant="primary"
+                        :icon="Save"
+                        :loading="form.processing"
+                        loading-text="Actualizando..."
                         :disabled="form.processing"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        <Sparkles
-                            v-if="form.processing"
-                            class="h-4 w-4 animate-pulse"
-                        />
-
-                        <Save
-                            v-else
-                            class="h-4 w-4"
-                        />
-
-                        {{
-                            form.processing
-                                ? 'Actualizando...'
-                                : 'Actualizar evento'
-                        }}
-                    </button>
+                        Actualizar evento
+                    </AdminButton>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </template>

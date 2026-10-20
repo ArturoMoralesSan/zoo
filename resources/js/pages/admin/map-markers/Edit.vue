@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
-    Check,
     ChevronDown,
     CircleDot,
     Info,
     MapPin,
     Palette,
     Save,
-    Sparkles,
     Tag,
     X,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
 import admin from '@/routes/admin';
 
 interface GeoJsonGeometry {
@@ -76,17 +78,11 @@ const form = useForm({
 });
 
 const selectedZone = computed<ZooZone | null>(
-    () =>
-        props.zones.find(
-            (zone) => zone.id === form.zone_id,
-        ) ?? null,
+    () => props.zones.find((zone) => zone.id === form.zone_id) ?? null,
 );
 
 const selectedIcon = computed<MapIcon | null>(
-    () =>
-        props.mapIcons.find(
-            (mapIcon) => mapIcon.value === form.icon,
-        ) ?? null,
+    () => props.mapIcons.find((mapIcon) => mapIcon.value === form.icon) ?? null,
 );
 
 const iconUrl = computed(() => {
@@ -98,90 +94,37 @@ const iconUrl = computed(() => {
 });
 
 const submit = (): void => {
-    form.put(
-        admin.mapMarkers.update(
-            props.marker.id,
-        ).url,
-    );
+    form.put(admin.mapMarkers.update(props.marker.id).url);
 };
 </script>
 
 <template>
     <Head title="Editar marker" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <MapPin class="h-5 w-5" />
-                    </div>
+    <div
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
+    >
+        <PageHeader
+            title="Editar marker"
+            :description="`Modifica la información y ubicación de ${props.marker.name}.`"
+            section="Mapa del zoológico"
+            :icon="MapPin"
+            :action-icon="ArrowLeft"
+            action-label="Volver a markers"
+            :action-href="admin.mapMarkers.index().url"
+        />
 
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Editar marker
-                        </h1>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Modifica la información y ubicación del marker
-                            <span class="font-medium text-foreground">
-                                {{ marker.name }}
-                            </span>.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.mapMarkers.index().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Regresar
-                </Link>
-            </div>
-        </div>
-
-        <form
-            @submit.prevent="submit"
-            class="space-y-4"
-        >
+        <form class="space-y-5" @submit.prevent="submit">
             <!-- Información general -->
-            <div
-                class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+            <AdminCard
+                title="Información general"
+                description="Modifica la información básica de este punto del mapa."
+                :icon="Tag"
             >
-                <div
-                    class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                >
-                    <div
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                    >
-                        <Tag class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h2 class="text-base font-semibold">
-                            Información general
-                        </h2>
-
-                        <p class="text-sm text-muted-foreground">
-                            Modifica la información básica del marker.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="mt-6 space-y-6">
-                    <!-- Nombre -->
-                    <div class="space-y-2">
-                        <label
-                            for="name"
-                            class="text-sm font-medium"
-                        >
-                            Nombre
+                <div class="form-grid">
+                    <div class="form-field form-field-full">
+                        <label for="name" class="form-label">
+                            Nombre <span class="form-required">*</span>
                         </label>
 
                         <input
@@ -189,112 +132,97 @@ const submit = (): void => {
                             v-model="form.name"
                             type="text"
                             placeholder="Ej. Entrada principal"
-                            class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            :class="[
+                                'form-input',
+                                { 'form-input-error': form.errors.name },
+                            ]"
                         />
 
-                        <p
-                            v-if="form.errors.name"
-                            class="text-sm text-red-500"
-                        >
+                        <p v-if="form.errors.name" class="form-error">
                             {{ form.errors.name }}
                         </p>
                     </div>
 
-                    <!-- Tipo y Zona -->
-                    <div class="grid gap-6 md:grid-cols-2">
-                        <!-- Tipo -->
-                        <div class="space-y-2">
-                            <label
-                                for="type"
-                                class="text-sm font-medium"
-                            >
-                                Tipo
-                            </label>
+                    <div class="form-field">
+                        <label for="type" class="form-label">
+                            Tipo
+                        </label>
 
-                            <input
-                                id="type"
-                                v-model="form.type"
-                                type="text"
-                                placeholder="Ej. Entrada, servicio, restaurante"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            />
+                        <input
+                            id="type"
+                            v-model="form.type"
+                            type="text"
+                            placeholder="Ej. Entrada, servicio, restaurante"
+                            :class="[
+                                'form-input',
+                                { 'form-input-error': form.errors.type },
+                            ]"
+                        />
 
-                            <p
-                                v-if="form.errors.type"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.type }}
-                            </p>
-                        </div>
+                        <p v-if="form.errors.type" class="form-error">
+                            {{ form.errors.type }}
+                        </p>
 
-                        <!-- Zona -->
-                        <div class="space-y-2">
-                            <label
-                                for="zone_id"
-                                class="text-sm font-medium"
-                            >
-                                Zona
-                            </label>
-
-                            <div class="relative">
-                                <select
-                                    id="zone_id"
-                                    v-model="form.zone_id"
-                                    class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                >
-                                    <option :value="null">
-                                        Selecciona una zona
-                                    </option>
-
-                                    <option
-                                        v-for="zone in zones"
-                                        :key="zone.id"
-                                        :value="zone.id"
-                                    >
-                                        {{ zone.name }}
-                                    </option>
-                                </select>
-
-                                <ChevronDown
-                                    class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                                />
-                            </div>
-
-                            <p
-                                v-if="form.errors.zone_id"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.zone_id }}
-                            </p>
-
-                            <p
-                                v-if="
-                                    form.zone_id &&
-                                    !selectedZone?.geometry
-                                "
-                                class="text-xs text-amber-600"
-                            >
-                                Esta zona no tiene un área definida en el mapa.
-                            </p>
-
-                            <p
-                                v-if="
-                                    form.zone_id &&
-                                    !selectedZone?.map_image
-                                "
-                                class="text-xs text-amber-600"
-                            >
-                                Esta zona no tiene un plano configurado.
-                            </p>
-                        </div>
+                        <p class="form-help">
+                            Categoría o tipo de lugar que representa este marker.
+                        </p>
                     </div>
 
-                    <!-- Descripción -->
-                    <div class="space-y-2">
-                        <label
-                            for="description"
-                            class="text-sm font-medium"
+                    <div class="form-field">
+                        <label for="zone_id" class="form-label">
+                            Zona <span class="form-required">*</span>
+                        </label>
+
+                        <div class="form-select-wrapper">
+                            <select
+                                id="zone_id"
+                                v-model="form.zone_id"
+                                required
+                                :class="[
+                                    'form-select appearance-none',
+                                    { 'form-select-error': form.errors.zone_id },
+                                ]"
+                            >
+                                <option :value="null">
+                                    Selecciona una zona
+                                </option>
+
+                                <option
+                                    v-for="zone in props.zones"
+                                    :key="zone.id"
+                                    :value="zone.id"
+                                >
+                                    {{ zone.name }}
+                                </option>
+                            </select>
+
+                            <ChevronDown
+                                :size="16"
+                                class="form-select-icon"
+                            />
+                        </div>
+
+                        <p v-if="form.errors.zone_id" class="form-error">
+                            {{ form.errors.zone_id }}
+                        </p>
+
+                        <p
+                            v-if="form.zone_id && !selectedZone?.geometry"
+                            class="form-help text-amber-700"
                         >
+                            Esta zona no tiene un área definida en el mapa.
+                        </p>
+
+                        <p
+                            v-if="form.zone_id && !selectedZone?.map_image"
+                            class="form-help text-amber-700"
+                        >
+                            Esta zona no tiene un plano configurado.
+                        </p>
+                    </div>
+
+                    <div class="form-field form-field-full">
+                        <label for="description" class="form-label">
                             Descripción
                         </label>
 
@@ -303,125 +231,102 @@ const submit = (): void => {
                             v-model="form.description"
                             rows="4"
                             placeholder="Describe este punto del zoológico..."
-                            class="w-full resize-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        ></textarea>
+                            :class="[
+                                'form-textarea',
+                                {
+                                    'form-textarea-error':
+                                        form.errors.description,
+                                },
+                            ]"
+                        />
 
                         <p
                             v-if="form.errors.description"
-                            class="text-sm text-red-500"
+                            class="form-error"
                         >
                             {{ form.errors.description }}
                         </p>
                     </div>
                 </div>
-            </div>
+            </AdminCard>
 
             <!-- Ubicación -->
-            <div
-                class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+            <AdminCard
+                title="Ubicación"
+                description="Ajusta la posición actual del marker sobre el mapa."
+                :icon="MapPin"
             >
-                <div
-                    class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                >
-                    <div
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                    >
-                        <MapPin class="h-5 w-5" />
-                    </div>
+                <div class="space-y-5">
+                    <div class="form-info">
+                        <Info class="form-info-icon" />
 
-                    <div>
-                        <h2 class="text-base font-semibold">
-                            Ubicación
-                        </h2>
-
-                        <p class="text-sm text-muted-foreground">
-                            Ajusta la posición del marker sobre el mapa.
+                        <p class="form-info-text">
+                            Selecciona un punto dentro de la zona directamente
+                            sobre el mapa. Puedes arrastrar el marker para
+                            ajustar su ubicación. El plano sirve como
+                            referencia visual.
                         </p>
                     </div>
-                </div>
 
-                <div class="mt-6 space-y-6">
-                    <div class="rounded-lg border border-sidebar-border bg-muted/20 p-4">
-                        <div class="flex items-start gap-3">
-                            <Info class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-
-                            <p class="text-sm text-muted-foreground">
-                                Selecciona un punto dentro de la zona directamente
-                                sobre el mapa. El plano es solo una referencia
-                                visual.
-                            </p>
-                        </div>
+                    <div
+                        class="overflow-hidden rounded-xl border border-[#DCE7DF] bg-white"
+                    >
+                        <MapMarkerMap
+                            :geometry="selectedZone?.geometry ?? null"
+                            :map-image="selectedZone?.map_image ?? null"
+                            :map-image-bounds="
+                                selectedZone?.map_image_bounds ?? null
+                            "
+                            v-model:latitude="form.latitude"
+                            v-model:longitude="form.longitude"
+                            :icon="form.icon"
+                            :color="form.color"
+                        />
                     </div>
 
-                    <!-- Mapa -->
-                    <MapMarkerMap
-                        :geometry="selectedZone?.geometry ?? null"
-                        :map-image="selectedZone?.map_image ?? null"
-                        :map-image-bounds="
-                            selectedZone?.map_image_bounds ?? null
-                        "
-                        v-model:latitude="form.latitude"
-                        v-model:longitude="form.longitude"
-                        :icon="form.icon"
-                        :color="form.color"
-                    />
-
-                    <!-- Información del plano -->
                     <div
                         v-if="
                             form.zone_id &&
                             selectedZone?.map_image &&
                             selectedZone?.map_image_bounds
                         "
-                        class="rounded-lg border border-sidebar-border bg-muted/30 p-4"
+                        class="form-info"
                     >
-                        <div class="flex items-start gap-3">
-                            <Info class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <Info class="form-info-icon" />
 
-                            <div>
-                                <p class="text-sm font-medium">
-                                    Plano de la zona
-                                </p>
-
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    El plano se muestra como referencia. Puedes
-                                    colocar el marker en cualquier punto dentro
-                                    de la zona, incluso en áreas donde no existe
-                                    imagen.
-                                </p>
-                            </div>
-                        </div>
+                        <p class="form-info-text">
+                            <span class="font-semibold">
+                                Plano de la zona.
+                            </span>
+                            Puedes colocar el marker en cualquier punto
+                            permitido de la zona, incluso en áreas donde no
+                            exista una imagen de referencia.
+                        </p>
                     </div>
 
-                    <!-- Mensaje sin zona -->
                     <div
                         v-if="!form.zone_id"
-                        class="rounded-lg border border-dashed border-sidebar-border bg-muted/30 p-4 text-center"
+                        class="rounded-xl border border-dashed border-[#C8DCCF] bg-[#F7FAF8] px-5 py-8 text-center"
                     >
                         <div
-                            class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary"
+                            class="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#E7F2EA] text-[#187744]"
                         >
                             <MapPin class="h-5 w-5" />
                         </div>
 
-                        <p class="mt-3 text-sm font-medium">
+                        <p class="mt-3 text-sm font-semibold text-[#244334]">
                             Selecciona una zona
                         </p>
 
-                        <p class="mt-1 text-xs text-muted-foreground">
+                        <p class="mt-1 text-sm text-[#718477]">
                             Al seleccionar una zona se mostrará su plano y su
                             área en el mapa.
                         </p>
                     </div>
 
-                    <!-- Coordenadas -->
-                    <div class="grid gap-6 md:grid-cols-2">
-                        <!-- Latitud -->
-                        <div class="space-y-2">
-                            <label
-                                for="latitude"
-                                class="text-sm font-medium"
-                            >
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="latitude" class="form-label">
                                 Latitud
                             </label>
 
@@ -432,28 +337,30 @@ const submit = (): void => {
                                 step="any"
                                 readonly
                                 placeholder="Selecciona un punto en el mapa"
-                                class="w-full rounded-lg border border-sidebar-border bg-muted/30 px-4 py-2.5 text-sm outline-none"
+                                :class="[
+                                    'form-input bg-[#F7FAF8]',
+                                    {
+                                        'form-input-error':
+                                            form.errors.latitude,
+                                    },
+                                ]"
                             />
 
-                            <p class="text-xs text-muted-foreground">
-                                Se obtiene automáticamente al colocar el
+                            <p class="form-help">
+                                Se actualiza automáticamente al mover el
                                 marker.
                             </p>
 
                             <p
                                 v-if="form.errors.latitude"
-                                class="text-sm text-red-500"
+                                class="form-error"
                             >
                                 {{ form.errors.latitude }}
                             </p>
                         </div>
 
-                        <!-- Longitud -->
-                        <div class="space-y-2">
-                            <label
-                                for="longitude"
-                                class="text-sm font-medium"
-                            >
+                        <div class="form-field">
+                            <label for="longitude" class="form-label">
                                 Longitud
                             </label>
 
@@ -464,71 +371,49 @@ const submit = (): void => {
                                 step="any"
                                 readonly
                                 placeholder="Selecciona un punto en el mapa"
-                                class="w-full rounded-lg border border-sidebar-border bg-muted/30 px-4 py-2.5 text-sm outline-none"
+                                :class="[
+                                    'form-input bg-[#F7FAF8]',
+                                    {
+                                        'form-input-error':
+                                            form.errors.longitude,
+                                    },
+                                ]"
                             />
 
-                            <p class="text-xs text-muted-foreground">
-                                Se obtiene automáticamente al colocar el
+                            <p class="form-help">
+                                Se actualiza automáticamente al mover el
                                 marker.
                             </p>
 
                             <p
                                 v-if="form.errors.longitude"
-                                class="text-sm text-red-500"
+                                class="form-error"
                             >
                                 {{ form.errors.longitude }}
                             </p>
                         </div>
                     </div>
                 </div>
-            </div>
+            </AdminCard>
 
             <!-- Apariencia -->
-            <div
-                class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+            <AdminCard
+                title="Apariencia"
+                description="Personaliza el icono y el color del marker."
+                :icon="Palette"
             >
-                <div
-                    class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                >
-                    <div
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                    >
-                        <Palette class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h2 class="text-base font-semibold">
-                            Apariencia
-                        </h2>
-
-                        <p class="text-sm text-muted-foreground">
-                            Configura el icono y color del marker.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="mt-6 grid gap-6 md:grid-cols-2">
-                    <!-- Icono -->
-                    <div class="space-y-2">
-                        <label
-                            for="icon"
-                            class="text-sm font-medium"
-                        >
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="icon" class="form-label">
                             Icono
                         </label>
 
-                        <div class="flex gap-3">
-                            <!-- Vista previa -->
+                        <div class="flex items-start gap-3">
                             <div
-                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-sidebar-border"
-                                :style="
-                                    form.color
-                                        ? {
-                                              backgroundColor:
-                                                  form.color,
-                                          }
-                                        : undefined
-                                "
+                                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#DCE7DF]"
+                                :style="{
+                                    backgroundColor: form.color || '#22c55e',
+                                }"
                             >
                                 <img
                                     v-if="iconUrl"
@@ -537,28 +422,30 @@ const submit = (): void => {
                                         selectedIcon?.label ??
                                         'Icono del marker'
                                     "
-                                    class="h-7 w-7 object-contain"
+                                    class="h-8 w-8 object-contain"
                                 />
 
-                                <MapPin
-                                    v-else
-                                    class="h-5 w-5"
-                                />
+                                <MapPin v-else class="h-5 w-5" />
                             </div>
 
-                            <!-- Selector -->
-                            <div class="relative min-w-0 flex-1">
+                            <div class="form-select-wrapper min-w-0 flex-1">
                                 <select
                                     id="icon"
                                     v-model="form.icon"
-                                    class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    :class="[
+                                        'form-select appearance-none',
+                                        {
+                                            'form-select-error':
+                                                form.errors.icon,
+                                        },
+                                    ]"
                                 >
                                     <option value="">
                                         Selecciona un icono
                                     </option>
 
                                     <option
-                                        v-for="mapIcon in mapIcons"
+                                        v-for="mapIcon in props.mapIcons"
                                         :key="mapIcon.value"
                                         :value="mapIcon.value"
                                     >
@@ -567,204 +454,149 @@ const submit = (): void => {
                                 </select>
 
                                 <ChevronDown
-                                    class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                                    :size="16"
+                                    class="form-select-icon"
                                 />
                             </div>
                         </div>
 
-                        <p class="text-xs text-muted-foreground">
-                            {{
-                                selectedIcon?.label ??
-                                'Icono del marker'
-                            }}
+                        <p class="form-help">
+                            {{ selectedIcon?.label ?? 'Icono del marker' }}
                         </p>
 
-                        <p
-                            v-if="form.errors.icon"
-                            class="text-sm text-red-500"
-                        >
+                        <p v-if="form.errors.icon" class="form-error">
                             {{ form.errors.icon }}
                         </p>
                     </div>
 
-                    <!-- Color -->
-                    <div class="space-y-2">
-                        <label
-                            for="color"
-                            class="text-sm font-medium"
-                        >
+                    <div class="form-field">
+                        <label for="color" class="form-label">
                             Color
                         </label>
 
-                        <div class="flex gap-2">
-                            <!-- Campo hexadecimal -->
+                        <div class="flex items-center gap-3">
                             <input
                                 id="color"
                                 v-model="form.color"
                                 type="text"
                                 placeholder="Ej. #22c55e"
-                                class="min-w-0 flex-1 rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                :class="[
+                                    'form-input',
+                                    {
+                                        'form-input-error':
+                                            form.errors.color,
+                                    },
+                                ]"
                             />
 
-                            <!-- Color picker -->
                             <input
                                 v-model="form.color"
                                 type="color"
-                                class="h-11 w-14 cursor-pointer rounded-lg border border-sidebar-border bg-background p-1"
+                                class="h-11 w-14 shrink-0 cursor-pointer rounded-lg border border-[#DCE7DF] bg-white p-1"
                                 title="Seleccionar color"
+                                aria-label="Seleccionar color del marker"
                             />
                         </div>
 
-                        <!-- Vista previa -->
                         <div
-                            class="flex items-center gap-3 rounded-lg border border-sidebar-border bg-muted/30 p-3"
+                            class="mt-3 flex items-center gap-3 rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-3"
                         >
                             <span
-                                class="h-8 w-8 shrink-0 rounded-full border shadow-sm"
+                                class="h-9 w-9 shrink-0 rounded-full border border-[#DCE7DF]"
                                 :style="{
-                                    backgroundColor:
-                                        form.color ||
-                                        '#22c55e',
+                                    backgroundColor: form.color || '#22c55e',
                                 }"
-                            ></span>
+                            />
 
-                            <div>
-                                <p class="text-xs font-medium">
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-[#244334]">
                                     Color seleccionado
                                 </p>
 
-                                <p class="text-xs text-muted-foreground">
-                                    {{
-                                        form.color ||
-                                        '#22c55e'
-                                    }}
+                                <p class="text-xs text-[#718477]">
+                                    {{ form.color || '#22c55e' }}
                                 </p>
                             </div>
                         </div>
 
-                        <p class="text-xs text-muted-foreground">
-                            Puedes escribir el código hexadecimal o utilizar
-                            el selector de color.
+                        <p class="form-help">
+                            Escribe un código hexadecimal o utiliza el
+                            selector de color.
                         </p>
 
-                        <p
-                            v-if="form.errors.color"
-                            class="text-sm text-red-500"
-                        >
+                        <p v-if="form.errors.color" class="form-error">
                             {{ form.errors.color }}
                         </p>
                     </div>
                 </div>
-            </div>
+            </AdminCard>
 
             <!-- Estado -->
-            <div
-                class="rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+            <AdminCard
+                title="Estado"
+                description="Define si el marker estará disponible en el mapa público."
+                :icon="CircleDot"
             >
-                <div
-                    class="flex items-center gap-3 border-b border-sidebar-border/70 pb-6 dark:border-sidebar-border"
-                >
-                    <div
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                    >
-                        <CircleDot class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h2 class="text-base font-semibold">
-                            Estado
-                        </h2>
-
-                        <p class="text-sm text-muted-foreground">
-                            Define si el marker estará disponible en el mapa.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="mt-6">
-                    <label
-                        for="is_active"
-                        class="flex cursor-pointer items-center gap-3"
-                    >
-                        <span
-                            class="flex h-5 w-5 shrink-0 items-center justify-center rounded border transition"
-                            :class="
-                                form.is_active
-                                    ? 'border-primary bg-primary text-primary-foreground'
-                                    : 'border-sidebar-border bg-background'
-                            "
-                        >
-                            <Check
-                                v-if="form.is_active"
-                                class="h-3.5 w-3.5"
-                            />
-                        </span>
-
+                <div class="form-field">
+                    <label for="is_active" class="form-checkbox-row">
                         <input
                             id="is_active"
                             v-model="form.is_active"
                             type="checkbox"
-                            class="sr-only"
+                            class="form-checkbox"
                         />
 
-                        <span class="text-sm font-medium">
-                            Marker activo
+                        <span>
+                            <span class="form-checkbox-title block">
+                                Marker activo
+                            </span>
+
+                            <span class="form-checkbox-description block">
+                                Los markers inactivos no estarán disponibles
+                                para los usuarios del mapa público.
+                            </span>
                         </span>
                     </label>
 
-                    <p class="mt-2 text-xs text-muted-foreground">
-                        Los markers inactivos no estarán disponibles para los
-                        usuarios del mapa público.
-                    </p>
-
-                    <p
-                        v-if="form.errors.is_active"
-                        class="mt-2 text-sm text-red-500"
-                    >
+                    <p v-if="form.errors.is_active" class="form-error">
                         {{ form.errors.is_active }}
                     </p>
                 </div>
-            </div>
+            </AdminCard>
 
             <!-- Acciones -->
             <div
-                class="flex flex-col-reverse gap-2 border-t border-sidebar-border/70 pt-6 sm:flex-row sm:justify-end dark:border-sidebar-border"
+                class="flex flex-col-reverse gap-3 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:items-center sm:justify-between"
             >
-                <Link
-                    :href="admin.mapMarkers.index().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <X class="h-4 w-4" />
-                    Cancelar
-                </Link>
+                <p class="text-sm text-[#718477]">
+                    Verifica la información y la ubicación antes de guardar
+                    los cambios.
+                </p>
 
-                <button
-                    type="submit"
-                    :disabled="
-                        form.processing ||
-                        !form.name ||
-                        !form.zone_id ||
-                        form.latitude === null ||
-                        form.longitude === null
-                    "
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    <Sparkles
-                        v-if="form.processing"
-                        class="h-4 w-4 animate-pulse"
+                <div class="flex flex-col-reverse gap-3 sm:flex-row">
+                    <CancelButton
+                        :href="admin.mapMarkers.index().url"
+                        :icon="X"
+                        label="Cancelar"
                     />
 
-                    <Save
-                        v-else
-                        class="h-4 w-4"
-                    />
-
-                    {{
-                        form.processing
-                            ? 'Actualizando...'
-                            : 'Actualizar marker'
-                    }}
-                </button>
+                    <AdminButton
+                        type="submit"
+                        variant="primary"
+                        :icon="Save"
+                        :loading="form.processing"
+                        loading-text="Actualizando..."
+                        :disabled="
+                            form.processing ||
+                            !form.name ||
+                            !form.zone_id ||
+                            form.latitude === null ||
+                            form.longitude === null
+                        "
+                    >
+                        Actualizar marker
+                    </AdminButton>
+                </div>
             </div>
         </form>
     </div>

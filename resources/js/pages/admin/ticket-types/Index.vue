@@ -1,15 +1,18 @@
+
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
-    Edit,
+    FilterX,
     Plus,
-    Search,
     Ticket,
-    Trash2,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
+
 import admin from '@/routes/admin';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import DataTable from '@/components/admin/DataTable.vue';
+import TableActions from '@/components/admin/TableActions.vue';
 
 interface TicketType {
     id: number;
@@ -43,27 +46,44 @@ const props = defineProps<{
     };
 }>();
 
-const search = ref(
-    props.filters?.search ?? '',
-);
+const search = ref(props.filters?.search ?? '');
 
-const submitSearch = () => {
+const hasFilters = (): boolean => {
+    return Boolean(search.value.trim());
+};
+
+const submitSearch = (): void => {
     router.get(
         admin.ticketTypes.index().url,
         {
-            search: search.value || undefined,
+            search: search.value.trim() || undefined,
         },
         {
             preserveState: true,
+            preserveScroll: true,
             replace: true,
         },
     );
 };
 
-const deleteTicketType = (
+const clearFilters = (): void => {
+    search.value = '';
+
+    router.get(
+        admin.ticketTypes.index().url,
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const deleteTicketType = async (
     item: TicketType,
-) => {
-    Swal.fire({
+): Promise<void> => {
+    const result = await Swal.fire({
         title: '¿Eliminar tipo de boleto?',
         text: `Se eliminará "${item.name}". Esta acción no se puede deshacer.`,
         icon: 'warning',
@@ -71,345 +91,193 @@ const deleteTicketType = (
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
-    }).then((result) => {
-        if (result.isConfirmed) {
-            router.delete(
-                admin.ticketTypes.destroy(
-                    item.id,
-                ).url,
-                {
-                    preserveScroll: true,
-                },
-            );
-        }
+        focusCancel: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#6B7280',
     });
-};
 
-const formatPrice = (
-    price: number | string,
-) => {
-    return Number(price).toLocaleString(
-        'es-MX',
+    if (!result.isConfirmed) {
+        return;
+    }
+
+    router.delete(
+        admin.ticketTypes.destroy(item.id).url,
         {
-            style: 'currency',
-            currency: 'MXN',
+            preserveScroll: true,
         },
     );
 };
+
+const formatPrice = (price: number | string): string => {
+    return Number(price).toLocaleString('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+    });
+};
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Panel',
+                href: admin.dashboard(),
+            },
+            {
+                title: 'Tipos de boletos',
+                href: admin.ticketTypes.index,
+            },
+        ],
+    },
+});
 </script>
 
 <template>
     <Head title="Tipos de boleto" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+    <div class="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader
+            title="Tipos de boleto"
+            description="Administra las tarifas y tipos de acceso al zoológico."
+            section="Taquilla"
+            :icon="Ticket"
+            :action-icon="Plus"
+            action-label="Nuevo tipo de boleto"
+            :action-href="admin.ticketTypes.create().url"
+        />
+
+        <DataTable
+            :pagination="ticketTypes"
+            :is-empty="ticketTypes.data.length === 0"
+            :empty-colspan="5"
+            :search="search"
+            search-placeholder="Buscar tipo de boleto..."
+            :has-filters="hasFilters()"
+            @update:search="search = $event"
+            @search="submitSearch"
+            @clear-filters="clearFilters"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-center gap-4">
+            <template #active-filters>
+                <span
+                    v-if="search.trim()"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F9F6] px-3 py-1 text-xs font-medium text-[#42604C]"
+                >
+                    <FilterX class="h-3.5 w-3.5" />
+                    Búsqueda: {{ search }}
+                </span>
+            </template>
+
+            <template #table-head>
+                <tr>
+                    <th class="min-w-[200px] px-5 py-4 font-semibold sm:px-6">
+                        Tipo
+                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Precio
+                    </th>
+                    <th class="min-w-[220px] px-5 py-4 font-semibold sm:px-6">
+                        Descripción
+                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Estado
+                    </th>
+                    <th class="px-5 py-4 text-right font-semibold sm:px-6">
+                        Acciones
+                    </th>
+                </tr>
+            </template>
+
+            <template #table-body>
+                <tr
+                    v-for="item in ticketTypes.data"
+                    :key="item.id"
+                    class="transition-colors hover:bg-[#F5F9F6]"
+                >
+                    <td class="px-5 py-4 sm:px-6">
+                        <div class="flex items-center gap-3">
+                            <span
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E4F2E8] text-[#187744]"
+                            >
+                                <Ticket class="h-5 w-5" />
+                            </span>
+
+                            <div class="min-w-0">
+                                <p class="font-medium text-[#244334]">
+                                    {{ item.name }}
+                                </p>
+                                <p class="mt-0.5 text-xs text-[#718477]">
+                                    ID: {{ item.id }}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                        <span class="font-semibold text-[#244334]">
+                            {{ formatPrice(item.price) }}
+                        </span>
+                    </td>
+
+                    <td class="px-5 py-4 sm:px-6">
+                        <p
+                            v-if="item.description"
+                            class="max-w-sm text-sm leading-5 text-[#42604C]"
+                        >
+                            {{ item.description }}
+                        </p>
+                        <span
+                            v-else
+                            class="text-sm italic text-[#87978B]"
+                        >
+                            Sin descripción
+                        </span>
+                    </td>
+
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            v-if="item.is_active"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700"
+                        >
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500" />
+                            Activo
+                        </span>
+
+                        <span
+                            v-else
+                            class="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"
+                        >
+                            <span class="h-1.5 w-1.5 rounded-full bg-red-500" />
+                            Inactivo
+                        </span>
+                    </td>
+
+                    <TableActions
+                        :edit-url="admin.ticketTypes.edit(item.id).url"
+                        item-name="tipo de boleto"
+                        @delete="deleteTicketType(item)"
+                    />
+                </tr>
+            </template>
+
+            <template #empty>
+                <div class="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
                     <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF2EC] text-[#66816F]"
                     >
                         <Ticket class="h-6 w-6" />
                     </div>
 
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Tipos de boleto
-                        </h1>
+                    <h3 class="mt-4 text-sm font-semibold text-[#244334]">
+                        No se encontraron tipos de boleto
+                    </h3>
 
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Administra las tarifas y tipos de acceso al zoológico.
-                        </p>
-                    </div>
+                    <p class="mt-1 max-w-md text-sm text-[#718477]">
+                        {{
+                            hasFilters()
+                                ? 'No hay tipos de boleto que coincidan con la búsqueda.'
+                                : 'Todavía no hay tipos de boleto registrados.'
+                        }}
+                    </p>
                 </div>
-
-                <Link
-                    :href="
-                        admin.ticketTypes.create().url
-                    "
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-                >
-                    <Plus class="h-4 w-4" />
-                    Nuevo tipo de boleto
-                </Link>
-            </div>
-        </div>
-
-        <!-- Tabla -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <!-- Buscador -->
-            <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
-            >
-                <form
-                    class="flex w-full flex-col gap-2 md:max-w-2xl md:flex-row"
-                    @submit.prevent="submitSearch"
-                >
-                    <div class="relative w-full">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                        />
-
-                        <input
-                            v-model="search"
-                            type="search"
-                            placeholder="Buscar tipo de boleto..."
-                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <Search class="h-4 w-4" />
-                        Buscar
-                    </button>
-                </form>
-
-                <div
-                    class="text-sm text-muted-foreground"
-                >
-                    {{ ticketTypes.total }} tipos
-                </div>
-            </div>
-
-            <!-- Tabla -->
-            <div class="overflow-x-auto">
-                <table
-                    class="w-full text-left text-sm"
-                >
-                    <thead
-                        class="border-b border-sidebar-border/70 bg-muted/40 dark:border-sidebar-border"
-                    >
-                        <tr>
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
-                                Tipo
-                            </th>
-
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
-                                Precio
-                            </th>
-
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
-                                Descripción
-                            </th>
-
-                            <th
-                                class="px-6 py-4 font-semibold"
-                            >
-                                Estado
-                            </th>
-
-                            <th
-                                class="px-6 py-4 text-right font-semibold"
-                            >
-                                Acciones
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody
-                        class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
-                    >
-                        <tr
-                            v-for="item in ticketTypes.data"
-                            :key="item.id"
-                            class="transition hover:bg-muted/30"
-                        >
-                            <td
-                                class="px-6 py-4"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                                    >
-                                        <Ticket class="h-4 w-4" />
-                                    </div>
-
-                                    <div>
-                                        <div
-                                            class="font-medium"
-                                        >
-                                            {{ item.name }}
-                                        </div>
-
-                                        <div
-                                            class="text-xs text-muted-foreground"
-                                        >
-                                            ID: {{ item.id }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <td
-                                class="px-6 py-4"
-                            >
-                                <span
-                                    class="text-base font-semibold"
-                                >
-                                    {{
-                                        formatPrice(
-                                            item.price,
-                                        )
-                                    }}
-                                </span>
-                            </td>
-
-                            <td
-                                class="px-6 py-4"
-                            >
-                                <span
-                                    v-if="
-                                        item.description
-                                    "
-                                    class="text-sm"
-                                >
-                                    {{
-                                        item.description
-                                    }}
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="text-sm italic text-muted-foreground"
-                                >
-                                    Sin descripción
-                                </span>
-                            </td>
-
-                            <td
-                                class="px-6 py-4"
-                            >
-                                <span
-                                    v-if="
-                                        item.is_active
-                                    "
-                                    class="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
-                                >
-                                    Activo
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
-                                >
-                                    Inactivo
-                                </span>
-                            </td>
-
-                            <td
-                                class="px-6 py-4"
-                            >
-                                <div
-                                    class="flex justify-end gap-2"
-                                >
-                                    <Link
-                                        :href="
-                                            admin.ticketTypes.edit(
-                                                item.id,
-                                            ).url
-                                        "
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Edit class="h-4 w-4" />
-                                        Editar
-                                    </Link>
-
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                        @click="
-                                            deleteTicketType(
-                                                item,
-                                            )
-                                        "
-                                    >
-                                        <Trash2 class="h-4 w-4" />
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr
-                            v-if="
-                                ticketTypes.data
-                                    .length === 0
-                            "
-                        >
-                            <td
-                                colspan="5"
-                                class="px-6 py-12 text-center text-sm text-muted-foreground"
-                            >
-                                <div
-                                    class="flex flex-col items-center justify-center gap-3"
-                                >
-                                    <div
-                                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-muted/60"
-                                    >
-                                        <Ticket class="h-5 w-5" />
-                                    </div>
-
-                                    <span>
-                                        No se encontraron tipos de boleto.
-                                    </span>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Paginación -->
-            <div
-                v-if="
-                    ticketTypes.last_page > 1
-                "
-                class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
-            >
-                <template
-                    v-for="(
-                        link, index
-                    ) in ticketTypes.links"
-                    :key="index"
-                >
-                    <Link
-                        v-if="link.url"
-                        :href="link.url"
-                        class="rounded-lg border px-3 py-2 text-sm transition"
-                        :class="
-                            link.active
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-sidebar-border hover:bg-accent'
-                        "
-                        v-html="link.label"
-                    />
-
-                    <span
-                        v-else
-                        class="rounded-lg border border-sidebar-border px-3 py-2 text-sm opacity-50"
-                        v-html="link.label"
-                    />
-                </template>
-            </div>
-        </div>
+            </template>
+        </DataTable>
     </div>
 </template>

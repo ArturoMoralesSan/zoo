@@ -1,12 +1,18 @@
+
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
-    Check,
     Info,
     Leaf,
     Save,
 } from 'lucide-vue-next';
+
+import PageHeader from '@/components/admin/PageHeader.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
 import admin from '@/routes/admin';
 
 const form = useForm({
@@ -24,191 +30,118 @@ const submit = () => {
     <Head title="Nueva categoría" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
         <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+        <PageHeader
+            title="Nueva categoría"
+            description="Crea una nueva categoría para las especies del zoológico."
+            section="Catálogo"
+            :icon="Leaf"
+            :action-icon="ArrowLeft"
+            action-label="Volver a categorías"
+            :action-href="admin.speciesCategories.index().url"
+        />
+
+        <!-- Tarjeta del formulario -->
+        <AdminCard
+            title="Información de la categoría"
+            description="Define el nombre y la descripción de la categoría."
+            :icon="Info"
+            :padding="false"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-center gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <Leaf class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Nueva categoría
-                        </h1>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Crea una nueva categoría para las especies del zoológico.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.speciesCategories.index().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Regresar
-                </Link>
-            </div>
-        </div>
-
-        <!-- Formulario -->
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
+            <!-- Formulario -->
             <form
-                class="flex flex-col"
+                id="category-form"
                 @submit.prevent="submit"
             >
-                <div class="p-6">
-                    <!-- Información -->
-                    <div
-                        class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                    >
-                        <div class="flex items-center gap-2">
-                            <Info class="h-5 w-5 text-primary" />
+                <div class="space-y-6 p-5 sm:p-6">
+                    <!-- Nombre -->
+                    <div class="form-field">
+                        <label for="name" class="form-label">
+                            Nombre
+                            <span class="text-red-500">*</span>
+                        </label>
 
-                            <h2 class="text-base font-semibold">
-                                Información de la categoría
-                            </h2>
-                        </div>
+                        <input
+                            id="name"
+                            v-model="form.name"
+                            type="text"
+                            placeholder="Ej. Mamíferos"
+                            class="form-input"
+                            :class="{
+                                'form-input-error': form.errors.name,
+                            }"
+                        />
 
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Define el nombre y la descripción de la categoría.
+                        <p
+                            v-if="form.errors.name"
+                            class="form-error"
+                        >
+                            {{ form.errors.name }}
                         </p>
                     </div>
 
-                    <div class="mt-6 space-y-6">
-                        <!-- Nombre -->
-                        <div class="space-y-2">
-                            <label
-                                for="name"
-                                class="text-sm font-medium"
-                            >
-                                Nombre
-                            </label>
+                    <!-- Descripción -->
+                    <div class="form-field">
+                        <label
+                            for="description"
+                            class="form-label"
+                        >
+                            Descripción
+                        </label>
 
-                            <input
-                                id="name"
-                                v-model="form.name"
-                                type="text"
-                                placeholder="Ej. Mamíferos"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            />
+                        <textarea
+                            id="description"
+                            v-model="form.description"
+                            rows="4"
+                            placeholder="Descripción de la categoría..."
+                            class="form-textarea"
+                            :class="{
+                                'form-textarea-error':
+                                    form.errors.description,
+                            }"
+                        />
 
-                            <p
-                                v-if="form.errors.name"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.name }}
-                            </p>
-                        </div>
-
-                        <!-- Descripción -->
-                        <div class="space-y-2">
-                            <label
-                                for="description"
-                                class="text-sm font-medium"
-                            >
-                                Descripción
-                            </label>
-
-                            <textarea
-                                id="description"
-                                v-model="form.description"
-                                rows="4"
-                                placeholder="Descripción de la categoría..."
-                                class="w-full resize-y rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            ></textarea>
-
-                            <p
-                                v-if="form.errors.description"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.description }}
-                            </p>
-                        </div>
-
-                        <!-- Estado -->
-                        <div class="space-y-2">
-                            <label class="text-sm font-medium">
-                                Estado
-                            </label>
-
-                            <div
-                                class="flex items-center justify-between rounded-xl border border-sidebar-border bg-muted/20 p-4"
-                            >
-                                <div class="flex items-start gap-3">
-                                    <div
-                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                                    >
-                                        <Check class="h-4 w-4" />
-                                    </div>
-
-                                    <div>
-                                        <p class="text-sm font-medium">
-                                            Categoría activa
-                                        </p>
-
-                                        <p class="text-xs text-muted-foreground">
-                                            Determina si la categoría está disponible para su uso.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <input
-                                    v-model="form.is_active"
-                                    type="checkbox"
-                                    class="h-4 w-4 rounded border-sidebar-border text-primary focus:ring-primary/20"
-                                />
-                            </div>
-
-                            <p
-                                v-if="form.errors.is_active"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.is_active }}
-                            </p>
-                        </div>
+                        <p
+                            v-if="form.errors.description"
+                            class="form-error"
+                        >
+                            {{ form.errors.description }}
+                        </p>
                     </div>
-                </div>
 
-                <!-- Botones -->
-                <div
-                    class="flex flex-col gap-3 border-t border-sidebar-border/70 px-6 py-5 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-end"
-                >
-                    <Link
-                        :href="admin.speciesCategories.index().url"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <ArrowLeft class="h-4 w-4" />
-                        Cancelar
-                    </Link>
-
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Save class="h-4 w-4" />
-
-                        {{
-                            form.processing
-                                ? 'Creando...'
-                                : 'Crear categoría'
-                        }}
-                    </button>
+                    <!-- Estado -->
+                    <ActiveSwitch
+                        id="is_active"
+                        v-model="form.is_active"
+                        label="Categoría activa"
+                        description="Determina si la categoría estará disponible para su uso en el sistema."
+                        :error="form.errors.is_active"
+                    />
                 </div>
             </form>
-        </div>
+
+            <!-- Pie de página opcional -->
+            <template #footer>
+                <CancelButton
+                    :href="admin.speciesCategories.index().url"
+                    :icon="ArrowLeft"
+                >
+                    Cancelar
+                </CancelButton>
+
+                <AdminButton
+                    type="submit"
+                    :disabled="form.processing"
+                    :loading="form.processing"
+                    :icon="Save"
+                    loading-text="Agregando..."
+                    @click="submit"
+                >
+                    Agregar categoría
+                </AdminButton>
+            </template>
+        </AdminCard>
     </div>
 </template>

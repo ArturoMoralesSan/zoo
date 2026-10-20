@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import {
+    ArrowLeft,
     Box,
-    Check,
     ChevronDown,
     ExternalLink,
     FileBox,
@@ -10,14 +10,18 @@ import {
     Info,
     Layers3,
     Save,
-    Sparkles,
     Tag,
     Trash2,
     Upload,
-    X,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
+
 import admin from '@/routes/admin';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
+import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 
 interface Species {
     id: number;
@@ -70,13 +74,12 @@ const submit = () => {
         _method: 'PUT',
     })).post(admin.cards.update(props.card.id).url, {
         forceFormData: true,
+        preserveScroll: true,
     });
 };
 
 const cardImageUrl = (path: string | null): string | null => {
-    if (!path) {
-        return null;
-    }
+    if (!path) return null;
 
     if (
         path.startsWith('http://') ||
@@ -90,9 +93,7 @@ const cardImageUrl = (path: string | null): string | null => {
 };
 
 const modelFileUrl = (path: string | null): string | null => {
-    if (!path) {
-        return null;
-    }
+    if (!path) return null;
 
     if (
         path.startsWith('http://') ||
@@ -124,13 +125,16 @@ const deleteImage = () => {
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#84958a',
     }).then((result) => {
-        if (!result.isConfirmed) {
-            return;
-        }
+        if (!result.isConfirmed) return;
 
         form.delete(admin.cards.image.destroy(props.card.id).url, {
             preserveScroll: true,
+            onSuccess: () => {
+                form.card_image = null;
+            },
         });
     });
 };
@@ -144,121 +148,86 @@ const deleteModel = () => {
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#84958a',
     }).then((result) => {
-        if (!result.isConfirmed) {
-            return;
-        }
+        if (!result.isConfirmed) return;
 
         form.delete(admin.cards.model.destroy(props.card.id).url, {
             preserveScroll: true,
+            onSuccess: () => {
+                form.model_file = null;
+            },
         });
     });
 };
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Panel',
+                href: admin.dashboard(),
+            },
+            {
+                title: 'Tarjetas',
+                href: admin.cards.index(),
+            },
+            {
+                title: 'Editar tarjeta',
+                href: admin.cards.edit,
+            },
+        ],
+    },
+});
 </script>
 
 <template>
     <Head :title="`Editar tarjeta: ${card.name}`" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+        <PageHeader
+            title="Editar tarjeta"
+            :description="`Actualiza la información de ${card.name}.`"
+            section="Colección"
+            :icon="Tag"
+            :action-icon="ArrowLeft"
+            action-label="Volver a tarjetas"
+            :action-href="admin.cards.index().url"
+        />
+
+        <form
+            id="card-form"
+            class="space-y-5"
+            @submit.prevent="submit"
         >
-            <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            <!-- Información general -->
+            <AdminCard
+                title="Información general"
+                description="Modifica los datos principales e identificación de la tarjeta."
+                :icon="Info"
             >
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <Tag class="h-5 w-5" />
-                    </div>
-
-                    <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h1 class="text-2xl font-semibold tracking-tight">
-                                Editar tarjeta
-                            </h1>
-
-                            <span
-                                class="rounded-full border border-sidebar-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
-                            >
-                                #{{ card.id }}
-                            </span>
-                        </div>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Actualiza la información, imagen y modelo 3D de
-                            <span class="font-medium text-foreground">
-                                {{ card.name }}
-                            </span>.
-                        </p>
-                    </div>
-                </div>
-
-                <Link
-                    :href="admin.cards.index().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <X class="h-4 w-4" />
-                    Cancelar
-                </Link>
-            </div>
-        </div>
-
-        <!-- Formulario -->
-        <div
-            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <form
-                class="space-y-8"
-                @submit.prevent="submit"
-            >
-                <!-- Información general -->
-                <section class="space-y-6">
-                    <div
-                        class="flex items-start gap-3 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                    >
-                        <div
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                        >
-                            <Info class="h-4 w-4" />
-                        </div>
-
-                        <div>
-                            <h2 class="text-base font-semibold">
-                                Información general
-                            </h2>
-
-                            <p class="mt-1 text-sm text-muted-foreground">
-                                Modifica los datos principales de la tarjeta.
-                            </p>
-                        </div>
-                    </div>
-
+                <div class="space-y-5">
                     <!-- Especie -->
-                    <div class="space-y-2">
-                        <label
-                            for="species_id"
-                            class="text-sm font-medium"
-                        >
-                            Especie
+                    <div class="form-field">
+                        <label for="species_id" class="form-label">
+                            Especie <span class="form-required">*</span>
                         </label>
 
-                        <div class="relative">
+                        <div class="form-select-wrapper">
                             <select
                                 id="species_id"
                                 v-model="form.species_id"
-                                class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                class="form-select appearance-none"
                             >
                                 <option value="">
                                     Selecciona una especie
                                 </option>
 
                                 <option
-                                    v-for="item in props.species"
+                                    v-for="item in species"
                                     :key="item.id"
                                     :value="String(item.id)"
                                 >
@@ -268,26 +237,25 @@ const deleteModel = () => {
                             </select>
 
                             <ChevronDown
-                                class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                                :size="16"
+                                class="form-select-icon"
                             />
                         </div>
 
                         <p
                             v-if="form.errors.species_id"
-                            class="text-sm text-red-500"
+                            class="form-error"
                         >
                             {{ form.errors.species_id }}
                         </p>
                     </div>
 
-                    <!-- Nombre y rareza -->
-                    <div class="grid gap-6 md:grid-cols-2">
-                        <div class="space-y-2">
-                            <label
-                                for="name"
-                                class="text-sm font-medium"
-                            >
+                    <div class="form-grid">
+                        <!-- Nombre -->
+                        <div class="form-field">
+                            <label for="name" class="form-label">
                                 Nombre de la tarjeta
+                                <span class="form-required">*</span>
                             </label>
 
                             <input
@@ -295,69 +263,51 @@ const deleteModel = () => {
                                 v-model="form.name"
                                 type="text"
                                 placeholder="Ej. Jaguar del Norte"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                class="form-input"
                             />
 
-                            <p
-                                v-if="form.errors.name"
-                                class="text-sm text-red-500"
-                            >
+                            <p v-if="form.errors.name" class="form-error">
                                 {{ form.errors.name }}
                             </p>
                         </div>
 
-                        <div class="space-y-2">
-                            <label
-                                for="rarity"
-                                class="text-sm font-medium"
-                            >
-                                Rareza
+                        <!-- Rareza -->
+                        <div class="form-field">
+                            <label for="rarity" class="form-label">
+                                Rareza <span class="form-required">*</span>
                             </label>
 
-                            <div class="relative">
+                            <div class="form-select-wrapper">
                                 <select
                                     id="rarity"
                                     v-model="form.rarity"
-                                    class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    class="form-select appearance-none"
                                 >
-                                    <option value="comun">
-                                        Común
-                                    </option>
-
-                                    <option value="rara">
-                                        Rara
-                                    </option>
-
-                                    <option value="epica">
-                                        Épica
-                                    </option>
-
+                                    <option value="comun">Común</option>
+                                    <option value="rara">Rara</option>
+                                    <option value="epica">Épica</option>
                                     <option value="edicion_especial">
                                         Edición especial
                                     </option>
                                 </select>
 
                                 <ChevronDown
-                                    class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                                    :size="16"
+                                    class="form-select-icon"
                                 />
                             </div>
 
                             <p
                                 v-if="form.errors.rarity"
-                                class="text-sm text-red-500"
+                                class="form-error"
                             >
                                 {{ form.errors.rarity }}
                             </p>
                         </div>
-                    </div>
 
-                    <!-- Edición y orden -->
-                    <div class="grid gap-6 md:grid-cols-2">
-                        <div class="space-y-2">
-                            <label
-                                for="edition"
-                                class="text-sm font-medium"
-                            >
+                        <!-- Edición -->
+                        <div class="form-field">
+                            <label for="edition" class="form-label">
                                 Edición
                             </label>
 
@@ -366,22 +316,25 @@ const deleteModel = () => {
                                 v-model="form.edition"
                                 type="text"
                                 placeholder="Ej. Colección Sahuatoba 2026"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                class="form-input"
                             />
+
+                            <p class="form-help">
+                                Opcional. Identifica la colección a la que
+                                pertenece.
+                            </p>
 
                             <p
                                 v-if="form.errors.edition"
-                                class="text-sm text-red-500"
+                                class="form-error"
                             >
                                 {{ form.errors.edition }}
                             </p>
                         </div>
 
-                        <div class="space-y-2">
-                            <label
-                                for="sort_order"
-                                class="text-sm font-medium"
-                            >
+                        <!-- Orden -->
+                        <div class="form-field">
+                            <label for="sort_order" class="form-label">
                                 Orden de aparición
                             </label>
 
@@ -391,12 +344,16 @@ const deleteModel = () => {
                                 type="number"
                                 min="0"
                                 placeholder="0"
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                class="form-input"
                             />
+
+                            <p class="form-help">
+                                Un número menor aparece primero.
+                            </p>
 
                             <p
                                 v-if="form.errors.sort_order"
-                                class="text-sm text-red-500"
+                                class="form-error"
                             >
                                 {{ form.errors.sort_order }}
                             </p>
@@ -404,11 +361,8 @@ const deleteModel = () => {
                     </div>
 
                     <!-- Descripción -->
-                    <div class="space-y-2">
-                        <label
-                            for="description"
-                            class="text-sm font-medium"
-                        >
+                    <div class="form-field">
+                        <label for="description" class="form-label">
                             Descripción
                         </label>
 
@@ -416,67 +370,51 @@ const deleteModel = () => {
                             id="description"
                             v-model="form.description"
                             rows="4"
-                            placeholder="Describe la tarjeta..."
-                            class="w-full resize-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            placeholder="Describe las características de esta tarjeta..."
+                            class="form-textarea"
                         />
 
                         <p
                             v-if="form.errors.description"
-                            class="text-sm text-red-500"
+                            class="form-error"
                         >
                             {{ form.errors.description }}
                         </p>
                     </div>
-                </section>
+                </div>
+            </AdminCard>
 
-                <!-- Imagen -->
-                <section class="space-y-5">
-                    <div
-                        class="flex items-start gap-3 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                    >
-                        <div
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                        >
-                            <FileImage class="h-4 w-4" />
-                        </div>
-
-                        <div>
-                            <h2 class="text-base font-semibold">
-                                Imagen de la tarjeta
-                            </h2>
-
-                            <p class="mt-1 text-sm text-muted-foreground">
-                                Conserva la imagen actual o reemplázala por
-                                una nueva.
-                            </p>
-                        </div>
-                    </div>
-
+            <!-- Imagen de la tarjeta -->
+            <AdminCard
+                title="Imagen de la tarjeta"
+                description="Conserva la imagen actual o reemplázala por una nueva."
+                :icon="FileImage"
+            >
+                <div class="space-y-5">
                     <!-- Imagen actual -->
                     <div
                         v-if="card.card_image"
-                        class="flex flex-col gap-5 rounded-xl border border-sidebar-border bg-muted/10 p-5 sm:flex-row sm:items-start"
+                        class="flex flex-col gap-5 rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4 sm:flex-row sm:items-start"
                     >
                         <img
                             :src="cardImageUrl(card.card_image) ?? ''"
                             :alt="card.name"
-                            class="h-44 w-32 shrink-0 rounded-lg border border-sidebar-border bg-background object-cover shadow-sm"
+                            class="h-44 w-32 shrink-0 rounded-lg border border-[#DCE7DF] bg-white object-cover"
                         />
 
-                        <div class="flex min-w-0 flex-1 flex-col gap-4">
+                        <div
+                            class="flex min-w-0 flex-1 flex-col items-start gap-4"
+                        >
                             <div>
-                                <div class="flex items-center gap-2">
-                                    <FileImage
-                                        class="h-4 w-4 text-muted-foreground"
-                                    />
-
-                                    <p class="text-sm font-medium">
-                                        Imagen actual
-                                    </p>
-                                </div>
+                                <p
+                                    class="flex items-center gap-2 text-sm font-semibold text-[#244334]"
+                                >
+                                    <FileImage :size="16" />
+                                    Imagen actual
+                                </p>
 
                                 <p
-                                    class="mt-2 break-all text-xs text-muted-foreground"
+                                    class="mt-2 break-all text-xs text-[#718477]"
                                 >
                                     {{ card.card_image }}
                                 </p>
@@ -485,48 +423,43 @@ const deleteModel = () => {
                             <button
                                 type="button"
                                 :disabled="form.processing"
-                                class="inline-flex w-fit items-center justify-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                                class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 @click="deleteImage"
                             >
-                                <Trash2 class="h-4 w-4" />
+                                <Trash2 :size="16" />
                                 Eliminar imagen
                             </button>
                         </div>
                     </div>
 
                     <!-- Nueva imagen -->
-                    <div class="space-y-2">
-                        <label
-                            for="card_image"
-                            class="text-sm font-medium"
-                        >
+                    <div class="form-field">
+                        <label for="card_image" class="form-label">
                             {{
                                 card.card_image
                                     ? 'Reemplazar imagen'
-                                    : 'Imagen'
+                                    : 'Imagen de la tarjeta'
                             }}
                         </label>
 
-                        <label
-                            for="card_image"
-                            class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-sidebar-border bg-muted/20 px-6 py-8 text-center transition hover:border-primary/50 hover:bg-primary/5"
-                        >
-                            <div
-                                class="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-background text-muted-foreground shadow-sm transition group-hover:text-primary"
-                            >
-                                <Upload class="h-5 w-5" />
+                        <label for="card_image" class="form-upload">
+                            <div class="form-upload-icon">
+                                <Upload :size="22" />
                             </div>
 
-                            <span class="text-sm font-medium">
+                            <span class="form-upload-title break-all">
                                 {{
                                     form.card_image?.name ||
                                     'Selecciona una nueva imagen'
                                 }}
                             </span>
 
-                            <span
-                                class="mt-1 text-xs text-muted-foreground"
-                            >
+                            <span class="form-upload-description">
+                                Haz clic para buscar un archivo en tu
+                                dispositivo.
+                            </span>
+
+                            <span class="form-upload-description">
                                 JPG, JPEG, PNG o WEBP · Máximo 5 MB
                             </span>
 
@@ -534,91 +467,77 @@ const deleteModel = () => {
                                 id="card_image"
                                 type="file"
                                 accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                                class="hidden"
+                                class="form-upload-input"
                                 @change="handleCardImage"
                             />
                         </label>
 
                         <p
                             v-if="form.errors.card_image"
-                            class="text-sm text-red-500"
+                            class="form-error"
                         >
                             {{ form.errors.card_image }}
                         </p>
                     </div>
-                </section>
+                </div>
+            </AdminCard>
 
-                <!-- Modelo 3D -->
-                <section
-                    class="rounded-xl border border-sidebar-border/70 p-5 dark:border-sidebar-border"
-                >
-                    <div
-                        class="mb-6 flex items-start gap-3 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                    >
-                        <div
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                        >
-                            <Box class="h-4 w-4" />
-                        </div>
-
-                        <div>
-                            <h2 class="text-base font-semibold">
-                                Modelo 3D
-                            </h2>
-
-                            <p class="mt-1 text-sm text-muted-foreground">
-                                Administra el modelo 3D asociado a esta tarjeta.
-                            </p>
-                        </div>
-                    </div>
-
+            <!-- Modelo 3D -->
+            <AdminCard
+                title="Modelo 3D"
+                description="Administra el modelo 3D asociado a esta tarjeta."
+                :icon="Box"
+            >
+                <div class="space-y-5">
                     <!-- Modelo actual -->
                     <div
                         v-if="card.model_file || card.model_url"
-                        class="mb-6 rounded-xl border border-sidebar-border bg-muted/10 p-5"
+                        class="rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4 sm:p-5"
                     >
                         <div class="flex items-start gap-3">
                             <div
-                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-background text-muted-foreground"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E2F3E8] text-[#187744]"
                             >
-                                <FileBox class="h-5 w-5" />
+                                <FileBox :size="20" />
                             </div>
 
                             <div class="min-w-0 flex-1">
-                                <p class="text-sm font-semibold">
+                                <p
+                                    class="text-sm font-semibold text-[#244334]"
+                                >
                                     Modelo actual
                                 </p>
 
                                 <p
                                     v-if="card.model_name"
-                                    class="mt-1 text-sm text-muted-foreground"
+                                    class="mt-1 text-sm text-[#718477]"
                                 >
                                     {{ card.model_name }}
                                 </p>
                             </div>
                         </div>
 
-                        <div
-                            class="mt-4 grid gap-3 text-sm sm:grid-cols-2"
-                        >
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2">
                             <div
                                 v-if="card.model_format"
-                                class="rounded-lg border border-sidebar-border bg-background p-3"
+                                class="rounded-lg border border-[#DCE7DF] bg-white p-3"
                             >
-                                <p class="text-xs text-muted-foreground">
+                                <p class="text-xs text-[#718477]">
                                     Formato
                                 </p>
 
-                                <p class="mt-1 font-medium">
+                                <p
+                                    class="mt-1 text-sm font-semibold text-[#244334]"
+                                >
                                     {{ card.model_format.toUpperCase() }}
                                 </p>
                             </div>
 
                             <div
                                 v-if="card.model_file"
-                                class="rounded-lg border border-sidebar-border bg-background p-3"
+                                class="min-w-0 rounded-lg border border-[#DCE7DF] bg-white p-3"
                             >
-                                <p class="text-xs text-muted-foreground">
+                                <p class="text-xs text-[#718477]">
                                     Archivo
                                 </p>
 
@@ -626,20 +545,21 @@ const deleteModel = () => {
                                     :href="modelFileUrl(card.model_file) ?? ''"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    class="mt-1 flex items-center gap-1 break-all text-primary hover:underline"
+                                    class="mt-1 flex items-start gap-1 break-all text-sm font-medium text-[#187744] hover:underline"
                                 >
                                     <span>{{ card.model_file }}</span>
                                     <ExternalLink
-                                        class="h-3.5 w-3.5 shrink-0"
+                                        :size="14"
+                                        class="mt-0.5 shrink-0"
                                     />
                                 </a>
                             </div>
 
                             <div
                                 v-if="card.model_url"
-                                class="rounded-lg border border-sidebar-border bg-background p-3 sm:col-span-2"
+                                class="min-w-0 rounded-lg border border-[#DCE7DF] bg-white p-3 sm:col-span-2"
                             >
-                                <p class="text-xs text-muted-foreground">
+                                <p class="text-xs text-[#718477]">
                                     URL externa
                                 </p>
 
@@ -647,11 +567,12 @@ const deleteModel = () => {
                                     :href="card.model_url"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    class="mt-1 flex items-start gap-1 break-all text-primary hover:underline"
+                                    class="mt-1 flex items-start gap-1 break-all text-sm font-medium text-[#187744] hover:underline"
                                 >
                                     <span>{{ card.model_url }}</span>
                                     <ExternalLink
-                                        class="mt-0.5 h-3.5 w-3.5 shrink-0"
+                                        :size="14"
+                                        class="mt-0.5 shrink-0"
                                     />
                                 </a>
                             </div>
@@ -661,302 +582,222 @@ const deleteModel = () => {
                             v-if="card.model_file"
                             type="button"
                             :disabled="form.processing"
-                            class="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                            class="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                             @click="deleteModel"
                         >
-                            <Trash2 class="h-4 w-4" />
+                            <Trash2 :size="16" />
                             Eliminar archivo 3D
                         </button>
                     </div>
 
-                    <div class="space-y-6">
-                        <!-- Nombre y formato -->
-                        <div class="grid gap-6 md:grid-cols-2">
-                            <div class="space-y-2">
-                                <label
-                                    for="model_name"
-                                    class="text-sm font-medium"
-                                >
-                                    Nombre del modelo
-                                </label>
-
-                                <input
-                                    id="model_name"
-                                    v-model="form.model_name"
-                                    type="text"
-                                    placeholder="Ej. Jaguar 3D"
-                                    class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                />
-
-                                <p
-                                    v-if="form.errors.model_name"
-                                    class="text-sm text-red-500"
-                                >
-                                    {{ form.errors.model_name }}
-                                </p>
-                            </div>
-
-                            <div class="space-y-2">
-                                <label
-                                    for="model_format"
-                                    class="text-sm font-medium"
-                                >
-                                    Formato
-                                </label>
-
-                                <div class="relative">
-                                    <select
-                                        id="model_format"
-                                        v-model="form.model_format"
-                                        class="w-full appearance-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                    >
-                                        <option value="">
-                                            Seleccionar formato
-                                        </option>
-
-                                        <option value="glb">
-                                            GLB
-                                        </option>
-
-                                        <option value="gltf">
-                                            GLTF
-                                        </option>
-                                    </select>
-
-                                    <ChevronDown
-                                        class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                                    />
-                                </div>
-
-                                <p
-                                    v-if="form.errors.model_format"
-                                    class="text-sm text-red-500"
-                                >
-                                    {{ form.errors.model_format }}
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Nuevo archivo -->
-                        <div class="space-y-2">
-                            <label
-                                for="model_file"
-                                class="text-sm font-medium"
-                            >
-                                {{
-                                    card.model_file
-                                        ? 'Reemplazar archivo 3D'
-                                        : 'Archivo 3D'
-                                }}
-                            </label>
-
-                            <label
-                                for="model_file"
-                                class="group flex cursor-pointer items-center gap-4 rounded-xl border border-dashed border-sidebar-border bg-muted/20 p-5 transition hover:border-primary/50 hover:bg-primary/5"
-                            >
-                                <div
-                                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-background text-muted-foreground shadow-sm transition group-hover:text-primary"
-                                >
-                                    <Upload class="h-5 w-5" />
-                                </div>
-
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium">
-                                        {{
-                                            form.model_file?.name ||
-                                            'Seleccionar archivo 3D'
-                                        }}
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-xs text-muted-foreground"
-                                    >
-                                        GLB o GLTF · Máximo 50 MB
-                                    </p>
-                                </div>
-
-                                <div
-                                    class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium"
-                                >
-                                    <Upload class="h-3.5 w-3.5" />
-                                    Examinar
-                                </div>
-
-                                <input
-                                    id="model_file"
-                                    type="file"
-                                    accept=".glb,.gltf"
-                                    class="hidden"
-                                    @change="handleModelFile"
-                                />
-                            </label>
-
-                            <p
-                                v-if="form.errors.model_file"
-                                class="text-sm text-red-500"
-                            >
-                                {{ form.errors.model_file }}
-                            </p>
-                        </div>
-
-                        <!-- URL -->
-                        <div class="space-y-2">
-                            <label
-                                for="model_url"
-                                class="text-sm font-medium"
-                            >
-                                URL del modelo 3D
+                    <div class="form-grid">
+                        <!-- Nombre del modelo -->
+                        <div class="form-field">
+                            <label for="model_name" class="form-label">
+                                Nombre del modelo
                             </label>
 
                             <input
-                                id="model_url"
-                                v-model="form.model_url"
-                                type="url"
-                                placeholder="https://..."
-                                class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                id="model_name"
+                                v-model="form.model_name"
+                                type="text"
+                                placeholder="Ej. Jaguar 3D"
+                                class="form-input"
                             />
 
-                            <p class="text-xs text-muted-foreground">
-                                Opcional. Puedes utilizar un modelo alojado
-                                externamente.
-                            </p>
-
                             <p
-                                v-if="form.errors.model_url"
-                                class="text-sm text-red-500"
+                                v-if="form.errors.model_name"
+                                class="form-error"
                             >
-                                {{ form.errors.model_url }}
+                                {{ form.errors.model_name }}
                             </p>
                         </div>
 
-                        <!-- Descripción -->
-                        <div class="space-y-2">
-                            <label
-                                for="model_description"
-                                class="text-sm font-medium"
-                            >
-                                Descripción del modelo
+                        <!-- Formato -->
+                        <div class="form-field">
+                            <label for="model_format" class="form-label">
+                                Formato del modelo
                             </label>
 
-                            <textarea
-                                id="model_description"
-                                v-model="form.model_description"
-                                rows="3"
-                                placeholder="Describe el modelo 3D..."
-                                class="w-full resize-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            />
+                            <div class="form-select-wrapper">
+                                <select
+                                    id="model_format"
+                                    v-model="form.model_format"
+                                    class="form-select appearance-none"
+                                >
+                                    <option value="">
+                                        Seleccionar formato
+                                    </option>
+                                    <option value="glb">GLB</option>
+                                    <option value="gltf">GLTF</option>
+                                </select>
+
+                                <ChevronDown
+                                    :size="16"
+                                    class="form-select-icon"
+                                />
+                            </div>
 
                             <p
-                                v-if="form.errors.model_description"
-                                class="text-sm text-red-500"
+                                v-if="form.errors.model_format"
+                                class="form-error"
                             >
-                                {{ form.errors.model_description }}
-                            </p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Configuración -->
-                <section class="space-y-4">
-                    <div
-                        class="flex items-start gap-3 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                    >
-                        <div
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                        >
-                            <Layers3 class="h-4 w-4" />
-                        </div>
-
-                        <div>
-                            <h2 class="text-base font-semibold">
-                                Configuración
-                            </h2>
-
-                            <p class="mt-1 text-sm text-muted-foreground">
-                                Controla la disponibilidad de la tarjeta.
+                                {{ form.errors.model_format }}
                             </p>
                         </div>
                     </div>
 
-                    <label
-                        class="flex cursor-pointer items-start gap-4 rounded-xl border border-sidebar-border p-4 transition hover:bg-accent/30"
-                    >
-                        <div
-                            class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
-                            :class="
-                                form.is_active
-                                    ? 'border-primary bg-primary text-primary-foreground'
-                                    : 'border-sidebar-border'
-                            "
+                    <!-- Archivo 3D -->
+                    <div class="form-field">
+                        <label for="model_file" class="form-label">
+                            {{
+                                card.model_file
+                                    ? 'Reemplazar archivo 3D'
+                                    : 'Archivo del modelo'
+                            }}
+                        </label>
+
+                        <label
+                            for="model_file"
+                            class="form-upload sm:flex-row sm:text-left"
                         >
-                            <Check
-                                v-if="form.is_active"
-                                class="h-3.5 w-3.5"
-                            />
+                            <div class="form-upload-icon">
+                                <FileBox :size="22" />
+                            </div>
 
-                            <input
-                                v-model="form.is_active"
-                                type="checkbox"
-                                class="sr-only"
-                            />
-                        </div>
+                            <div class="min-w-0 flex-1">
+                                <p
+                                    class="break-all text-sm font-medium text-[#244334]"
+                                >
+                                    {{
+                                        form.model_file?.name ||
+                                        'Seleccionar archivo 3D'
+                                    }}
+                                </p>
 
-                        <span>
-                            <span class="block text-sm font-medium">
-                                Tarjeta activa
-                            </span>
+                                <p class="form-upload-description mt-1">
+                                    Formatos GLB o GLTF · Máximo 50 MB
+                                </p>
+                            </div>
 
                             <span
-                                class="mt-1 block text-xs text-muted-foreground"
+                                class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-[#C8DCCF] bg-white px-4 py-2.5 text-sm font-medium text-[#435D4C] transition group-hover:border-[#A9CBB5]"
                             >
-                                La tarjeta estará disponible en el sistema.
+                                <Upload :size="16" />
+                                Examinar
                             </span>
-                        </span>
-                    </label>
 
-                    <p
-                        v-if="form.errors.is_active"
-                        class="text-sm text-red-500"
-                    >
-                        {{ form.errors.is_active }}
-                    </p>
-                </section>
+                            <input
+                                id="model_file"
+                                type="file"
+                                accept=".glb,.gltf"
+                                class="form-upload-input"
+                                @change="handleModelFile"
+                            />
+                        </label>
 
-                <!-- Acciones -->
-                <div
-                    class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 sm:flex-row sm:justify-end dark:border-sidebar-border"
-                >
-                    <Link
-                        :href="admin.cards.index().url"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-5 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <X class="h-4 w-4" />
-                        Cancelar
-                    </Link>
+                        <p
+                            v-if="form.errors.model_file"
+                            class="form-error"
+                        >
+                            {{ form.errors.model_file }}
+                        </p>
+                    </div>
 
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Save
-                            v-if="!form.processing"
-                            class="h-4 w-4"
+                    <!-- URL -->
+                    <div class="form-field">
+                        <label for="model_url" class="form-label">
+                            URL del modelo 3D
+                        </label>
+
+                        <input
+                            id="model_url"
+                            v-model="form.model_url"
+                            type="url"
+                            placeholder="https://ejemplo.com/modelo.glb"
+                            class="form-input"
                         />
 
-                        <Sparkles
-                            v-else
-                            class="h-4 w-4 animate-pulse"
+                        <p class="form-help">
+                            Opcional. Utiliza este campo si el modelo está
+                            alojado externamente.
+                        </p>
+
+                        <p
+                            v-if="form.errors.model_url"
+                            class="form-error"
+                        >
+                            {{ form.errors.model_url }}
+                        </p>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div class="form-field">
+                        <label
+                            for="model_description"
+                            class="form-label"
+                        >
+                            Descripción del modelo
+                        </label>
+
+                        <textarea
+                            id="model_description"
+                            v-model="form.model_description"
+                            rows="3"
+                            placeholder="Información adicional sobre el modelo 3D..."
+                            class="form-textarea"
                         />
 
-                        {{
-                            form.processing
-                                ? 'Guardando...'
-                                : 'Guardar cambios'
-                        }}
-                    </button>
+                        <p
+                            v-if="form.errors.model_description"
+                            class="form-error"
+                        >
+                            {{ form.errors.model_description }}
+                        </p>
+                    </div>
                 </div>
-            </form>
-        </div>
+            </AdminCard>
+
+            <!-- Configuración -->
+            <AdminCard
+                title="Configuración"
+                description="Controla la disponibilidad de la tarjeta."
+                :icon="Layers3"
+            >
+                <ActiveSwitch
+                    id="is_active"
+                    v-model="form.is_active"
+                    label="Tarjeta activa"
+                    description="La tarjeta estará disponible para mostrarse y utilizarse en el sistema."
+                    :error="form.errors.is_active"
+                />
+            </AdminCard>
+
+            <!-- Acciones -->
+            <div
+                class="flex flex-col gap-3 rounded-2xl border border-[#DCE7DF] bg-white p-4 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+            >
+                <p class="form-help sm:mr-auto">
+                    Actualiza los campos necesarios antes de guardar.
+                </p>
+
+                <CancelButton
+                    :href="admin.cards.index().url"
+                    :icon="ArrowLeft"
+                >
+                    Cancelar
+                </CancelButton>
+
+                <AdminButton
+                    type="submit"
+                    :disabled="form.processing"
+                    :loading="form.processing"
+                    loading-text="Guardando cambios..."
+                    :icon="Save"
+                >
+                    Guardar cambios
+                </AdminButton>
+            </div>
+        </form>
     </div>
 </template>

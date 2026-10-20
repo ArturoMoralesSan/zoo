@@ -274,7 +274,7 @@ const closeSearch = () => {
                     v-model="search"
                     type="text"
                     placeholder="Buscar ..."
-                    class="h-9 w-full rounded-md border border-sidebar-border bg-sidebar-accent/30 pl-9 pr-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-sidebar-ring focus:ring-1 focus:ring-sidebar-ring"
+                    class="h-9 w-full rounded-md border border-sidebar-border bg-sidebar-accent/30 !pl-9 !pr-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-sidebar-ring focus:ring-1 focus:ring-sidebar-ring"
                 />
 
                 <button
@@ -334,7 +334,7 @@ const closeSearch = () => {
                             v-model="search"
                             type="text"
                             placeholder="Buscar..."
-                            class="h-9 w-full rounded-md border border-input bg-background pl-9 pr-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
+                            class="h-9 w-full rounded-md border border-input bg-background !pl-9 !pr-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
                         />
 
                         <button

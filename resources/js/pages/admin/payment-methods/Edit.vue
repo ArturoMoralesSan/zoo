@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     CreditCard,
     Hash,
+    Info,
     Save,
-    Text,
-    ToggleLeft,
 } from 'lucide-vue-next';
+
+import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
 import admin from '@/routes/admin';
 
 interface PaymentMethod {
@@ -33,9 +38,7 @@ const form = useForm({
 
 const submit = () => {
     form.put(
-        admin.paymentMethods.update(
-            props.paymentMethod.id,
-        ).url,
+        admin.paymentMethods.update(props.paymentMethod.id).url,
     );
 };
 
@@ -63,242 +66,212 @@ defineOptions({
     <Head title="Editar método de pago" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
     >
-        <!-- Encabezado -->
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+        <PageHeader
+            title="Editar método de pago"
+            :description="`Actualiza la información de ${paymentMethod.name}.`"
+            section="Taquilla"
+            :icon="CreditCard"
+            :action-icon="ArrowLeft"
+            action-label="Volver a métodos de pago"
+            :action-href="admin.paymentMethods.index().url"
+        />
+
+        <form
+            class="space-y-5"
+            @submit.prevent="submit"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+            <!-- Información general -->
+            <AdminCard
+                title="Información general"
+                description="Actualiza los datos principales del método de pago."
+                :icon="CreditCard"
             >
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                    >
-                        <CreditCard class="h-5 w-5" />
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <!-- Nombre -->
+                    <div class="form-field">
+                        <label for="name" class="form-label">
+                            Nombre
+                            <span class="text-red-500">*</span>
+                        </label>
+
+                        <input
+                            id="name"
+                            v-model="form.name"
+                            type="text"
+                            class="form-input"
+                            :class="{
+                                'form-input-error': form.errors.name,
+                            }"
+                            placeholder="Ej. Efectivo"
+                            autocomplete="off"
+                            required
+                        />
+
+                        <p v-if="form.errors.name" class="form-error">
+                            {{ form.errors.name }}
+                        </p>
+
+                        <p v-else class="form-help">
+                            Nombre con el que se identificará el método de pago.
+                        </p>
                     </div>
 
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Editar método de pago
-                        </h1>
+                    <!-- Código -->
+                    <div class="form-field">
+                        <label for="code" class="form-label">
+                            Código
+                            <span class="text-red-500">*</span>
+                        </label>
 
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Actualiza la información del método de pago.
+                        <input
+                            id="code"
+                            v-model="form.code"
+                            type="text"
+                            class="form-input"
+                            :class="{
+                                'form-input-error': form.errors.code,
+                            }"
+                            placeholder="Ej. cash"
+                            autocomplete="off"
+                            required
+                        />
+
+                        <p v-if="form.errors.code" class="form-error">
+                            {{ form.errors.code }}
+                        </p>
+
+                        <p v-else class="form-help">
+                            El código debe ser único y solo puede contener
+                            letras, números, guiones y guiones bajos.
+                        </p>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div class="form-field md:col-span-2">
+                        <label for="description" class="form-label">
+                            Descripción
+                        </label>
+
+                        <textarea
+                            id="description"
+                            v-model="form.description"
+                            rows="4"
+                            class="form-textarea"
+                            :class="{
+                                'form-textarea-error':
+                                    form.errors.description,
+                            }"
+                            placeholder="Describe el método de pago..."
+                        />
+
+                        <p
+                            v-if="form.errors.description"
+                            class="form-error"
+                        >
+                            {{ form.errors.description }}
+                        </p>
+
+                        <p v-else class="form-help">
+                            Agrega información adicional sobre este método.
                         </p>
                     </div>
                 </div>
+            </AdminCard>
 
-                <Link
-                    :href="admin.paymentMethods.index().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                    <ArrowLeft class="h-4 w-4" />
-                    Regresar
-                </Link>
-            </div>
-        </div>
-
-        <!-- Formulario -->
-        <div
-            class="relative rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
-        >
-            <form
-                class="space-y-6"
-                @submit.prevent="submit"
+            <!-- Configuración -->
+            <AdminCard
+                title="Configuración"
+                description="Define el orden de visualización y la disponibilidad del método de pago."
+                :icon="Hash"
             >
-                <!-- Información general -->
-                <div
-                    class="border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border"
-                >
-                    <div class="flex items-center gap-2">
-                        <CreditCard class="h-4 w-4 text-primary" />
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <!-- Orden -->
+                    <div class="form-field">
+                        <label for="sort_order" class="form-label">
+                            Orden de visualización
+                        </label>
 
-                        <h2 class="text-base font-semibold">
-                            Información general
-                        </h2>
-                    </div>
+                        <input
+                            id="sort_order"
+                            v-model.number="form.sort_order"
+                            type="number"
+                            min="0"
+                            class="form-input"
+                            :class="{
+                                'form-input-error':
+                                    form.errors.sort_order,
+                            }"
+                        />
 
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Actualiza los datos principales del método de pago.
-                    </p>
-                </div>
-
-                <!-- Nombre -->
-                <div class="space-y-2">
-                    <label
-                        for="name"
-                        class="flex items-center gap-2 text-sm font-medium"
-                    >
-                        <CreditCard class="h-4 w-4 text-muted-foreground" />
-                        Nombre
-                    </label>
-
-                    <input
-                        id="name"
-                        v-model="form.name"
-                        type="text"
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-
-                    <p
-                        v-if="form.errors.name"
-                        class="text-sm text-red-500"
-                    >
-                        {{ form.errors.name }}
-                    </p>
-                </div>
-
-                <!-- Código -->
-                <div class="space-y-2">
-                    <label
-                        for="code"
-                        class="flex items-center gap-2 text-sm font-medium"
-                    >
-                        <Hash class="h-4 w-4 text-muted-foreground" />
-                        Código
-                    </label>
-
-                    <input
-                        id="code"
-                        v-model="form.code"
-                        type="text"
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-
-                    <p class="text-xs text-muted-foreground">
-                        El código debe ser único y solo puede contener letras,
-                        números, guiones y guiones bajos.
-                    </p>
-
-                    <p
-                        v-if="form.errors.code"
-                        class="text-sm text-red-500"
-                    >
-                        {{ form.errors.code }}
-                    </p>
-                </div>
-
-                <!-- Descripción -->
-                <div class="space-y-2">
-                    <label
-                        for="description"
-                        class="flex items-center gap-2 text-sm font-medium"
-                    >
-                        <Text class="h-4 w-4 text-muted-foreground" />
-                        Descripción
-                    </label>
-
-                    <textarea
-                        id="description"
-                        v-model="form.description"
-                        rows="4"
-                        class="w-full resize-none rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-
-                    <p
-                        v-if="form.errors.description"
-                        class="text-sm text-red-500"
-                    >
-                        {{ form.errors.description }}
-                    </p>
-                </div>
-
-                <!-- Orden -->
-                <div class="space-y-2">
-                    <label
-                        for="sort_order"
-                        class="flex items-center gap-2 text-sm font-medium"
-                    >
-                        <Hash class="h-4 w-4 text-muted-foreground" />
-                        Orden
-                    </label>
-
-                    <input
-                        id="sort_order"
-                        v-model.number="form.sort_order"
-                        type="number"
-                        min="0"
-                        class="w-full rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-
-                    <p class="text-xs text-muted-foreground">
-                        Define el orden en que aparecerá el método de pago.
-                    </p>
-
-                    <p
-                        v-if="form.errors.sort_order"
-                        class="text-sm text-red-500"
-                    >
-                        {{ form.errors.sort_order }}
-                    </p>
-                </div>
-
-                <!-- Estado -->
-                <div
-                    class="flex items-center justify-between rounded-xl border border-sidebar-border bg-muted/20 p-4"
-                >
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        <p
+                            v-if="form.errors.sort_order"
+                            class="form-error"
                         >
-                            <ToggleLeft class="h-4 w-4" />
-                        </div>
+                            {{ form.errors.sort_order }}
+                        </p>
 
-                        <div>
-                            <p class="text-sm font-medium">
-                                Método activo
-                            </p>
-
-                            <p class="mt-1 text-xs text-muted-foreground">
-                                Los métodos inactivos no estarán disponibles
-                                para nuevas órdenes.
-                            </p>
-                        </div>
+                        <p v-else class="form-help">
+                            Define el orden en que aparecerá el método de pago.
+                        </p>
                     </div>
 
-                    <input
-                        v-model="form.is_active"
-                        type="checkbox"
-                        class="h-4 w-4 rounded border-sidebar-border text-primary focus:ring-primary/20"
-                    />
+                    <!-- Estado -->
+                    <div class="flex items-center">
+                        <ActiveSwitch
+                            v-model="form.is_active"
+                            label="Método activo"
+                            description="Los métodos inactivos no estarán disponibles para nuevas órdenes."
+                            :error="form.errors.is_active"
+                        />
+                    </div>
                 </div>
+            </AdminCard>
 
-                <p
-                    v-if="form.errors.is_active"
-                    class="text-sm text-red-500"
-                >
-                    {{ form.errors.is_active }}
-                </p>
-
-                <!-- Acciones -->
+            <!-- Información adicional -->
+            <div
+                class="flex items-start gap-3 rounded-xl border border-[#DCE7DF] bg-white p-4"
+            >
                 <div
-                    class="flex flex-col-reverse gap-3 border-t border-sidebar-border/70 pt-6 dark:border-sidebar-border sm:flex-row sm:justify-end"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF3ED] text-[#187744]"
                 >
-                    <Link
-                        :href="admin.paymentMethods.index().url"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <ArrowLeft class="h-4 w-4" />
-                        Cancelar
-                    </Link>
-
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Save class="h-4 w-4" />
-
-                        {{
-                            form.processing
-                                ? 'Guardando...'
-                                : 'Actualizar método de pago'
-                        }}
-                    </button>
+                    <Info class="h-5 w-5" />
                 </div>
-            </form>
-        </div>
+
+                <div>
+                    <p class="text-sm font-semibold text-[#244334]">
+                        Antes de actualizar
+                    </p>
+
+                    <p class="mt-1 text-sm leading-6 text-[#718477]">
+                        Los cambios se aplicarán al actualizar el método de
+                        pago. Verifica que el código siga siendo compatible con
+                        la lógica que utiliza tu sistema para procesar los pagos.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div
+                class="flex flex-col-reverse gap-3 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:justify-end"
+            >
+                <CancelButton
+                    :href="admin.paymentMethods.index().url"
+                    :icon="ArrowLeft"
+                    label="Cancelar"
+                />
+
+                <AdminButton
+                    type="submit"
+                    variant="primary"
+                    :icon="Save"
+                    :loading="form.processing"
+                    loading-text="Actualizando..."
+                >
+                    Actualizar método de pago
+                </AdminButton>
+            </div>
+        </form>
     </div>
 </template>

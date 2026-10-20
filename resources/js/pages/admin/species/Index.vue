@@ -1,20 +1,18 @@
-<script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
 
+<script setup lang="ts">
+import { Head, router } from '@inertiajs/vue3';
 import {
-    Edit,
-    Eye,
+    FilterX,
     Leaf,
     Plus,
-    Search,
-    Trash2,
 } from 'lucide-vue-next';
-
 import Swal from 'sweetalert2';
-
 import { ref } from 'vue';
 
 import admin from '@/routes/admin';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import DataTable from '@/components/admin/DataTable.vue';
+import TableActions from '@/components/admin/TableActions.vue';
 
 interface Category {
     id: number;
@@ -69,22 +67,42 @@ const categoryId = ref(
         : '',
 );
 
-const submitSearch = () => {
+const hasFilters = (): boolean => {
+    return Boolean(search.value.trim() || categoryId.value);
+};
+
+const submitSearch = (): void => {
     router.get(
         admin.species.index().url,
         {
-            search: search.value || undefined,
+            search: search.value.trim() || undefined,
             category_id: categoryId.value || undefined,
         },
         {
             preserveState: true,
+            preserveScroll: true,
             replace: true,
         },
     );
 };
 
-const deleteSpecies = (item: Species) => {
-    Swal.fire({
+const clearFilters = (): void => {
+    search.value = '';
+    categoryId.value = '';
+
+    router.get(
+        admin.species.index().url,
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const deleteSpecies = async (item: Species): Promise<void> => {
+    const result = await Swal.fire({
         title: '¿Eliminar especie?',
         text: `Se eliminará "${item.common_name}". Esta acción no se puede deshacer.`,
         icon: 'warning',
@@ -92,381 +110,250 @@ const deleteSpecies = (item: Species) => {
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
-    }).then((result) => {
-        if (result.isConfirmed) {
-            router.delete(
-                admin.species.destroy(item.id).url,
-                {
-                    preserveScroll: true,
-                },
-            );
-        }
+        focusCancel: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#6B7280',
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
+    router.delete(admin.species.destroy(item.id).url, {
+        preserveScroll: true,
     });
 };
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Panel',
+                href: admin.dashboard(),
+            },
+            {
+                title: 'Especies',
+                href: admin.species.index,
+            },
+        ],
+    },
+});
 </script>
 
 <template>
     <Head title="Especies" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
-        <!-- HEADER -->
+    <div class="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader
+            title="Especies"
+            description="Administra el catálogo de especies del zoológico."
+            section="Administración"
+            :icon="Leaf"
+            :action-icon="Plus"
+            action-label="Nueva especie"
+            :action-href="admin.species.create().url"
+        />
 
-        <div
-            class="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-background p-6 dark:border-sidebar-border"
+        <DataTable
+            :pagination="species"
+            :is-empty="species.data.length === 0"
+            :empty-colspan="6"
+            :search="search"
+            search-placeholder="Buscar especie..."
+            :has-filters="hasFilters()"
+            @update:search="search = $event"
+            @search="submitSearch"
+            @clear-filters="clearFilters"
         >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-center gap-4">
+            <template #filters>
+                <select
+                    v-model="categoryId"
+                    aria-label="Filtrar por categoría"
+                    class="w-full rounded-lg border border-[#DCE7DF] bg-white px-3 py-2.5 text-sm text-[#244334] outline-none transition focus:border-[#187744] focus:ring-2 focus:ring-[#187744]/15 sm:w-auto"
+                    @change="submitSearch"
+                >
+                    <option value="">
+                        Todas las categorías
+                    </option>
+
+                    <option
+                        v-for="category in categories"
+                        :key="category.id"
+                        :value="String(category.id)"
+                    >
+                        {{ category.name }}
+                    </option>
+                </select>
+            </template>
+
+            <template #active-filters>
+                <span
+                    v-if="search.trim()"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F9F6] px-3 py-1 text-xs font-medium text-[#42604C]"
+                >
+                    <FilterX class="h-3.5 w-3.5" />
+                    Búsqueda: {{ search }}
+                </span>
+
+                <span
+                    v-if="categoryId"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F9F6] px-3 py-1 text-xs font-medium text-[#42604C]"
+                >
+                    Categoría:
+                    {{
+                        categories.find(
+                            (category) =>
+                                String(category.id) === categoryId,
+                        )?.name ?? 'Seleccionada'
+                    }}
+                </span>
+            </template>
+
+            <template #table-head>
+                <tr>
+                    <th class="min-w-[240px] px-5 py-4 font-semibold sm:px-6">
+                        Especie
+                    </th>
+
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Categoría
+                    </th>
+
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Hábitat
+                    </th>
+
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Conservación
+                    </th>
+
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Estado
+                    </th>
+
+                    <th class="px-5 py-4 text-right font-semibold sm:px-6">
+                        Acciones
+                    </th>
+                </tr>
+            </template>
+
+            <template #table-body>
+                <tr
+                    v-for="item in species.data"
+                    :key="item.id"
+                    class="transition-colors hover:bg-[#F5F9F6]"
+                >
+                    <td class="px-5 py-4 sm:px-6">
+                        <div class="flex items-center gap-3">
+                            <span
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E4F2E8] text-[#187744]"
+                            >
+                                <Leaf class="h-5 w-5" />
+                            </span>
+
+                            <div class="min-w-0">
+                                <p class="font-medium text-[#244334]">
+                                    {{ item.common_name }}
+                                </p>
+
+                                <p class="text-xs italic text-[#718477]">
+                                    {{ item.scientific_name }}
+                                </p>
+
+                                <p class="mt-0.5 text-xs text-[#718477]">
+                                    ID: {{ item.id }}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            class="inline-flex items-center rounded-full border border-[#DCE7DF] bg-[#F5F9F6] px-2.5 py-1 text-xs font-medium text-[#42604C]"
+                        >
+                            {{ item.category?.name ?? 'Sin categoría' }}
+                        </span>
+                    </td>
+
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            v-if="item.habitat"
+                            class="text-sm text-[#42604C]"
+                        >
+                            {{ item.habitat }}
+                        </span>
+
+                        <span
+                            v-else
+                            class="text-sm italic text-[#91A096]"
+                        >
+                            Sin especificar
+                        </span>
+                    </td>
+
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            v-if="item.conservation_status"
+                            class="inline-flex items-center rounded-full border border-[#DCE7DF] bg-[#F5F9F6] px-2.5 py-1 text-xs font-medium text-[#42604C]"
+                        >
+                            {{ item.conservation_status }}
+                        </span>
+
+                        <span
+                            v-else
+                            class="text-sm italic text-[#91A096]"
+                        >
+                            Sin especificar
+                        </span>
+                    </td>
+
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            v-if="item.is_active"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700"
+                        >
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500" />
+                            Activa
+                        </span>
+
+                        <span
+                            v-else
+                            class="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"
+                        >
+                            <span class="h-1.5 w-1.5 rounded-full bg-red-500" />
+                            Inactiva
+                        </span>
+                    </td>
+
+                    <TableActions
+                        :view-url="admin.species.show(item.id).url"
+                        :edit-url="admin.species.edit(item.id).url"
+                        item-name="especie"
+                        @delete="deleteSpecies(item)"
+                    />
+                </tr>
+            </template>
+
+            <template #empty>
+                <div class="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
                     <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF2EC] text-[#66816F]"
                     >
-                        <Leaf class="h-5 w-5" />
+                        <Leaf class="h-6 w-6" />
                     </div>
 
-                    <div>
-                        <h1 class="text-2xl font-semibold">
-                            Especies
-                        </h1>
+                    <h3 class="mt-4 text-sm font-semibold text-[#244334]">
+                        No se encontraron especies
+                    </h3>
 
-                        <p
-                            class="mt-1 text-sm text-muted-foreground"
-                        >
-                            Administra el catálogo de especies del zoológico.
-                        </p>
-                    </div>
+                    <p class="mt-1 max-w-md text-sm text-[#718477]">
+                        {{
+                            hasFilters()
+                                ? 'No hay especies que coincidan con los filtros seleccionados.'
+                                : 'Todavía no hay especies registradas en el catálogo.'
+                        }}
+                    </p>
                 </div>
-
-                <Link
-                    :href="admin.species.create().url"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-                >
-                    <Plus class="h-4 w-4" />
-
-                    Nueva especie
-                </Link>
-            </div>
-        </div>
-
-        <!-- TABLA -->
-
-        <div
-            class="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-background dark:border-sidebar-border"
-        >
-            <!-- BUSCADOR -->
-
-            <div
-                class="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between"
-            >
-                <form
-                    class="flex w-full flex-col gap-2 md:max-w-2xl md:flex-row"
-                    @submit.prevent="submitSearch"
-                >
-                    <div class="relative flex-1">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                        />
-
-                        <input
-                            v-model="search"
-                            type="search"
-                            placeholder="Buscar especie..."
-                            class="w-full rounded-lg border border-sidebar-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        />
-                    </div>
-
-                    <select
-                        v-model="categoryId"
-                        class="rounded-lg border border-sidebar-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    >
-                        <option value="">
-                            Todas las categorías
-                        </option>
-
-                        <option
-                            v-for="category in categories"
-                            :key="category.id"
-                            :value="category.id"
-                        >
-                            {{ category.name }}
-                        </option>
-                    </select>
-
-                    <button
-                        type="submit"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <Search class="h-4 w-4" />
-
-                        Buscar
-                    </button>
-                </form>
-
-                <div
-                    class="text-sm text-muted-foreground"
-                >
-                    {{ species.total }}
-                    {{ species.total === 1 ? 'especie' : 'especies' }}
-                </div>
-            </div>
-
-            <!-- TABLA -->
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead
-                        class="border-b border-sidebar-border/70 bg-muted/40 dark:border-sidebar-border"
-                    >
-                        <tr>
-                            <th class="px-6 py-4 font-semibold">
-                                Especie
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Categoría
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Hábitat
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Conservación
-                            </th>
-
-                            <th class="px-6 py-4 font-semibold">
-                                Estado
-                            </th>
-
-                            <th
-                                class="px-6 py-4 text-right font-semibold"
-                            >
-                                Acciones
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody
-                        class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border"
-                    >
-                        <tr
-                            v-for="item in species.data"
-                            :key="item.id"
-                            class="transition hover:bg-muted/30"
-                        >
-                            <!-- ESPECIE -->
-
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div
-                                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-primary/10 text-primary"
-                                    >
-                                        <Leaf class="h-4 w-4" />
-                                    </div>
-
-                                    <div class="min-w-0">
-                                        <div class="font-medium">
-                                            {{ item.common_name }}
-                                        </div>
-
-                                        <div
-                                            class="text-xs italic text-muted-foreground"
-                                        >
-                                            {{ item.scientific_name }}
-                                        </div>
-
-                                        <div
-                                            class="mt-0.5 text-xs text-muted-foreground"
-                                        >
-                                            ID: {{ item.id }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <!-- CATEGORÍA -->
-
-                            <td class="px-6 py-4">
-                                <span
-                                    class="inline-flex items-center rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium"
-                                >
-                                    {{ item.category.name }}
-                                </span>
-                            </td>
-
-                            <!-- HÁBITAT -->
-
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="item.habitat"
-                                    class="text-sm"
-                                >
-                                    {{ item.habitat }}
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="text-sm italic text-muted-foreground"
-                                >
-                                    Sin especificar
-                                </span>
-                            </td>
-
-                            <!-- CONSERVACIÓN -->
-
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="item.conservation_status"
-                                    class="inline-flex items-center rounded-full border border-sidebar-border bg-muted/30 px-2.5 py-1 text-xs font-medium"
-                                >
-                                    {{ item.conservation_status }}
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="text-sm italic text-muted-foreground"
-                                >
-                                    Sin especificar
-                                </span>
-                            </td>
-
-                            <!-- ESTADO -->
-
-                            <td class="px-6 py-4">
-                                <span
-                                    v-if="item.is_active"
-                                    class="inline-flex items-center rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400"
-                                >
-                                    Activa
-                                </span>
-
-                                <span
-                                    v-else
-                                    class="inline-flex items-center rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400"
-                                >
-                                    Inactiva
-                                </span>
-                            </td>
-
-                            <!-- ACCIONES -->
-
-                            <td class="px-6 py-4">
-                                <div
-                                    class="flex justify-end gap-2"
-                                >
-                                    <!-- DETALLES -->
-
-                                    <Link
-                                        :href="
-                                            admin.species.show(
-                                                item.id,
-                                            ).url
-                                        "
-                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Eye class="h-3.5 w-3.5" />
-
-                                        Detalles
-                                    </Link>
-
-                                    <!-- EDITAR -->
-
-                                    <Link
-                                        :href="
-                                            admin.species.edit(
-                                                item.id,
-                                            ).url
-                                        "
-                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium transition hover:bg-accent"
-                                    >
-                                        <Edit class="h-3.5 w-3.5" />
-
-                                        Editar
-                                    </Link>
-
-                                    <!-- ELIMINAR -->
-
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/10"
-                                        @click="
-                                            deleteSpecies(item)
-                                        "
-                                    >
-                                        <Trash2 class="h-3.5 w-3.5" />
-
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- SIN RESULTADOS -->
-
-                        <tr v-if="species.data.length === 0">
-                            <td
-                                colspan="6"
-                                class="px-6 py-12"
-                            >
-                                <div
-                                    class="flex flex-col items-center justify-center text-center"
-                                >
-                                    <div
-                                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
-                                    >
-                                        <Leaf class="h-6 w-6" />
-                                    </div>
-
-                                    <h3
-                                        class="mt-4 text-sm font-semibold text-foreground"
-                                    >
-                                        No se encontraron especies
-                                    </h3>
-
-                                    <p
-                                        class="mt-1 max-w-md text-sm text-muted-foreground"
-                                    >
-                                        No hay especies que coincidan con los
-                                        criterios de búsqueda seleccionados.
-                                    </p>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- PAGINACIÓN -->
-
-            <div
-                v-if="species.last_page > 1"
-                class="flex flex-wrap items-center justify-center gap-1 border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
-            >
-                <template
-                    v-for="(link, index) in species.links"
-                    :key="index"
-                >
-                    <Link
-                        v-if="link.url"
-                        :href="link.url"
-                        class="rounded-lg border px-3 py-2 text-sm transition"
-                        :class="
-                            link.active
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-sidebar-border hover:bg-accent'
-                        "
-                        v-html="link.label"
-                    />
-
-                    <span
-                        v-else
-                        class="rounded-lg border border-sidebar-border px-3 py-2 text-sm opacity-50"
-                        v-html="link.label"
-                    />
-                </template>
-            </div>
-        </div>
+            </template>
+        </DataTable>
     </div>
 </template>

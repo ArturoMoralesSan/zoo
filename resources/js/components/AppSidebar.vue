@@ -1,30 +1,19 @@
+
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 
 import {
     BadgeCheck,
-    BookOpen,
+    BriefcaseBusiness,
     CalendarDays,
-    CirclePlus,
     CreditCard,
-    FolderGit2,
-    Gift,
-    Heart,
-    History,
-    KeyRound,
     LayoutDashboard,
     LayoutGrid,
-    Map,
-    MapPin,
-    PawPrint,
-    Receipt,
-    Route,
-    Settings,
     Shield,
+    ShoppingCart,
+    Store,
     Tag,
-    Tags,
     Ticket,
-    TicketCheck,
     Trophy,
     Users,
 } from '@lucide/vue';
@@ -44,7 +33,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-import admin from "@/routes/admin";
+import admin from '@/routes/admin';
 import type { NavItem } from '@/types';
 
 interface MenuLink {
@@ -71,32 +60,20 @@ interface Menu {
 
 const page = usePage();
 
-const menus = page.props.menus as Menu[];
+const menus = (page.props.menus ?? []) as Menu[];
 
 const icons = {
     BadgeCheck,
-    BookOpen,
+    BriefcaseBusiness,
     CalendarDays,
-    CirclePlus,
     CreditCard,
-    FolderGit2,
-    Gift,
-    Heart,
-    History,
-    KeyRound,
     LayoutDashboard,
     LayoutGrid,
-    Map,
-    MapPin,
-    PawPrint,
-    Receipt,
-    Route,
-    Settings,
     Shield,
+    ShoppingCart,
+    Store,
     Tag,
-    Tags,
     Ticket,
-    TicketCheck,
     Trophy,
     Users,
 };
@@ -114,13 +91,10 @@ const mainNavItems: NavItem[] = menus.map((menu) => {
         return {
             title: menu.name,
             icon: getIcon(menu.icon),
-
-            children: menu.links.map((link) => ({
+            children: (menu.links ?? []).map((link) => ({
                 title: link.name,
                 href: link.url,
-                icon: link.icon
-                    ? getIcon(link.icon)
-                    : undefined,
+                icon: link.icon ? getIcon(link.icon) : undefined,
             })),
         };
     }
@@ -137,7 +111,6 @@ const footerNavItems: NavItem[] = [];
 
 <template>
     <Sidebar collapsible="icon" variant="inset">
-
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
@@ -159,10 +132,8 @@ const footerNavItems: NavItem[] = [];
 
         <SidebarFooter>
             <NavFooter :items="footerNavItems" />
-
             <NavUser />
         </SidebarFooter>
-
     </Sidebar>
 
     <slot />

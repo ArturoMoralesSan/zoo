@@ -6,14 +6,11 @@ import {
     CheckCircle2,
     CircleOff,
     ExternalLink,
-    FileBox,
     FileImage,
     ImageOff,
     Info,
-    Link as LinkIcon,
     Pencil,
     Tag,
-    Upload,
 } from 'lucide-vue-next';
 import admin from '@/routes/admin';
 
@@ -41,498 +38,315 @@ interface Card {
     species: Species;
 }
 
-const props = defineProps<{
-    card: Card;
-}>();
+defineProps<{ card: Card }>();
 
-const cardImageUrl = (path: string | null): string | null => {
-    if (!path) {
-        return null;
-    }
-
-    if (
-        path.startsWith('http://') ||
-        path.startsWith('https://') ||
-        path.startsWith('/')
-    ) {
-        return path;
-    }
-
+const fileUrl = (path: string | null): string | null => {
+    if (!path) return null;
+    if (/^(https?:\/\/|\/)/.test(path)) return path;
     return `/storage/${path}`;
 };
 
-const modelFileUrl = (path: string | null): string | null => {
-    if (!path) {
-        return null;
-    }
-
-    if (
-        path.startsWith('http://') ||
-        path.startsWith('https://') ||
-        path.startsWith('/')
-    ) {
-        return path;
-    }
-
-    return `/storage/${path}`;
+const rarityLabels: Record<string, string> = {
+    comun: 'Común',
+    rara: 'Rara',
+    epica: 'Épica',
+    edicion_especial: 'Edición especial',
 };
 
-const getRarityLabel = (value: string): string => {
-    const labels: Record<string, string> = {
-        comun: 'Común',
-        rara: 'Rara',
-        epica: 'Épica',
-        edicion_especial: 'Edición especial',
-    };
-
-    return labels[value] ?? value;
+const rarityClasses: Record<string, string> = {
+    comun: 'bg-[#F2F7F4] text-[#718477]',
+    rara: 'bg-blue-50 text-blue-700',
+    epica: 'bg-purple-50 text-purple-700',
+    edicion_especial: 'bg-amber-50 text-amber-700',
 };
 
-const getRarityClasses = (value: string): string => {
-    const classes: Record<string, string> = {
-        comun: 'border-sidebar-border bg-muted/40 text-muted-foreground',
-        rara: 'border-blue-500/30 bg-blue-500/5 text-blue-500',
-        epica: 'border-purple-500/30 bg-purple-500/5 text-purple-500',
-        edicion_especial:
-            'border-yellow-500/30 bg-yellow-500/5 text-yellow-600',
-    };
+const rarityLabel = (value: string) => rarityLabels[value] ?? value;
 
-    return (
-        classes[value] ??
-        'border-sidebar-border bg-muted/40 text-muted-foreground'
-    );
-};
+const rarityClass = (value: string) =>
+    rarityClasses[value] ?? rarityClasses.comun;
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Panel',
+                href: admin.dashboard(),
+            },
+            {
+                title: 'Tarjetas',
+                href: admin.cards.index,
+            },
+            {
+                title: 'Detalle de tarjeta',
+                href: admin.cards.show,
+            },
+        ],
+    },
+});
 </script>
 
 <template>
     <Head :title="`Tarjeta: ${card.name}`" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-        <!-- Encabezado -->
-        <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div class="flex items-start gap-3">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                    >
-                        <Tag class="h-5 w-5" />
-                    </div>
-
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h1 class="text-2xl font-semibold">
-                                {{ card.name }}
-                            </h1>
-
-                            <span
-                                class="rounded-full border px-2.5 py-1 text-xs font-medium"
-                                :class="getRarityClasses(card.rarity)"
-                            >
-                                {{ getRarityLabel(card.rarity) }}
-                            </span>
-
-                            <span
-                                v-if="card.is_active"
-                                class="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/5 px-2.5 py-1 text-xs font-medium text-green-500"
-                            >
-                                <CheckCircle2 class="h-3.5 w-3.5" />
-                                Activa
-                            </span>
-
-                            <span
-                                v-else
-                                class="inline-flex items-center gap-1 rounded-full border border-sidebar-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground"
-                            >
-                                <CircleOff class="h-3.5 w-3.5" />
-                                Inactiva
-                            </span>
-                        </div>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Información de la tarjeta coleccionable · ID #{{ card.id }}
-                        </p>
-                    </div>
+    <div class="space-y-4 bg-[#F8FAF8] p-3 sm:p-5">
+        <!-- Encabezado compacto -->
+        <header class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#DCE7DF] bg-white p-4">
+            <div class="flex min-w-0 items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#EAF3EC] text-[#187744]">
+                    <Tag :size="20" />
                 </div>
 
-                <div class="flex flex-col gap-2 sm:flex-row">
-                    <Link
-                        :href="admin.cards.index().url"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                    >
-                        <ArrowLeft class="h-4 w-4" />
-                        Volver
-                    </Link>
+                <div class="min-w-0">
+                    <div class="mb-1 flex flex-wrap items-center gap-2">
+                        <span class="text-xs text-[#718477]">
+                            Tarjetas / #{{ card.id }}
+                        </span>
 
-                    <Link
-                        :href="admin.cards.edit(card.id).url"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-                    >
-                        <Pencil class="h-4 w-4" />
-                        Editar tarjeta
-                    </Link>
+                        <span
+                            class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                            :class="rarityClass(card.rarity)"
+                        >
+                            {{ rarityLabel(card.rarity) }}
+                        </span>
+                    </div>
+
+                    <h1 class="truncate text-xl font-bold text-[#244334]">
+                        {{ card.name }}
+                    </h1>
+
+                    <p class="mt-1 flex items-center gap-1.5 text-xs text-[#718477]">
+                        <CheckCircle2 v-if="card.is_active" :size="14" class="text-[#187744]" />
+                        <CircleOff v-else :size="14" />
+                        {{ card.is_active ? 'Activa' : 'Inactiva' }}
+                    </p>
                 </div>
             </div>
-        </div>
+
+            <div class="flex gap-2">
+                <Link
+                    :href="admin.cards.index().url"
+                    class="inline-flex items-center gap-2 rounded-lg border border-[#DCE7DF] px-3 py-2 text-sm font-medium text-[#435D4C] hover:bg-[#F2F7F4]"
+                >
+                    <ArrowLeft :size="16" />
+                    Volver
+                </Link>
+
+                <Link
+                    :href="admin.cards.edit(card.id).url"
+                    class="inline-flex items-center gap-2 rounded-lg bg-[#187744] px-3 py-2 text-sm font-medium text-white hover:bg-[#126238]"
+                >
+                    <Pencil :size="16" />
+                    Editar
+                </Link>
+            </div>
+        </header>
 
         <!-- Información principal -->
         <div class="grid gap-4 lg:grid-cols-3">
             <!-- Imagen -->
-            <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
-            >
-                <div class="mb-4 flex items-center gap-2">
-                    <FileImage class="h-5 w-5 text-primary" />
-
-                    <div>
-                        <h2 class="text-base font-semibold">
-                            Imagen de la tarjeta
-                        </h2>
-
-                        <p class="text-xs text-muted-foreground">
-                            Recurso visual de la tarjeta.
-                        </p>
-                    </div>
+            <section class="rounded-xl border border-[#DCE7DF] bg-white p-4">
+                <div class="mb-3 flex items-center gap-2">
+                    <FileImage :size="18" class="text-[#187744]" />
+                    <h2 class="text-sm font-semibold text-[#244334]">
+                        Imagen de la tarjeta
+                    </h2>
                 </div>
 
-                <div
-                    class="flex min-h-[400px] items-center justify-center overflow-hidden rounded-lg border border-sidebar-border bg-muted/40"
-                >
+                <div class="flex min-h-64 items-center justify-center rounded-lg bg-[#F6F9F6] p-3">
                     <img
                         v-if="card.card_image"
-                        :src="cardImageUrl(card.card_image) ?? ''"
+                        :src="fileUrl(card.card_image) ?? ''"
                         :alt="card.name"
-                        class="max-h-[600px] w-full object-contain"
+                        class="max-h-[380px] w-full object-contain"
                     />
 
-                    <div
-                        v-else
-                        class="flex flex-col items-center justify-center px-6 py-12 text-center text-muted-foreground"
-                    >
-                        <div
-                            class="flex h-14 w-14 items-center justify-center rounded-full bg-background"
-                        >
-                            <ImageOff class="h-7 w-7" />
-                        </div>
-
-                        <p class="mt-4 font-medium">
+                    <div v-else class="py-8 text-center">
+                        <ImageOff :size="30" class="mx-auto text-[#84958A]" />
+                        <p class="mt-2 text-sm font-medium text-[#435D4C]">
                             Sin imagen
                         </p>
-
-                        <p class="mt-1 max-w-xs text-sm">
-                            Esta tarjeta no tiene una imagen asociada.
-                        </p>
-
                         <Link
                             :href="admin.cards.edit(card.id).url"
-                            class="mt-4 inline-flex items-center gap-2 rounded-lg border border-sidebar-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                            class="mt-2 inline-block text-sm font-medium text-[#187744] hover:underline"
                         >
-                            <Upload class="h-4 w-4" />
                             Agregar imagen
                         </Link>
                     </div>
                 </div>
 
-                <div
+                <p
                     v-if="card.card_image"
-                    class="mt-3 flex items-start gap-2 break-all text-xs text-muted-foreground"
+                    class="mt-2 break-all text-xs text-[#718477]"
                 >
-                    <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span>{{ card.card_image }}</span>
-                </div>
-            </div>
+                    {{ card.card_image }}
+                </p>
+            </section>
 
-            <!-- Datos -->
-            <div
-                class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border lg:col-span-2"
-            >
-                <div class="mb-6 flex items-center gap-2">
-                    <Info class="h-5 w-5 text-primary" />
-
-                    <div>
-                        <h2 class="text-base font-semibold">
-                            Información de la tarjeta
-                        </h2>
-
-                        <p class="text-xs text-muted-foreground">
-                            Datos generales y configuración.
-                        </p>
-                    </div>
+            <!-- Datos generales -->
+            <section class="rounded-xl border border-[#DCE7DF] bg-white p-4 lg:col-span-2">
+                <div class="mb-4 flex items-center gap-2">
+                    <Info :size="18" class="text-[#187744]" />
+                    <h2 class="text-sm font-semibold text-[#244334]">
+                        Información general
+                    </h2>
                 </div>
 
-                <div class="flex flex-col gap-6">
-                    <!-- Especie -->
-                    <div
-                        class="rounded-lg border border-sidebar-border p-5"
-                    >
-                        <p class="text-xs font-medium text-muted-foreground">
-                            Especie
-                        </p>
-
-                        <p class="mt-1 font-medium">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-lg bg-[#F6F9F6] p-3">
+                        <p class="text-xs text-[#718477]">Especie</p>
+                        <p class="mt-1 text-sm font-semibold text-[#244334]">
                             {{ card.species.common_name }}
                         </p>
-
-                        <p class="mt-1 text-sm italic text-muted-foreground">
+                        <p class="mt-0.5 text-xs italic text-[#718477]">
                             {{ card.species.scientific_name }}
                         </p>
                     </div>
 
-                    <!-- Información secundaria -->
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div
-                            class="rounded-lg border border-sidebar-border p-5"
+                    <div class="rounded-lg bg-[#F6F9F6] p-3">
+                        <p class="text-xs text-[#718477]">Rareza</p>
+                        <span
+                            class="mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                            :class="rarityClass(card.rarity)"
                         >
-                            <p class="text-xs text-muted-foreground">
-                                Edición
-                            </p>
-
-                            <p class="mt-1 font-medium">
-                                {{ card.edition || 'General' }}
-                            </p>
-                        </div>
-
-                        <div
-                            class="rounded-lg border border-sidebar-border p-5"
-                        >
-                            <p class="text-xs text-muted-foreground">
-                                Orden
-                            </p>
-
-                            <p class="mt-1 font-medium">
-                                {{ card.sort_order }}
-                            </p>
-                        </div>
+                            {{ rarityLabel(card.rarity) }}
+                        </span>
                     </div>
 
-                    <!-- Rareza -->
-                    <div
-                        class="rounded-lg border border-sidebar-border p-5"
-                    >
-                        <p class="text-xs text-muted-foreground">
-                            Rareza
+                    <div class="rounded-lg border border-[#E5ECE7] p-3">
+                        <p class="text-xs text-[#718477]">Edición</p>
+                        <p class="mt-1 text-sm font-medium text-[#244334]">
+                            {{ card.edition || 'General' }}
                         </p>
-
-                        <div class="mt-2">
-                            <span
-                                class="inline-flex rounded-full border px-3 py-1.5 text-xs font-medium"
-                                :class="getRarityClasses(card.rarity)"
-                            >
-                                {{ getRarityLabel(card.rarity) }}
-                            </span>
-                        </div>
                     </div>
 
-                    <!-- Descripción -->
-                    <div>
-                        <h3 class="text-sm font-semibold">
-                            Descripción
-                        </h3>
-
-                        <p
-                            v-if="card.description"
-                            class="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground"
-                        >
-                            {{ card.description }}
+                    <div class="rounded-lg border border-[#E5ECE7] p-3">
+                        <p class="text-xs text-[#718477]">Orden de visualización</p>
+                        <p class="mt-1 text-sm font-medium text-[#244334]">
+                            {{ card.sort_order }}
                         </p>
-
-                        <div
-                            v-else
-                            class="mt-3 flex items-center gap-2 rounded-lg border border-dashed border-sidebar-border p-4 text-sm text-muted-foreground"
-                        >
-                            <Info class="h-4 w-4 shrink-0" />
-                            <span>
-                                Esta tarjeta no tiene una descripción.
-                            </span>
-                        </div>
                     </div>
                 </div>
-            </div>
+
+                <div class="mt-4 border-t border-[#E5ECE7] pt-3">
+                    <p class="text-xs font-semibold text-[#435D4C]">
+                        Descripción
+                    </p>
+                    <p
+                        v-if="card.description"
+                        class="mt-1 whitespace-pre-line text-sm leading-6 text-[#5F7566]"
+                    >
+                        {{ card.description }}
+                    </p>
+                    <p v-else class="mt-1 text-sm text-[#84958A]">
+                        Sin descripción registrada.
+                    </p>
+                </div>
+            </section>
         </div>
 
         <!-- Modelo 3D -->
-        <div
-            class="relative rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border"
-        >
-            <div
-                class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"
-            >
-                <div class="flex items-start gap-3">
-                    <div
-                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                    >
-                        <Box class="h-5 w-5" />
-                    </div>
-
+        <section class="rounded-xl border border-[#DCE7DF] bg-white p-4">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <Box :size="19" class="text-[#187744]" />
                     <div>
-                        <h2 class="text-lg font-semibold">
+                        <h2 class="text-sm font-semibold text-[#244334]">
                             Modelo 3D
                         </h2>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Información del modelo 3D asociado a esta tarjeta.
+                        <p class="text-xs text-[#718477]">
+                            Recursos digitales de la tarjeta
                         </p>
                     </div>
                 </div>
 
                 <span
-                    v-if="card.model_file || card.model_url"
-                    class="inline-flex w-fit items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/5 px-2.5 py-1 text-xs font-medium text-green-500"
+                    class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                    :class="card.model_file || card.model_url
+                        ? 'bg-[#EAF5ED] text-[#187744]'
+                        : 'bg-[#F2F4F2] text-[#718477]'"
                 >
-                    <CheckCircle2 class="h-3.5 w-3.5" />
-                    Disponible
-                </span>
-
-                <span
-                    v-else
-                    class="inline-flex w-fit items-center gap-1.5 rounded-full border border-sidebar-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground"
-                >
-                    <CircleOff class="h-3.5 w-3.5" />
-                    Sin modelo
+                    {{ card.model_file || card.model_url ? 'Disponible' : 'Sin modelo' }}
                 </span>
             </div>
 
-            <!-- Hay modelo -->
             <div
                 v-if="card.model_file || card.model_url"
-                class="mt-6 grid gap-4 lg:grid-cols-2"
+                class="grid gap-3 md:grid-cols-2"
             >
-                <!-- Información -->
-                <div
-                    class="rounded-lg border border-sidebar-border p-5"
-                >
-                    <div class="mb-5 flex items-center gap-2">
-                        <FileBox class="h-4 w-4 text-primary" />
-
-                        <h3 class="text-sm font-semibold">
-                            Información del modelo
-                        </h3>
+                <div class="space-y-3">
+                    <div
+                        v-if="card.model_name || card.model_format"
+                        class="flex flex-wrap items-center gap-2"
+                    >
+                        <span class="text-sm font-medium text-[#244334]">
+                            {{ card.model_name || 'Modelo 3D' }}
+                        </span>
+                        <span
+                            v-if="card.model_format"
+                            class="rounded-md bg-[#F2F7F4] px-2 py-1 text-xs font-semibold uppercase text-[#435D4C]"
+                        >
+                            {{ card.model_format }}
+                        </span>
                     </div>
 
-                    <div class="space-y-5">
-                        <div v-if="card.model_name">
-                            <p class="text-xs text-muted-foreground">
-                                Nombre
-                            </p>
+                    <a
+                        v-if="card.model_file"
+                        :href="fileUrl(card.model_file) ?? ''"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex items-center gap-2 rounded-lg border border-[#DCE7DF] p-3 text-sm text-[#187744] hover:bg-[#F6F9F6]"
+                    >
+                        <Box :size="17" class="shrink-0" />
+                        <span class="min-w-0 flex-1 break-all">
+                            {{ card.model_file }}
+                        </span>
+                        <ExternalLink :size="15" class="shrink-0" />
+                    </a>
 
-                            <p class="mt-1 font-medium">
-                                {{ card.model_name }}
-                            </p>
-                        </div>
-
-                        <div v-if="card.model_format">
-                            <p class="text-xs text-muted-foreground">
-                                Formato
-                            </p>
-
-                            <span
-                                class="mt-1 inline-flex rounded-md border border-sidebar-border bg-muted/40 px-2.5 py-1 text-xs font-medium uppercase"
-                            >
-                                {{ card.model_format }}
-                            </span>
-                        </div>
-
-                        <div v-if="card.model_file">
-                            <p class="text-xs text-muted-foreground">
-                                Archivo
-                            </p>
-
-                            <a
-                                :href="
-                                    modelFileUrl(card.model_file) ?? ''
-                                "
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="mt-1 inline-flex max-w-full items-center gap-1.5 break-all text-sm text-primary hover:underline"
-                            >
-                                <FileBox class="h-4 w-4 shrink-0" />
-                                <span>{{ card.model_file }}</span>
-                                <ExternalLink class="h-3.5 w-3.5 shrink-0" />
-                            </a>
-                        </div>
-
-                        <div v-if="card.model_url">
-                            <p class="text-xs text-muted-foreground">
-                                URL externa
-                            </p>
-
-                            <a
-                                :href="card.model_url"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="mt-1 inline-flex max-w-full items-center gap-1.5 break-all text-sm text-primary hover:underline"
-                            >
-                                <LinkIcon class="h-4 w-4 shrink-0" />
-                                <span>{{ card.model_url }}</span>
-                                <ExternalLink class="h-3.5 w-3.5 shrink-0" />
-                            </a>
-                        </div>
-                    </div>
+                    <a
+                        v-if="card.model_url"
+                        :href="card.model_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex items-center gap-2 rounded-lg border border-[#DCE7DF] p-3 text-sm text-[#187744] hover:bg-[#F6F9F6]"
+                    >
+                        <ExternalLink :size="16" class="shrink-0" />
+                        <span class="min-w-0 flex-1 break-all">
+                            {{ card.model_url }}
+                        </span>
+                    </a>
                 </div>
 
-                <!-- Descripción -->
-                <div
-                    class="rounded-lg border border-sidebar-border p-5"
-                >
-                    <div class="mb-4 flex items-center gap-2">
-                        <Info class="h-4 w-4 text-primary" />
-
-                        <h3 class="text-sm font-semibold">
-                            Descripción del modelo
-                        </h3>
-                    </div>
-
+                <div class="rounded-lg bg-[#F6F9F6] p-3">
+                    <p class="text-xs font-semibold text-[#435D4C]">
+                        Descripción del modelo
+                    </p>
                     <p
                         v-if="card.model_description"
-                        class="whitespace-pre-line text-sm leading-6 text-muted-foreground"
+                        class="mt-1 whitespace-pre-line text-sm leading-6 text-[#5F7566]"
                     >
                         {{ card.model_description }}
                     </p>
-
-                    <div
-                        v-else
-                        class="flex items-center gap-2 rounded-lg border border-dashed border-sidebar-border p-4 text-sm text-muted-foreground"
-                    >
-                        <Info class="h-4 w-4 shrink-0" />
-
-                        <span>
-                            Sin descripción del modelo.
-                        </span>
-                    </div>
+                    <p v-else class="mt-1 text-sm text-[#84958A]">
+                        Sin descripción adicional.
+                    </p>
                 </div>
             </div>
 
-            <!-- Sin modelo -->
             <div
                 v-else
-                class="mt-6 flex flex-col items-center justify-center rounded-lg border border-dashed border-sidebar-border px-6 py-12 text-center"
+                class="rounded-lg border border-dashed border-[#DCE7DF] bg-[#F8FAF8] px-4 py-6 text-center"
             >
-                <div
-                    class="flex h-14 w-14 items-center justify-center rounded-full bg-muted/60 text-muted-foreground"
-                >
-                    <Box class="h-7 w-7" />
-                </div>
-
-                <p class="mt-4 font-medium">
-                    No hay un modelo 3D asociado
+                <p class="text-sm text-[#718477]">
+                    Esta tarjeta no tiene un modelo 3D asociado.
                 </p>
-
-                <p class="mt-1 max-w-md text-sm text-muted-foreground">
-                    Puedes agregar un archivo GLB/GLTF o una URL desde la
-                    edición de la tarjeta.
-                </p>
-
                 <Link
                     :href="admin.cards.edit(card.id).url"
-                    class="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                    class="mt-2 inline-block text-sm font-semibold text-[#187744] hover:underline"
                 >
-                    <Upload class="h-4 w-4" />
-                    Agregar modelo 3D
+                    Agregar modelo
                 </Link>
             </div>
-        </div>
+        </section>
     </div>
 </template>
