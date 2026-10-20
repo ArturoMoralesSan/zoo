@@ -1,71 +1,128 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import {
+    UserRound,
+    ShieldCheck,
+    Palette,
+    ChevronRight,
+    Settings2,
+} from 'lucide-vue-next';
+
 import Heading from '@/components/Heading.vue';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
+
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
+
 import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
     {
         title: 'Perfil',
         href: editProfile(),
+        icon: UserRound,
     },
     {
         title: 'Seguridad',
         href: editSecurity(),
-    },
-    {
-        title: 'Apariencia',
-        href: editAppearance(),
-    },
+        icon: ShieldCheck,
+    }
 ];
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="px-4 py-6">
-        <Heading
-            title="Configuración"
-            description="Administra tu perfil y la configuración de tu cuenta"
-        />
-
-        <div class="flex flex-col lg:flex-row lg:space-x-12">
-            <aside class="w-full max-w-xl lg:w-48">
-                <nav
-                    class="flex flex-col space-y-1 space-x-0"
-                    aria-label="Configuración"
+    <div
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
+    >
+        <div
+            class="rounded-2xl border border-[#DCE7DF] bg-white p-5 sm:p-6"
+        >
+            <div class="flex items-start gap-3">
+                <div
+                    class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#EAF3EC] text-[#187744]"
                 >
-                    <Button
-                        v-for="item in sidebarNavItems"
-                        :key="toUrl(item.href)"
-                        variant="ghost"
-                        :class="[
-                            'w-full justify-start',
-                            { 'bg-muted': isCurrentOrParentUrl(item.href) },
-                        ]"
-                        as-child
+                    <Settings2 :size="22" />
+                </div>
+
+                <div class="min-w-0 flex-1">
+                    <Heading
+                        title="Configuración"
+                        description="Administra tu perfil y personaliza la configuración de tu cuenta."
+                    />
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
+            <aside class="w-full shrink-0 lg:sticky lg:top-5 lg:w-60">
+                <div
+                    class="rounded-2xl border border-[#DCE7DF] bg-white p-3"
+                >
+                    <p
+                        class="px-3 pb-3 pt-2 text-xs font-semibold uppercase tracking-wider text-[#84958A]"
                     >
-                        <Link :href="item.href">
-                            <component :is="item.icon" class="h-4 w-4" />
-                            {{ item.title }}
+                        Cuenta
+                    </p>
+
+                    <nav
+                        class="flex flex-col gap-1"
+                        aria-label="Configuración"
+                    >
+                        <Link
+                            v-for="item in sidebarNavItems"
+                            :key="toUrl(item.href)"
+                            :href="item.href"
+                            :class="[
+                                'group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors duration-200',
+                                isCurrentOrParentUrl(item.href)
+                                    ? 'bg-[#EAF3EC] text-[#187744]'
+                                    : 'text-[#435D4C] hover:bg-[#F2F7F4] hover:text-[#187744]',
+                            ]"
+                            :aria-current="
+                                isCurrentOrParentUrl(item.href)
+                                    ? 'page'
+                                    : undefined
+                            "
+                        >
+                            <component
+                                :is="item.icon"
+                                :size="19"
+                                :class="[
+                                    'shrink-0 transition-colors',
+                                    isCurrentOrParentUrl(item.href)
+                                        ? 'text-[#187744]'
+                                        : 'text-[#84958A] group-hover:text-[#187744]',
+                                ]"
+                            />
+
+                            <span class="flex-1">
+                                {{ item.title }}
+                            </span>
+
+                            <ChevronRight
+                                v-if="isCurrentOrParentUrl(item.href)"
+                                :size="16"
+                                class="shrink-0 text-[#187744]"
+                            />
                         </Link>
-                    </Button>
-                </nav>
+                    </nav>
+                </div>
             </aside>
 
-            <Separator class="my-6 lg:hidden" />
+            <Separator class="my-1 lg:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <main class="min-w-0 flex-1">
+                <section
+                    class="w-full space-y-5"
+                >
                     <slot />
                 </section>
-            </div>
+            </main>
         </div>
     </div>
 </template>

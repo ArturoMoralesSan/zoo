@@ -1,15 +1,25 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import {
+    ArrowLeft,
+    KeyRound,
+    LockKeyhole,
+    Save,
+    ShieldCheck,
+} from 'lucide-vue-next';
+
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
-import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import type { Props as ManagePasskeysProps } from '@/components/ManagePasskeys.vue';
 import ManagePasskeys from '@/components/ManagePasskeys.vue';
 import type { Props as ManageTwoFactorProps } from '@/components/ManageTwoFactor.vue';
 import ManageTwoFactor from '@/components/ManageTwoFactor.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+
+import AdminButton from '@/components/admin/AdminButton.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
+
 import { edit } from '@/routes/security';
 
 type Props = {
@@ -36,92 +46,170 @@ defineOptions({
 
     <h1 class="sr-only">Configuración de seguridad</h1>
 
-    <div class="space-y-6">
-        <Heading
-            variant="small"
-            title="Actualizar contraseña"
-            description="Asegúrate de que tu cuenta utilice una contraseña larga y aleatoria para mantenerla segura"
+    <div
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
+    >
+        <PageHeader
+            title="Configuración de seguridad"
+            description="Protege tu cuenta y administra tus métodos de autenticación."
+            section="Cuenta"
+            :icon="ShieldCheck"
         />
 
         <Form
             v-bind="SecurityController.update.form()"
-            :options="{
-                preserveScroll: true,
-            }"
+            :options="{ preserveScroll: true }"
             reset-on-success
             :reset-on-error="[
                 'password',
                 'password_confirmation',
                 'current_password',
             ]"
-            class="space-y-6"
+            class="flex flex-col gap-5"
             v-slot="{ errors, processing }"
         >
-            <div class="grid gap-2">
-                <Label for="current_password">Contraseña actual</Label>
+            <AdminCard
+                title="Actualizar contraseña"
+                description="Utiliza una contraseña larga y única para mantener tu cuenta segura."
+                :icon="LockKeyhole"
+            >
+                <div class="form-grid">
+                    <div class="form-field form-field-full">
+                        <label for="current_password" class="form-label">
+                            Contraseña actual
+                            <span class="form-required">*</span>
+                        </label>
 
-                <PasswordInput
-                    id="current_password"
-                    name="current_password"
-                    class="mt-1 block w-full"
-                    autocomplete="current-password"
-                    placeholder="Contraseña actual"
-                />
+                        <PasswordInput
+                            id="current_password"
+                            name="current_password"
+                            class="form-input"
+                            autocomplete="current-password"
+                            placeholder="Ingresa tu contraseña actual"
+                        />
 
-                <InputError :message="errors.current_password" />
-            </div>
+                        <InputError
+                            :message="errors.current_password"
+                            class="form-error"
+                        />
 
-            <div class="grid gap-2">
-                <Label for="password">Nueva contraseña</Label>
+                        <p
+                            v-if="!errors.current_password"
+                            class="form-help"
+                        >
+                            Confirma tu identidad antes de cambiar la contraseña.
+                        </p>
+                    </div>
 
-                <PasswordInput
-                    id="password"
-                    name="password"
-                    class="mt-1 block w-full"
-                    autocomplete="new-password"
-                    placeholder="Nueva contraseña"
-                    :passwordrules="props.passwordRules"
-                />
+                    <div class="form-field form-field-full">
+                        <label for="password" class="form-label">
+                            Nueva contraseña
+                            <span class="form-required">*</span>
+                        </label>
 
-                <InputError :message="errors.password" />
-            </div>
+                        <PasswordInput
+                            id="password"
+                            name="password"
+                            class="form-input"
+                            autocomplete="new-password"
+                            placeholder="Ingresa una nueva contraseña"
+                            :passwordrules="props.passwordRules"
+                        />
 
-            <div class="grid gap-2">
-                <Label for="password_confirmation">
-                    Confirmar contraseña
-                </Label>
+                        <InputError
+                            :message="errors.password"
+                            class="form-error"
+                        />
 
-                <PasswordInput
-                    id="password_confirmation"
-                    name="password_confirmation"
-                    class="mt-1 block w-full"
-                    autocomplete="new-password"
-                    placeholder="Confirmar contraseña"
-                    :passwordrules="props.passwordRules"
-                />
+                        <p v-if="!errors.password" class="form-help">
+                            Elige una contraseña difícil de adivinar y evita
+                            reutilizar contraseñas anteriores.
+                        </p>
+                    </div>
 
-                <InputError :message="errors.password_confirmation" />
-            </div>
+                    <div class="form-field form-field-full">
+                        <label
+                            for="password_confirmation"
+                            class="form-label"
+                        >
+                            Confirmar contraseña
+                            <span class="form-required">*</span>
+                        </label>
 
-            <div class="flex items-center gap-4">
-                <Button
-                    :disabled="processing"
-                    data-test="update-password-button"
+                        <PasswordInput
+                            id="password_confirmation"
+                            name="password_confirmation"
+                            class="form-input"
+                            autocomplete="new-password"
+                            placeholder="Confirma tu nueva contraseña"
+                            :passwordrules="props.passwordRules"
+                        />
+
+                        <InputError
+                            :message="errors.password_confirmation"
+                            class="form-error"
+                        />
+
+                        <p
+                            v-if="!errors.password_confirmation"
+                            class="form-help"
+                        >
+                            Escribe nuevamente la nueva contraseña para
+                            verificar que coincida.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="form-info mt-5">
+                    <ShieldCheck
+                        class="form-info-icon"
+                        :size="20"
+                    />
+
+                    <p class="form-info-text">
+                        Mantén tu contraseña privada y no la compartas con
+                        otras personas.
+                    </p>
+                </div>
+
+                <div
+                    class="mt-5 flex flex-col-reverse gap-3 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:justify-end"
                 >
-                    Guardar
-                </Button>
-            </div>
+                    <AdminButton
+                        type="submit"
+                        variant="primary"
+                        :icon="Save"
+                        :loading="processing"
+                        loading-text="Guardando..."
+                        data-test="update-password-button"
+                    >
+                        Actualizar contraseña
+                    </AdminButton>
+                </div>
+            </AdminCard>
         </Form>
+
+        <AdminCard
+            title="Autenticación de dos factores"
+            description="Añade una capa adicional de protección al iniciar sesión."
+            :icon="ShieldCheck"
+        >
+            <ManageTwoFactor
+                :canManageTwoFactor="canManageTwoFactor"
+                :requiresConfirmation="requiresConfirmation"
+                :twoFactorEnabled="twoFactorEnabled"
+            />
+        </AdminCard>
+
+        <AdminCard
+            title="Llaves de acceso"
+            description="Administra tus passkeys para iniciar sesión con un método de autenticación compatible."
+            :icon="KeyRound"
+        >
+            <ManagePasskeys
+                :canManagePasskeys="canManagePasskeys"
+                :passkeys="passkeys"
+            />
+        </AdminCard>
     </div>
-
-    <ManageTwoFactor
-        :canManageTwoFactor="canManageTwoFactor"
-        :requiresConfirmation="requiresConfirmation"
-        :twoFactorEnabled="twoFactorEnabled"
-    />
-
-    <ManagePasskeys
-        :canManagePasskeys="canManagePasskeys"
-        :passkeys="passkeys"
-    />
 </template>
