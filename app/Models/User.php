@@ -82,4 +82,9 @@ class User extends Authenticatable implements PasskeyUser
             RewardRedemption::class
         );
     }
+
+    public function cardCaptures(): HasMany
+    {
+        return $this->hasMany(CardCapture::class);
+    }
 }

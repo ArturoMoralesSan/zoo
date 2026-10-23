@@ -95,6 +95,129 @@ class StoreCardRequest extends FormRequest
                 'integer',
                 'min:0',
             ],
+
+            'astucia' => [
+                'required',
+                'integer',
+                'between:1,100',
+            ],
+
+            'rapidez' => [
+                'required',
+                'integer',
+                'between:1,100',
+            ],
+
+            'fuerza' => [
+                'required',
+                'integer',
+                'between:1,100',
+            ],
+
+            'questions_per_duel' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:50',
+            ],
+
+            'retry_type' => [
+                'required',
+                'string',
+                Rule::in(['card', 'category']),
+            ],
+
+            'retries' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:100',
+            ],
+
+            'category_retry_limit' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:100',
+            ],
+
+            'questions' => [
+                'nullable',
+                'array',
+            ],
+
+            'questions.*.id' => [
+                'nullable',
+                'integer',
+            ],
+
+            'questions.*.question' => [
+                'required',
+                'string',
+                'max:5000',
+            ],
+
+            'questions.*.is_active' => [
+                'nullable',
+                'boolean',
+            ],
+
+            'questions.*.sort_order' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
+
+            'questions.*.answers' => [
+                'required',
+                'array',
+                'min:2',
+            ],
+
+            'questions.*.answers.*.id' => [
+                'nullable',
+                'integer',
+            ],
+
+            'questions.*.answers.*.answer' => [
+                'required',
+                'string',
+                'max:1000',
+            ],
+
+            'questions.*.answers.*.is_correct' => [
+                'required',
+                'boolean',
+            ],
+
+            'questions.*.answers.*.sort_order' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $questions = $this->input('questions');
+            if (is_array($questions)) {
+                foreach ($questions as $qIndex => $q) {
+                    if (isset($q['answers']) && is_array($q['answers'])) {
+                        $correctCount = collect($q['answers'])
+                            ->filter(fn ($ans) => filter_var($ans['is_correct'] ?? false, FILTER_VALIDATE_BOOLEAN))
+                            ->count();
+
+                        if ($correctCount !== 1) {
+                            $validator->errors()->add(
+                                "questions.{$qIndex}.answers",
+                                'Cada pregunta debe tener exactamente una opción marcada como correcta.'
+                            );
+                        }
+                    }
+                }
+            }
+        });
     }
 }

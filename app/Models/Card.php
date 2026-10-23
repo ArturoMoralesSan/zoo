@@ -25,12 +25,35 @@ class Card extends Model
         'model_description',
         'is_active',
         'sort_order',
+        'astucia',
+        'rapidez',
+        'fuerza',
+        'questions_per_duel',
+        'retry_type',
+        'retries',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'astucia' => 'integer',
+        'rapidez' => 'integer',
+        'fuerza' => 'integer',
+        'questions_per_duel' => 'integer',
+        'retries' => 'integer',
     ];
+
+    /**
+     * Obtener el número particular de reintentos según la tarjeta o su categoría.
+     */
+    public function getParticularRetriesAttribute(): int
+    {
+        if ($this->retry_type === 'category') {
+            return (int) ($this->species?->category?->retry_limit ?? 3);
+        }
+
+        return (int) ($this->retries ?? 3);
+    }
 
     public function species(): BelongsTo
     {

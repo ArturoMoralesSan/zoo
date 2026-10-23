@@ -1,18 +1,25 @@
-
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     Box,
+    CheckCircle2,
     ChevronDown,
     FileBox,
     FileImage,
+    HelpCircle,
     Info,
     Layers3,
+    Plus,
+    RotateCcw,
     Save,
+    Swords,
     Tag,
+    Trash2,
     Upload,
+    Zap,
 } from 'lucide-vue-next';
+import { computed, watch } from 'vue';
 
 import admin from '@/routes/admin';
 import PageHeader from '@/components/admin/PageHeader.vue';
@@ -21,10 +28,33 @@ import AdminButton from '@/components/admin/AdminButton.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 
+interface SpeciesCategory {
+    id: number;
+    name: string;
+    retry_limit?: number;
+}
+
 interface Species {
     id: number;
+    species_category_id?: number;
     common_name: string;
     scientific_name: string;
+    category?: SpeciesCategory;
+}
+
+interface AnswerForm {
+    id?: number;
+    answer: string;
+    is_correct: boolean;
+    sort_order?: number;
+}
+
+interface QuestionForm {
+    id?: number;
+    question: string;
+    is_active: boolean;
+    sort_order: number;
+    answers: AnswerForm[];
 }
 
 const props = defineProps<{
@@ -45,7 +75,80 @@ const form = useForm({
     model_description: '',
     is_active: true,
     sort_order: 0,
+    astucia: 50,
+    rapidez: 50,
+    fuerza: 50,
+    questions_per_duel: 3,
+    retry_type: 'card' as 'card' | 'category',
+    retries: 3,
+    category_retry_limit: 3,
+    questions: [] as QuestionForm[],
 });
+
+const selectedSpecies = computed(() => {
+    return props.species.find((s) => String(s.id) === String(form.species_id));
+});
+
+watch(
+    () => selectedSpecies.value,
+    (species) => {
+        if (species?.category?.retry_limit !== undefined) {
+            form.category_retry_limit = species.category.retry_limit;
+        }
+    },
+    { immediate: true }
+);
+
+const addQuestion = () => {
+    form.questions.push({
+        question: '',
+        is_active: true,
+        sort_order: form.questions.length,
+        answers: [
+            { answer: '', is_correct: true, sort_order: 0 },
+            { answer: '', is_correct: false, sort_order: 1 },
+            { answer: '', is_correct: false, sort_order: 2 },
+        ],
+    });
+};
+
+const removeQuestion = (qIndex: number) => {
+    form.questions.splice(qIndex, 1);
+    form.questions.forEach((q, idx) => {
+        q.sort_order = idx;
+    });
+};
+
+const addAnswer = (qIndex: number) => {
+    const question = form.questions[qIndex];
+    if (!question) return;
+    question.answers.push({
+        answer: '',
+        is_correct: question.answers.length === 0,
+        sort_order: question.answers.length,
+    });
+};
+
+const removeAnswer = (qIndex: number, aIndex: number) => {
+    const question = form.questions[qIndex];
+    if (!question || question.answers.length <= 2) return;
+    const wasCorrect = question.answers[aIndex].is_correct;
+    question.answers.splice(aIndex, 1);
+    question.answers.forEach((ans, idx) => {
+        ans.sort_order = idx;
+    });
+    if (wasCorrect && question.answers.length > 0) {
+        question.answers[0].is_correct = true;
+    }
+};
+
+const selectCorrectAnswer = (qIndex: number, aIndex: number) => {
+    const question = form.questions[qIndex];
+    if (!question) return;
+    question.answers.forEach((ans, idx) => {
+        ans.is_correct = idx === aIndex;
+    });
+};
 
 const submit = () => {
     form.post(admin.cards.store().url, {
@@ -138,6 +241,9 @@ defineOptions({
                                     :value="String(item.id)"
                                 >
                                     {{ item.common_name }} — {{ item.scientific_name }}
+                                    <template v-if="item.category">
+                                        ({{ item.category.name }})
+                                    </template>
                                 </option>
                             </select>
 
@@ -294,6 +400,485 @@ defineOptions({
                         >
                             {{ form.errors.description }}
                         </p>
+                    </div>
+                </div>
+            </AdminCard>
+
+            <!-- Estadísticas de la tarjeta (Astucia, Rapidez, Fuerza: 1-100) -->
+            <AdminCard
+                title="Estadísticas de la tarjeta"
+                description="Asigna un valor numérico de 1 a 100 para cada atributo de la tarjeta."
+                :icon="Zap"
+            >
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                    <!-- Astucia -->
+                    <div class="form-field rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4">
+                        <label for="astucia" class="form-label flex items-center justify-between">
+                            <span>Astucia</span>
+                            <span class="rounded bg-[#EAF5EE] px-2 py-0.5 text-xs font-bold text-[#187744]">
+                                {{ form.astucia }}/100
+                            </span>
+                        </label>
+
+                        <input
+                            id="astucia"
+                            v-model.number="form.astucia"
+                            type="number"
+                            min="1"
+                            max="100"
+                            required
+                            class="form-input text-center text-lg font-semibold"
+                            :class="{
+                                'form-input-error': form.errors.astucia,
+                            }"
+                        />
+
+                        <p class="form-help text-center">
+                            Nivel de ingenio y astucia (1 - 100).
+                        </p>
+
+                        <p v-if="form.errors.astucia" class="form-error text-center">
+                            {{ form.errors.astucia }}
+                        </p>
+                    </div>
+
+                    <!-- Rapidez -->
+                    <div class="form-field rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4">
+                        <label for="rapidez" class="form-label flex items-center justify-between">
+                            <span>Rapidez</span>
+                            <span class="rounded bg-[#EAF5EE] px-2 py-0.5 text-xs font-bold text-[#187744]">
+                                {{ form.rapidez }}/100
+                            </span>
+                        </label>
+
+                        <input
+                            id="rapidez"
+                            v-model.number="form.rapidez"
+                            type="number"
+                            min="1"
+                            max="100"
+                            required
+                            class="form-input text-center text-lg font-semibold"
+                            :class="{
+                                'form-input-error': form.errors.rapidez,
+                            }"
+                        />
+
+                        <p class="form-help text-center">
+                            Velocidad y agilidad (1 - 100).
+                        </p>
+
+                        <p v-if="form.errors.rapidez" class="form-error text-center">
+                            {{ form.errors.rapidez }}
+                        </p>
+                    </div>
+
+                    <!-- Fuerza -->
+                    <div class="form-field rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4">
+                        <label for="fuerza" class="form-label flex items-center justify-between">
+                            <span>Fuerza</span>
+                            <span class="rounded bg-[#EAF5EE] px-2 py-0.5 text-xs font-bold text-[#187744]">
+                                {{ form.fuerza }}/100
+                            </span>
+                        </label>
+
+                        <input
+                            id="fuerza"
+                            v-model.number="form.fuerza"
+                            type="number"
+                            min="1"
+                            max="100"
+                            required
+                            class="form-input text-center text-lg font-semibold"
+                            :class="{
+                                'form-input-error': form.errors.fuerza,
+                            }"
+                        />
+
+                        <p class="form-help text-center">
+                            Potencia y resistencia física (1 - 100).
+                        </p>
+
+                        <p v-if="form.errors.fuerza" class="form-error text-center">
+                            {{ form.errors.fuerza }}
+                        </p>
+                    </div>
+                </div>
+            </AdminCard>
+
+            <!-- Configuración de Duelo y Reintentos -->
+            <AdminCard
+                title="Configuración de duelos y reintentos"
+                description="Personaliza la cantidad de preguntas mostradas por duelo y el límite de reintentos."
+                :icon="Swords"
+            >
+                <div class="space-y-5">
+                    <div class="form-grid">
+                        <!-- Preguntas por duelo -->
+                        <div class="form-field">
+                            <label for="questions_per_duel" class="form-label">
+                                Preguntas por duelo
+                                <span class="text-red-500">*</span>
+                            </label>
+
+                            <input
+                                id="questions_per_duel"
+                                v-model.number="form.questions_per_duel"
+                                type="number"
+                                min="1"
+                                max="50"
+                                required
+                                placeholder="3"
+                                class="form-input"
+                                :class="{
+                                    'form-input-error': form.errors.questions_per_duel,
+                                }"
+                            />
+
+                            <p class="form-help">
+                                Cantidad de preguntas aleatorias que se mostrarán al usuario por cada duelo.
+                            </p>
+
+                            <p v-if="form.errors.questions_per_duel" class="form-error">
+                                {{ form.errors.questions_per_duel }}
+                            </p>
+                        </div>
+
+                        <!-- Tipo de límite de reintentos -->
+                        <div class="form-field">
+                            <label class="form-label">
+                                Asignación del límite de reintentos
+                                <span class="text-red-500">*</span>
+                            </label>
+
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                <label
+                                    class="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition"
+                                    :class="
+                                        form.retry_type === 'card'
+                                            ? 'border-[#187744] bg-[#F2F7F4] text-[#187744]'
+                                            : 'border-[#C8DCCF] bg-white text-[#435D4C]'
+                                    "
+                                >
+                                    <input
+                                        v-model="form.retry_type"
+                                        type="radio"
+                                        value="card"
+                                        class="accent-[#187744]"
+                                    />
+                                    <div>
+                                        <p class="text-sm font-semibold">Por tarjeta</p>
+                                        <p class="text-xs text-[#718477]">Límite exclusivo para esta tarjeta</p>
+                                    </div>
+                                </label>
+
+                                <label
+                                    class="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition"
+                                    :class="
+                                        form.retry_type === 'category'
+                                            ? 'border-[#187744] bg-[#F2F7F4] text-[#187744]'
+                                            : 'border-[#C8DCCF] bg-white text-[#435D4C]'
+                                    "
+                                >
+                                    <input
+                                        v-model="form.retry_type"
+                                        type="radio"
+                                        value="category"
+                                        class="accent-[#187744]"
+                                    />
+                                    <div>
+                                        <p class="text-sm font-semibold">Por categoría</p>
+                                        <p class="text-xs text-[#718477]">Límite según la categoría de la especie</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <p v-if="form.errors.retry_type" class="form-error">
+                                {{ form.errors.retry_type }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Si el límite es Por Tarjeta -->
+                    <div
+                        v-if="form.retry_type === 'card'"
+                        class="rounded-xl border border-[#DCE7DF] bg-[#FCFEFC] p-4"
+                    >
+                        <div class="form-field max-w-sm">
+                            <label for="retries" class="form-label">
+                                Límite de reintentos para esta tarjeta
+                                <span class="text-red-500">*</span>
+                            </label>
+
+                            <input
+                                id="retries"
+                                v-model.number="form.retries"
+                                type="number"
+                                min="1"
+                                max="100"
+                                required
+                                placeholder="3"
+                                class="form-input"
+                                :class="{
+                                    'form-input-error': form.errors.retries,
+                                }"
+                            />
+
+                            <p class="form-help">
+                                Número máximo de intentos que tendrá el usuario para resolver el quiz de esta tarjeta.
+                            </p>
+
+                            <p v-if="form.errors.retries" class="form-error">
+                                {{ form.errors.retries }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Si el límite es Por Categoría -->
+                    <div
+                        v-else
+                        class="rounded-xl border border-[#DCE7DF] bg-[#FCFEFC] p-4"
+                    >
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-2 text-sm text-[#244334]">
+                                <RotateCcw :size="16" class="text-[#187744]" />
+                                <span>
+                                    Categoría de la especie:
+                                    <strong>{{ selectedSpecies?.category?.name || 'Selecciona una especie arriba' }}</strong>
+                                </span>
+                            </div>
+
+                            <div class="form-field max-w-sm">
+                                <label for="category_retry_limit" class="form-label">
+                                    Límite de reintentos de la categoría
+                                </label>
+
+                                <input
+                                    id="category_retry_limit"
+                                    v-model.number="form.category_retry_limit"
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    placeholder="3"
+                                    class="form-input"
+                                    :class="{
+                                        'form-input-error': form.errors.category_retry_limit,
+                                    }"
+                                />
+
+                                <p class="form-help">
+                                    El valor establecido aquí aplicará a todas las tarjetas asociadas a esta categoría.
+                                </p>
+
+                                <p v-if="form.errors.category_retry_limit" class="form-error">
+                                    {{ form.errors.category_retry_limit }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </AdminCard>
+
+            <!-- Preguntas y opciones del quiz -->
+            <AdminCard
+                title="Preguntas del quiz"
+                description="Agrega y personaliza las preguntas y opciones de respuesta para esta tarjeta."
+                :icon="HelpCircle"
+            >
+                <div class="space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#E1EBE4] pb-4">
+                        <p class="text-sm text-[#718477]">
+                            Total de preguntas agregadas: <strong>{{ form.questions.length }}</strong>
+                        </p>
+
+                        <button
+                            type="button"
+                            class="inline-flex items-center gap-2 rounded-xl bg-[#187744] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#126238]"
+                            @click="addQuestion"
+                        >
+                            <Plus :size="16" />
+                            Agregar pregunta
+                        </button>
+                    </div>
+
+                    <!-- Estado vacío -->
+                    <div
+                        v-if="form.questions.length === 0"
+                        class="rounded-xl border border-dashed border-[#B8D2C1] bg-[#F7FAF8] p-8 text-center"
+                    >
+                        <HelpCircle :size="36" class="mx-auto text-[#84958A]" />
+                        <h4 class="mt-2 text-sm font-semibold text-[#244334]">
+                            No hay preguntas añadidas
+                        </h4>
+                        <p class="mt-1 text-xs text-[#718477]">
+                            Haz clic en "Agregar pregunta" para configurar preguntas y opciones para los duelos de esta tarjeta.
+                        </p>
+                        <button
+                            type="button"
+                            class="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#C8DCCF] bg-white px-3.5 py-2 text-xs font-semibold text-[#187744] transition hover:bg-[#EDF5EF]"
+                            @click="addQuestion"
+                        >
+                            <Plus :size="14" />
+                            Agregar primera pregunta
+                        </button>
+                    </div>
+
+                    <!-- Lista de preguntas -->
+                    <div
+                        v-for="(question, qIndex) in form.questions"
+                        :key="qIndex"
+                        class="space-y-4 rounded-xl border border-[#DCE7DF] bg-[#FCFEFC] p-4 sm:p-5"
+                    >
+                        <!-- Cabecera de la pregunta -->
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#E1EBE4] pb-3">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="flex h-7 w-7 items-center justify-center rounded-lg bg-[#187744] text-xs font-bold text-white"
+                                >
+                                    {{ qIndex + 1 }}
+                                </span>
+                                <h4 class="text-sm font-bold text-[#244334]">
+                                    Pregunta #{{ qIndex + 1 }}
+                                </h4>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <label class="flex items-center gap-2 text-xs text-[#435D4C]">
+                                    <input
+                                        v-model="question.is_active"
+                                        type="checkbox"
+                                        class="h-4 w-4 rounded accent-[#187744]"
+                                    />
+                                    <span>Activa</span>
+                                </label>
+
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                                    @click="removeQuestion(qIndex)"
+                                >
+                                    <Trash2 :size="14" />
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Texto de la pregunta -->
+                        <div class="form-field">
+                            <label :for="`question-${qIndex}`" class="form-label">
+                                Texto de la pregunta
+                                <span class="text-red-500">*</span>
+                            </label>
+
+                            <textarea
+                                :id="`question-${qIndex}`"
+                                v-model="question.question"
+                                rows="2"
+                                required
+                                placeholder="Ej. ¿Cuál es la principal característica de esta especie?"
+                                class="form-textarea"
+                                :class="{
+                                    'form-textarea-error': form.errors[`questions.${qIndex}.question`],
+                                }"
+                            />
+
+                            <p
+                                v-if="form.errors[`questions.${qIndex}.question`]"
+                                class="form-error"
+                            >
+                                {{ form.errors[`questions.${qIndex}.question`] }}
+                            </p>
+                        </div>
+
+                        <!-- Opciones de respuesta -->
+                        <div class="space-y-3 pt-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-xs font-semibold uppercase tracking-wider text-[#435D4C]">
+                                    Opciones de respuesta (marca la correcta)
+                                </label>
+
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center gap-1 text-xs font-semibold text-[#187744] hover:underline"
+                                    @click="addAnswer(qIndex)"
+                                >
+                                    <Plus :size="13" />
+                                    Agregar opción
+                                </button>
+                            </div>
+
+                            <div class="space-y-2.5">
+                                <div
+                                    v-for="(answer, aIndex) in question.answers"
+                                    :key="aIndex"
+                                    class="flex items-center gap-2 rounded-lg border p-2.5 transition"
+                                    :class="
+                                        answer.is_correct
+                                            ? 'border-[#BFCFC6] bg-[#EAF5EE]'
+                                            : 'border-[#E1EBE4] bg-white'
+                                    "
+                                >
+                                    <!-- Letra de opción -->
+                                    <span
+                                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded text-xs font-bold"
+                                        :class="
+                                            answer.is_correct
+                                                ? 'bg-[#187744] text-white'
+                                                : 'bg-[#F2F7F4] text-[#718477]'
+                                        "
+                                    >
+                                        {{ String.fromCharCode(65 + aIndex) }}
+                                    </span>
+
+                                    <!-- Campo de texto de la opción -->
+                                    <div class="min-w-0 flex-1">
+                                        <input
+                                            v-model="answer.answer"
+                                            type="text"
+                                            required
+                                            :placeholder="`Opción ${String.fromCharCode(65 + aIndex)}`"
+                                            class="form-input py-2 text-sm"
+                                            :class="{
+                                                'form-input-error': form.errors[`questions.${qIndex}.answers.${aIndex}.answer`],
+                                            }"
+                                        />
+                                    </div>
+
+                                    <!-- Botón para marcar correcta -->
+                                    <button
+                                        type="button"
+                                        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition"
+                                        :class="
+                                            answer.is_correct
+                                                ? 'border-[#187744] bg-[#187744] text-white'
+                                                : 'border-[#C8DCCF] bg-white text-[#435D4C] hover:bg-[#F2F7F4]'
+                                        "
+                                        @click="selectCorrectAnswer(qIndex, aIndex)"
+                                    >
+                                        <CheckCircle2 :size="14" />
+                                        {{ answer.is_correct ? 'Correcta' : 'Elegir' }}
+                                    </button>
+
+                                    <!-- Eliminar opción -->
+                                    <button
+                                        v-if="question.answers.length > 2"
+                                        type="button"
+                                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#718477] transition hover:bg-red-50 hover:text-red-600"
+                                        title="Eliminar opción"
+                                        @click="removeAnswer(qIndex, aIndex)"
+                                    >
+                                        <Trash2 :size="15" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p
+                                v-if="form.errors[`questions.${qIndex}.answers`]"
+                                class="form-error"
+                            >
+                                {{ form.errors[`questions.${qIndex}.answers`] }}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </AdminCard>
@@ -517,7 +1102,7 @@ defineOptions({
             <!-- Configuración -->
             <AdminCard
                 title="Configuración"
-                description="Define la disponibilidad y el orden de la tarjeta."
+                description="Define la disponibilidad de la tarjeta en el sistema."
                 :icon="Layers3"
             >
                 <ActiveSwitch
@@ -529,7 +1114,7 @@ defineOptions({
                 />
             </AdminCard>
 
-            <!-- Acciones: pie opcional -->
+            <!-- Acciones: pie -->
             <AdminCard :padding="false">
                 <template #default>
                     <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
