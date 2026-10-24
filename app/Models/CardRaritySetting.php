@@ -15,10 +15,13 @@ class CardRaritySetting extends Model
 
     public const DEFAULT_RETRIES = 3;
 
+    public const DEFAULT_COOLDOWN_MINUTES = 1440;
+
     protected $fillable = [
         'rarity',
         'questions_per_duel',
         'retries',
+        'cooldown_minutes',
     ];
 
     protected function casts(): array
@@ -27,6 +30,7 @@ class CardRaritySetting extends Model
             'rarity' => CardRarity::class,
             'questions_per_duel' => 'integer',
             'retries' => 'integer',
+            'cooldown_minutes' => 'integer',
         ];
     }
 

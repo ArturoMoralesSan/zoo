@@ -136,6 +136,14 @@ class UpdateCardRequest extends FormRequest
                 'max:100',
             ],
 
+            'cooldown_minutes' => [
+                'nullable',
+                'required_if:duel_settings_source,'.Card::DUEL_SETTINGS_CARD,
+                'integer',
+                'min:1',
+                'max:43200',
+            ],
+
             'questions' => [
                 'nullable',
                 'array',

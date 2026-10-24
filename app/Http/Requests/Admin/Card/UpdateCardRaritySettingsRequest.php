@@ -40,6 +40,13 @@ class UpdateCardRaritySettingsRequest extends FormRequest
                 'min:1',
                 'max:100',
             ],
+
+            'settings.*.cooldown_minutes' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:43200',
+            ],
         ];
     }
 
@@ -48,6 +55,7 @@ class UpdateCardRaritySettingsRequest extends FormRequest
         return [
             'settings.*.questions_per_duel' => 'preguntas por duelo',
             'settings.*.retries' => 'reintentos',
+            'settings.*.cooldown_minutes' => 'tiempo de espera',
         ];
     }
 }

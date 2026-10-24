@@ -75,6 +75,7 @@ interface Card {
     retries?: number | null;
     effective_questions_per_duel?: number;
     effective_retries?: number;
+    effective_cooldown_minutes?: number;
     species: Species;
     quiz_questions?: QuizQuestion[];
 }
@@ -280,6 +281,16 @@ defineOptions({
                         <p class="text-xs text-[#718477]">Límite de reintentos</p>
                         <p class="mt-1 text-sm font-semibold text-[#244334]">
                             {{ card.effective_retries ?? 3 }}
+                            <span class="text-xs font-normal text-[#718477]">
+                                ({{ duelSettingsLabel }})
+                            </span>
+                        </p>
+                    </div>
+
+                    <div class="rounded-lg border border-[#E5ECE7] p-3">
+                        <p class="text-xs text-[#718477]">Espera tras agotar reintentos</p>
+                        <p class="mt-1 text-sm font-semibold text-[#244334]">
+                            {{ card.effective_cooldown_minutes ?? 1440 }} min
                             <span class="text-xs font-normal text-[#718477]">
                                 ({{ duelSettingsLabel }})
                             </span>

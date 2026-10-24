@@ -108,6 +108,7 @@ class CardController extends Controller
         ])->append([
             'effective_questions_per_duel',
             'effective_retries',
+            'effective_cooldown_minutes',
         ]);
 
         return Inertia::render(
@@ -441,6 +442,7 @@ class CardController extends Controller
                 'rarity',
                 'questions_per_duel',
                 'retries',
+                'cooldown_minutes',
             ]);
     }
 
@@ -480,6 +482,9 @@ class CardController extends Controller
                 : null,
             'retries' => $usesCardSettings
                 ? $validated['retries']
+                : null,
+            'cooldown_minutes' => $usesCardSettings
+                ? $validated['cooldown_minutes']
                 : null,
         ];
     }

@@ -23,6 +23,7 @@ class CardRaritySettingController extends Controller
                     [
                         'questions_per_duel' => $setting['questions_per_duel'],
                         'retries' => $setting['retries'],
+                        'cooldown_minutes' => $setting['cooldown_minutes'],
                     ]
                 );
             }

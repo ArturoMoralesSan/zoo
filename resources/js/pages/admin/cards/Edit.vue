@@ -80,6 +80,7 @@ interface Card {
     duel_settings_source?: DuelSettingsSource;
     questions_per_duel?: number | null;
     retries?: number | null;
+    cooldown_minutes?: number | null;
     species?: Species;
     quiz_questions?: QuizQuestion[];
 }
@@ -126,6 +127,7 @@ const form = useForm({
         'rarity') as DuelSettingsSource,
     questions_per_duel: props.card.questions_per_duel ?? null,
     retries: props.card.retries ?? null,
+    cooldown_minutes: props.card.cooldown_minutes ?? null,
     questions: (props.card.quiz_questions ?? []).map((q) => ({
         id: q.id,
         question: q.question,
@@ -612,6 +614,7 @@ defineOptions({
                 v-model:source="form.duel_settings_source"
                 v-model:questions-per-duel="form.questions_per_duel"
                 v-model:retries="form.retries"
+                v-model:cooldown-minutes="form.cooldown_minutes"
                 :rarity="form.rarity"
                 :rarity-settings="raritySettings"
                 :errors="form.errors"

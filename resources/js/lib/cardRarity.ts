@@ -7,6 +7,7 @@ export interface CardRaritySetting {
     rarity: CardRarity;
     questions_per_duel: number;
     retries: number;
+    cooldown_minutes: number;
 }
 
 export const rarityOptions: { value: CardRarity; label: string }[] = [

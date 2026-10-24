@@ -87,4 +87,14 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->hasMany(CardCapture::class);
     }
+
+    public function cardQuizStates(): HasMany
+    {
+        return $this->hasMany(CardQuizState::class);
+    }
+
+    public function quizAttempts(): HasMany
+    {
+        return $this->hasMany(QuizAttempt::class);
+    }
 }

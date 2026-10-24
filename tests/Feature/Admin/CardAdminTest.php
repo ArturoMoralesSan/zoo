@@ -60,6 +60,7 @@ class CardAdminTest extends TestCase
             'questions_per_duel' => 5,
             'duel_settings_source' => 'card',
             'retries' => 4,
+            'cooldown_minutes' => 90,
             'is_active' => true,
             'sort_order' => 1,
             'questions' => [
@@ -86,6 +87,7 @@ class CardAdminTest extends TestCase
             'questions_per_duel' => 5,
             'duel_settings_source' => 'card',
             'retries' => 4,
+            'cooldown_minutes' => 90,
         ]);
 
         $card = Card::where('name', 'Águila Legendaria')->first();
@@ -172,6 +174,7 @@ class CardAdminTest extends TestCase
             'duel_settings_source' => 'rarity',
             'questions_per_duel' => null,
             'retries' => null,
+            'cooldown_minutes' => null,
         ]);
 
         // Los valores efectivos provienen de la rareza
@@ -199,7 +202,7 @@ class CardAdminTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response->assertSessionHasErrors(['questions_per_duel', 'retries']);
+        $response->assertSessionHasErrors(['questions_per_duel', 'retries', 'cooldown_minutes']);
     }
 
     public function test_admin_can_update_rarity_settings(): void
@@ -208,8 +211,8 @@ class CardAdminTest extends TestCase
             ->from(route('admin.cards.index'))
             ->put(route('admin.cards.rarity-settings.update'), [
                 'settings' => [
-                    ['rarity' => 'comun', 'questions_per_duel' => 2, 'retries' => 5],
-                    ['rarity' => 'epica', 'questions_per_duel' => 10, 'retries' => 1],
+                    ['rarity' => 'comun', 'questions_per_duel' => 2, 'retries' => 5, 'cooldown_minutes' => 45],
+                    ['rarity' => 'epica', 'questions_per_duel' => 10, 'retries' => 1, 'cooldown_minutes' => 120],
                 ],
             ]);
 
@@ -220,12 +223,14 @@ class CardAdminTest extends TestCase
             'rarity' => 'comun',
             'questions_per_duel' => 2,
             'retries' => 5,
+            'cooldown_minutes' => 45,
         ]);
 
         $this->assertDatabaseHas('card_rarity_settings', [
             'rarity' => 'epica',
             'questions_per_duel' => 10,
             'retries' => 1,
+            'cooldown_minutes' => 120,
         ]);
     }
 
@@ -234,7 +239,7 @@ class CardAdminTest extends TestCase
         $response = $this->actingAs($this->admin)
             ->put(route('admin.cards.rarity-settings.update'), [
                 'settings' => [
-                    ['rarity' => 'legendaria', 'questions_per_duel' => 0, 'retries' => 101],
+                    ['rarity' => 'legendaria', 'questions_per_duel' => 0, 'retries' => 101, 'cooldown_minutes' => 0],
                 ],
             ]);
 
@@ -242,6 +247,7 @@ class CardAdminTest extends TestCase
             'settings.0.rarity',
             'settings.0.questions_per_duel',
             'settings.0.retries',
+            'settings.0.cooldown_minutes',
         ]);
     }
 }

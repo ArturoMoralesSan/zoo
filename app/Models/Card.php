@@ -32,6 +32,7 @@ class Card extends Model
         'duel_settings_source',
         'questions_per_duel',
         'retries',
+        'cooldown_minutes',
     ];
 
     protected $casts = [
@@ -42,6 +43,7 @@ class Card extends Model
         'fuerza' => 'integer',
         'questions_per_duel' => 'integer',
         'retries' => 'integer',
+        'cooldown_minutes' => 'integer',
     ];
 
     /**
@@ -83,6 +85,18 @@ class Card extends Model
         ) ?: CardRaritySetting::DEFAULT_RETRIES);
     }
 
+    /**
+     * Minutos de espera tras agotar los reintentos, según la tarjeta o su rareza.
+     */
+    protected function effectiveCooldownMinutes(): Attribute
+    {
+        return Attribute::get(fn (): int => (int) (
+            $this->usesRarityDuelSettings()
+                ? $this->raritySetting?->cooldown_minutes
+                : $this->cooldown_minutes
+        ) ?: CardRaritySetting::DEFAULT_COOLDOWN_MINUTES);
+    }
+
     public function species(): BelongsTo
     {
         return $this->belongsTo(
@@ -104,6 +118,11 @@ class Card extends Model
         return $this->hasMany(
             CardCapture::class
         );
+    }
+
+    public function quizAttempts(): HasMany
+    {
+        return $this->hasMany(QuizAttempt::class);
     }
 
     public function quizQuestions(): HasMany 

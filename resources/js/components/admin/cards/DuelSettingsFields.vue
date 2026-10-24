@@ -3,25 +3,27 @@ import { Info, Swords } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 import AdminCard from '@/components/admin/AdminCard.vue';
-import {
-    getRarityClasses,
-    getRarityLabel
-    
-    
-} from '@/lib/cardRarity';
-import type {CardRaritySetting, DuelSettingsSource} from '@/lib/cardRarity';
+import { getRarityClasses, getRarityLabel } from '@/lib/cardRarity';
+import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
 
 const props = defineProps<{
     rarity: string;
     raritySettings: CardRaritySetting[];
     errors: Partial<
-        Record<'duel_settings_source' | 'questions_per_duel' | 'retries', string>
+        Record<
+            | 'duel_settings_source'
+            | 'questions_per_duel'
+            | 'retries'
+            | 'cooldown_minutes',
+            string
+        >
     >;
 }>();
 
 const source = defineModel<DuelSettingsSource>('source', { required: true });
 const questionsPerDuel = defineModel<number | null>('questionsPerDuel');
 const retries = defineModel<number | null>('retries');
+const cooldownMinutes = defineModel<number | null>('cooldownMinutes');
 
 const raritySetting = computed(() =>
     props.raritySettings.find((setting) => setting.rarity === props.rarity),
@@ -51,6 +53,7 @@ const selectSource = (value: DuelSettingsSource) => {
     if (value === 'card') {
         questionsPerDuel.value ??= raritySetting.value?.questions_per_duel ?? 3;
         retries.value ??= raritySetting.value?.retries ?? 3;
+        cooldownMinutes.value ??= raritySetting.value?.cooldown_minutes ?? 1440;
     }
 
     source.value = value;
@@ -60,7 +63,7 @@ const selectSource = (value: DuelSettingsSource) => {
 <template>
     <AdminCard
         title="Configuración de duelos y reintentos"
-        description="Usa la configuración de la rareza o personaliza la cantidad de preguntas por duelo y el límite de reintentos."
+        description="Usa la configuración de la rareza o personaliza las preguntas por duelo, el límite de reintentos y el tiempo de espera."
         :icon="Swords"
     >
         <div class="space-y-5">
@@ -118,7 +121,7 @@ const selectSource = (value: DuelSettingsSource) => {
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <div class="rounded-xl border border-[#DCE7DF] bg-white p-3.5">
                             <p class="text-xs font-medium text-[#718477]">
                                 Preguntas por duelo
@@ -134,6 +137,16 @@ const selectSource = (value: DuelSettingsSource) => {
                             </p>
                             <p class="mt-1 text-lg font-semibold text-[#244334]">
                                 {{ raritySetting?.retries ?? 3 }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border border-[#DCE7DF] bg-white p-3.5">
+                            <p class="text-xs font-medium text-[#718477]">
+                                Espera tras agotar reintentos
+                            </p>
+                            <p class="mt-1 text-lg font-semibold text-[#244334]">
+                                {{ raritySetting?.cooldown_minutes ?? 1440 }}
+                                <span class="text-xs font-normal text-[#718477]">min</span>
                             </p>
                         </div>
                     </div>
@@ -207,6 +220,35 @@ const selectSource = (value: DuelSettingsSource) => {
 
                         <p v-if="errors.retries" class="form-error">
                             {{ errors.retries }}
+                        </p>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="cooldown_minutes" class="form-label">
+                            Espera tras agotar reintentos (minutos)
+                            <span class="text-red-500">*</span>
+                        </label>
+
+                        <input
+                            id="cooldown_minutes"
+                            v-model.number="cooldownMinutes"
+                            type="number"
+                            min="1"
+                            max="43200"
+                            required
+                            placeholder="1440"
+                            class="form-input"
+                            :class="{
+                                'form-input-error': errors.cooldown_minutes,
+                            }"
+                        />
+
+                        <p class="form-help">
+                            Tiempo que deberá esperar el usuario para volver a intentarlo. Al terminar, sus reintentos se reinician.
+                        </p>
+
+                        <p v-if="errors.cooldown_minutes" class="form-error">
+                            {{ errors.cooldown_minutes }}
                         </p>
                     </div>
                 </div>

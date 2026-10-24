@@ -80,6 +80,7 @@ const form = useForm({
     duel_settings_source: 'rarity' as DuelSettingsSource,
     questions_per_duel: null as number | null,
     retries: null as number | null,
+    cooldown_minutes: null as number | null,
     questions: [] as QuestionForm[],
 });
 
@@ -511,6 +512,7 @@ defineOptions({
                 v-model:source="form.duel_settings_source"
                 v-model:questions-per-duel="form.questions_per_duel"
                 v-model:retries="form.retries"
+                v-model:cooldown-minutes="form.cooldown_minutes"
                 :rarity="form.rarity"
                 :rarity-settings="raritySettings"
                 :errors="form.errors"

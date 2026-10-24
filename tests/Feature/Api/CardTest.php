@@ -4,11 +4,11 @@ namespace Tests\Feature\Api;
 
 use App\Models\Card;
 use App\Models\CardCapture;
-use App\Models\CardRaritySetting;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -42,189 +42,136 @@ class CardTest extends TestCase
         ]);
     }
 
-    public function test_cards_index_returns_encountered_false_and_omits_models_when_user_does_not_own_card(): void
+    private function createCard(array $attributes = []): Card
     {
-        Sanctum::actingAs($this->user);
-
-        $card = Card::create([
+        return Card::create(array_merge([
             'species_id' => $this->species->id,
-            'name' => 'Carta No Obtenida',
+            'name' => 'Carta ' . uniqid(),
             'rarity' => 'comun',
+            'description' => 'Descripción que no debe enviarse',
             'model_name' => 'Jaguar 3D',
             'model_file' => 'cards/1/models/jaguar.glb',
             'model_url' => 'https://example.com/models/jaguar.glb',
             'astucia' => 75,
             'rapidez' => 85,
             'fuerza' => 90,
-            'questions_per_duel' => 4,
             'duel_settings_source' => 'card',
+            'questions_per_duel' => 4,
             'retries' => 3,
             'is_active' => true,
+        ], $attributes));
+    }
+
+    private function capture(Card $card): CardCapture
+    {
+        return CardCapture::create([
+            'user_id' => $this->user->id,
+            'card_id' => $card->id,
+            'captured_at' => now(),
         ]);
+    }
 
-        $response = $this->getJson(route('api.cards.index'));
+    private function cardFromIndex(Card $card): ?array
+    {
+        return collect(
+            $this->getJson(route('api.cards.index'))->assertOk()->json('data')
+        )->firstWhere('id', $card->id);
+    }
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-            ]);
+    public function test_cards_index_requires_authentication(): void
+    {
+        $this->getJson(route('api.cards.index'))->assertUnauthorized();
+    }
 
-        $data = collect($response->json('data'))->firstWhere('id', $card->id);
+    public function test_cards_index_returns_hub_shape_without_model_when_not_owned(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $card = $this->createCard();
+
+        $data = $this->cardFromIndex($card);
 
         $this->assertNotNull($data);
+        $this->assertSame([
+            'id', 'name', 'card_image', 'rarity', 'species_name', 'category_name',
+            'sort_order', 'stats', 'encountered', 'captured_at', 'model_url',
+        ], array_keys($data));
+
         $this->assertFalse($data['encountered']);
-        $this->assertArrayNotHasKey('model_file', $data);
-        $this->assertArrayNotHasKey('model_url', $data);
-        $this->assertEquals(75, $data['astucia']);
-        $this->assertEquals(85, $data['rapidez']);
-        $this->assertEquals(90, $data['fuerza']);
-        $this->assertEquals(4, $data['questions_per_duel']);
-        $this->assertEquals(3, $data['retries']);
-        $this->assertArrayNotHasKey('species', $data);
-        $this->assertEquals($this->species->common_name, $data['species_name']);
+        $this->assertNull($data['captured_at']);
+        $this->assertNull($data['model_url']);
+        $this->assertSame($this->species->common_name, $data['species_name']);
+        $this->assertSame($this->category->name, $data['category_name']);
+        $this->assertSame(['astucia' => 75, 'rapidez' => 85, 'fuerza' => 90], $data['stats']);
     }
 
-    public function test_cards_index_returns_encountered_true_and_sends_models_when_user_owns_card(): void
+    public function test_cards_index_returns_uploaded_model_url_when_owned(): void
     {
         Sanctum::actingAs($this->user);
 
-        $card = Card::create([
-            'species_id' => $this->species->id,
-            'name' => 'Carta Obtenida',
-            'rarity' => 'epica',
-            'model_name' => 'Jaguar Especial',
-            'model_file' => 'cards/2/models/jaguar_epic.glb',
-            'model_url' => 'https://example.com/models/jaguar_epic.glb',
-            'astucia' => 88,
-            'rapidez' => 92,
-            'fuerza' => 96,
-            'questions_per_duel' => 5,
-            'duel_settings_source' => 'card',
-            'retries' => 4,
-            'is_active' => true,
-        ]);
+        $card = $this->createCard();
+        $this->capture($card);
 
-        CardCapture::create([
-            'user_id' => $this->user->id,
-            'card_id' => $card->id,
-            'captured_at' => now(),
-        ]);
+        $data = $this->cardFromIndex($card);
 
-        $response = $this->getJson(route('api.cards.index'));
-
-        $response->assertStatus(200);
-
-        $data = collect($response->json('data'))->firstWhere('id', $card->id);
-
-        $this->assertNotNull($data);
         $this->assertTrue($data['encountered']);
-        $this->assertEquals('cards/2/models/jaguar_epic.glb', $data['model_file']);
-        $this->assertEquals('https://example.com/models/jaguar_epic.glb', $data['model_url']);
-        $this->assertEquals(88, $data['astucia']);
-        $this->assertEquals(92, $data['rapidez']);
-        $this->assertEquals(96, $data['fuerza']);
-        $this->assertEquals(5, $data['questions_per_duel']);
-        $this->assertEquals(4, $data['retries']);
-    }
-
-    public function test_cards_duel_settings_resolve_rarity_defaults_when_source_is_rarity(): void
-    {
-        Sanctum::actingAs($this->user);
-
-        CardRaritySetting::updateOrCreate(
-            ['rarity' => 'comun'],
-            ['questions_per_duel' => 6, 'retries' => 7]
+        $this->assertNotNull($data['captured_at']);
+        $this->assertSame(
+            Storage::disk('public')->url('cards/1/models/jaguar.glb'),
+            $data['model_url']
         );
-
-        $card = Card::create([
-            'species_id' => $this->species->id,
-            'name' => 'Carta Por Rareza',
-            'rarity' => 'comun',
-            'astucia' => 60,
-            'rapidez' => 60,
-            'fuerza' => 60,
-            'duel_settings_source' => 'rarity',
-            'is_active' => true,
-        ]);
-
-        $response = $this->getJson(route('api.cards.index'));
-
-        $response->assertStatus(200);
-
-        $data = collect($response->json('data'))->firstWhere('id', $card->id);
-
-        $this->assertNotNull($data);
-        $this->assertEquals('rarity', $data['duel_settings_source']);
-        $this->assertEquals(6, $data['questions_per_duel']);
-        $this->assertEquals(7, $data['retries']);
     }
 
-    public function test_cards_show_returns_403_and_no_data_when_user_does_not_own_card(): void
+    public function test_cards_index_falls_back_to_external_model_url(): void
     {
         Sanctum::actingAs($this->user);
 
-        $card = Card::create([
-            'species_id' => $this->species->id,
-            'name' => 'Carta Bloqueada',
-            'rarity' => 'rara',
-            'is_active' => true,
-        ]);
+        $card = $this->createCard(['model_file' => null]);
+        $this->capture($card);
 
-        $response = $this->getJson(route('api.cards.show', $card));
-
-        $response->assertStatus(403)
-            ->assertJson([
-                'success' => false,
-            ]);
-
-        $this->assertArrayNotHasKey('data', $response->json());
+        $this->assertSame(
+            'https://example.com/models/jaguar.glb',
+            $this->cardFromIndex($card)['model_url']
+        );
     }
 
-    public function test_cards_show_returns_data_when_user_owns_card(): void
+    public function test_cards_index_excludes_inactive_cards(): void
     {
         Sanctum::actingAs($this->user);
 
-        $card = Card::create([
-            'species_id' => $this->species->id,
-            'name' => 'Carta Desbloqueada',
-            'rarity' => 'rara',
-            'model_name' => 'Jaguar 3D',
-            'model_file' => 'cards/3/models/jaguar.glb',
-            'model_url' => 'https://example.com/models/jaguar.glb',
-            'astucia' => 80,
-            'rapidez' => 85,
-            'fuerza' => 90,
-            'questions_per_duel' => 3,
-            'duel_settings_source' => 'card',
-            'retries' => 2,
-            'is_active' => true,
-        ]);
+        $card = $this->createCard(['is_active' => false]);
 
-        CardCapture::create([
-            'user_id' => $this->user->id,
-            'card_id' => $card->id,
-            'captured_at' => now(),
-        ]);
+        $this->assertNull($this->cardFromIndex($card));
+    }
 
-        $response = $this->getJson(route('api.cards.show', $card));
+    public function test_cards_index_returns_304_when_etag_matches(): void
+    {
+        Sanctum::actingAs($this->user);
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'id' => $card->id,
-                    'name' => 'Carta Desbloqueada',
-                    'encountered' => true,
-                    'model_file' => 'cards/3/models/jaguar.glb',
-                    'model_url' => 'https://example.com/models/jaguar.glb',
-                    'astucia' => 80,
-                    'rapidez' => 85,
-                    'fuerza' => 90,
-                    'questions_per_duel' => 3,
-                    'retries' => 2,
-                    'species_name' => $this->species->common_name,
-                ],
-            ])
-            ->assertJsonMissingPath('data.species');
+        $this->createCard();
+
+        $etag = $this->getJson(route('api.cards.index'))
+            ->assertOk()
+            ->headers
+            ->get('ETag');
+
+        $this->assertNotEmpty($etag);
+
+        $this->getJson(route('api.cards.index'), ['If-None-Match' => $etag])
+            ->assertStatus(304);
+    }
+
+    public function test_removed_card_endpoints_no_longer_exist(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $card = $this->createCard();
+
+        $this->getJson("/api/cards/{$card->id}")->assertNotFound();
+        $this->getJson('/api/my-cards')->assertNotFound();
+        $this->getJson("/api/my-cards/{$card->id}")->assertNotFound();
+        $this->getJson("/api/cards/{$card->id}/quiz")->assertNotFound();
+        $this->postJson("/api/cards/{$card->id}/capture")->assertNotFound();
+        $this->postJson("/api/cards/{$card->id}/quiz/submit")->assertNotFound();
     }
 }
