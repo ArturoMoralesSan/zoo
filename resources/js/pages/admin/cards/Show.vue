@@ -38,21 +38,6 @@ interface Species {
     category?: SpeciesCategory;
 }
 
-interface Answer {
-    id: number;
-    answer: string;
-    is_correct: boolean;
-    sort_order: number;
-}
-
-interface QuizQuestion {
-    id: number;
-    question: string;
-    is_active: boolean;
-    sort_order: number;
-    answers?: Answer[];
-}
-
 interface Card {
     id: number;
     species_id: number;
@@ -79,7 +64,8 @@ interface Card {
     effective_cooldown_minutes?: number;
     qr_codes_count?: number;
     species: Species;
-    quiz_questions?: QuizQuestion[];
+    quiz_questions_count?: number;
+    active_quiz_questions_count?: number;
 }
 
 const props = defineProps<{ card: Card }>();
@@ -486,21 +472,23 @@ defineOptions({
 
         <!-- Preguntas del Quiz -->
         <section class="rounded-xl border border-[#DCE7DF] bg-white p-4">
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
                     <HelpCircle :size="19" class="text-[#187744]" />
                     <div>
                         <h2 class="text-sm font-semibold text-[#244334]">
-                            Preguntas del quiz
+                            Preguntas del quiz ({{ card.quiz_questions_count ?? 0 }})
                         </h2>
                         <p class="text-xs text-[#718477]">
-                            Preguntas configuradas para los duelos de esta tarjeta
+                            {{ card.active_quiz_questions_count ?? 0 }}
+                            {{ card.active_quiz_questions_count === 1 ? 'pregunta activa' : 'preguntas activas' }}
+                            · cada duelo usa {{ card.effective_questions_per_duel ?? 3 }}
                         </p>
                     </div>
                 </div>
 
                 <Link
-                    :href="admin.cards.edit(card.id).url"
+                    :href="admin.cards.quiz.index(card.id).url"
                     class="inline-flex items-center gap-1.5 rounded-lg border border-[#DCE7DF] px-3 py-1.5 text-xs font-semibold text-[#187744] hover:bg-[#F2F7F4]"
                 >
                     <Pencil :size="13" />
@@ -508,68 +496,17 @@ defineOptions({
                 </Link>
             </div>
 
-            <div
-                v-if="card.quiz_questions && card.quiz_questions.length > 0"
-                class="space-y-3"
+            <p
+                v-if="(card.active_quiz_questions_count ?? 0) < (card.effective_questions_per_duel ?? 3)"
+                class="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700"
             >
-                <div
-                    v-for="(q, qIdx) in card.quiz_questions"
-                    :key="q.id"
-                    class="rounded-xl border border-[#E5ECE7] bg-[#FCFEFC] p-3.5"
-                >
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex items-start gap-2.5">
-                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#187744] text-xs font-bold text-white">
-                                {{ qIdx + 1 }}
-                            </span>
-                            <div>
-                                <p class="text-sm font-semibold text-[#244334]">
-                                    {{ q.question }}
-                                </p>
-                                <span
-                                    class="mt-1 inline-block rounded px-2 py-0.5 text-[11px] font-medium"
-                                    :class="q.is_active ? 'bg-[#EAF5EE] text-[#187744]' : 'bg-[#F2F4F2] text-[#718477]'"
-                                >
-                                    {{ q.is_active ? 'Activa' : 'Inactiva' }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div
-                        v-if="q.answers && q.answers.length > 0"
-                        class="mt-3 grid gap-2 sm:grid-cols-2 md:grid-cols-3"
-                    >
-                        <div
-                            v-for="(ans, aIdx) in q.answers"
-                            :key="ans.id"
-                            class="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs"
-                            :class="ans.is_correct ? 'border-[#BFCFC6] bg-[#EAF5EE] font-semibold text-[#187744]' : 'border-[#E5ECE7] bg-white text-[#435D4C]'"
-                        >
-                            <span class="font-bold">{{ String.fromCharCode(65 + aIdx) }}.</span>
-                            <span class="truncate">{{ ans.answer }}</span>
-                            <span v-if="ans.is_correct" class="ml-auto rounded bg-[#187744] px-1.5 py-0.5 text-[10px] text-white">
-                                Correcta
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                v-else
-                class="rounded-lg border border-dashed border-[#DCE7DF] bg-[#F8FAF8] px-4 py-6 text-center"
-            >
-                <p class="text-sm text-[#718477]">
-                    Esta tarjeta no tiene preguntas asignadas todavía.
-                </p>
-                <Link
-                    :href="admin.cards.edit(card.id).url"
-                    class="mt-2 inline-block text-sm font-semibold text-[#187744] hover:underline"
-                >
-                    Agregar preguntas
-                </Link>
-            </div>
+                <Info :size="14" class="mt-0.5 shrink-0" />
+                {{
+                    (card.active_quiz_questions_count ?? 0) === 0
+                        ? 'Sin preguntas activas no se puede iniciar un duelo por esta tarjeta.'
+                        : 'Hay menos preguntas activas que las configuradas por duelo; cada duelo usará todas las activas.'
+                }}
+            </p>
         </section>
     </div>
 </template>

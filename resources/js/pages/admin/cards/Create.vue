@@ -3,17 +3,13 @@ import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     Box,
-    CheckCircle2,
     ChevronDown,
     FileBox,
     FileImage,
-    HelpCircle,
     Info,
     Layers3,
-    Plus,
     Save,
     Tag,
-    Trash2,
     Upload,
     Zap,
 } from 'lucide-vue-next';
@@ -38,21 +34,6 @@ interface Species {
     category?: { id: number; name: string };
     common_name: string;
     scientific_name: string;
-}
-
-interface AnswerForm {
-    id?: number;
-    answer: string;
-    is_correct: boolean;
-    sort_order?: number;
-}
-
-interface QuestionForm {
-    id?: number;
-    question: string;
-    is_active: boolean;
-    sort_order: number;
-    answers: AnswerForm[];
 }
 
 const props = defineProps<{
@@ -81,59 +62,7 @@ const form = useForm({
     questions_per_duel: null as number | null,
     retries: null as number | null,
     cooldown_minutes: null as number | null,
-    questions: [] as QuestionForm[],
 });
-
-const addQuestion = () => {
-    form.questions.push({
-        question: '',
-        is_active: true,
-        sort_order: form.questions.length,
-        answers: [
-            { answer: '', is_correct: true, sort_order: 0 },
-            { answer: '', is_correct: false, sort_order: 1 },
-            { answer: '', is_correct: false, sort_order: 2 },
-        ],
-    });
-};
-
-const removeQuestion = (qIndex: number) => {
-    form.questions.splice(qIndex, 1);
-    form.questions.forEach((q, idx) => {
-        q.sort_order = idx;
-    });
-};
-
-const addAnswer = (qIndex: number) => {
-    const question = form.questions[qIndex];
-    if (!question) return;
-    question.answers.push({
-        answer: '',
-        is_correct: question.answers.length === 0,
-        sort_order: question.answers.length,
-    });
-};
-
-const removeAnswer = (qIndex: number, aIndex: number) => {
-    const question = form.questions[qIndex];
-    if (!question || question.answers.length <= 2) return;
-    const wasCorrect = question.answers[aIndex].is_correct;
-    question.answers.splice(aIndex, 1);
-    question.answers.forEach((ans, idx) => {
-        ans.sort_order = idx;
-    });
-    if (wasCorrect && question.answers.length > 0) {
-        question.answers[0].is_correct = true;
-    }
-};
-
-const selectCorrectAnswer = (qIndex: number, aIndex: number) => {
-    const question = form.questions[qIndex];
-    if (!question) return;
-    question.answers.forEach((ans, idx) => {
-        ans.is_correct = idx === aIndex;
-    });
-};
 
 const submit = () => {
     form.post(admin.cards.store().url, {
@@ -517,210 +446,6 @@ defineOptions({
                 :rarity-settings="raritySettings"
                 :errors="form.errors"
             />
-
-            <!-- Preguntas y opciones del quiz -->
-            <AdminCard
-                title="Preguntas del quiz"
-                description="Agrega y personaliza las preguntas y opciones de respuesta para esta tarjeta."
-                :icon="HelpCircle"
-            >
-                <div class="space-y-5">
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#E1EBE4] pb-4">
-                        <p class="text-sm text-[#718477]">
-                            Total de preguntas agregadas: <strong>{{ form.questions.length }}</strong>
-                        </p>
-
-                        <button
-                            type="button"
-                            class="inline-flex items-center gap-2 rounded-xl bg-[#187744] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#126238]"
-                            @click="addQuestion"
-                        >
-                            <Plus :size="16" />
-                            Agregar pregunta
-                        </button>
-                    </div>
-
-                    <!-- Estado vacío -->
-                    <div
-                        v-if="form.questions.length === 0"
-                        class="rounded-xl border border-dashed border-[#B8D2C1] bg-[#F7FAF8] p-8 text-center"
-                    >
-                        <HelpCircle :size="36" class="mx-auto text-[#84958A]" />
-                        <h4 class="mt-2 text-sm font-semibold text-[#244334]">
-                            No hay preguntas añadidas
-                        </h4>
-                        <p class="mt-1 text-xs text-[#718477]">
-                            Haz clic en "Agregar pregunta" para configurar preguntas y opciones para los duelos de esta tarjeta.
-                        </p>
-                        <button
-                            type="button"
-                            class="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#C8DCCF] bg-white px-3.5 py-2 text-xs font-semibold text-[#187744] transition hover:bg-[#EDF5EF]"
-                            @click="addQuestion"
-                        >
-                            <Plus :size="14" />
-                            Agregar primera pregunta
-                        </button>
-                    </div>
-
-                    <!-- Lista de preguntas -->
-                    <div
-                        v-for="(question, qIndex) in form.questions"
-                        :key="qIndex"
-                        class="space-y-4 rounded-xl border border-[#DCE7DF] bg-[#FCFEFC] p-4 sm:p-5"
-                    >
-                        <!-- Cabecera de la pregunta -->
-                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#E1EBE4] pb-3">
-                            <div class="flex items-center gap-2">
-                                <span
-                                    class="flex h-7 w-7 items-center justify-center rounded-lg bg-[#187744] text-xs font-bold text-white"
-                                >
-                                    {{ qIndex + 1 }}
-                                </span>
-                                <h4 class="text-sm font-bold text-[#244334]">
-                                    Pregunta #{{ qIndex + 1 }}
-                                </h4>
-                            </div>
-
-                            <div class="flex items-center gap-3">
-                                <label class="flex items-center gap-2 text-xs text-[#435D4C]">
-                                    <input
-                                        v-model="question.is_active"
-                                        type="checkbox"
-                                        class="h-4 w-4 rounded accent-[#187744]"
-                                    />
-                                    <span>Activa</span>
-                                </label>
-
-                                <button
-                                    type="button"
-                                    class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
-                                    @click="removeQuestion(qIndex)"
-                                >
-                                    <Trash2 :size="14" />
-                                    Eliminar
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Texto de la pregunta -->
-                        <div class="form-field">
-                            <label :for="`question-${qIndex}`" class="form-label">
-                                Texto de la pregunta
-                                <span class="text-red-500">*</span>
-                            </label>
-
-                            <textarea
-                                :id="`question-${qIndex}`"
-                                v-model="question.question"
-                                rows="2"
-                                required
-                                placeholder="Ej. ¿Cuál es la principal característica de esta especie?"
-                                class="form-textarea"
-                                :class="{
-                                    'form-textarea-error': form.errors[`questions.${qIndex}.question`],
-                                }"
-                            />
-
-                            <p
-                                v-if="form.errors[`questions.${qIndex}.question`]"
-                                class="form-error"
-                            >
-                                {{ form.errors[`questions.${qIndex}.question`] }}
-                            </p>
-                        </div>
-
-                        <!-- Opciones de respuesta -->
-                        <div class="space-y-3 pt-2">
-                            <div class="flex items-center justify-between">
-                                <label class="text-xs font-semibold uppercase tracking-wider text-[#435D4C]">
-                                    Opciones de respuesta (marca la correcta)
-                                </label>
-
-                                <button
-                                    type="button"
-                                    class="inline-flex items-center gap-1 text-xs font-semibold text-[#187744] hover:underline"
-                                    @click="addAnswer(qIndex)"
-                                >
-                                    <Plus :size="13" />
-                                    Agregar opción
-                                </button>
-                            </div>
-
-                            <div class="space-y-2.5">
-                                <div
-                                    v-for="(answer, aIndex) in question.answers"
-                                    :key="aIndex"
-                                    class="flex items-center gap-2 rounded-lg border p-2.5 transition"
-                                    :class="
-                                        answer.is_correct
-                                            ? 'border-[#BFCFC6] bg-[#EAF5EE]'
-                                            : 'border-[#E1EBE4] bg-white'
-                                    "
-                                >
-                                    <!-- Letra de opción -->
-                                    <span
-                                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded text-xs font-bold"
-                                        :class="
-                                            answer.is_correct
-                                                ? 'bg-[#187744] text-white'
-                                                : 'bg-[#F2F7F4] text-[#718477]'
-                                        "
-                                    >
-                                        {{ String.fromCharCode(65 + aIndex) }}
-                                    </span>
-
-                                    <!-- Campo de texto de la opción -->
-                                    <div class="min-w-0 flex-1">
-                                        <input
-                                            v-model="answer.answer"
-                                            type="text"
-                                            required
-                                            :placeholder="`Opción ${String.fromCharCode(65 + aIndex)}`"
-                                            class="form-input py-2 text-sm"
-                                            :class="{
-                                                'form-input-error': form.errors[`questions.${qIndex}.answers.${aIndex}.answer`],
-                                            }"
-                                        />
-                                    </div>
-
-                                    <!-- Botón para marcar correcta -->
-                                    <button
-                                        type="button"
-                                        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition"
-                                        :class="
-                                            answer.is_correct
-                                                ? 'border-[#187744] bg-[#187744] text-white'
-                                                : 'border-[#C8DCCF] bg-white text-[#435D4C] hover:bg-[#F2F7F4]'
-                                        "
-                                        @click="selectCorrectAnswer(qIndex, aIndex)"
-                                    >
-                                        <CheckCircle2 :size="14" />
-                                        {{ answer.is_correct ? 'Correcta' : 'Elegir' }}
-                                    </button>
-
-                                    <!-- Eliminar opción -->
-                                    <button
-                                        v-if="question.answers.length > 2"
-                                        type="button"
-                                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#718477] transition hover:bg-red-50 hover:text-red-600"
-                                        title="Eliminar opción"
-                                        @click="removeAnswer(qIndex, aIndex)"
-                                    >
-                                        <Trash2 :size="15" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <p
-                                v-if="form.errors[`questions.${qIndex}.answers`]"
-                                class="form-error"
-                            >
-                                {{ form.errors[`questions.${qIndex}.answers`] }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </AdminCard>
 
             <!-- Imagen de la tarjeta -->
             <AdminCard

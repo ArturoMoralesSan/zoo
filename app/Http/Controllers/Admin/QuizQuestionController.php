@@ -284,15 +284,35 @@ class QuizQuestionController extends Controller
                 'sort_order' => $validated['sort_order'] ?? 0,
             ]);
 
-            $quizQuestion->answers()->delete();
+            /*
+             * Se actualizan las respuestas existentes en lugar de recrearlas,
+             * para conservar sus ids: un duelo en curso las envía al responder.
+             */
+            $existingAnswers = $quizQuestion->answers()->get()->keyBy('id');
+
+            $keptAnswerIds = [];
 
             foreach ($validated['answers'] as $index => $answer) {
-                $quizQuestion->answers()->create([
+                $attributes = [
                     'answer' => $answer['answer'],
                     'is_correct' => (bool) $answer['is_correct'],
                     'sort_order' => $index,
-                ]);
+                ];
+
+                $existing = $existingAnswers->get($answer['id'] ?? null);
+
+                if ($existing) {
+                    $existing->update($attributes);
+                } else {
+                    $existing = $quizQuestion->answers()->create($attributes);
+                }
+
+                $keptAnswerIds[] = $existing->id;
             }
+
+            $quizQuestion->answers()
+                ->whereNotIn('id', $keptAnswerIds)
+                ->delete();
         });
 
         return redirect()

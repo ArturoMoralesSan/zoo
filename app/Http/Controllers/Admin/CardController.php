@@ -105,8 +105,11 @@ class CardController extends Controller
         $card->load([
             'species',
             'raritySetting',
-            'quizQuestions.answers',
-        ])->loadCount('qrCodes')->append([
+        ])->loadCount([
+            'qrCodes',
+            'quizQuestions',
+            'quizQuestions as active_quiz_questions_count' => fn ($query) => $query->where('is_active', true),
+        ])->append([
             'effective_questions_per_duel',
             'effective_retries',
             'effective_cooldown_minutes',
@@ -156,11 +159,6 @@ class CardController extends Controller
         ) {
             $card = Card::create(
                 $this->cardAttributes($request, $validated)
-            );
-
-            $this->syncQuizQuestions(
-                $card,
-                $validated['questions'] ?? []
             );
 
             /*
@@ -213,7 +211,6 @@ class CardController extends Controller
     {
         $card->load([
             'species',
-            'quizQuestions.answers',
         ]);
 
         return Inertia::render(
@@ -251,11 +248,6 @@ class CardController extends Controller
         ) {
             $card->update(
                 $this->cardAttributes($request, $validated)
-            );
-
-            $this->syncQuizQuestions(
-                $card,
-                $validated['questions'] ?? []
             );
 
             /*
@@ -488,78 +480,6 @@ class CardController extends Controller
                 ? $validated['cooldown_minutes']
                 : null,
         ];
-    }
-
-    /**
-     * Sincronizar las preguntas del quiz y sus respuestas.
-     *
-     * Se actualizan las existentes, se crean las nuevas
-     * y se eliminan las que ya no vienen en la petición.
-     */
-    private function syncQuizQuestions(
-        Card $card,
-        array $questions
-    ): void {
-        $existingQuestions = $card->quizQuestions()
-            ->with('answers')
-            ->get()
-            ->keyBy('id');
-
-        $keptQuestionIds = [];
-
-        foreach (array_values($questions) as $index => $data) {
-            $attributes = [
-                'question' => $data['question'],
-                'is_active' => filter_var(
-                    $data['is_active'] ?? true,
-                    FILTER_VALIDATE_BOOLEAN
-                ),
-                'sort_order' => $data['sort_order'] ?? $index,
-            ];
-
-            $question = $existingQuestions->get($data['id'] ?? null);
-
-            if ($question) {
-                $question->update($attributes);
-            } else {
-                $question = $card->quizQuestions()->create($attributes);
-            }
-
-            $keptQuestionIds[] = $question->id;
-
-            $existingAnswers = $question->answers->keyBy('id');
-
-            $keptAnswerIds = [];
-
-            foreach (array_values($data['answers']) as $answerIndex => $answerData) {
-                $answerAttributes = [
-                    'answer' => $answerData['answer'],
-                    'is_correct' => filter_var(
-                        $answerData['is_correct'],
-                        FILTER_VALIDATE_BOOLEAN
-                    ),
-                    'sort_order' => $answerData['sort_order'] ?? $answerIndex,
-                ];
-
-                $answer = $existingAnswers->get($answerData['id'] ?? null);
-
-                if ($answer) {
-                    $answer->update($answerAttributes);
-                } else {
-                    $answer = $question->answers()->create($answerAttributes);
-                }
-
-                $keptAnswerIds[] = $answer->id;
-            }
-
-            $question->answers()
-                ->whereNotIn('id', $keptAnswerIds)
-                ->delete();
-        }
-
-        $card->quizQuestions()
-            ->whereNotIn('id', $keptQuestionIds)
-            ->delete();
     }
 
     /**

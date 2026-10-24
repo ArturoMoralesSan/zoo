@@ -48,7 +48,7 @@ class CardAdminTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_store_card_with_stats_retries_and_questions(): void
+    public function test_admin_can_store_card_with_stats_and_duel_settings(): void
     {
         $response = $this->actingAs($this->admin)->post(route('admin.cards.store'), [
             'species_id' => $this->species->id,
@@ -63,17 +63,9 @@ class CardAdminTest extends TestCase
             'cooldown_minutes' => 90,
             'is_active' => true,
             'sort_order' => 1,
+            // Las preguntas ya no se gestionan desde el formulario de la tarjeta
             'questions' => [
-                [
-                    'question' => '¿Cuál es la envergadura del águila real?',
-                    'is_active' => true,
-                    'sort_order' => 0,
-                    'answers' => [
-                        ['answer' => 'Más de 2 metros', 'is_correct' => true, 'sort_order' => 0],
-                        ['answer' => '50 centímetros', 'is_correct' => false, 'sort_order' => 1],
-                        ['answer' => '1 metro', 'is_correct' => false, 'sort_order' => 2],
-                    ],
-                ],
+                ['question' => 'Ignorada', 'answers' => []],
             ],
         ]);
 
@@ -91,15 +83,10 @@ class CardAdminTest extends TestCase
         ]);
 
         $card = Card::where('name', 'Águila Legendaria')->first();
-        $this->assertCount(1, $card->quizQuestions);
-
-        $question = $card->quizQuestions->first();
-        $this->assertEquals('¿Cuál es la envergadura del águila real?', $question->question);
-        $this->assertCount(3, $question->answers);
-        $this->assertEquals(1, $question->answers()->where('is_correct', true)->count());
+        $this->assertCount(0, $card->quizQuestions);
     }
 
-    public function test_admin_can_update_card_to_use_rarity_settings_and_sync_questions(): void
+    public function test_admin_can_update_card_to_use_rarity_settings_without_touching_questions(): void
     {
         $card = Card::create([
             'species_id' => $this->species->id,
@@ -122,7 +109,9 @@ class CardAdminTest extends TestCase
         $q1->answers()->createMany([
             ['answer' => 'Opcion 1', 'is_correct' => true, 'sort_order' => 0],
             ['answer' => 'Opcion 2', 'is_correct' => false, 'sort_order' => 1],
+            ['answer' => 'Opcion 3', 'is_correct' => false, 'sort_order' => 2],
         ]);
+        $answerIds = $q1->answers()->pluck('id')->all();
 
         CardRaritySetting::updateOrCreate(
             ['rarity' => 'rara'],
@@ -139,28 +128,7 @@ class CardAdminTest extends TestCase
             'duel_settings_source' => 'rarity',
             'is_active' => true,
             'sort_order' => 0,
-            'questions' => [
-                [
-                    'id' => $q1->id,
-                    'question' => 'Pregunta actualizada',
-                    'is_active' => true,
-                    'sort_order' => 0,
-                    'answers' => [
-                        ['answer' => 'Nueva opcion correcta', 'is_correct' => true, 'sort_order' => 0],
-                        ['answer' => 'Nueva opcion incorrecta', 'is_correct' => false, 'sort_order' => 1],
-                        ['answer' => 'Tercera opcion', 'is_correct' => false, 'sort_order' => 2],
-                    ],
-                ],
-                [
-                    'question' => 'Segunda pregunta nueva',
-                    'is_active' => true,
-                    'sort_order' => 1,
-                    'answers' => [
-                        ['answer' => 'Respuesta A', 'is_correct' => false, 'sort_order' => 0],
-                        ['answer' => 'Respuesta B', 'is_correct' => true, 'sort_order' => 1],
-                    ],
-                ],
-            ],
+            'questions' => [],
         ]);
 
         $response->assertRedirect(route('admin.cards.index'));
@@ -182,11 +150,10 @@ class CardAdminTest extends TestCase
         $this->assertEquals(5, $card->effective_questions_per_duel);
         $this->assertEquals(8, $card->effective_retries);
 
-        // Questions synced
-        $this->assertCount(2, $card->quizQuestions);
-        $this->assertEquals('Pregunta actualizada', $card->quizQuestions[0]->question);
-        $this->assertCount(3, $card->quizQuestions[0]->answers);
-        $this->assertEquals('Segunda pregunta nueva', $card->quizQuestions[1]->question);
+        // Las preguntas existentes no se modifican al guardar la tarjeta
+        $this->assertCount(1, $card->quizQuestions);
+        $this->assertEquals('Pregunta antigua', $card->quizQuestions[0]->question);
+        $this->assertEqualsCanonicalizing($answerIds, $card->quizQuestions[0]->answers->pluck('id')->all());
     }
 
     public function test_custom_settings_are_required_when_source_is_card(): void

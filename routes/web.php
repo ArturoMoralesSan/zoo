@@ -310,15 +310,15 @@ Route::middleware(['auth', 'verified'])
         )->middleware('permission:cards.edit')
             ->name('cards.rarity-settings.update');
 
+        /*
+         * middlewareFor asigna el permiso por acción; ->middleware([...])
+         * ignora las llaves y exigiría todos los permisos en cada ruta.
+         */
         Route::resource('cards', CardController::class)
-            ->middleware([
-                'index' => 'permission:cards.view',
-                'create' => 'permission:cards.create',
-                'store' => 'permission:cards.create',
-                'edit' => 'permission:cards.edit',
-                'update' => 'permission:cards.edit',
-                'destroy' => 'permission:cards.delete',
-            ]);
+            ->middlewareFor(['index', 'show'], 'permission:cards.view')
+            ->middlewareFor(['create', 'store'], 'permission:cards.create')
+            ->middlewareFor(['edit', 'update'], 'permission:cards.edit')
+            ->middlewareFor('destroy', 'permission:cards.delete');
 
         Route::delete(
             'cards/{card}/image',
@@ -349,15 +349,9 @@ Route::middleware(['auth', 'verified'])
                     ->parameters([
                         'quiz' => 'quizQuestion',
                     ])
-                    ->middleware([
-                        'index' => 'permission:cards.view',
-                        'create' => 'permission:cards.edit',
-                        'store' => 'permission:cards.edit',
-                        'show' => 'permission:cards.view',
-                        'edit' => 'permission:cards.edit',
-                        'update' => 'permission:cards.edit',
-                        'destroy' => 'permission:cards.delete',
-                    ]);
+                    ->middlewareFor(['index', 'show'], 'permission:cards.view')
+                    ->middlewareFor(['create', 'store', 'edit', 'update'], 'permission:cards.edit')
+                    ->middlewareFor('destroy', 'permission:cards.delete');
 
                 /*
                  * Códigos QR para iniciar duelos.
@@ -369,14 +363,9 @@ Route::middleware(['auth', 'verified'])
                         ->parameters([
                             'qr-codes' => 'qrCode',
                         ])
-                        ->middleware([
-                            'index' => 'permission:cards.view',
-                            'create' => 'permission:cards.edit',
-                            'store' => 'permission:cards.edit',
-                            'edit' => 'permission:cards.edit',
-                            'update' => 'permission:cards.edit',
-                            'destroy' => 'permission:cards.delete',
-                        ]);
+                        ->middlewareFor('index', 'permission:cards.view')
+                        ->middlewareFor(['create', 'store', 'edit', 'update'], 'permission:cards.edit')
+                        ->middlewareFor('destroy', 'permission:cards.delete');
 
                     Route::post(
                         'qr-codes/{qrCode}/regenerate',
