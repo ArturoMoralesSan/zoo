@@ -48,10 +48,7 @@ class CardTest extends TestCase
             'species_id' => $this->species->id,
             'name' => 'Carta ' . uniqid(),
             'rarity' => 'comun',
-            'description' => 'Descripción que no debe enviarse',
-            'model_name' => 'Jaguar 3D',
             'model_file' => 'cards/1/models/jaguar.glb',
-            'model_url' => 'https://example.com/models/jaguar.glb',
             'astucia' => 75,
             'rapidez' => 85,
             'fuerza' => 90,
@@ -122,17 +119,17 @@ class CardTest extends TestCase
         );
     }
 
-    public function test_cards_index_falls_back_to_external_model_url(): void
+    public function test_owned_card_without_model_file_returns_null_model_url(): void
     {
         Sanctum::actingAs($this->user);
 
         $card = $this->createCard(['model_file' => null]);
         $this->capture($card);
 
-        $this->assertSame(
-            'https://example.com/models/jaguar.glb',
-            $this->cardFromIndex($card)['model_url']
-        );
+        $data = $this->cardFromIndex($card);
+
+        $this->assertTrue($data['encountered']);
+        $this->assertNull($data['model_url']);
     }
 
     public function test_cards_index_excludes_inactive_cards(): void

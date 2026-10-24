@@ -8,6 +8,8 @@ use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -216,5 +218,76 @@ class CardAdminTest extends TestCase
             'settings.0.retries',
             'settings.0.cooldown_minutes',
         ]);
+    }
+
+    private function cardPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'species_id' => $this->species->id,
+            'name' => 'Águila Modelo ' . uniqid(),
+            'rarity' => 'comun',
+            'astucia' => 50,
+            'rapidez' => 50,
+            'fuerza' => 50,
+            'duel_settings_source' => 'rarity',
+            'is_active' => true,
+        ], $overrides);
+    }
+
+    public function test_admin_can_upload_a_glb_model(): void
+    {
+        $payload = $this->cardPayload([
+            'model_file' => UploadedFile::fake()->create('aguila.glb', 100, 'model/gltf-binary'),
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('admin.cards.index'));
+
+        $card = Card::where('name', $payload['name'])->firstOrFail();
+
+        $this->assertStringEndsWith('.glb', $card->model_file);
+
+        $path = storage_path('app/public/' . $card->model_file);
+        $this->assertFileExists($path);
+
+        // Solo se borra lo creado por la prueba: el archivo (nombre único)
+        // y sus carpetas si quedaron vacías (rmdir falla si contienen algo).
+        File::delete($path);
+        @rmdir(dirname($path));
+        @rmdir(dirname($path, 2));
+    }
+
+    public function test_gltf_models_are_rejected(): void
+    {
+        $payload = $this->cardPayload([
+            'model_file' => UploadedFile::fake()->create('aguila.gltf', 100, 'model/gltf+json'),
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasErrors('model_file');
+
+        $this->assertDatabaseMissing('cards', ['name' => $payload['name']]);
+    }
+
+    public function test_removed_card_fields_are_ignored(): void
+    {
+        $payload = $this->cardPayload([
+            'description' => 'Ya no existe',
+            'edition' => 'Navidad',
+            'model_name' => 'Modelo',
+            'model_url' => 'https://example.com/modelo.glb',
+            'model_format' => 'gltf',
+            'model_description' => 'Ya no existe',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('admin.cards.index'));
+
+        $this->assertDatabaseHas('cards', ['name' => $payload['name']]);
     }
 }

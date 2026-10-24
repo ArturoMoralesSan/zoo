@@ -21,7 +21,7 @@ import { computed } from 'vue';
 import { useObjectUrl } from '@/composables/useObjectUrl';
 import { rarityOptions } from '@/lib/cardRarity';
 import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
-import { modelExtension, storageUrl } from '@/lib/modelPreview';
+import { storageUrl } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
@@ -44,14 +44,8 @@ interface Card {
     species_id: number;
     name: string;
     rarity: string;
-    edition: string | null;
-    description: string | null;
     card_image: string | null;
-    model_name: string | null;
     model_file: string | null;
-    model_url: string | null;
-    model_format: string | null;
-    model_description: string | null;
     is_active: boolean;
     sort_order: number;
     astucia?: number;
@@ -74,14 +68,8 @@ const form = useForm({
     species_id: String(props.card.species_id),
     name: props.card.name ?? '',
     rarity: props.card.rarity ?? 'comun',
-    edition: props.card.edition ?? '',
-    description: props.card.description ?? '',
     card_image: null as File | null,
-    model_name: props.card.model_name ?? '',
     model_file: null as File | null,
-    model_url: props.card.model_url ?? '',
-    model_format: props.card.model_format ?? '',
-    model_description: props.card.model_description ?? '',
     is_active: props.card.is_active,
     sort_order: props.card.sort_order ?? 0,
     astucia: props.card.astucia ?? 50,
@@ -115,26 +103,13 @@ const handleModelFile = (event: Event) => {
 };
 
 /*
- * Vista previa: archivo nuevo, luego el archivo guardado y por último la URL.
+ * Vista previa: archivo nuevo o, si no hay, el archivo guardado.
  */
 const modelFilePreviewUrl = useObjectUrl(() => form.model_file);
 
 const modelPreviewSource = computed(
-    () =>
-        modelFilePreviewUrl.value ??
-        storageUrl(props.card.model_file) ??
-        (form.model_url.trim() || null),
+    () => modelFilePreviewUrl.value ?? storageUrl(props.card.model_file),
 );
-
-const modelPreviewExtension = computed(() => {
-    if (form.model_file) {
-        return modelExtension(form.model_file.name);
-    }
-
-    return props.card.model_file
-        ? modelExtension(props.card.model_file)
-        : modelExtension(form.model_url);
-});
 
 const deleteImage = () => {
     Swal.fire({
@@ -329,33 +304,6 @@ defineOptions({
                             </p>
                         </div>
 
-                        <!-- Edición -->
-                        <div class="form-field">
-                            <label for="edition" class="form-label">
-                                Edición
-                            </label>
-
-                            <input
-                                id="edition"
-                                v-model="form.edition"
-                                type="text"
-                                placeholder="Ej. Colección Sahuatoba 2026"
-                                class="form-input"
-                            />
-
-                            <p class="form-help">
-                                Opcional. Identifica la colección a la que
-                                pertenece.
-                            </p>
-
-                            <p
-                                v-if="form.errors.edition"
-                                class="form-error"
-                            >
-                                {{ form.errors.edition }}
-                            </p>
-                        </div>
-
                         <!-- Orden -->
                         <div class="form-field">
                             <label for="sort_order" class="form-label">
@@ -382,28 +330,6 @@ defineOptions({
                                 {{ form.errors.sort_order }}
                             </p>
                         </div>
-                    </div>
-
-                    <!-- Descripción -->
-                    <div class="form-field">
-                        <label for="description" class="form-label">
-                            Descripción
-                        </label>
-
-                        <textarea
-                            id="description"
-                            v-model="form.description"
-                            rows="4"
-                            placeholder="Describe las características de esta tarjeta..."
-                            class="form-textarea"
-                        />
-
-                        <p
-                            v-if="form.errors.description"
-                            class="form-error"
-                        >
-                            {{ form.errors.description }}
-                        </p>
                     </div>
                 </div>
             </AdminCard>
@@ -628,7 +554,7 @@ defineOptions({
                 <div class="space-y-5">
                     <!-- Modelo actual -->
                     <div
-                        v-if="card.model_file || card.model_url"
+                        v-if="card.model_file"
                         class="rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4 sm:p-5"
                     >
                         <div class="flex items-start gap-3">
@@ -644,34 +570,11 @@ defineOptions({
                                 >
                                     Modelo actual
                                 </p>
-
-                                <p
-                                    v-if="card.model_name"
-                                    class="mt-1 text-sm text-[#718477]"
-                                >
-                                    {{ card.model_name }}
-                                </p>
                             </div>
                         </div>
 
-                        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div class="mt-4">
                             <div
-                                v-if="card.model_format"
-                                class="rounded-lg border border-[#DCE7DF] bg-white p-3"
-                            >
-                                <p class="text-xs text-[#718477]">
-                                    Formato
-                                </p>
-
-                                <p
-                                    class="mt-1 text-sm font-semibold text-[#244334]"
-                                >
-                                    {{ card.model_format.toUpperCase() }}
-                                </p>
-                            </div>
-
-                            <div
-                                v-if="card.model_file"
                                 class="min-w-0 rounded-lg border border-[#DCE7DF] bg-white p-3"
                             >
                                 <p class="text-xs text-[#718477]">
@@ -691,28 +594,6 @@ defineOptions({
                                     />
                                 </a>
                             </div>
-
-                            <div
-                                v-if="card.model_url"
-                                class="min-w-0 rounded-lg border border-[#DCE7DF] bg-white p-3 sm:col-span-2"
-                            >
-                                <p class="text-xs text-[#718477]">
-                                    URL externa
-                                </p>
-
-                                <a
-                                    :href="card.model_url"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="mt-1 flex items-start gap-1 break-all text-sm font-medium text-[#187744] hover:underline"
-                                >
-                                    <span>{{ card.model_url }}</span>
-                                    <ExternalLink
-                                        :size="14"
-                                        class="mt-0.5 shrink-0"
-                                    />
-                                </a>
-                            </div>
                         </div>
 
                         <button
@@ -725,63 +606,6 @@ defineOptions({
                             <Trash2 :size="16" />
                             Eliminar archivo 3D
                         </button>
-                    </div>
-
-                    <div class="form-grid">
-                        <!-- Nombre del modelo -->
-                        <div class="form-field">
-                            <label for="model_name" class="form-label">
-                                Nombre del modelo
-                            </label>
-
-                            <input
-                                id="model_name"
-                                v-model="form.model_name"
-                                type="text"
-                                placeholder="Ej. Jaguar 3D"
-                                class="form-input"
-                            />
-
-                            <p
-                                v-if="form.errors.model_name"
-                                class="form-error"
-                            >
-                                {{ form.errors.model_name }}
-                            </p>
-                        </div>
-
-                        <!-- Formato -->
-                        <div class="form-field">
-                            <label for="model_format" class="form-label">
-                                Formato del modelo
-                            </label>
-
-                            <div class="form-select-wrapper">
-                                <select
-                                    id="model_format"
-                                    v-model="form.model_format"
-                                    class="form-select appearance-none"
-                                >
-                                    <option value="">
-                                        Seleccionar formato
-                                    </option>
-                                    <option value="glb">GLB</option>
-                                    <option value="gltf">GLTF</option>
-                                </select>
-
-                                <ChevronDown
-                                    :size="16"
-                                    class="form-select-icon"
-                                />
-                            </div>
-
-                            <p
-                                v-if="form.errors.model_format"
-                                class="form-error"
-                            >
-                                {{ form.errors.model_format }}
-                            </p>
-                        </div>
                     </div>
 
                     <!-- Archivo 3D -->
@@ -813,7 +637,7 @@ defineOptions({
                                 </p>
 
                                 <p class="form-upload-description mt-1">
-                                    Formatos GLB o GLTF · Máximo 50 MB
+                                    Formato GLB · Máximo 50 MB
                                 </p>
                             </div>
 
@@ -827,7 +651,7 @@ defineOptions({
                             <input
                                 id="model_file"
                                 type="file"
-                                accept=".glb,.gltf"
+                                accept=".glb"
                                 class="form-upload-input"
                                 @change="handleModelFile"
                             />
@@ -841,66 +665,14 @@ defineOptions({
                         </p>
                     </div>
 
-                    <!-- URL -->
-                    <div class="form-field">
-                        <label for="model_url" class="form-label">
-                            URL del modelo 3D
-                        </label>
-
-                        <input
-                            id="model_url"
-                            v-model="form.model_url"
-                            type="url"
-                            placeholder="https://ejemplo.com/modelo.glb"
-                            class="form-input"
-                        />
-
-                        <p class="form-help">
-                            Opcional. Utiliza este campo si el modelo está
-                            alojado externamente.
-                        </p>
-
-                        <p
-                            v-if="form.errors.model_url"
-                            class="form-error"
-                        >
-                            {{ form.errors.model_url }}
-                        </p>
-                    </div>
-
                     <!-- Vista previa del modelo -->
                     <div class="form-field">
                         <span class="form-label">Vista previa</span>
 
                         <ModelViewer
                             :source="modelPreviewSource"
-                            :extension="modelPreviewExtension"
+                            extension="glb"
                         />
-                    </div>
-
-                    <!-- Descripción -->
-                    <div class="form-field">
-                        <label
-                            for="model_description"
-                            class="form-label"
-                        >
-                            Descripción del modelo
-                        </label>
-
-                        <textarea
-                            id="model_description"
-                            v-model="form.model_description"
-                            rows="3"
-                            placeholder="Información adicional sobre el modelo 3D..."
-                            class="form-textarea"
-                        />
-
-                        <p
-                            v-if="form.errors.model_description"
-                            class="form-error"
-                        >
-                            {{ form.errors.model_description }}
-                        </p>
                     </div>
                 </div>
             </AdminCard>

@@ -35,17 +35,6 @@ class StoreCardRequest extends FormRequest
                 Rule::enum(CardRarity::class),
             ],
 
-            'edition' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'description' => [
-                'nullable',
-                'string',
-            ],
-
             'card_image' => [
                 'nullable',
                 'image',
@@ -53,34 +42,12 @@ class StoreCardRequest extends FormRequest
                 'max:5120',
             ],
 
-            'model_name' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
             'model_file' => [
                 'nullable',
                 'file',
-                'mimes:glb,gltf',
+                'extensions:glb',
+                'mimes:glb',
                 'max:51200',
-            ],
-
-            'model_url' => [
-                'nullable',
-                'url',
-                'max:2048',
-            ],
-
-            'model_format' => [
-                'nullable',
-                'string',
-                'max:50',
-            ],
-
-            'model_description' => [
-                'nullable',
-                'string',
             ],
 
             'is_active' => [

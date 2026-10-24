@@ -16,7 +16,7 @@ const props = withDefaults(
     {
         extension: null,
         heightClass: 'h-[360px]',
-        emptyText: 'Selecciona un archivo o ingresa una URL para previsualizar el modelo.',
+        emptyText: 'Selecciona un archivo GLB para previsualizar el modelo.',
     },
 );
 
@@ -143,8 +143,7 @@ const toggleAnimation = () => {
                 <TriangleAlert :size="22" class="text-red-500" />
 
                 <p class="form-error max-w-sm">
-                    No se pudo cargar el modelo. Verifica que el archivo sea válido
-                    o que la URL permita el acceso (CORS).
+                    No se pudo cargar el modelo. Verifica que el archivo GLB sea válido.
                 </p>
             </div>
         </div>

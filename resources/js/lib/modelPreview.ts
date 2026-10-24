@@ -1,4 +1,7 @@
-export type ModelExtension = 'glb' | 'gltf';
+/**
+ * Los modelos 3D de las tarjetas solo se aceptan en GLB.
+ */
+export type ModelExtension = 'glb';
 
 /**
  * URL pública de un archivo guardado en el disco "public".
@@ -13,18 +16,4 @@ export const storageUrl = (path: string | null | undefined): string | null => {
     }
 
     return `/storage/${path}`;
-};
-
-/**
- * Extensión del modelo 3D a partir de un nombre de archivo, ruta o URL.
- */
-export const modelExtension = (
-    value: string | null | undefined,
-): ModelExtension | null => {
-    const match = value
-        ?.split(/[?#]/)[0]
-        .toLowerCase()
-        .match(/\.(glb|gltf)$/);
-
-    return (match?.[1] as ModelExtension | undefined) ?? null;
 };

@@ -23,7 +23,7 @@ import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 
 import { getRarityLabel } from '@/lib/cardRarity';
 import type { DuelSettingsSource } from '@/lib/cardRarity';
-import { modelExtension, storageUrl } from '@/lib/modelPreview';
+import { storageUrl } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
 
 interface SpeciesCategory {
@@ -43,14 +43,8 @@ interface Card {
     species_id: number;
     name: string;
     rarity: string;
-    edition: string | null;
-    description: string | null;
     card_image: string | null;
-    model_name: string | null;
     model_file: string | null;
-    model_url: string | null;
-    model_format: string | null;
-    model_description: string | null;
     is_active: boolean;
     sort_order: number;
     astucia?: number;
@@ -70,13 +64,7 @@ interface Card {
 
 const props = defineProps<{ card: Card }>();
 
-const modelPreviewSource = computed(
-    () => storageUrl(props.card.model_file) ?? props.card.model_url,
-);
-
-const modelPreviewExtension = computed(() =>
-    modelExtension(props.card.model_file ?? props.card.model_url),
-);
+const modelPreviewSource = computed(() => storageUrl(props.card.model_file));
 
 const duelSettingsLabel = computed(() =>
     props.card.duel_settings_source === 'card' ? 'Personalizado' : 'Por rareza',
@@ -242,13 +230,6 @@ defineOptions({
                     </div>
 
                     <div class="rounded-lg border border-[#E5ECE7] p-3">
-                        <p class="text-xs text-[#718477]">Edición</p>
-                        <p class="mt-1 text-sm font-medium text-[#244334]">
-                            {{ card.edition || 'General' }}
-                        </p>
-                    </div>
-
-                    <div class="rounded-lg border border-[#E5ECE7] p-3">
                         <p class="text-xs text-[#718477]">Orden de visualización</p>
                         <p class="mt-1 text-sm font-medium text-[#244334]">
                             {{ card.sort_order }}
@@ -315,20 +296,6 @@ defineOptions({
                     </div>
                 </div>
 
-                <div class="mt-4 border-t border-[#E5ECE7] pt-3">
-                    <p class="text-xs font-semibold text-[#435D4C]">
-                        Descripción
-                    </p>
-                    <p
-                        v-if="card.description"
-                        class="mt-1 whitespace-pre-line text-sm leading-6 text-[#5F7566]"
-                    >
-                        {{ card.description }}
-                    </p>
-                    <p v-else class="mt-1 text-sm text-[#84958A]">
-                        Sin descripción registrada.
-                    </p>
-                </div>
             </section>
         </div>
 
@@ -349,85 +316,38 @@ defineOptions({
 
                 <span
                     class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                    :class="card.model_file || card.model_url
+                    :class="card.model_file
                         ? 'bg-[#EAF5ED] text-[#187744]'
                         : 'bg-[#F2F4F2] text-[#718477]'"
                 >
-                    {{ card.model_file || card.model_url ? 'Disponible' : 'Sin modelo' }}
+                    {{ card.model_file ? 'Disponible' : 'Sin modelo' }}
                 </span>
             </div>
 
             <ModelViewer
                 v-if="modelPreviewSource"
                 :source="modelPreviewSource"
-                :extension="modelPreviewExtension"
+                extension="glb"
                 height-class="h-[420px]"
                 class="mb-3"
             />
 
-            <div
-                v-if="card.model_file || card.model_url"
-                class="grid gap-3 md:grid-cols-2"
+            <a
+                v-if="card.model_file"
+                :href="storageUrl(card.model_file) ?? ''"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center gap-2 rounded-lg border border-[#DCE7DF] p-3 text-sm text-[#187744] hover:bg-[#F6F9F6]"
             >
-                <div class="space-y-3">
-                    <div
-                        v-if="card.model_name || card.model_format"
-                        class="flex flex-wrap items-center gap-2"
-                    >
-                        <span class="text-sm font-medium text-[#244334]">
-                            {{ card.model_name || 'Modelo 3D' }}
-                        </span>
-                        <span
-                            v-if="card.model_format"
-                            class="rounded-md bg-[#F2F7F4] px-2 py-1 text-xs font-semibold uppercase text-[#435D4C]"
-                        >
-                            {{ card.model_format }}
-                        </span>
-                    </div>
-
-                    <a
-                        v-if="card.model_file"
-                        :href="storageUrl(card.model_file) ?? ''"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="flex items-center gap-2 rounded-lg border border-[#DCE7DF] p-3 text-sm text-[#187744] hover:bg-[#F6F9F6]"
-                    >
-                        <Box :size="17" class="shrink-0" />
-                        <span class="min-w-0 flex-1 break-all">
-                            {{ card.model_file }}
-                        </span>
-                        <ExternalLink :size="15" class="shrink-0" />
-                    </a>
-
-                    <a
-                        v-if="card.model_url"
-                        :href="card.model_url"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="flex items-center gap-2 rounded-lg border border-[#DCE7DF] p-3 text-sm text-[#187744] hover:bg-[#F6F9F6]"
-                    >
-                        <ExternalLink :size="16" class="shrink-0" />
-                        <span class="min-w-0 flex-1 break-all">
-                            {{ card.model_url }}
-                        </span>
-                    </a>
-                </div>
-
-                <div class="rounded-lg bg-[#F6F9F6] p-3">
-                    <p class="text-xs font-semibold text-[#435D4C]">
-                        Descripción del modelo
-                    </p>
-                    <p
-                        v-if="card.model_description"
-                        class="mt-1 whitespace-pre-line text-sm leading-6 text-[#5F7566]"
-                    >
-                        {{ card.model_description }}
-                    </p>
-                    <p v-else class="mt-1 text-sm text-[#84958A]">
-                        Sin descripción adicional.
-                    </p>
-                </div>
-            </div>
+                <Box :size="17" class="shrink-0" />
+                <span class="min-w-0 flex-1 break-all">
+                    {{ card.model_file }}
+                </span>
+                <span class="rounded-md bg-[#F2F7F4] px-2 py-1 text-xs font-semibold uppercase text-[#435D4C]">
+                    GLB
+                </span>
+                <ExternalLink :size="15" class="shrink-0" />
+            </a>
 
             <div
                 v-else

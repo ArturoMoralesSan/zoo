@@ -27,14 +27,8 @@ interface Card {
     species_id: number;
     name: string;
     rarity: string;
-    edition: string | null;
-    description: string | null;
     card_image: string | null;
-    model_name: string | null;
     model_file: string | null;
-    model_url: string | null;
-    model_format: string | null;
-    model_description: string | null;
     is_active: boolean;
     sort_order: number;
     species: Species;
@@ -128,10 +122,6 @@ defineOptions({
 
                 <span v-if="card.species?.common_name">
                     · {{ card.species.common_name }}
-                </span>
-
-                <span v-if="card.edition">
-                    · {{ card.edition }}
                 </span>
 
                 — La pregunta se asociará a esta tarjeta.

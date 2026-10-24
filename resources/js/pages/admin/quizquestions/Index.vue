@@ -27,8 +27,6 @@ interface Card {
     species_id?: number;
     name: string;
     rarity?: string;
-    edition?: string | null;
-    description?: string | null;
     card_image?: string | null;
     species?: Species | null;
 }
@@ -182,7 +180,7 @@ defineOptions({
     <div class="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader
             :title="card.name"
-            :description="`${card.species?.common_name ?? 'Sin especie'}${card.edition ? ` · ${card.edition}` : ''}`"
+            :description="card.species?.common_name ?? 'Sin especie'"
             section="Quiz de tarjeta"
             :icon="HelpCircle"
             :action-icon="Plus"

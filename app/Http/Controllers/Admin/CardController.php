@@ -33,7 +33,6 @@ class CardController extends Controller
                     $query->where(function ($query) use ($search) {
                         $query
                             ->where('name', 'like', "%{$search}%")
-                            ->orWhere('edition', 'like', "%{$search}%")
                             ->orWhereHas(
                                 'species',
                                 function ($query) use ($search) {
@@ -453,12 +452,6 @@ class CardController extends Controller
             'species_id' => $validated['species_id'],
             'name' => $validated['name'],
             'rarity' => $validated['rarity'],
-            'edition' => $validated['edition'] ?? null,
-            'description' => $validated['description'] ?? null,
-            'model_name' => $validated['model_name'] ?? null,
-            'model_url' => $validated['model_url'] ?? null,
-            'model_format' => $validated['model_format'] ?? null,
-            'model_description' => $validated['model_description'] ?? null,
             'is_active' => $request->boolean('is_active'),
             'sort_order' => $validated['sort_order'] ?? 0,
             'astucia' => $validated['astucia'],

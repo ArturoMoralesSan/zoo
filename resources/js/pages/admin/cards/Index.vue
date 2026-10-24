@@ -33,13 +33,8 @@ interface Card {
     species_id: number;
     name: string;
     rarity: string;
-    edition: string | null;
-    description: string | null;
     card_image: string | null;
-    model_name: string | null;
     model_file: string | null;
-    model_url: string | null;
-    model_format: string | null;
     is_active: boolean;
     sort_order: number;
     species: Species;
@@ -136,22 +131,11 @@ const deleteCard = (card: Card) => {
     });
 };
 
-const getModelLabel = (card: Card) => {
-    if (card.model_file) {
-        return card.model_format
-            ? card.model_format.toUpperCase()
-            : 'Archivo';
-    }
-
-    if (card.model_url) {
-        return 'URL';
-    }
-
-    return 'Sin modelo';
-};
+const getModelLabel = (card: Card) =>
+    card.model_file ? 'GLB' : 'Sin modelo';
 
 const getModelClasses = (card: Card) => {
-    if (card.model_file || card.model_url) {
+    if (card.model_file) {
         return 'border-[#c9e4d2] bg-[#e4f2e8] text-[#187744]';
     }
 
@@ -208,7 +192,7 @@ defineOptions({
             v-model:search="search"
             :pagination="cards"
             :is-empty="cards.data.length === 0"
-            :empty-colspan="7"
+            :empty-colspan="6"
             search-placeholder="Buscar tarjeta..."
             :has-filters="hasFilters()"
             @search="submitSearch"
@@ -294,9 +278,6 @@ defineOptions({
                         Rareza
                     </th>
 
-                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
-                        Edición
-                    </th>
 
                     <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
                         Modelo 3D
@@ -344,13 +325,6 @@ defineOptions({
                                     {{ card.name }}
                                 </div>
 
-                                <div
-                                    v-if="card.description"
-                                    class="mt-1 max-w-[220px] truncate text-xs text-[#718477]"
-                                >
-                                    {{ card.description }}
-                                </div>
-
                                 <div class="mt-1 text-xs text-[#84958a]">
                                     ID {{ card.id }}
                                 </div>
@@ -378,20 +352,6 @@ defineOptions({
                             :class="getRarityClasses(card.rarity)"
                         >
                             {{ getRarityLabel(card.rarity) }}
-                        </span>
-                    </td>
-
-                    <!-- Edición -->
-                    <td class="px-5 py-4 sm:px-6">
-                        <span
-                            v-if="card.edition"
-                            class="inline-flex whitespace-nowrap rounded-lg border border-[#dce7df] bg-white px-2.5 py-1.5 text-xs font-medium text-[#435d4c]"
-                        >
-                            {{ card.edition }}
-                        </span>
-
-                        <span v-else class="text-sm text-[#a0ada4]">
-                            —
                         </span>
                     </td>
 

@@ -30,7 +30,6 @@ class CardController extends Controller
                 'rarity',
                 'card_image',
                 'model_file',
-                'model_url',
                 'sort_order',
                 'astucia',
                 'rapidez',

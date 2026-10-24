@@ -18,7 +18,6 @@ import { computed } from 'vue';
 import { useObjectUrl } from '@/composables/useObjectUrl';
 import { rarityOptions } from '@/lib/cardRarity';
 import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
-import { modelExtension } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
@@ -45,14 +44,8 @@ const form = useForm({
     species_id: '',
     name: '',
     rarity: 'comun',
-    edition: '',
-    description: '',
     card_image: null as File | null,
-    model_name: '',
     model_file: null as File | null,
-    model_url: '',
-    model_format: '',
-    model_description: '',
     is_active: true,
     sort_order: 0,
     astucia: 50,
@@ -81,19 +74,11 @@ const handleModelFile = (event: Event) => {
 };
 
 /*
- * Vista previa: el archivo seleccionado tiene prioridad sobre la URL.
+ * Vista previa del archivo seleccionado.
  */
 const modelFilePreviewUrl = useObjectUrl(() => form.model_file);
 
-const modelPreviewSource = computed(
-    () => modelFilePreviewUrl.value ?? (form.model_url.trim() || null),
-);
-
-const modelPreviewExtension = computed(() =>
-    form.model_file
-        ? modelExtension(form.model_file.name)
-        : modelExtension(form.model_url),
-);
+const modelPreviewSource = computed(() => modelFilePreviewUrl.value);
 
 defineOptions({
     layout: {
@@ -250,32 +235,6 @@ defineOptions({
                             </p>
                         </div>
 
-                        <!-- Edición -->
-                        <div class="form-field">
-                            <label for="edition" class="form-label">
-                                Edición
-                            </label>
-
-                            <input
-                                id="edition"
-                                v-model="form.edition"
-                                type="text"
-                                placeholder="Ej. Colección Sahuatoba 2026"
-                                class="form-input"
-                                :class="{
-                                    'form-input-error': form.errors.edition,
-                                }"
-                            />
-
-                            <p class="form-help">
-                                Opcional. Identifica la colección a la que pertenece.
-                            </p>
-
-                            <p v-if="form.errors.edition" class="form-error">
-                                {{ form.errors.edition }}
-                            </p>
-                        </div>
-
                         <!-- Orden -->
                         <div class="form-field">
                             <label for="sort_order" class="form-label">
@@ -305,31 +264,6 @@ defineOptions({
                                 {{ form.errors.sort_order }}
                             </p>
                         </div>
-                    </div>
-
-                    <!-- Descripción -->
-                    <div class="form-field">
-                        <label for="description" class="form-label">
-                            Descripción
-                        </label>
-
-                        <textarea
-                            id="description"
-                            v-model="form.description"
-                            rows="4"
-                            placeholder="Describe las características de esta tarjeta..."
-                            class="form-textarea"
-                            :class="{
-                                'form-textarea-error': form.errors.description,
-                            }"
-                        />
-
-                        <p
-                            v-if="form.errors.description"
-                            class="form-error"
-                        >
-                            {{ form.errors.description }}
-                        </p>
                     </div>
                 </div>
             </AdminCard>
@@ -496,69 +430,6 @@ defineOptions({
                 :icon="Box"
             >
                 <div class="space-y-5">
-                    <div class="form-grid">
-                        <!-- Nombre del modelo -->
-                        <div class="form-field">
-                            <label for="model_name" class="form-label">
-                                Nombre del modelo
-                            </label>
-
-                            <input
-                                id="model_name"
-                                v-model="form.model_name"
-                                type="text"
-                                placeholder="Ej. Jaguar 3D"
-                                class="form-input"
-                                :class="{
-                                    'form-input-error': form.errors.model_name,
-                                }"
-                            />
-
-                            <p
-                                v-if="form.errors.model_name"
-                                class="form-error"
-                            >
-                                {{ form.errors.model_name }}
-                            </p>
-                        </div>
-
-                        <!-- Formato -->
-                        <div class="form-field">
-                            <label for="model_format" class="form-label">
-                                Formato del modelo
-                            </label>
-
-                            <div class="form-select-wrapper">
-                                <select
-                                    id="model_format"
-                                    v-model="form.model_format"
-                                    class="form-select appearance-none"
-                                    :class="{
-                                        'form-input-error': form.errors.model_format,
-                                    }"
-                                >
-                                    <option value="">
-                                        Seleccionar formato
-                                    </option>
-                                    <option value="glb">GLB</option>
-                                    <option value="gltf">GLTF</option>
-                                </select>
-
-                                <ChevronDown
-                                    :size="16"
-                                    class="form-select-icon"
-                                />
-                            </div>
-
-                            <p
-                                v-if="form.errors.model_format"
-                                class="form-error"
-                            >
-                                {{ form.errors.model_format }}
-                            </p>
-                        </div>
-                    </div>
-
                     <!-- Archivo del modelo -->
                     <div class="form-field">
                         <label for="model_file" class="form-label">
@@ -579,7 +450,7 @@ defineOptions({
                                 </p>
 
                                 <p class="form-upload-description mt-1">
-                                    Formatos GLB o GLTF · Máximo 50 MB
+                                    Formato GLB · Máximo 50 MB
                                 </p>
                             </div>
 
@@ -593,7 +464,7 @@ defineOptions({
                             <input
                                 id="model_file"
                                 type="file"
-                                accept=".glb,.gltf"
+                                accept=".glb"
                                 class="form-upload-input"
                                 @change="handleModelFile"
                             />
@@ -607,68 +478,14 @@ defineOptions({
                         </p>
                     </div>
 
-                    <!-- URL del modelo -->
-                    <div class="form-field">
-                        <label for="model_url" class="form-label">
-                            URL del modelo 3D
-                        </label>
-
-                        <input
-                            id="model_url"
-                            v-model="form.model_url"
-                            type="url"
-                            placeholder="https://ejemplo.com/modelo.glb"
-                            class="form-input"
-                            :class="{
-                                'form-input-error': form.errors.model_url,
-                            }"
-                        />
-
-                        <p class="form-help">
-                            Opcional. Utiliza este campo si el modelo está alojado externamente.
-                        </p>
-
-                        <p
-                            v-if="form.errors.model_url"
-                            class="form-error"
-                        >
-                            {{ form.errors.model_url }}
-                        </p>
-                    </div>
-
                     <!-- Vista previa del modelo -->
                     <div class="form-field">
                         <span class="form-label">Vista previa</span>
 
                         <ModelViewer
                             :source="modelPreviewSource"
-                            :extension="modelPreviewExtension"
+                            extension="glb"
                         />
-                    </div>
-
-                    <!-- Descripción del modelo -->
-                    <div class="form-field">
-                        <label for="model_description" class="form-label">
-                            Descripción del modelo
-                        </label>
-
-                        <textarea
-                            id="model_description"
-                            v-model="form.model_description"
-                            rows="3"
-                            placeholder="Información adicional sobre el modelo 3D..."
-                            class="form-textarea"
-                            :class="{
-                                'form-textarea-error': form.errors.model_description,
-                            }"
-                        />
-
-                        <p
-                            v-if="form.errors.model_description"
-                            class="form-error"
-                        >
-                            {{ form.errors.model_description }}
-                        </p>
                     </div>
                 </div>
             </AdminCard>
