@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CardController;
+use App\Http\Controllers\Admin\CardRaritySettingController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DonationController;
 use App\Http\Controllers\Admin\EventController;
@@ -301,6 +302,12 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:map_paths.edit',
                 'destroy' => 'permission:map_paths.delete',
             ]);
+
+        Route::put(
+            'cards/rarity-settings',
+            [CardRaritySettingController::class, 'update']
+        )->middleware('permission:cards.edit')
+            ->name('cards.rarity-settings.update');
 
         Route::resource('cards', CardController::class)
             ->middleware([

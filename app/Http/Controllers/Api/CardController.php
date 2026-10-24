@@ -22,7 +22,7 @@ class CardController extends Controller
             : [];
 
         $cards = Card::query()
-            ->with(['species.category'])
+            ->with(['species:id,common_name', 'raritySetting'])
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('id')
@@ -64,7 +64,7 @@ class CardController extends Controller
             ], 403);
         }
 
-        $card->load(['species.category']);
+        $card->load(['species:id,common_name', 'raritySetting']);
 
         return response()->json([
             'success' => true,
@@ -80,6 +80,7 @@ class CardController extends Controller
         $data = [
             'id' => $card->id,
             'species_id' => $card->species_id,
+            'species_name' => $card->species?->common_name,
             'name' => $card->name,
             'rarity' => $card->rarity,
             'edition' => $card->edition,
@@ -93,9 +94,9 @@ class CardController extends Controller
             'astucia' => (int) ($card->astucia ?? 50),
             'rapidez' => (int) ($card->rapidez ?? 50),
             'fuerza' => (int) ($card->fuerza ?? 50),
-            'questions_per_duel' => (int) ($card->questions_per_duel ?? 3),
-            'retry_type' => $card->retry_type ?? 'card',
-            'retries' => (int) $card->particular_retries,
+            'duel_settings_source' => $card->duel_settings_source,
+            'questions_per_duel' => $card->effective_questions_per_duel,
+            'retries' => $card->effective_retries,
             'encountered' => $isOwned,
             'created_at' => $card->created_at,
             'updated_at' => $card->updated_at,
@@ -107,10 +108,6 @@ class CardController extends Controller
         if ($isOwned) {
             $data['model_file'] = $card->model_file;
             $data['model_url'] = $card->model_url;
-        }
-
-        if ($card->relationLoaded('species') && $card->species) {
-            $data['species'] = $card->species;
         }
 
         return $data;

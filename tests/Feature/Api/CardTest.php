@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Card;
 use App\Models\CardCapture;
+use App\Models\CardRaritySetting;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
@@ -28,7 +29,6 @@ class CardTest extends TestCase
         $this->category = SpeciesCategory::create([
             'name' => 'Mamíferos ' . uniqid(),
             'description' => 'Categoría de prueba',
-            'retry_limit' => 5,
             'is_active' => true,
         ]);
 
@@ -57,7 +57,7 @@ class CardTest extends TestCase
             'rapidez' => 85,
             'fuerza' => 90,
             'questions_per_duel' => 4,
-            'retry_type' => 'card',
+            'duel_settings_source' => 'card',
             'retries' => 3,
             'is_active' => true,
         ]);
@@ -80,6 +80,8 @@ class CardTest extends TestCase
         $this->assertEquals(90, $data['fuerza']);
         $this->assertEquals(4, $data['questions_per_duel']);
         $this->assertEquals(3, $data['retries']);
+        $this->assertArrayNotHasKey('species', $data);
+        $this->assertEquals($this->species->common_name, $data['species_name']);
     }
 
     public function test_cards_index_returns_encountered_true_and_sends_models_when_user_owns_card(): void
@@ -97,7 +99,7 @@ class CardTest extends TestCase
             'rapidez' => 92,
             'fuerza' => 96,
             'questions_per_duel' => 5,
-            'retry_type' => 'card',
+            'duel_settings_source' => 'card',
             'retries' => 4,
             'is_active' => true,
         ]);
@@ -125,22 +127,23 @@ class CardTest extends TestCase
         $this->assertEquals(4, $data['retries']);
     }
 
-    public function test_cards_retries_resolves_category_limit_when_retry_type_is_category(): void
+    public function test_cards_duel_settings_resolve_rarity_defaults_when_source_is_rarity(): void
     {
         Sanctum::actingAs($this->user);
 
-        $this->category->update(['retry_limit' => 7]);
+        CardRaritySetting::updateOrCreate(
+            ['rarity' => 'comun'],
+            ['questions_per_duel' => 6, 'retries' => 7]
+        );
 
         $card = Card::create([
             'species_id' => $this->species->id,
-            'name' => 'Carta Por Categoria',
+            'name' => 'Carta Por Rareza',
             'rarity' => 'comun',
             'astucia' => 60,
             'rapidez' => 60,
             'fuerza' => 60,
-            'questions_per_duel' => 3,
-            'retry_type' => 'category',
-            'retries' => null,
+            'duel_settings_source' => 'rarity',
             'is_active' => true,
         ]);
 
@@ -151,6 +154,8 @@ class CardTest extends TestCase
         $data = collect($response->json('data'))->firstWhere('id', $card->id);
 
         $this->assertNotNull($data);
+        $this->assertEquals('rarity', $data['duel_settings_source']);
+        $this->assertEquals(6, $data['questions_per_duel']);
         $this->assertEquals(7, $data['retries']);
     }
 
@@ -190,7 +195,7 @@ class CardTest extends TestCase
             'rapidez' => 85,
             'fuerza' => 90,
             'questions_per_duel' => 3,
-            'retry_type' => 'card',
+            'duel_settings_source' => 'card',
             'retries' => 2,
             'is_active' => true,
         ]);
@@ -217,7 +222,9 @@ class CardTest extends TestCase
                     'fuerza' => 90,
                     'questions_per_duel' => 3,
                     'retries' => 2,
+                    'species_name' => $this->species->common_name,
                 ],
-            ]);
+            ])
+            ->assertJsonMissingPath('data.species');
     }
 }

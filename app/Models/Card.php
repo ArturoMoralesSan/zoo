@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,8 +29,8 @@ class Card extends Model
         'astucia',
         'rapidez',
         'fuerza',
+        'duel_settings_source',
         'questions_per_duel',
-        'retry_type',
         'retries',
     ];
 
@@ -44,21 +45,57 @@ class Card extends Model
     ];
 
     /**
-     * Obtener el número particular de reintentos según la tarjeta o su categoría.
+     * Orígenes posibles de la configuración de duelos.
      */
-    public function getParticularRetriesAttribute(): int
-    {
-        if ($this->retry_type === 'category') {
-            return (int) ($this->species?->category?->retry_limit ?? 3);
-        }
+    public const DUEL_SETTINGS_RARITY = 'rarity';
 
-        return (int) ($this->retries ?? 3);
+    public const DUEL_SETTINGS_CARD = 'card';
+
+    /**
+     * Indica si la tarjeta usa la configuración de su rareza.
+     */
+    public function usesRarityDuelSettings(): bool
+    {
+        return $this->duel_settings_source !== self::DUEL_SETTINGS_CARD;
+    }
+
+    /**
+     * Preguntas por duelo según la tarjeta o su rareza.
+     */
+    protected function effectiveQuestionsPerDuel(): Attribute
+    {
+        return Attribute::get(fn (): int => (int) (
+            $this->usesRarityDuelSettings()
+                ? $this->raritySetting?->questions_per_duel
+                : $this->questions_per_duel
+        ) ?: CardRaritySetting::DEFAULT_QUESTIONS_PER_DUEL);
+    }
+
+    /**
+     * Reintentos según la tarjeta o su rareza.
+     */
+    protected function effectiveRetries(): Attribute
+    {
+        return Attribute::get(fn (): int => (int) (
+            $this->usesRarityDuelSettings()
+                ? $this->raritySetting?->retries
+                : $this->retries
+        ) ?: CardRaritySetting::DEFAULT_RETRIES);
     }
 
     public function species(): BelongsTo
     {
         return $this->belongsTo(
             Species::class
+        );
+    }
+
+    public function raritySetting(): BelongsTo
+    {
+        return $this->belongsTo(
+            CardRaritySetting::class,
+            'rarity',
+            'rarity'
         );
     }
 

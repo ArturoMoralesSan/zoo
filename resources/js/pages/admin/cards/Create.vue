@@ -11,35 +11,29 @@ import {
     Info,
     Layers3,
     Plus,
-    RotateCcw,
     Save,
-    Swords,
     Tag,
     Trash2,
     Upload,
     Zap,
 } from 'lucide-vue-next';
-import { computed, watch } from 'vue';
 
+import { rarityOptions } from '@/lib/cardRarity';
+import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
 import admin from '@/routes/admin';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
-
-interface SpeciesCategory {
-    id: number;
-    name: string;
-    retry_limit?: number;
-}
+import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 
 interface Species {
     id: number;
     species_category_id?: number;
+    category?: { id: number; name: string };
     common_name: string;
     scientific_name: string;
-    category?: SpeciesCategory;
 }
 
 interface AnswerForm {
@@ -59,6 +53,7 @@ interface QuestionForm {
 
 const props = defineProps<{
     species: Species[];
+    raritySettings: CardRaritySetting[];
 }>();
 
 const form = useForm({
@@ -78,26 +73,11 @@ const form = useForm({
     astucia: 50,
     rapidez: 50,
     fuerza: 50,
-    questions_per_duel: 3,
-    retry_type: 'card' as 'card' | 'category',
-    retries: 3,
-    category_retry_limit: 3,
+    duel_settings_source: 'rarity' as DuelSettingsSource,
+    questions_per_duel: null as number | null,
+    retries: null as number | null,
     questions: [] as QuestionForm[],
 });
-
-const selectedSpecies = computed(() => {
-    return props.species.find((s) => String(s.id) === String(form.species_id));
-});
-
-watch(
-    () => selectedSpecies.value,
-    (species) => {
-        if (species?.category?.retry_limit !== undefined) {
-            form.category_retry_limit = species.category.retry_limit;
-        }
-    },
-    { immediate: true }
-);
 
 const addQuestion = () => {
     form.questions.push({
@@ -301,11 +281,12 @@ defineOptions({
                                         'form-input-error': form.errors.rarity,
                                     }"
                                 >
-                                    <option value="comun">Común</option>
-                                    <option value="rara">Rara</option>
-                                    <option value="epica">Épica</option>
-                                    <option value="edicion_especial">
-                                        Edición especial
+                                    <option
+                                        v-for="option in rarityOptions"
+                                        :key="option.value"
+                                        :value="option.value"
+                                    >
+                                        {{ option.label }}
                                     </option>
                                 </select>
 
@@ -506,178 +487,15 @@ defineOptions({
                 </div>
             </AdminCard>
 
-            <!-- Configuración de Duelo y Reintentos -->
-            <AdminCard
-                title="Configuración de duelos y reintentos"
-                description="Personaliza la cantidad de preguntas mostradas por duelo y el límite de reintentos."
-                :icon="Swords"
-            >
-                <div class="space-y-5">
-                    <div class="form-grid">
-                        <!-- Preguntas por duelo -->
-                        <div class="form-field">
-                            <label for="questions_per_duel" class="form-label">
-                                Preguntas por duelo
-                                <span class="text-red-500">*</span>
-                            </label>
-
-                            <input
-                                id="questions_per_duel"
-                                v-model.number="form.questions_per_duel"
-                                type="number"
-                                min="1"
-                                max="50"
-                                required
-                                placeholder="3"
-                                class="form-input"
-                                :class="{
-                                    'form-input-error': form.errors.questions_per_duel,
-                                }"
-                            />
-
-                            <p class="form-help">
-                                Cantidad de preguntas aleatorias que se mostrarán al usuario por cada duelo.
-                            </p>
-
-                            <p v-if="form.errors.questions_per_duel" class="form-error">
-                                {{ form.errors.questions_per_duel }}
-                            </p>
-                        </div>
-
-                        <!-- Tipo de límite de reintentos -->
-                        <div class="form-field">
-                            <label class="form-label">
-                                Asignación del límite de reintentos
-                                <span class="text-red-500">*</span>
-                            </label>
-
-                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                <label
-                                    class="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition"
-                                    :class="
-                                        form.retry_type === 'card'
-                                            ? 'border-[#187744] bg-[#F2F7F4] text-[#187744]'
-                                            : 'border-[#C8DCCF] bg-white text-[#435D4C]'
-                                    "
-                                >
-                                    <input
-                                        v-model="form.retry_type"
-                                        type="radio"
-                                        value="card"
-                                        class="accent-[#187744]"
-                                    />
-                                    <div>
-                                        <p class="text-sm font-semibold">Por tarjeta</p>
-                                        <p class="text-xs text-[#718477]">Límite exclusivo para esta tarjeta</p>
-                                    </div>
-                                </label>
-
-                                <label
-                                    class="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition"
-                                    :class="
-                                        form.retry_type === 'category'
-                                            ? 'border-[#187744] bg-[#F2F7F4] text-[#187744]'
-                                            : 'border-[#C8DCCF] bg-white text-[#435D4C]'
-                                    "
-                                >
-                                    <input
-                                        v-model="form.retry_type"
-                                        type="radio"
-                                        value="category"
-                                        class="accent-[#187744]"
-                                    />
-                                    <div>
-                                        <p class="text-sm font-semibold">Por categoría</p>
-                                        <p class="text-xs text-[#718477]">Límite según la categoría de la especie</p>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <p v-if="form.errors.retry_type" class="form-error">
-                                {{ form.errors.retry_type }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Si el límite es Por Tarjeta -->
-                    <div
-                        v-if="form.retry_type === 'card'"
-                        class="rounded-xl border border-[#DCE7DF] bg-[#FCFEFC] p-4"
-                    >
-                        <div class="form-field max-w-sm">
-                            <label for="retries" class="form-label">
-                                Límite de reintentos para esta tarjeta
-                                <span class="text-red-500">*</span>
-                            </label>
-
-                            <input
-                                id="retries"
-                                v-model.number="form.retries"
-                                type="number"
-                                min="1"
-                                max="100"
-                                required
-                                placeholder="3"
-                                class="form-input"
-                                :class="{
-                                    'form-input-error': form.errors.retries,
-                                }"
-                            />
-
-                            <p class="form-help">
-                                Número máximo de intentos que tendrá el usuario para resolver el quiz de esta tarjeta.
-                            </p>
-
-                            <p v-if="form.errors.retries" class="form-error">
-                                {{ form.errors.retries }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Si el límite es Por Categoría -->
-                    <div
-                        v-else
-                        class="rounded-xl border border-[#DCE7DF] bg-[#FCFEFC] p-4"
-                    >
-                        <div class="space-y-3">
-                            <div class="flex items-center gap-2 text-sm text-[#244334]">
-                                <RotateCcw :size="16" class="text-[#187744]" />
-                                <span>
-                                    Categoría de la especie:
-                                    <strong>{{ selectedSpecies?.category?.name || 'Selecciona una especie arriba' }}</strong>
-                                </span>
-                            </div>
-
-                            <div class="form-field max-w-sm">
-                                <label for="category_retry_limit" class="form-label">
-                                    Límite de reintentos de la categoría
-                                </label>
-
-                                <input
-                                    id="category_retry_limit"
-                                    v-model.number="form.category_retry_limit"
-                                    type="number"
-                                    min="1"
-                                    max="100"
-                                    placeholder="3"
-                                    class="form-input"
-                                    :class="{
-                                        'form-input-error': form.errors.category_retry_limit,
-                                    }"
-                                />
-
-                                <p class="form-help">
-                                    El valor establecido aquí aplicará a todas las tarjetas asociadas a esta categoría.
-                                </p>
-
-                                <p v-if="form.errors.category_retry_limit" class="form-error">
-                                    {{ form.errors.category_retry_limit }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </AdminCard>
+            <!-- Configuración de duelos y reintentos -->
+            <DuelSettingsFields
+                v-model:source="form.duel_settings_source"
+                v-model:questions-per-duel="form.questions_per_duel"
+                v-model:retries="form.retries"
+                :rarity="form.rarity"
+                :rarity-settings="raritySettings"
+                :errors="form.errors"
+            />
 
             <!-- Preguntas y opciones del quiz -->
             <AdminCard

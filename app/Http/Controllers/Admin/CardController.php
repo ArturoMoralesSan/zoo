@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Card\StoreCardRequest;
 use App\Http\Requests\Admin\Card\UpdateCardRequest;
 use App\Models\Card;
+use App\Models\CardRaritySetting;
 use App\Models\Species;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -74,6 +77,8 @@ class CardController extends Controller
             [
                 'cards' => $cards,
 
+                'raritySettings' => $this->raritySettings(),
+
                 'species' => Species::query()
                     ->where('is_active', true)
                     ->orderBy('common_name')
@@ -99,6 +104,10 @@ class CardController extends Controller
     {
         $card->load([
             'species',
+            'raritySetting',
+        ])->append([
+            'effective_questions_per_duel',
+            'effective_retries',
         ]);
 
         return Inertia::render(
@@ -117,6 +126,8 @@ class CardController extends Controller
         return Inertia::render(
             'admin/cards/Create',
             [
+                'raritySettings' => $this->raritySettings(),
+
                 'species' => Species::query()
                     ->where('is_active', true)
                     ->orderBy('common_name')
@@ -141,19 +152,14 @@ class CardController extends Controller
             $request,
             $validated
         ) {
-            $card = Card::create([
-                'species_id' => $validated['species_id'],
-                'name' => $validated['name'],
-                'rarity' => $validated['rarity'],
-                'edition' => $validated['edition'] ?? null,
-                'description' => $validated['description'] ?? null,
-                'model_name' => $validated['model_name'] ?? null,
-                'model_url' => $validated['model_url'] ?? null,
-                'model_format' => $validated['model_format'] ?? null,
-                'model_description' => $validated['model_description'] ?? null,
-                'is_active' => $request->boolean('is_active'),
-                'sort_order' => $validated['sort_order'] ?? 0,
-            ]);
+            $card = Card::create(
+                $this->cardAttributes($request, $validated)
+            );
+
+            $this->syncQuizQuestions(
+                $card,
+                $validated['questions'] ?? []
+            );
 
             /*
              * Imagen de la tarjeta.
@@ -205,12 +211,15 @@ class CardController extends Controller
     {
         $card->load([
             'species',
+            'quizQuestions.answers',
         ]);
 
         return Inertia::render(
             'admin/cards/Edit',
             [
                 'card' => $card,
+
+                'raritySettings' => $this->raritySettings(),
 
                 'species' => Species::query()
                     ->where('is_active', true)
@@ -238,19 +247,14 @@ class CardController extends Controller
             $card,
             $validated
         ) {
-            $card->update([
-                'species_id' => $validated['species_id'],
-                'name' => $validated['name'],
-                'rarity' => $validated['rarity'],
-                'edition' => $validated['edition'] ?? null,
-                'description' => $validated['description'] ?? null,
-                'model_name' => $validated['model_name'] ?? null,
-                'model_url' => $validated['model_url'] ?? null,
-                'model_format' => $validated['model_format'] ?? null,
-                'model_description' => $validated['model_description'] ?? null,
-                'is_active' => $request->boolean('is_active'),
-                'sort_order' => $validated['sort_order'] ?? 0,
-            ]);
+            $card->update(
+                $this->cardAttributes($request, $validated)
+            );
+
+            $this->syncQuizQuestions(
+                $card,
+                $validated['questions'] ?? []
+            );
 
             /*
              * Nueva imagen.
@@ -423,6 +427,133 @@ class CardController extends Controller
             'success',
             'Modelo 3D eliminado correctamente.'
         );
+    }
+
+    /**
+     * Configuración de duelos de cada rareza.
+     */
+    private function raritySettings(): Collection
+    {
+        return CardRaritySetting::query()
+            ->orderBy('id')
+            ->get([
+                'id',
+                'rarity',
+                'questions_per_duel',
+                'retries',
+            ]);
+    }
+
+    /**
+     * Atributos de la tarjeta a partir de los datos validados.
+     */
+    private function cardAttributes(
+        FormRequest $request,
+        array $validated
+    ): array {
+        $usesCardSettings =
+            $validated['duel_settings_source'] === Card::DUEL_SETTINGS_CARD;
+
+        return [
+            'species_id' => $validated['species_id'],
+            'name' => $validated['name'],
+            'rarity' => $validated['rarity'],
+            'edition' => $validated['edition'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'model_name' => $validated['model_name'] ?? null,
+            'model_url' => $validated['model_url'] ?? null,
+            'model_format' => $validated['model_format'] ?? null,
+            'model_description' => $validated['model_description'] ?? null,
+            'is_active' => $request->boolean('is_active'),
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'astucia' => $validated['astucia'],
+            'rapidez' => $validated['rapidez'],
+            'fuerza' => $validated['fuerza'],
+            'duel_settings_source' => $validated['duel_settings_source'],
+
+            /*
+             * Solo se guardan valores propios si la tarjeta
+             * no usa la configuración de su rareza.
+             */
+            'questions_per_duel' => $usesCardSettings
+                ? $validated['questions_per_duel']
+                : null,
+            'retries' => $usesCardSettings
+                ? $validated['retries']
+                : null,
+        ];
+    }
+
+    /**
+     * Sincronizar las preguntas del quiz y sus respuestas.
+     *
+     * Se actualizan las existentes, se crean las nuevas
+     * y se eliminan las que ya no vienen en la petición.
+     */
+    private function syncQuizQuestions(
+        Card $card,
+        array $questions
+    ): void {
+        $existingQuestions = $card->quizQuestions()
+            ->with('answers')
+            ->get()
+            ->keyBy('id');
+
+        $keptQuestionIds = [];
+
+        foreach (array_values($questions) as $index => $data) {
+            $attributes = [
+                'question' => $data['question'],
+                'is_active' => filter_var(
+                    $data['is_active'] ?? true,
+                    FILTER_VALIDATE_BOOLEAN
+                ),
+                'sort_order' => $data['sort_order'] ?? $index,
+            ];
+
+            $question = $existingQuestions->get($data['id'] ?? null);
+
+            if ($question) {
+                $question->update($attributes);
+            } else {
+                $question = $card->quizQuestions()->create($attributes);
+            }
+
+            $keptQuestionIds[] = $question->id;
+
+            $existingAnswers = $question->answers->keyBy('id');
+
+            $keptAnswerIds = [];
+
+            foreach (array_values($data['answers']) as $answerIndex => $answerData) {
+                $answerAttributes = [
+                    'answer' => $answerData['answer'],
+                    'is_correct' => filter_var(
+                        $answerData['is_correct'],
+                        FILTER_VALIDATE_BOOLEAN
+                    ),
+                    'sort_order' => $answerData['sort_order'] ?? $answerIndex,
+                ];
+
+                $answer = $existingAnswers->get($answerData['id'] ?? null);
+
+                if ($answer) {
+                    $answer->update($answerAttributes);
+                } else {
+                    $answer = $question->answers()->create($answerAttributes);
+                }
+
+                $keptAnswerIds[] = $answer->id;
+            }
+
+            $question->answers()
+                ->whereNotIn('id', $keptAnswerIds)
+                ->delete();
+        }
+
+        $card->quizQuestions()
+            ->whereNotIn('id', $keptQuestionIds)
+            ->delete();
     }
 
     /**

@@ -16,12 +16,15 @@ import {
     Tag,
     Zap,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
+
+import { getRarityLabel } from '@/lib/cardRarity';
+import type { DuelSettingsSource } from '@/lib/cardRarity';
 import admin from '@/routes/admin';
 
 interface SpeciesCategory {
     id: number;
     name: string;
-    retry_limit?: number;
 }
 
 interface Species {
@@ -64,27 +67,25 @@ interface Card {
     astucia?: number;
     rapidez?: number;
     fuerza?: number;
-    questions_per_duel?: number;
-    retry_type?: 'card' | 'category';
+    duel_settings_source?: DuelSettingsSource;
+    questions_per_duel?: number | null;
     retries?: number | null;
-    particular_retries?: number;
+    effective_questions_per_duel?: number;
+    effective_retries?: number;
     species: Species;
     quiz_questions?: QuizQuestion[];
 }
 
-defineProps<{ card: Card }>();
+const props = defineProps<{ card: Card }>();
+
+const duelSettingsLabel = computed(() =>
+    props.card.duel_settings_source === 'card' ? 'Personalizado' : 'Por rareza',
+);
 
 const fileUrl = (path: string | null): string | null => {
     if (!path) return null;
     if (/^(https?:\/\/|\/)/.test(path)) return path;
     return `/storage/${path}`;
-};
-
-const rarityLabels: Record<string, string> = {
-    comun: 'Común',
-    rara: 'Rara',
-    epica: 'Épica',
-    edicion_especial: 'Edición especial',
 };
 
 const rarityClasses: Record<string, string> = {
@@ -94,7 +95,7 @@ const rarityClasses: Record<string, string> = {
     edicion_especial: 'bg-amber-50 text-amber-700',
 };
 
-const rarityLabel = (value: string) => rarityLabels[value] ?? value;
+const rarityLabel = getRarityLabel;
 
 const rarityClass = (value: string) =>
     rarityClasses[value] ?? rarityClasses.comun;
@@ -263,16 +264,19 @@ defineOptions({
                     <div class="rounded-lg border border-[#E5ECE7] p-3">
                         <p class="text-xs text-[#718477]">Preguntas por duelo</p>
                         <p class="mt-1 text-sm font-semibold text-[#244334]">
-                            {{ card.questions_per_duel ?? 3 }} preguntas
+                            {{ card.effective_questions_per_duel ?? 3 }} preguntas
+                            <span class="text-xs font-normal text-[#718477]">
+                                ({{ duelSettingsLabel }})
+                            </span>
                         </p>
                     </div>
 
                     <div class="rounded-lg border border-[#E5ECE7] p-3">
                         <p class="text-xs text-[#718477]">Límite de reintentos</p>
                         <p class="mt-1 text-sm font-semibold text-[#244334]">
-                            {{ card.particular_retries ?? card.retries ?? 3 }}
+                            {{ card.effective_retries ?? 3 }}
                             <span class="text-xs font-normal text-[#718477]">
-                                ({{ card.retry_type === 'category' ? 'Por categoría' : 'Por tarjeta' }})
+                                ({{ duelSettingsLabel }})
                             </span>
                         </p>
                     </div>

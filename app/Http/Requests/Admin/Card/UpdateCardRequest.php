@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Admin\Card;
 
+use App\Enums\CardRarity;
+use App\Models\Card;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,12 +32,7 @@ class UpdateCardRequest extends FormRequest
             'rarity' => [
                 'required',
                 'string',
-                Rule::in([
-                    'comun',
-                    'rara',
-                    'epica',
-                    'edicion_especial',
-                ]),
+                Rule::enum(CardRarity::class),
             ],
 
             'edition' => [
@@ -114,28 +111,26 @@ class UpdateCardRequest extends FormRequest
                 'between:1,100',
             ],
 
-            'questions_per_duel' => [
+            'duel_settings_source' => [
                 'required',
+                'string',
+                Rule::in([
+                    Card::DUEL_SETTINGS_RARITY,
+                    Card::DUEL_SETTINGS_CARD,
+                ]),
+            ],
+
+            'questions_per_duel' => [
+                'nullable',
+                'required_if:duel_settings_source,'.Card::DUEL_SETTINGS_CARD,
                 'integer',
                 'min:1',
                 'max:50',
             ],
 
-            'retry_type' => [
-                'required',
-                'string',
-                Rule::in(['card', 'category']),
-            ],
-
             'retries' => [
                 'nullable',
-                'integer',
-                'min:1',
-                'max:100',
-            ],
-
-            'category_retry_limit' => [
-                'nullable',
+                'required_if:duel_settings_source,'.Card::DUEL_SETTINGS_CARD,
                 'integer',
                 'min:1',
                 'max:100',

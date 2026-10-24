@@ -10,14 +10,12 @@ class SpeciesCategory extends Model
     protected $fillable = [
         'name',
         'description',
-        'retry_limit',
         'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'retry_limit' => 'integer',
             'is_active' => 'boolean',
         ];
     }

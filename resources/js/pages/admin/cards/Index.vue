@@ -10,10 +10,17 @@ import {
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
 
+import {
+    getRarityClasses,
+    getRarityLabel,
+    rarityOptions,
+} from '@/lib/cardRarity';
+import type { CardRaritySetting } from '@/lib/cardRarity';
 import admin from '@/routes/admin';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import DataTable from '@/components/admin/DataTable.vue';
 import TableActions from '@/components/admin/TableActions.vue';
+import RaritySettingsTable from '@/components/admin/cards/RaritySettingsTable.vue';
 
 interface Species {
     id: number;
@@ -62,6 +69,7 @@ const props = defineProps<{
         rarity?: string;
     };
     species: Species[];
+    raritySettings: CardRaritySetting[];
 }>();
 
 const search = ref(props.filters?.search ?? '');
@@ -126,28 +134,6 @@ const deleteCard = (card: Card) => {
             );
         }
     });
-};
-
-const getRarityLabel = (value: string) => {
-    const labels: Record<string, string> = {
-        comun: 'Común',
-        rara: 'Rara',
-        epica: 'Épica',
-        edicion_especial: 'Edición especial',
-    };
-
-    return labels[value] ?? value;
-};
-
-const getRarityClasses = (value: string) => {
-    const classes: Record<string, string> = {
-        comun: 'border-[#dce7df] bg-[#f2f7f4] text-[#52685a]',
-        rara: 'border-blue-200 bg-blue-50 text-blue-700',
-        epica: 'border-purple-200 bg-purple-50 text-purple-700',
-        edicion_especial: 'border-amber-200 bg-amber-50 text-amber-700',
-    };
-
-    return classes[value] ?? 'border-[#dce7df] bg-[#f2f7f4] text-[#52685a]';
 };
 
 const getModelLabel = (card: Card) => {
@@ -216,6 +202,8 @@ defineOptions({
             :action-href="admin.cards.create().url"
         />
 
+        <RaritySettingsTable :settings="raritySettings" />
+
         <DataTable
             v-model:search="search"
             :pagination="cards"
@@ -252,10 +240,13 @@ defineOptions({
                     @change="applyFilters"
                 >
                     <option value="">Todas las rarezas</option>
-                    <option value="comun">Común</option>
-                    <option value="rara">Rara</option>
-                    <option value="epica">Épica</option>
-                    <option value="edicion_especial">Edición especial</option>
+                    <option
+                        v-for="option in rarityOptions"
+                        :key="option.value"
+                        :value="option.value"
+                    >
+                        {{ option.label }}
+                    </option>
                 </select>
             </template>
 
