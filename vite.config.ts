@@ -21,6 +21,10 @@ export default defineConfig({
         tailwindcss(),
         vue({
             template: {
+                compilerOptions: {
+                    // <babylon-viewer> es un web component (visor 3D).
+                    isCustomElement: (tag) => tag.startsWith('babylon-'),
+                },
                 transformAssetUrls: {
                     base: null,
                     includeAbsolute: false,

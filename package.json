@@ -41,6 +41,9 @@
         "vue-tsc": "^2.2.4"
     },
     "dependencies": {
+        "@babylonjs/core": "^9.32.0",
+        "@babylonjs/loaders": "^9.32.0",
+        "@babylonjs/viewer": "^9.32.0",
         "@inertiajs/vite": "^3.0.0",
         "@inertiajs/vue3": "^3.0.0",
         "@laravel/passkeys": "^0.2.0",

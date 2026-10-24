@@ -18,8 +18,11 @@ import {
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
+import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
+
 import { getRarityLabel } from '@/lib/cardRarity';
 import type { DuelSettingsSource } from '@/lib/cardRarity';
+import { modelExtension, storageUrl } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
 
 interface SpeciesCategory {
@@ -78,15 +81,17 @@ interface Card {
 
 const props = defineProps<{ card: Card }>();
 
+const modelPreviewSource = computed(
+    () => storageUrl(props.card.model_file) ?? props.card.model_url,
+);
+
+const modelPreviewExtension = computed(() =>
+    modelExtension(props.card.model_file ?? props.card.model_url),
+);
+
 const duelSettingsLabel = computed(() =>
     props.card.duel_settings_source === 'card' ? 'Personalizado' : 'Por rareza',
 );
-
-const fileUrl = (path: string | null): string | null => {
-    if (!path) return null;
-    if (/^(https?:\/\/|\/)/.test(path)) return path;
-    return `/storage/${path}`;
-};
 
 const rarityClasses: Record<string, string> = {
     comun: 'bg-[#F2F7F4] text-[#718477]',
@@ -190,7 +195,7 @@ defineOptions({
                 <div class="flex min-h-64 items-center justify-center rounded-lg bg-[#F6F9F6] p-3">
                     <img
                         v-if="card.card_image"
-                        :src="fileUrl(card.card_image) ?? ''"
+                        :src="storageUrl(card.card_image) ?? ''"
                         :alt="card.name"
                         class="max-h-[380px] w-full object-contain"
                     />
@@ -353,6 +358,14 @@ defineOptions({
                 </span>
             </div>
 
+            <ModelViewer
+                v-if="modelPreviewSource"
+                :source="modelPreviewSource"
+                :extension="modelPreviewExtension"
+                height-class="h-[420px]"
+                class="mb-3"
+            />
+
             <div
                 v-if="card.model_file || card.model_url"
                 class="grid gap-3 md:grid-cols-2"
@@ -375,7 +388,7 @@ defineOptions({
 
                     <a
                         v-if="card.model_file"
-                        :href="fileUrl(card.model_file) ?? ''"
+                        :href="storageUrl(card.model_file) ?? ''"
                         target="_blank"
                         rel="noopener noreferrer"
                         class="flex items-center gap-2 rounded-lg border border-[#DCE7DF] p-3 text-sm text-[#187744] hover:bg-[#F6F9F6]"

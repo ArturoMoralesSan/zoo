@@ -19,9 +19,12 @@ import {
     Zap,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
+import { computed } from 'vue';
 
+import { useObjectUrl } from '@/composables/useObjectUrl';
 import { rarityOptions } from '@/lib/cardRarity';
 import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
+import { modelExtension, storageUrl } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
@@ -29,6 +32,7 @@ import AdminButton from '@/components/admin/AdminButton.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
+import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 
 interface Species {
     id: number;
@@ -197,34 +201,6 @@ const submit = () => {
     });
 };
 
-const cardImageUrl = (path: string | null): string | null => {
-    if (!path) return null;
-
-    if (
-        path.startsWith('http://') ||
-        path.startsWith('https://') ||
-        path.startsWith('/')
-    ) {
-        return path;
-    }
-
-    return `/storage/${path}`;
-};
-
-const modelFileUrl = (path: string | null): string | null => {
-    if (!path) return null;
-
-    if (
-        path.startsWith('http://') ||
-        path.startsWith('https://') ||
-        path.startsWith('/')
-    ) {
-        return path;
-    }
-
-    return `/storage/${path}`;
-};
-
 const handleCardImage = (event: Event) => {
     const target = event.target as HTMLInputElement;
     form.card_image = target.files?.[0] ?? null;
@@ -234,6 +210,28 @@ const handleModelFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
     form.model_file = target.files?.[0] ?? null;
 };
+
+/*
+ * Vista previa: archivo nuevo, luego el archivo guardado y por último la URL.
+ */
+const modelFilePreviewUrl = useObjectUrl(() => form.model_file);
+
+const modelPreviewSource = computed(
+    () =>
+        modelFilePreviewUrl.value ??
+        storageUrl(props.card.model_file) ??
+        (form.model_url.trim() || null),
+);
+
+const modelPreviewExtension = computed(() => {
+    if (form.model_file) {
+        return modelExtension(form.model_file.name);
+    }
+
+    return props.card.model_file
+        ? modelExtension(props.card.model_file)
+        : modelExtension(form.model_url);
+});
 
 const deleteImage = () => {
     Swal.fire({
@@ -836,7 +834,7 @@ defineOptions({
                         class="flex flex-col gap-5 rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4 sm:flex-row sm:items-start"
                     >
                         <img
-                            :src="cardImageUrl(card.card_image) ?? ''"
+                            :src="storageUrl(card.card_image) ?? ''"
                             :alt="card.name"
                             class="h-44 w-32 shrink-0 rounded-lg border border-[#DCE7DF] bg-white object-cover"
                         />
@@ -981,7 +979,7 @@ defineOptions({
                                 </p>
 
                                 <a
-                                    :href="modelFileUrl(card.model_file) ?? ''"
+                                    :href="storageUrl(card.model_file) ?? ''"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="mt-1 flex items-start gap-1 break-all text-sm font-medium text-[#187744] hover:underline"
@@ -1168,6 +1166,16 @@ defineOptions({
                         >
                             {{ form.errors.model_url }}
                         </p>
+                    </div>
+
+                    <!-- Vista previa del modelo -->
+                    <div class="form-field">
+                        <span class="form-label">Vista previa</span>
+
+                        <ModelViewer
+                            :source="modelPreviewSource"
+                            :extension="modelPreviewExtension"
+                        />
                     </div>
 
                     <!-- Descripción -->

@@ -17,9 +17,12 @@ import {
     Upload,
     Zap,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 
+import { useObjectUrl } from '@/composables/useObjectUrl';
 import { rarityOptions } from '@/lib/cardRarity';
 import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
+import { modelExtension } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
@@ -27,6 +30,7 @@ import AdminButton from '@/components/admin/AdminButton.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
+import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 
 interface Species {
     id: number;
@@ -145,6 +149,21 @@ const handleModelFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
     form.model_file = target.files?.[0] ?? null;
 };
+
+/*
+ * Vista previa: el archivo seleccionado tiene prioridad sobre la URL.
+ */
+const modelFilePreviewUrl = useObjectUrl(() => form.model_file);
+
+const modelPreviewSource = computed(
+    () => modelFilePreviewUrl.value ?? (form.model_url.trim() || null),
+);
+
+const modelPreviewExtension = computed(() =>
+    form.model_file
+        ? modelExtension(form.model_file.name)
+        : modelExtension(form.model_url),
+);
 
 defineOptions({
     layout: {
@@ -888,6 +907,16 @@ defineOptions({
                         >
                             {{ form.errors.model_url }}
                         </p>
+                    </div>
+
+                    <!-- Vista previa del modelo -->
+                    <div class="form-field">
+                        <span class="form-label">Vista previa</span>
+
+                        <ModelViewer
+                            :source="modelPreviewSource"
+                            :extension="modelPreviewExtension"
+                        />
                     </div>
 
                     <!-- Descripción del modelo -->
