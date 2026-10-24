@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CardController;
+use App\Http\Controllers\Admin\CardQrCodeController;
 use App\Http\Controllers\Admin\CardRaritySettingController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DonationController;
@@ -357,6 +358,32 @@ Route::middleware(['auth', 'verified'])
                         'update' => 'permission:cards.edit',
                         'destroy' => 'permission:cards.delete',
                     ]);
+
+                /*
+                 * Códigos QR para iniciar duelos.
+                 * scopeBindings: el QR debe pertenecer a la tarjeta de la URL.
+                 */
+                Route::scopeBindings()->group(function () {
+                    Route::resource('qr-codes', CardQrCodeController::class)
+                        ->except('show')
+                        ->parameters([
+                            'qr-codes' => 'qrCode',
+                        ])
+                        ->middleware([
+                            'index' => 'permission:cards.view',
+                            'create' => 'permission:cards.edit',
+                            'store' => 'permission:cards.edit',
+                            'edit' => 'permission:cards.edit',
+                            'update' => 'permission:cards.edit',
+                            'destroy' => 'permission:cards.delete',
+                        ]);
+
+                    Route::post(
+                        'qr-codes/{qrCode}/regenerate',
+                        [CardQrCodeController::class, 'regenerate']
+                    )->middleware('permission:cards.edit')
+                        ->name('qr-codes.regenerate');
+                });
             });
     });
 

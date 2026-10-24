@@ -5,6 +5,7 @@ import {
     HelpCircle,
     Eye,
     Pencil,
+    QrCode,
     Trash2,
 } from 'lucide-vue-next';
 
@@ -18,18 +19,21 @@ withDefaults(defineProps<{
     viewUrl?: string;
     editUrl?: string;
     questionsUrl?: string;
+    qrCodesUrl?: string;
     deleteTitle?: string;
     deleteLabel?: string;
     itemName?: string;
     showView?: boolean;
     showEdit?: boolean;
     showQuestions?: boolean;
+    showQrCodes?: boolean;
     showDelete?: boolean;
     loading?: boolean;
 }>(), {
     showView: true,
     showEdit: true,
     showQuestions: false,
+    showQrCodes: false,
     showDelete: true,
     deleteTitle: '',
     deleteLabel: 'Eliminar',
@@ -58,6 +62,21 @@ const emit = defineEmits<{
                 <HelpCircle :size="16" />
                 Preguntas
             </Link>
+
+            <!-- Administrar códigos QR -->
+            <Link
+                v-if="showQrCodes && qrCodesUrl"
+                :href="qrCodesUrl"
+                title="Administrar códigos QR"
+                aria-label="Administrar códigos QR"
+                class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52685a] transition hover:bg-[#e4f2e8] hover:text-[#187744] focus:outline-none focus:ring-2 focus:ring-[#187744]/15"
+            >
+                <QrCode :size="16" />
+                QR
+            </Link>
+
+            <!-- Acciones adicionales -->
+            <slot />
 
             <!-- Ver -->
             <Link

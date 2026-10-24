@@ -427,10 +427,12 @@ defineOptions({
                     <!-- Acciones reutilizables -->
                     <TableActions
                         :questions-url="admin.cards.quiz.index(card.id).url"
+                        :qr-codes-url="admin.cards.qrCodes.index(card.id).url"
                         :view-url="admin.cards.show(card.id).url"
                         :edit-url="admin.cards.edit(card.id).url"
                         item-name="tarjeta"
                         show-questions
+                        show-qr-codes
                         @delete="deleteCard(card)"
                     />
                 </tr>

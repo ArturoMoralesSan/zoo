@@ -105,7 +105,8 @@ class CardController extends Controller
         $card->load([
             'species',
             'raritySetting',
-        ])->append([
+            'quizQuestions.answers',
+        ])->loadCount('qrCodes')->append([
             'effective_questions_per_duel',
             'effective_retries',
             'effective_cooldown_minutes',

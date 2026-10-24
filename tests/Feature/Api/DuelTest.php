@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Card;
 use App\Models\CardCapture;
+use App\Models\CardQrCode;
 use App\Models\CardRaritySetting;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
@@ -79,12 +80,27 @@ class DuelTest extends TestCase
             ]);
         }
 
+        $card->qrCodes()->create([
+            'label' => 'Entrada',
+            'is_active' => true,
+        ]);
+
         return $card;
     }
 
+    /**
+     * Iniciar un duelo escaneando el primer QR de la tarjeta.
+     */
     private function startDuel(?Card $card = null): TestResponse
     {
-        return $this->postJson(route('api.cards.duel.store', $card ?? $this->card));
+        $qrCode = ($card ?? $this->card)->qrCodes()->first();
+
+        return $this->scan($qrCode->token);
+    }
+
+    private function scan(?string $code): TestResponse
+    {
+        return $this->postJson(route('api.duels.store'), ['code' => $code]);
     }
 
     /**
@@ -323,5 +339,70 @@ class DuelTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.retries_left', 0)
             ->assertJsonPath('data.locked_until', now()->addMinutes(30)->toJSON());
+    }
+
+    public function test_unknown_qr_code_returns_404(): void
+    {
+        $this->scan(str_repeat('x', 64))
+            ->assertNotFound()
+            ->assertJsonPath('success', false);
+    }
+
+    public function test_inactive_qr_code_returns_404(): void
+    {
+        $this->card->qrCodes()->update(['is_active' => false]);
+
+        $this->startDuel()->assertNotFound();
+    }
+
+    public function test_expired_qr_code_returns_410(): void
+    {
+        $this->card->qrCodes()->update(['expires_at' => now()->subMinute()]);
+
+        $this->startDuel()->assertStatus(410);
+    }
+
+    public function test_qr_code_with_future_expiration_starts_a_duel(): void
+    {
+        $this->card->qrCodes()->update(['expires_at' => now()->addDay()]);
+
+        $this->startDuel()->assertOk();
+    }
+
+    public function test_scanning_records_the_scan(): void
+    {
+        $this->startDuel()->assertOk();
+        $this->startDuel()->assertOk();
+
+        $qrCode = $this->card->qrCodes()->first();
+
+        $this->assertSame(2, $qrCode->scans_count);
+        $this->assertNotNull($qrCode->last_scanned_at);
+    }
+
+    public function test_code_is_required(): void
+    {
+        $this->scan(null)->assertStatus(422)->assertJsonValidationErrors('code');
+    }
+
+    public function test_duel_response_never_exposes_the_qr_token(): void
+    {
+        $token = $this->card->qrCodes()->first()->token;
+
+        $this->assertStringNotContainsString($token, $this->startDuel()->getContent());
+    }
+
+    public function test_duel_cannot_be_started_by_card_id(): void
+    {
+        $this->postJson("/api/cards/{$this->card->id}/duel")->assertNotFound();
+    }
+
+    public function test_qr_codes_get_a_unique_random_token(): void
+    {
+        $first = $this->card->qrCodes()->first();
+        $second = CardQrCode::create(['card_id' => $this->card->id]);
+
+        $this->assertSame(64, strlen($first->token));
+        $this->assertNotSame($first->token, $second->token);
     }
 }

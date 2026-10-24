@@ -113,16 +113,17 @@ Route::middleware('auth:sanctum')->group(function () {
     | Duelos
     |--------------------------------------------------------------------------
     |
+    | El duelo se inicia con el token de un código QR de la tarjeta.
     | El servidor elige las preguntas, califica, cuenta los reintentos
     | y captura la tarjeta solo si todas las respuestas son correctas.
     |
     */
 
-    Route::post('/cards/{card}/duel', [
+    Route::post('/duels', [
         DuelController::class,
         'store',
     ])->middleware('throttle:30,1')
-        ->name('api.cards.duel.store');
+        ->name('api.duels.store');
 
     Route::post('/duels/{attempt}/submit', [
         DuelController::class,

@@ -23,6 +23,16 @@ class DuelException extends Exception
         parent::__construct($message);
     }
 
+    public static function invalidQr(): self
+    {
+        return new self('Código QR no válido.', 404);
+    }
+
+    public static function expiredQr(): self
+    {
+        return new self('Este código QR ya venció.', 410);
+    }
+
     public static function cardNotAvailable(): self
     {
         return new self('Esta tarjeta no está disponible.', 404);

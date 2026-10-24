@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\StartDuelRequest;
 use App\Http\Requests\Api\SubmitDuelRequest;
-use App\Models\Card;
 use App\Models\QuizAttempt;
 use App\Services\CardDuelService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class DuelController extends Controller
 {
@@ -17,13 +16,16 @@ class DuelController extends Controller
     ) {}
 
     /**
-     * Iniciar (o reanudar) un duelo por una tarjeta.
+     * Iniciar (o reanudar) un duelo escaneando el código QR de una tarjeta.
      */
-    public function store(Request $request, Card $card): JsonResponse
+    public function store(StartDuelRequest $request): JsonResponse
     {
         return response()->json([
             'success' => true,
-            'data' => $this->duelService->start($request->user(), $card),
+            'data' => $this->duelService->startFromQr(
+                $request->user(),
+                $request->validated('code')
+            ),
         ]);
     }
 

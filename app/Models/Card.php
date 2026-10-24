@@ -120,6 +120,11 @@ class Card extends Model
         );
     }
 
+    public function qrCodes(): HasMany
+    {
+        return $this->hasMany(CardQrCode::class);
+    }
+
     public function quizAttempts(): HasMany
     {
         return $this->hasMany(QuizAttempt::class);

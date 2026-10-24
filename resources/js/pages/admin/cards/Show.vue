@@ -11,6 +11,7 @@ import {
     ImageOff,
     Info,
     Pencil,
+    QrCode,
     RotateCcw,
     Swords,
     Tag,
@@ -76,6 +77,7 @@ interface Card {
     effective_questions_per_duel?: number;
     effective_retries?: number;
     effective_cooldown_minutes?: number;
+    qr_codes_count?: number;
     species: Species;
     quiz_questions?: QuizQuestion[];
 }
@@ -453,6 +455,31 @@ defineOptions({
                     class="mt-2 inline-block text-sm font-semibold text-[#187744] hover:underline"
                 >
                     Agregar modelo
+                </Link>
+            </div>
+        </section>
+
+        <!-- Códigos QR -->
+        <section class="rounded-xl border border-[#DCE7DF] bg-white p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <QrCode :size="19" class="text-[#187744]" />
+                    <div>
+                        <h2 class="text-sm font-semibold text-[#244334]">
+                            Códigos QR ({{ card.qr_codes_count ?? 0 }})
+                        </h2>
+                        <p class="text-xs text-[#718477]">
+                            Los visitantes escanean estos códigos para iniciar un duelo por la tarjeta
+                        </p>
+                    </div>
+                </div>
+
+                <Link
+                    :href="admin.cards.qrCodes.index(card.id).url"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-[#DCE7DF] px-3 py-1.5 text-xs font-semibold text-[#187744] hover:bg-[#F2F7F4]"
+                >
+                    <QrCode :size="13" />
+                    Gestionar códigos QR
                 </Link>
             </div>
         </section>

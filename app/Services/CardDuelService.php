@@ -6,6 +6,7 @@ use App\Exceptions\DuelException;
 use App\Http\Resources\CardResource;
 use App\Models\Card;
 use App\Models\CardCapture;
+use App\Models\CardQrCode;
 use App\Models\CardQuizState;
 use App\Models\QuizAttempt;
 use App\Models\QuizQuestion;
@@ -30,11 +31,41 @@ class CardDuelService
     public const ATTEMPT_TTL_MINUTES = 10;
 
     /**
+     * Iniciar (o reanudar) un duelo a partir del token de un código QR.
+     *
+     * Es la única forma de iniciar un duelo: la tarjeta se obtiene
+     * del QR, nunca de un id enviado por la app.
+     *
+     * @return array<string, mixed>
+     */
+    public function startFromQr(User $user, string $token): array
+    {
+        $qrCode = CardQrCode::query()
+            ->with('card')
+            ->where('token', $token)
+            ->first();
+
+        if (! $qrCode || ! $qrCode->is_active) {
+            throw DuelException::invalidQr();
+        }
+
+        if ($qrCode->isExpired()) {
+            throw DuelException::expiredQr();
+        }
+
+        $qrCode->increment('scans_count', 1, [
+            'last_scanned_at' => now(),
+        ]);
+
+        return $this->start($user, $qrCode->card);
+    }
+
+    /**
      * Iniciar un duelo o reanudar el que está pendiente.
      *
      * @return array<string, mixed>
      */
-    public function start(User $user, Card $card): array
+    private function start(User $user, Card $card): array
     {
         $this->ensureCardIsAvailable($card);
 
