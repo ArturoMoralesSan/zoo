@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Tarjeta para el hub de la app móvil.
  *
- * El modelo 3D (archivo GLB) solo se envía si el usuario posee la tarjeta.
+ * El modelo 3D (archivo GLB) y la imagen final de la tarjeta solo se envían
+ * si el usuario posee la tarjeta.
  *
  * @mixin Card
  */
@@ -39,7 +40,7 @@ class CardResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'card_image' => self::publicUrl($this->card_image),
+            'thumbnail_image' => self::publicUrl($this->thumbnail_image),
             'rarity' => $this->rarity,
             'species_name' => $this->species?->common_name,
             'category_name' => $this->species?->category?->name,
@@ -52,6 +53,7 @@ class CardResource extends JsonResource
             'encountered' => $isOwned,
             'captured_at' => Carbon::make($this->capturedAt)?->toJSON(),
             'model_url' => $isOwned ? self::publicUrl($this->model_file) : null,
+            'card_image_url' => $isOwned ? self::publicUrl($this->generated_image) : null,
         ];
     }
 

@@ -35,11 +35,28 @@ class UpdateCardRequest extends FormRequest
                 Rule::enum(CardRarity::class),
             ],
 
-            'card_image' => [
+            'thumbnail_image' => [
                 'nullable',
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
+            ],
+
+            'artwork_image' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
+
+            /*
+             * Imagen final generada en el navegador a partir de la plantilla.
+             */
+            'generated_image' => [
+                'nullable',
+                'image',
+                'mimes:png',
+                'max:15360',
             ],
 
             'model_file' => [

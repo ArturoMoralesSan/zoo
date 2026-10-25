@@ -321,9 +321,10 @@ Route::middleware(['auth', 'verified'])
             ->middlewareFor('destroy', 'permission:cards.delete');
 
         Route::delete(
-            'cards/{card}/image',
+            'cards/{card}/image/{image}',
             [CardController::class, 'destroyImage']
-        )->middleware('permission:cards.edit')
+        )->whereIn('image', array_keys(CardController::IMAGE_FIELDS))
+            ->middleware('permission:cards.edit')
             ->name('cards.image.destroy');
 
         Route::delete(

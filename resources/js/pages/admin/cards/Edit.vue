@@ -16,7 +16,7 @@ import {
     Zap,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
-import { computed } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 
 import { useObjectUrl } from '@/composables/useObjectUrl';
 import { rarityOptions } from '@/lib/cardRarity';
@@ -28,6 +28,8 @@ import AdminCard from '@/components/admin/AdminCard.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import CardImageField from '@/components/admin/cards/CardImageField.vue';
+import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 
@@ -44,7 +46,9 @@ interface Card {
     species_id: number;
     name: string;
     rarity: string;
-    card_image: string | null;
+    thumbnail_image: string | null;
+    artwork_image: string | null;
+    generated_image: string | null;
     model_file: string | null;
     is_active: boolean;
     sort_order: number;
@@ -68,7 +72,9 @@ const form = useForm({
     species_id: String(props.card.species_id),
     name: props.card.name ?? '',
     rarity: props.card.rarity ?? 'comun',
-    card_image: null as File | null,
+    thumbnail_image: null as File | null,
+    artwork_image: null as File | null,
+    generated_image: null as File | null,
     model_file: null as File | null,
     is_active: props.card.is_active,
     sort_order: props.card.sort_order ?? 0,
@@ -82,7 +88,38 @@ const form = useForm({
     cooldown_minutes: props.card.cooldown_minutes ?? null,
 });
 
-const submit = () => {
+/*
+ * Vista previa de la tarjeta generada a partir de la plantilla.
+ */
+const preview = useTemplateRef<InstanceType<typeof CardPreview>>('preview');
+
+const selectedSpecies = computed(() =>
+    props.species.find((item) => String(item.id) === form.species_id),
+);
+
+const artworkFilePreviewUrl = useObjectUrl(() => form.artwork_image);
+
+const artworkPreviewUrl = computed(
+    () => artworkFilePreviewUrl.value ?? storageUrl(props.card.artwork_image),
+);
+
+const generatingImage = ref(false);
+
+const submit = async () => {
+    /*
+     * La imagen final se genera al guardar para que coincida
+     * con los datos enviados.
+     */
+    generatingImage.value = true;
+
+    try {
+        form.generated_image = (await preview.value?.generatePngFile()) ?? null;
+    } catch {
+        form.generated_image = null;
+    } finally {
+        generatingImage.value = false;
+    }
+
     form.transform((data) => ({
         ...data,
         _method: 'PUT',
@@ -90,11 +127,6 @@ const submit = () => {
         forceFormData: true,
         preserveScroll: true,
     });
-};
-
-const handleCardImage = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    form.card_image = target.files?.[0] ?? null;
 };
 
 const handleModelFile = (event: Event) => {
@@ -111,10 +143,13 @@ const modelPreviewSource = computed(
     () => modelFilePreviewUrl.value ?? storageUrl(props.card.model_file),
 );
 
-const deleteImage = () => {
+const deleteImage = (image: 'thumbnail' | 'artwork') => {
     Swal.fire({
         title: '¿Eliminar imagen?',
-        text: 'La imagen actual de esta tarjeta será eliminada.',
+        text:
+            image === 'thumbnail'
+                ? 'La miniatura actual de esta tarjeta será eliminada.'
+                : 'La imagen actual de la plantilla será eliminada.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
@@ -125,10 +160,10 @@ const deleteImage = () => {
     }).then((result) => {
         if (!result.isConfirmed) return;
 
-        form.delete(admin.cards.image.destroy(props.card.id).url, {
+        form.delete(admin.cards.image.destroy([props.card.id, image]).url, {
             preserveScroll: true,
             onSuccess: () => {
-                form.card_image = null;
+                form[`${image}_image` as const] = null;
             },
         });
     });
@@ -447,103 +482,53 @@ defineOptions({
                 :errors="form.errors"
             />
 
-            <!-- Imagen de la tarjeta -->
+            <!-- Imágenes de la tarjeta -->
             <AdminCard
-                title="Imagen de la tarjeta"
-                description="Conserva la imagen actual o reemplázala por una nueva."
+                title="Imágenes de la tarjeta"
+                description="Conserva las imágenes actuales o reemplázalas por nuevas."
                 :icon="FileImage"
             >
-                <div class="space-y-5">
-                    <!-- Imagen actual -->
-                    <div
-                        v-if="card.card_image"
-                        class="flex flex-col gap-5 rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4 sm:flex-row sm:items-start"
-                    >
-                        <img
-                            :src="storageUrl(card.card_image) ?? ''"
-                            :alt="card.name"
-                            class="h-44 w-32 shrink-0 rounded-lg border border-[#DCE7DF] bg-white object-cover"
-                        />
+                <div class="grid gap-5 lg:grid-cols-2">
+                    <CardImageField
+                        id="thumbnail_image"
+                        v-model:file="form.thumbnail_image"
+                        label="Miniatura"
+                        help="Se muestra en los listados de la colección."
+                        :current-path="card.thumbnail_image"
+                        :alt="card.name"
+                        :error="form.errors.thumbnail_image"
+                        :disabled="form.processing"
+                        @delete="deleteImage('thumbnail')"
+                    />
 
-                        <div
-                            class="flex min-w-0 flex-1 flex-col items-start gap-4"
-                        >
-                            <div>
-                                <p
-                                    class="flex items-center gap-2 text-sm font-semibold text-[#244334]"
-                                >
-                                    <FileImage :size="16" />
-                                    Imagen actual
-                                </p>
-
-                                <p
-                                    class="mt-2 break-all text-xs text-[#718477]"
-                                >
-                                    {{ card.card_image }}
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                :disabled="form.processing"
-                                class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                @click="deleteImage"
-                            >
-                                <Trash2 :size="16" />
-                                Eliminar imagen
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Nueva imagen -->
-                    <div class="form-field">
-                        <label for="card_image" class="form-label">
-                            {{
-                                card.card_image
-                                    ? 'Reemplazar imagen'
-                                    : 'Imagen de la tarjeta'
-                            }}
-                        </label>
-
-                        <label for="card_image" class="form-upload">
-                            <div class="form-upload-icon">
-                                <Upload :size="22" />
-                            </div>
-
-                            <span class="form-upload-title break-all">
-                                {{
-                                    form.card_image?.name ||
-                                    'Selecciona una nueva imagen'
-                                }}
-                            </span>
-
-                            <span class="form-upload-description">
-                                Haz clic para buscar un archivo en tu
-                                dispositivo.
-                            </span>
-
-                            <span class="form-upload-description">
-                                JPG, JPEG, PNG o WEBP · Máximo 5 MB
-                            </span>
-
-                            <input
-                                id="card_image"
-                                type="file"
-                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                                class="form-upload-input"
-                                @change="handleCardImage"
-                            />
-                        </label>
-
-                        <p
-                            v-if="form.errors.card_image"
-                            class="form-error"
-                        >
-                            {{ form.errors.card_image }}
-                        </p>
-                    </div>
+                    <CardImageField
+                        id="artwork_image"
+                        v-model:file="form.artwork_image"
+                        label="Imagen de la tarjeta"
+                        help="Fondo de la plantilla de la tarjeta."
+                        :current-path="card.artwork_image"
+                        :alt="card.name"
+                        :error="form.errors.artwork_image"
+                        :disabled="form.processing"
+                        @delete="deleteImage('artwork')"
+                    />
                 </div>
+
+                <p v-if="form.errors.generated_image" class="form-error mt-3">
+                    {{ form.errors.generated_image }}
+                </p>
             </AdminCard>
+
+            <!-- Vista previa de la tarjeta -->
+            <CardPreview
+                ref="preview"
+                :title="form.name"
+                :scientific-name="selectedSpecies?.scientific_name ?? ''"
+                :astucia="form.astucia"
+                :rapidez="form.rapidez"
+                :fuerza="form.fuerza"
+                :artwork-url="artworkPreviewUrl"
+            />
 
             <!-- Modelo 3D -->
             <AdminCard
@@ -709,8 +694,8 @@ defineOptions({
 
                 <AdminButton
                     type="submit"
-                    :disabled="form.processing"
-                    :loading="form.processing"
+                    :disabled="form.processing || generatingImage"
+                    :loading="form.processing || generatingImage"
                     loading-text="Guardando cambios..."
                     :icon="Save"
                 >

@@ -33,7 +33,7 @@ interface Card {
     species_id: number;
     name: string;
     rarity: string;
-    card_image: string | null;
+    thumbnail_image: string | null;
     model_file: string | null;
     is_active: boolean;
     sort_order: number;
@@ -305,8 +305,8 @@ defineOptions({
                         <div class="flex min-w-[190px] items-center gap-3">
                             <div class="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-[#e1e9e3] bg-[#f2f7f4]">
                                 <img
-                                    v-if="card.card_image"
-                                    :src="cardImageUrl(card.card_image) ?? ''"
+                                    v-if="card.thumbnail_image"
+                                    :src="cardImageUrl(card.thumbnail_image) ?? ''"
                                     :alt="card.name"
                                     class="h-full w-full object-cover"
                                 />

@@ -20,6 +20,13 @@ const props = withDefaults(
     },
 );
 
+const emit = defineEmits<{
+    /*
+     * Acceso a la escena de Babylon una vez cargado el modelo.
+     */
+    loaded: [details: NonNullable<HTML3DElement['viewerDetails']>];
+}>();
+
 const viewer = ref<HTML3DElement | null>(null);
 
 const isReady = ref(false);
@@ -60,6 +67,10 @@ const onModelChange = () => {
     hasError.value = false;
     animations.value = [...(viewer.value?.animations ?? [])];
     syncAnimationState();
+
+    if (viewer.value?.viewerDetails) {
+        emit('loaded', viewer.value.viewerDetails);
+    }
 };
 
 const onModelError = () => {

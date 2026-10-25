@@ -49,6 +49,7 @@ class CardTest extends TestCase
             'name' => 'Carta ' . uniqid(),
             'rarity' => 'comun',
             'model_file' => 'cards/1/models/jaguar.glb',
+            'generated_image' => 'cards/1/jaguar.png',
             'astucia' => 75,
             'rapidez' => 85,
             'fuerza' => 90,
@@ -90,13 +91,15 @@ class CardTest extends TestCase
 
         $this->assertNotNull($data);
         $this->assertSame([
-            'id', 'name', 'card_image', 'rarity', 'species_name', 'category_name',
+            'id', 'name', 'thumbnail_image', 'rarity', 'species_name', 'category_name',
             'sort_order', 'stats', 'encountered', 'captured_at', 'model_url',
+            'card_image_url',
         ], array_keys($data));
 
         $this->assertFalse($data['encountered']);
         $this->assertNull($data['captured_at']);
         $this->assertNull($data['model_url']);
+        $this->assertNull($data['card_image_url']);
         $this->assertSame($this->species->common_name, $data['species_name']);
         $this->assertSame($this->category->name, $data['category_name']);
         $this->assertSame(['astucia' => 75, 'rapidez' => 85, 'fuerza' => 90], $data['stats']);
@@ -116,6 +119,10 @@ class CardTest extends TestCase
         $this->assertSame(
             Storage::disk('public')->url('cards/1/models/jaguar.glb'),
             $data['model_url']
+        );
+        $this->assertSame(
+            Storage::disk('public')->url('cards/1/jaguar.png'),
+            $data['card_image_url']
         );
     }
 

@@ -149,7 +149,8 @@ class CardDuelService
             'card' => [
                 'id' => $card->id,
                 'name' => $card->name,
-                'card_image' => CardResource::publicUrl($card->card_image),
+                'thumbnail_image' => CardResource::publicUrl($card->thumbnail_image),
+                'card_image_url' => CardResource::publicUrl($card->generated_image),
                 'rarity' => $card->rarity,
                 'species_name' => $card->species?->common_name,
                 'stats' => [

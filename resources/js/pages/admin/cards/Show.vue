@@ -19,6 +19,7 @@ import {
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
+import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 
 import { getRarityLabel } from '@/lib/cardRarity';
@@ -43,7 +44,9 @@ interface Card {
     species_id: number;
     name: string;
     rarity: string;
-    card_image: string | null;
+    thumbnail_image: string | null;
+    artwork_image: string | null;
+    generated_image: string | null;
     model_file: string | null;
     is_active: boolean;
     sort_order: number;
@@ -160,19 +163,19 @@ defineOptions({
 
         <!-- Información principal -->
         <div class="grid gap-4 lg:grid-cols-3">
-            <!-- Imagen -->
+            <!-- Miniatura -->
             <section class="rounded-xl border border-[#DCE7DF] bg-white p-4">
                 <div class="mb-3 flex items-center gap-2">
                     <FileImage :size="18" class="text-[#187744]" />
                     <h2 class="text-sm font-semibold text-[#244334]">
-                        Imagen de la tarjeta
+                        Miniatura
                     </h2>
                 </div>
 
                 <div class="flex min-h-64 items-center justify-center rounded-lg bg-[#F6F9F6] p-3">
                     <img
-                        v-if="card.card_image"
-                        :src="storageUrl(card.card_image) ?? ''"
+                        v-if="card.thumbnail_image"
+                        :src="storageUrl(card.thumbnail_image) ?? ''"
                         :alt="card.name"
                         class="max-h-[380px] w-full object-contain"
                     />
@@ -192,11 +195,22 @@ defineOptions({
                 </div>
 
                 <p
-                    v-if="card.card_image"
+                    v-if="card.thumbnail_image"
                     class="mt-2 break-all text-xs text-[#718477]"
                 >
-                    {{ card.card_image }}
+                    {{ card.thumbnail_image }}
                 </p>
+
+                <a
+                    v-if="card.generated_image"
+                    :href="storageUrl(card.generated_image) ?? ''"
+                    target="_blank"
+                    rel="noopener"
+                    class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[#187744] hover:underline"
+                >
+                    <ExternalLink :size="14" />
+                    Ver imagen final guardada
+                </a>
             </section>
 
             <!-- Datos generales -->
@@ -298,6 +312,16 @@ defineOptions({
 
             </section>
         </div>
+
+        <!-- Vista previa de la tarjeta -->
+        <CardPreview
+            :title="card.name"
+            :scientific-name="card.species.scientific_name"
+            :astucia="card.astucia ?? null"
+            :rapidez="card.rapidez ?? null"
+            :fuerza="card.fuerza ?? null"
+            :artwork-url="storageUrl(card.artwork_image)"
+        />
 
         <!-- Modelo 3D -->
         <section class="rounded-xl border border-[#DCE7DF] bg-white p-4">

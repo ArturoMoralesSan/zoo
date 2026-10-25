@@ -60,6 +60,7 @@ class DuelTest extends TestCase
             'name' => 'Quetzal Dorado',
             'rarity' => 'rara',
             'model_file' => 'cards/9/models/quetzal.glb',
+            'generated_image' => 'cards/9/quetzal.png',
             'astucia' => 60,
             'rapidez' => 70,
             'fuerza' => 40,
@@ -142,6 +143,7 @@ class DuelTest extends TestCase
         $this->assertSame(2, $duel->json('data.retries_left'));
         $this->assertStringNotContainsString('is_correct', $duel->getContent());
         $this->assertArrayNotHasKey('model_url', $duel->json('data.card'));
+        $this->assertStringEndsWith('cards/9/quetzal.png', $duel->json('data.card.card_image_url'));
     }
 
     public function test_start_returns_404_for_inactive_card(): void

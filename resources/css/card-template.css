@@ -1,0 +1,36 @@
+/*
+ * Fuentes de la plantilla de tarjetas (CardTemplate.vue).
+ */
+@font-face {
+    font-family: 'Cinzel';
+    src: url('../fonts/Cinzel-VariableFont_wght.ttf');
+    font-weight: 400 900;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Noto Sans';
+    src: url('../fonts/NotoSans-VariableFont_wght.ttf');
+    font-weight: 100 900;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Noto Sans';
+    src: url('../fonts/NotoSans-Italic-VariableFont_wght.ttf');
+    font-weight: 100 900;
+    font-style: italic;
+}
+
+/*
+ * admin-content.css aplica estilos sin capa a los h1 del panel, que ganan
+ * a las utilidades de Tailwind. Dentro de la plantilla se descartan para
+ * que el título conserve el diseño de la tarjeta.
+ */
+.card-template h1 {
+    color: revert-layer;
+    font-size: revert-layer;
+    font-weight: revert-layer;
+    letter-spacing: revert-layer;
+    line-height: revert-layer;
+}

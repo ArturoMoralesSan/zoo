@@ -27,7 +27,7 @@ interface Card {
     species_id: number;
     name: string;
     rarity: string;
-    card_image: string | null;
+    thumbnail_image: string | null;
     model_file: string | null;
     is_active: boolean;
     sort_order: number;

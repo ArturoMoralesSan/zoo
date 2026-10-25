@@ -21,6 +21,14 @@ use Inertia\Response;
 class CardController extends Controller
 {
     /**
+     * Imágenes que se pueden eliminar desde el formulario, por tipo.
+     */
+    public const IMAGE_FIELDS = [
+        'thumbnail' => 'thumbnail_image',
+        'artwork' => 'artwork_image',
+    ];
+
+    /**
      * Lista de tarjetas.
      */
     public function index(): Response
@@ -160,37 +168,7 @@ class CardController extends Controller
                 $this->cardAttributes($request, $validated)
             );
 
-            /*
-             * Imagen de la tarjeta.
-             */
-            if (
-                $request->hasFile('card_image') &&
-                $request->file('card_image')->isValid()
-            ) {
-                $card->update([
-                    'card_image' => $this->moveUploadedFile(
-                        $request->file('card_image'),
-                        'cards/'.$card->id
-                    ),
-                ]);
-            }
-
-            /*
-             * Modelo 3D.
-             */
-            if (
-                $request->hasFile('model_file') &&
-                $request->file('model_file')->isValid()
-            ) {
-                $modelPath = $this->moveUploadedFile(
-                    $request->file('model_file'),
-                    'cards/'.$card->id.'/models'
-                );
-
-                $card->update([
-                    'model_file' => $modelPath,
-                ]);
-            }
+            $this->storeCardFiles($request, $card);
 
             return $card;
         });
@@ -249,59 +227,7 @@ class CardController extends Controller
                 $this->cardAttributes($request, $validated)
             );
 
-            /*
-             * Nueva imagen.
-             */
-            if (
-                $request->hasFile('card_image') &&
-                $request->file('card_image')->isValid()
-            ) {
-                if (
-                    $card->card_image &&
-                    Storage::disk('public')->exists(
-                        $card->card_image
-                    )
-                ) {
-                    Storage::disk('public')->delete(
-                        $card->card_image
-                    );
-                }
-
-                $card->update([
-                    'card_image' => $this->moveUploadedFile(
-                        $request->file('card_image'),
-                        'cards/'.$card->id
-                    ),
-                ]);
-            }
-
-            /*
-             * Nuevo modelo 3D.
-             */
-            if (
-                $request->hasFile('model_file') &&
-                $request->file('model_file')->isValid()
-            ) {
-                if (
-                    $card->model_file &&
-                    Storage::disk('public')->exists(
-                        $card->model_file
-                    )
-                ) {
-                    Storage::disk('public')->delete(
-                        $card->model_file
-                    );
-                }
-
-                $modelPath = $this->moveUploadedFile(
-                    $request->file('model_file'),
-                    'cards/'.$card->id.'/models'
-                );
-
-                $card->update([
-                    'model_file' => $modelPath,
-                ]);
-            }
+            $this->storeCardFiles($request, $card);
         });
 
         return redirect()
@@ -357,30 +283,25 @@ class CardController extends Controller
     }
 
     /**
-     * Eliminar solamente la imagen de la tarjeta.
+     * Eliminar solamente una imagen de la tarjeta (miniatura o ilustración).
      */
     public function destroyImage(
-        Card $card
+        Card $card,
+        string $image
     ): RedirectResponse {
-        if (! $card->card_image) {
+        $field = self::IMAGE_FIELDS[$image];
+
+        if (! $card->{$field}) {
             return back()->with(
                 'error',
-                'La tarjeta no tiene una imagen.'
+                'La tarjeta no tiene esta imagen.'
             );
         }
 
-        if (
-            Storage::disk('public')->exists(
-                $card->card_image
-            )
-        ) {
-            Storage::disk('public')->delete(
-                $card->card_image
-            );
-        }
+        $this->deletePublicFile($card->{$field});
 
         $card->update([
-            'card_image' => null,
+            $field => null,
         ]);
 
         return back()->with(
@@ -402,15 +323,7 @@ class CardController extends Controller
             );
         }
 
-        if (
-            Storage::disk('public')->exists(
-                $card->model_file
-            )
-        ) {
-            Storage::disk('public')->delete(
-                $card->model_file
-            );
-        }
+        $this->deletePublicFile($card->model_file);
 
         $card->update([
             'model_file' => null,
@@ -473,6 +386,52 @@ class CardController extends Controller
                 ? $validated['cooldown_minutes']
                 : null,
         ];
+    }
+
+    /**
+     * Guardar los archivos subidos de la tarjeta, reemplazando los anteriores.
+     */
+    private function storeCardFiles(
+        FormRequest $request,
+        Card $card
+    ): void {
+        $directories = [
+            'thumbnail_image' => 'cards/'.$card->id,
+            'artwork_image' => 'cards/'.$card->id,
+            'generated_image' => 'cards/'.$card->id,
+            'model_file' => 'cards/'.$card->id.'/models',
+        ];
+
+        foreach ($directories as $field => $directory) {
+            if (
+                ! $request->hasFile($field) ||
+                ! $request->file($field)->isValid()
+            ) {
+                continue;
+            }
+
+            $this->deletePublicFile($card->{$field});
+
+            $card->update([
+                $field => $this->moveUploadedFile(
+                    $request->file($field),
+                    $directory
+                ),
+            ]);
+        }
+    }
+
+    /**
+     * Eliminar un archivo del disco público si existe.
+     */
+    private function deletePublicFile(?string $path): void
+    {
+        if (
+            $path &&
+            Storage::disk('public')->exists($path)
+        ) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     /**

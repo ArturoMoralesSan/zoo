@@ -13,7 +13,7 @@ import {
     Upload,
     Zap,
 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 
 import { useObjectUrl } from '@/composables/useObjectUrl';
 import { rarityOptions } from '@/lib/cardRarity';
@@ -24,6 +24,8 @@ import AdminCard from '@/components/admin/AdminCard.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import CardImageField from '@/components/admin/cards/CardImageField.vue';
+import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 
@@ -44,7 +46,9 @@ const form = useForm({
     species_id: '',
     name: '',
     rarity: 'comun',
-    card_image: null as File | null,
+    thumbnail_image: null as File | null,
+    artwork_image: null as File | null,
+    generated_image: null as File | null,
     model_file: null as File | null,
     is_active: true,
     sort_order: 0,
@@ -57,15 +61,37 @@ const form = useForm({
     cooldown_minutes: null as number | null,
 });
 
-const submit = () => {
+/*
+ * Vista previa de la tarjeta generada a partir de la plantilla.
+ */
+const preview = useTemplateRef<InstanceType<typeof CardPreview>>('preview');
+
+const selectedSpecies = computed(() =>
+    props.species.find((item) => String(item.id) === form.species_id),
+);
+
+const artworkPreviewUrl = useObjectUrl(() => form.artwork_image);
+
+const generatingImage = ref(false);
+
+const submit = async () => {
+    /*
+     * La imagen final se genera al guardar para que coincida
+     * con los datos enviados.
+     */
+    generatingImage.value = true;
+
+    try {
+        form.generated_image = (await preview.value?.generatePngFile()) ?? null;
+    } catch {
+        form.generated_image = null;
+    } finally {
+        generatingImage.value = false;
+    }
+
     form.post(admin.cards.store().url, {
         forceFormData: true,
     });
-};
-
-const handleCardImage = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    form.card_image = target.files?.[0] ?? null;
 };
 
 const handleModelFile = (event: Event) => {
@@ -381,47 +407,45 @@ defineOptions({
                 :errors="form.errors"
             />
 
-            <!-- Imagen de la tarjeta -->
+            <!-- Imágenes de la tarjeta -->
             <AdminCard
-                title="Imagen de la tarjeta"
-                description="Sube la imagen que se mostrará en la colección."
+                title="Imágenes de la tarjeta"
+                description="Sube la miniatura y la imagen que se usará en la plantilla."
                 :icon="FileImage"
             >
-                <div>
-                    <label for="card_image" class="form-upload">
-                        <div class="form-upload-icon">
-                            <Upload :size="24" />
-                        </div>
+                <div class="grid gap-5 lg:grid-cols-2">
+                    <CardImageField
+                        id="thumbnail_image"
+                        v-model:file="form.thumbnail_image"
+                        label="Miniatura"
+                        help="Se muestra en los listados de la colección."
+                        :error="form.errors.thumbnail_image"
+                    />
 
-                        <span class="form-upload-title">
-                            {{ form.card_image?.name || 'Selecciona una imagen' }}
-                        </span>
-
-                        <span class="form-upload-description">
-                            Haz clic para buscar un archivo en tu dispositivo.
-                        </span>
-
-                        <span class="form-upload-description">
-                            JPG, JPEG, PNG o WEBP · Máximo 5 MB
-                        </span>
-
-                        <input
-                            id="card_image"
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                            class="form-upload-input"
-                            @change="handleCardImage"
-                        />
-                    </label>
-
-                    <p
-                        v-if="form.errors.card_image"
-                        class="form-error mt-3"
-                    >
-                        {{ form.errors.card_image }}
-                    </p>
+                    <CardImageField
+                        id="artwork_image"
+                        v-model:file="form.artwork_image"
+                        label="Imagen de la tarjeta"
+                        help="Fondo de la plantilla de la tarjeta."
+                        :error="form.errors.artwork_image"
+                    />
                 </div>
+
+                <p v-if="form.errors.generated_image" class="form-error mt-3">
+                    {{ form.errors.generated_image }}
+                </p>
             </AdminCard>
+
+            <!-- Vista previa de la tarjeta -->
+            <CardPreview
+                ref="preview"
+                :title="form.name"
+                :scientific-name="selectedSpecies?.scientific_name ?? ''"
+                :astucia="form.astucia"
+                :rapidez="form.rapidez"
+                :fuerza="form.fuerza"
+                :artwork-url="artworkPreviewUrl"
+            />
 
             <!-- Modelo 3D -->
             <AdminCard
@@ -523,8 +547,8 @@ defineOptions({
 
                         <AdminButton
                             type="submit"
-                            :disabled="form.processing"
-                            :loading="form.processing"
+                            :disabled="form.processing || generatingImage"
+                            :loading="form.processing || generatingImage"
                             :icon="Save"
                             loading-text="Guardando..."
                         >

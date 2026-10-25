@@ -220,6 +220,18 @@ class CardAdminTest extends TestCase
         ]);
     }
 
+    /**
+     * PNG y GIF de 1x1 (las pruebas no dependen de la extensión GD).
+     */
+    private const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+    private const GIF = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+    private function fakeImage(string $name, string $base64 = self::PNG): UploadedFile
+    {
+        return UploadedFile::fake()->createWithContent($name, base64_decode($base64));
+    }
+
     private function cardPayload(array $overrides = []): array
     {
         return array_merge([
@@ -257,6 +269,66 @@ class CardAdminTest extends TestCase
         File::delete($path);
         @rmdir(dirname($path));
         @rmdir(dirname($path, 2));
+    }
+
+    public function test_admin_can_upload_card_images(): void
+    {
+        $payload = $this->cardPayload([
+            'thumbnail_image' => $this->fakeImage('miniatura.jpg'),
+            'artwork_image' => $this->fakeImage('fondo.png'),
+            'generated_image' => $this->fakeImage('card.png'),
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('admin.cards.index'));
+
+        $card = Card::where('name', $payload['name'])->firstOrFail();
+
+        $paths = [];
+
+        foreach (['thumbnail_image', 'artwork_image', 'generated_image'] as $field) {
+            $this->assertNotNull($card->{$field});
+            $paths[] = storage_path('app/public/' . $card->{$field});
+        }
+
+        // Al actualizar, la imagen generada reemplaza a la anterior.
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->cardPayload([
+                'name' => $card->name,
+                'generated_image' => $this->fakeImage('card.png'),
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $card->refresh();
+
+        $this->assertFileDoesNotExist($paths[2]);
+        $paths[2] = storage_path('app/public/' . $card->generated_image);
+
+        foreach ($paths as $path) {
+            $this->assertFileExists($path);
+        }
+
+        // Eliminar la miniatura desde el formulario.
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.image.destroy', [$card, 'thumbnail']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($card->refresh()->thumbnail_image);
+        $this->assertFileDoesNotExist($paths[0]);
+
+        File::delete($paths);
+        @rmdir(dirname($paths[1]));
+    }
+
+    public function test_generated_card_image_must_be_png(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload([
+                'generated_image' => $this->fakeImage('card.gif', self::GIF),
+            ]))
+            ->assertSessionHasErrors('generated_image');
     }
 
     public function test_gltf_models_are_rejected(): void
