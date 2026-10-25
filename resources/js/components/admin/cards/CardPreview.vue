@@ -19,6 +19,10 @@ import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import CardTemplate from '@/components/admin/cards/CardTemplate.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
+import { resolveAccent } from '@/lib/cardColors';
+import type { AccentColor } from '@/lib/cardColors';
+import { ensureCardFont } from '@/lib/cardFonts';
+import type { CardFontId, TitleSize } from '@/lib/cardFonts';
 import {
     CARD_EXPORT_PIXEL_RATIO,
     CARD_TEXTURE_PIXEL_RATIO,
@@ -36,20 +40,34 @@ const props = defineProps<{
     rapidez: number | string | null;
     fuerza: number | string | null;
     artworkUrl: string | null;
+    fadeColor: string;
+    accentColor: AccentColor | null;
+    titleFontFamily: CardFontId;
+    titleFontWeight: number;
+    titleFontSize: TitleSize;
 }>();
+
+/*
+ * Acento final: el elegido o, en automático, blanco/negro según el degradado.
+ */
+const resolvedAccent = computed(() =>
+    resolveAccent(props.fadeColor, props.accentColor),
+);
 
 /*
  * Modelo base de la tarjeta y material donde va la imagen generada.
  */
-const CARD_MODEL_URL = '/models/card.glb';
+const CARD_MODEL_URL = '/models/card.glb?v=2';
 const CARD_MATERIAL = 'CardImage';
 
 /*
- * Tamaño real de la plantilla y alto máximo de la vista previa.
+ * Tamaño real de la plantilla, alto máximo de la vista previa
+ * y espacio del marco (padding + borde) alrededor de la tarjeta 2D.
  */
 const CARD_WIDTH = 572;
 const CARD_HEIGHT = 1016;
-const PREVIEW_MAX_HEIGHT = 460;
+const PREVIEW_MAX_HEIGHT = 440;
+const PREVIEW_FRAME = 18;
 
 const container = useTemplateRef<HTMLElement>('container');
 const template = useTemplateRef<InstanceType<typeof CardTemplate>>('template');
@@ -65,6 +83,16 @@ useResizeObserver(container, ([entry]) => {
 
 const templateNode = (): HTMLElement | null =>
     (template.value?.$el as HTMLElement | undefined) ?? null;
+
+/*
+ * Plantilla lista para convertirse en imagen: la fuente del nombre
+ * se carga bajo demanda y debe estar disponible antes de dibujar.
+ */
+const readyTemplateNode = async (): Promise<HTMLElement | null> => {
+    await ensureCardFont(props.titleFontFamily, props.titleFontWeight);
+
+    return templateNode();
+};
 
 /*
  * Textura del visor 3D.
@@ -145,13 +173,12 @@ const onModelLoaded = async (details: ViewerScene) => {
 let renderId = 0;
 
 const regenerate = async () => {
-    const node = templateNode();
+    const id = ++renderId;
+    const node = await readyTemplateNode();
 
-    if (!node) {
+    if (!node || id !== renderId) {
         return;
     }
-
-    const id = ++renderId;
 
     try {
         const url = await renderCardPng(node, CARD_TEXTURE_PIXEL_RATIO);
@@ -178,6 +205,11 @@ watch(
         props.rapidez,
         props.fuerza,
         props.artworkUrl,
+        props.fadeColor,
+        props.accentColor,
+        props.titleFontFamily,
+        props.titleFontWeight,
+        props.titleFontSize,
     ],
     scheduleRegenerate,
     { flush: 'post' },
@@ -196,15 +228,19 @@ onBeforeUnmount(() => {
 const downloading = ref<'png' | 'svg' | null>(null);
 
 const download = async (format: 'png' | 'svg') => {
-    const node = templateNode();
-
-    if (!node || downloading.value) {
+    if (downloading.value) {
         return;
     }
 
     downloading.value = format;
 
     try {
+        const node = await readyTemplateNode();
+
+        if (!node) {
+            return;
+        }
+
         const dataUrl =
             format === 'png'
                 ? await renderCardPng(node, CARD_EXPORT_PIXEL_RATIO)
@@ -223,11 +259,16 @@ const previewSize = computed(() => ({
     height: `${CARD_HEIGHT * scale.value}px`,
 }));
 
+// El visor 3D ocupa el mismo alto que la tarjeta 2D con su marco.
+const viewerHeight = computed(
+    () => `${CARD_HEIGHT * scale.value + PREVIEW_FRAME}px`,
+);
+
 /**
  * PNG final de la tarjeta para guardarlo en el servidor.
  */
 const generatePngFile = async (): Promise<File | null> => {
-    const node = templateNode();
+    const node = await readyTemplateNode();
 
     if (!node) {
         return null;
@@ -245,86 +286,90 @@ defineExpose({ generatePngFile });
 <template>
     <AdminCard
         title="Vista previa de la tarjeta"
-        description="Se genera a partir del nombre, la especie, las estadísticas y la imagen de la tarjeta."
+        description="Se actualiza mientras editas la tarjeta."
         :icon="IdCard"
     >
-        <div class="grid gap-5 lg:grid-cols-2">
-            <!-- Plantilla -->
-            <div class="space-y-3">
-                <span class="form-label">Imagen</span>
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Plantilla -->
+                <div class="min-w-0 space-y-2">
+                    <span class="form-label">Imagen</span>
 
-                <div
-                    ref="container"
-                    class="flex justify-center rounded-xl border border-[#DCE7DF] bg-[#F6F9F6] p-3"
-                >
-                    <div class="overflow-hidden" :style="previewSize">
-                        <div
-                            class="origin-top-left"
-                            :style="{ transform: `scale(${scale})` }"
-                        >
-                            <CardTemplate
-                                ref="template"
-                                :title="title"
-                                :scientific-name="scientificName"
-                                :astucia="astucia"
-                                :rapidez="rapidez"
-                                :fuerza="fuerza"
-                                :artwork-url="artworkUrl"
-                            />
+                    <div
+                        ref="container"
+                        class="flex justify-center rounded-xl border border-[#DCE7DF] bg-[#F6F9F6] p-2"
+                    >
+                        <div class="overflow-hidden" :style="previewSize">
+                            <div
+                                class="origin-top-left"
+                                :style="{ transform: `scale(${scale})` }"
+                            >
+                                <CardTemplate
+                                    ref="template"
+                                    :title="title"
+                                    :scientific-name="scientificName"
+                                    :astucia="astucia"
+                                    :rapidez="rapidez"
+                                    :fuerza="fuerza"
+                                    :artwork-url="artworkUrl"
+                                    :fade-color="fadeColor"
+                                    :accent-color="resolvedAccent"
+                                    :title-font-family="titleFontFamily"
+                                    :title-font-weight="titleFontWeight"
+                                    :title-font-size="titleFontSize"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex flex-wrap gap-2">
-                    <AdminButton
-                        variant="secondary"
-                        :icon="Download"
-                        :loading="downloading === 'png'"
-                        :disabled="downloading !== null"
-                        loading-text="Generando..."
-                        @click="download('png')"
-                    >
-                        Descargar PNG
-                    </AdminButton>
+                <!-- Modelo 3D -->
+                <div class="min-w-0 space-y-2">
+                    <span class="form-label">Modelo 3D</span>
 
-                    <AdminButton
-                        variant="secondary"
-                        :icon="FileCode"
-                        :loading="downloading === 'svg'"
-                        :disabled="downloading !== null"
-                        loading-text="Generando..."
-                        @click="download('svg')"
-                    >
-                        Descargar SVG
-                    </AdminButton>
+                    <ModelViewer
+                        :source="CARD_MODEL_URL"
+                        extension="glb"
+                        :height="viewerHeight"
+                        :zoom-controls="false"
+                        @loaded="onModelLoaded"
+                    />
                 </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <AdminButton
+                    variant="secondary"
+                    :icon="Download"
+                    :loading="downloading === 'png'"
+                    :disabled="downloading !== null"
+                    loading-text="Generando..."
+                    @click="download('png')"
+                >
+                    PNG
+                </AdminButton>
+
+                <AdminButton
+                    variant="secondary"
+                    :icon="FileCode"
+                    :loading="downloading === 'svg'"
+                    :disabled="downloading !== null"
+                    loading-text="Generando..."
+                    @click="download('svg')"
+                >
+                    SVG
+                </AdminButton>
 
                 <p class="form-help">
-                    PNG en alta calidad (1716 × 3048 px). El SVG se ve
-                    correctamente en navegadores, pero puede no abrirse bien en
+                    PNG de 1716 × 3048 px. El SVG puede no abrirse bien en
                     editores vectoriales.
                 </p>
-
-                <p
-                    v-if="renderFailed"
-                    class="form-error flex items-center gap-1.5"
-                >
-                    <TriangleAlert :size="14" />
-                    No se pudo generar la imagen de la tarjeta.
-                </p>
             </div>
 
-            <!-- Modelo 3D -->
-            <div class="space-y-3">
-                <span class="form-label">Modelo 3D</span>
-
-                <ModelViewer
-                    :source="CARD_MODEL_URL"
-                    extension="glb"
-                    height-class="h-[486px]"
-                    @loaded="onModelLoaded"
-                />
-            </div>
+            <p v-if="renderFailed" class="form-error flex items-center gap-1.5">
+                <TriangleAlert :size="14" />
+                No se pudo generar la imagen de la tarjeta.
+            </p>
         </div>
     </AdminCard>
 </template>

@@ -1,0 +1,50 @@
+{
+    "noto-sans": {
+        "family": "Noto Sans",
+        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "noto-serif": {
+        "family": "Noto Serif",
+        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "barlow": {
+        "family": "Barlow",
+        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "open-sans": {
+        "family": "Open Sans",
+        "weights": [300, 400, 500, 600, 700, 800]
+    },
+    "roboto": {
+        "family": "Roboto",
+        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "roboto-serif": {
+        "family": "Roboto Serif",
+        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "rubik": {
+        "family": "Rubik",
+        "weights": [300, 400, 500, 600, 700, 800, 900]
+    },
+    "nunito": {
+        "family": "Nunito",
+        "weights": [200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "montserrat": {
+        "family": "Montserrat",
+        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "montserrat-alternates": {
+        "family": "Montserrat Alternates",
+        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "signika": {
+        "family": "Signika",
+        "weights": [300, 400, 500, 600, 700]
+    },
+    "cinzel": {
+        "family": "Cinzel",
+        "weights": [400, 500, 600, 700, 800, 900]
+    }
+}

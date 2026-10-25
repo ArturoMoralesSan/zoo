@@ -3,6 +3,13 @@ import { BicepsFlexedIcon, Brain03Icon, EnergyIcon } from '@hugeicons/core-free-
 import { HugeiconsIcon } from '@hugeicons/vue';
 import { computed } from 'vue';
 
+import '@fontsource/noto-sans/latin-400.css';
+import '@fontsource/noto-sans/latin-500.css';
+import '@fontsource/noto-sans/latin-400-italic.css';
+
+import { CARD_FONTS, TITLE_SIZES } from '@/lib/cardFonts';
+import type { CardFontId, TitleSize } from '@/lib/cardFonts';
+
 import durangoTravelLogo from '../../../../images/cards/durangotravel.png';
 
 /*
@@ -16,31 +23,49 @@ const props = defineProps<{
     rapidez: number | string | null;
     fuerza: number | string | null;
     artworkUrl: string | null;
+    fadeColor: string;
+    accentColor: string;
+    titleFontFamily: CardFontId;
+    titleFontWeight: number;
+    titleFontSize: TitleSize;
 }>();
 
-const backgroundStyle = computed(() =>
-    props.artworkUrl
+/*
+ * Colores configurables: degradados (fade) y elementos de acento.
+ */
+const rootStyle = computed(() => ({
+    '--card-fade': props.fadeColor,
+    '--card-accent': props.accentColor,
+    ...(props.artworkUrl
         ? { backgroundImage: `url("${props.artworkUrl}")` }
-        : {},
-);
+        : {}),
+}));
+
+const titleClass = computed(() => TITLE_SIZES[props.titleFontSize].className);
+
+const titleStyle = computed(() => ({
+    fontFamily: `"${CARD_FONTS[props.titleFontFamily].family}"`,
+    fontWeight: props.titleFontWeight,
+}));
 </script>
 
 <template>
     <div
-        class="w-143 h-254 rounded-[40px] bg-[#4f6b5a] bg-center bg-cover flex flex-col justify-between overflow-hidden relative font-card card-template"
-        :style="backgroundStyle">
+        class="w-143 h-254 rounded-[40px] bg-(--card-fade) bg-center bg-cover flex flex-col justify-between overflow-hidden relative font-card card-template"
+        :style="rootStyle">
 
-        <!-- Top fade -->
+        <!-- Top fade (Fade color) -->
         <div class="pointer-events-none absolute inset-x-0 top-0 h-[30%]
-          bg-linear-to-b from-[rgba(79,107,90,0.7)] to-transparent"></div>
+          bg-linear-to-b from-(--card-fade) to-transparent"></div>
 
-        <!-- Bottom fade -->
-        <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[42%]
-          bg-linear-to-t from-[rgba(79,107,90,0.7)] to-transparent"></div>
+        <!-- Bottom fade (Fade color) -->
+        <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[75%]
+          bg-linear-to-t from-(--card-fade) to-transparent"></div>
 
         <div class="w-full flex justify-between relative">
             <div class="pl-10 pt-21">
-                <svg class="fill-white h-24 w-auto" viewBox="0 0 13.417285 9.0927632" version="1.1" id="svg1"
+                <!-- Logo (Accent) -->
+                <svg class="fill-(--card-accent) h-24 w-auto" viewBox="0 0 13.417285 9.0927632" version="1.1" id="svg1"
                     xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
                     <defs id="defs1">
                         <clipPath clipPathUnits="userSpaceOnUse" id="clipPath5-7">
@@ -69,22 +94,24 @@ const backgroundStyle = computed(() =>
                 </div>
             </div>
         </div>
-        <div class="flex flex-col items-center pb-14 gap-8 relative">
-            <div class="flex flex-col items-center text-white gap-3">
-                <h1 class="text-6xl font-extrabold font-cinzel w-full text-center">{{ title }}</h1>
+        <div class="flex flex-col items-center pb-14 gap-8 px-9 relative">
+            <!-- Species common and scientific name (Accent) -->
+            <div class="flex flex-col items-center text-(--card-accent) gap-3">
+                <h1 class="w-full text-center" :class="titleClass" :style="titleStyle">{{ title }}</h1>
                 <p class="italic text-3xl w-full text-center">{{ scientificName }}</p>
             </div>
+            <!-- Stats (Accent) -->
             <div
-                class="[&_svg]:stroke-white [&_svg]:h-8 [&_svg]:w-8 [&_svg]:stroke-[2.5px] font-medium text-4xl flex gap-9">
-                <div class="flex items-center gap-2.5 text-white">
+                class="[&_svg]:stroke-(--card-accent) [&_svg]:h-8 [&_svg]:w-8 [&_svg]:stroke-[2.5px] font-medium text-4xl flex gap-9">
+                <div class="flex items-center gap-2.5 text-(--card-accent)">
                     <HugeiconsIcon :icon="Brain03Icon" :stroke-width="2.5" />
                     <p>{{ astucia }}</p>
                 </div>
-                <div class="flex items-center gap-2.5 text-white">
+                <div class="flex items-center gap-2.5 text-(--card-accent)">
                     <HugeiconsIcon :icon="EnergyIcon" :stroke-width="2.5" />
                     <p>{{ rapidez }}</p>
                 </div>
-                <div class="flex items-center gap-2.5 text-white">
+                <div class="flex items-center gap-2.5 text-(--card-accent)">
                     <HugeiconsIcon :icon="BicepsFlexedIcon" :stroke-width="2.5" />
                     <p>{{ fuerza }}</p>
                 </div>

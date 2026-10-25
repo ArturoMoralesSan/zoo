@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Card;
 
+use App\Concerns\CardDesignValidationRules;
 use App\Enums\CardRarity;
 use App\Models\Card;
 use Illuminate\Foundation\Http\FormRequest;
@@ -9,6 +10,8 @@ use Illuminate\Validation\Rule;
 
 class UpdateCardRequest extends FormRequest
 {
+    use CardDesignValidationRules;
+
     public function authorize(): bool
     {
         return true;
@@ -17,6 +20,8 @@ class UpdateCardRequest extends FormRequest
     public function rules(): array
     {
         return [
+            ...$this->cardDesignRules(),
+
             'species_id' => [
                 'required',
                 'integer',

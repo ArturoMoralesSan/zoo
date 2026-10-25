@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import type { HTML3DElement } from '@babylonjs/viewer';
-import { Box, LoaderCircle, Pause, Play, TriangleAlert } from 'lucide-vue-next';
+import {
+    Box,
+    LoaderCircle,
+    RotateCcw,
+    Scan,
+    TriangleAlert,
+    ZoomIn,
+    ZoomOut,
+} from 'lucide-vue-next';
 import { onMounted, ref, watch } from 'vue';
 
-import AdminButton from '@/components/admin/AdminButton.vue';
 import type { ModelExtension } from '@/lib/modelPreview';
 
 const props = withDefaults(
@@ -11,11 +18,21 @@ const props = withDefaults(
         source: string | null;
         extension?: ModelExtension | null;
         heightClass?: string;
+        /*
+         * Alto exacto (p. ej. para igualar otra vista previa); tiene prioridad sobre heightClass.
+         */
+        height?: string | null;
+        /*
+         * Acercamiento predeterminado y botones de zoom (Completo / Normal / Cerca).
+         */
+        zoomControls?: boolean;
         emptyText?: string;
     }>(),
     {
         extension: null,
         heightClass: 'h-[360px]',
+        height: null,
+        zoomControls: true,
         emptyText: 'Selecciona un archivo GLB para previsualizar el modelo.',
     },
 );
@@ -33,9 +50,84 @@ const isReady = ref(false);
 const isLoading = ref(false);
 const hasError = ref(false);
 
+/*
+ * Zoom relativo al encuadre automático del visor, para que se vea
+ * igual en cualquier modelo sin importar su tamaño.
+ */
+const ZOOM_PRESETS = [
+    { id: 'full', label: 'Completo', factor: 1, icon: ZoomOut },
+    { id: 'normal', label: 'Normal', factor: 0.8, icon: Scan },
+    { id: 'close', label: 'Cerca', factor: 0.55, icon: ZoomIn },
+] as const;
+
+type ZoomPreset = (typeof ZOOM_PRESETS)[number];
+
+const DEFAULT_ZOOM = ZOOM_PRESETS[1];
+
+let framedRadius: number | null = null;
+
+const activeZoom = ref<ZoomPreset['id'] | null>(DEFAULT_ZOOM.id);
+
+const applyZoom = (preset: ZoomPreset) => {
+    const details = viewer.value?.viewerDetails;
+
+    if (!details || !framedRadius) {
+        return;
+    }
+
+    // Solo cambia la distancia; el ángulo y el centro se conservan.
+    details.viewer.updateCamera({ radius: framedRadius * preset.factor });
+    activeZoom.value = preset.id;
+};
+
+const resetView = () => {
+    viewer.value?.viewerDetails?.viewer.resetCamera(true);
+    applyZoom(DEFAULT_ZOOM);
+};
+
+// Al acercar o girar a mano ya no aplica ningún preajuste.
+const clearActiveZoom = () => {
+    activeZoom.value = null;
+};
+
 const animations = ref<string[]>([]);
 const selectedAnimation = ref<number | null>(null);
-const isPlaying = ref(false);
+
+/*
+ * La barra del visor siempre incluye un botón para restablecer la cámara,
+ * sin opción para quitarlo. Se oculta con estilos dentro de su shadow DOM
+ * (se usa "Restablecer vista" de los controles de zoom), junto con el
+ * separador anterior y la barra completa si ya no le queda ningún control.
+ */
+const TOOLBAR_STYLES = `
+    button[aria-label="Reset Camera Pose"],
+    .divider:has(+ button[aria-label="Reset Camera Pose"]) {
+        display: none;
+    }
+
+    .tool-bar:not(:has(.animation-timeline, select)) {
+        display: none;
+    }
+`;
+
+let toolbarSheet: CSSStyleSheet | null = null;
+
+watch(viewer, (element) => {
+    const root = element?.shadowRoot;
+
+    if (!root) {
+        return;
+    }
+
+    if (!toolbarSheet) {
+        toolbarSheet = new CSSStyleSheet();
+        toolbarSheet.replaceSync(TOOLBAR_STYLES);
+    }
+
+    if (!root.adoptedStyleSheets.includes(toolbarSheet)) {
+        root.adoptedStyleSheets = [...root.adoptedStyleSheets, toolbarSheet];
+    }
+});
 
 /*
  * Babylon.js es pesado: se carga solo cuando se usa el visor.
@@ -52,14 +144,14 @@ watch(
         isLoading.value = Boolean(source);
         animations.value = [];
         selectedAnimation.value = null;
-        isPlaying.value = false;
+        framedRadius = null;
+        activeZoom.value = DEFAULT_ZOOM.id;
     },
     { immediate: true },
 );
 
 const syncAnimationState = () => {
     selectedAnimation.value = viewer.value?.selectedAnimation ?? null;
-    isPlaying.value = viewer.value?.isAnimationPlaying ?? false;
 };
 
 const onModelChange = () => {
@@ -68,9 +160,24 @@ const onModelChange = () => {
     animations.value = [...(viewer.value?.animations ?? [])];
     syncAnimationState();
 
-    if (viewer.value?.viewerDetails) {
-        emit('loaded', viewer.value.viewerDetails);
+    const details = viewer.value?.viewerDetails;
+
+    if (!details) {
+        return;
     }
+
+    /*
+     * Al cargar, el visor encuadra el modelo con una animación, así que el
+     * radio final aún no está aplicado. El límite máximo de zoom sí: el visor
+     * lo fija en 5 veces el radio de encuadre.
+     */
+    framedRadius = (details.camera.upperRadiusLimit ?? 0) / 5 || null;
+
+    if (props.zoomControls) {
+        applyZoom(DEFAULT_ZOOM);
+    }
+
+    emit('loaded', details);
 };
 
 const onModelError = () => {
@@ -90,10 +197,6 @@ const selectAnimation = (index: number) => {
         viewer.value.toggleAnimation();
     }
 };
-
-const toggleAnimation = () => {
-    viewer.value?.toggleAnimation();
-};
 </script>
 
 <template>
@@ -102,9 +205,12 @@ const toggleAnimation = () => {
         <div
             v-if="!source"
             class="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#DCE7DF] bg-[#F8FAF8] px-4 py-8 text-center"
-            :class="heightClass"
+            :class="height ? null : heightClass"
+            :style="height ? { height } : undefined"
         >
-            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E2F3E8] text-[#187744]">
+            <div
+                class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E2F3E8] text-[#187744]"
+            >
                 <Box :size="24" />
             </div>
 
@@ -117,7 +223,8 @@ const toggleAnimation = () => {
         <div
             v-else
             class="relative overflow-hidden rounded-xl border border-[#DCE7DF] bg-[#F6F9F6]"
-            :class="heightClass"
+            :class="height ? null : heightClass"
+            :style="height ? { height } : undefined"
         >
             <!--
                 source/extension se enlazan como atributos (.attr):
@@ -128,14 +235,49 @@ const toggleAnimation = () => {
                 ref="viewer"
                 :source.attr="source"
                 :extension.attr="extension ? `.${extension}` : null"
-                animation-auto-play
                 clear-color="#F6F9F6"
                 class="model-viewer block h-full w-full"
                 @modelchange="onModelChange"
                 @modelerror="onModelError"
                 @selectedanimationchange="syncAnimationState"
-                @animationplayingchange="syncAnimationState"
+                @pointerdown="clearActiveZoom"
+                @wheel.passive="clearActiveZoom"
             />
+
+            <!-- Zoom -->
+            <div
+                v-if="zoomControls && isReady && !isLoading && !hasError"
+                class="absolute top-4 left-4 flex items-center gap-1 rounded-xl border border-[#DCE7DF] bg-white/90 p-1 backdrop-blur-sm"
+            >
+                <button
+                    v-for="preset in ZOOM_PRESETS"
+                    :key="preset.id"
+                    type="button"
+                    :aria-pressed="activeZoom === preset.id"
+                    class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors"
+                    :class="
+                        activeZoom === preset.id
+                            ? 'bg-[#EAF5EE] text-[#187744]'
+                            : 'text-[#435D4C] hover:bg-[#F2F7F4]'
+                    "
+                    @click="applyZoom(preset)"
+                >
+                    <component :is="preset.icon" :size="15" />
+                    {{ preset.label }}
+                </button>
+
+                <span class="mx-0.5 h-6 w-px bg-[#DCE7DF]" />
+
+                <button
+                    type="button"
+                    title="Restablecer vista"
+                    aria-label="Restablecer vista"
+                    class="inline-flex items-center rounded-lg p-2 text-[#435D4C] transition-colors hover:bg-[#F2F7F4]"
+                    @click="resetView"
+                >
+                    <RotateCcw :size="15" />
+                </button>
+            </div>
 
             <!-- Cargando -->
             <div
@@ -154,7 +296,8 @@ const toggleAnimation = () => {
                 <TriangleAlert :size="22" class="text-red-500" />
 
                 <p class="form-error max-w-sm">
-                    No se pudo cargar el modelo. Verifica que el archivo GLB sea válido.
+                    No se pudo cargar el modelo. Verifica que el archivo GLB sea
+                    válido.
                 </p>
             </div>
         </div>
@@ -164,20 +307,11 @@ const toggleAnimation = () => {
             v-if="source && !hasError && animations.length"
             class="rounded-xl border border-[#DCE7DF] bg-[#FCFEFC] p-3.5"
         >
-            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p class="text-xs font-semibold uppercase tracking-wider text-[#435D4C]">
-                    Animaciones ({{ animations.length }})
-                </p>
-
-                <AdminButton
-                    variant="secondary"
-                    :icon="isPlaying ? Pause : Play"
-                    class="w-[8.5rem]"
-                    @click="toggleAnimation"
-                >
-                    {{ isPlaying ? 'Pausar' : 'Reproducir' }}
-                </AdminButton>
-            </div>
+            <p
+                class="mb-3 text-xs font-semibold tracking-wider text-[#435D4C] uppercase"
+            >
+                Animaciones ({{ animations.length }})
+            </p>
 
             <div class="flex flex-wrap gap-2">
                 <button

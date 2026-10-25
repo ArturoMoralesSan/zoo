@@ -23,6 +23,8 @@ import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 
 import { getRarityLabel } from '@/lib/cardRarity';
+import type { AccentColor } from '@/lib/cardColors';
+import type { CardFontId, TitleSize } from '@/lib/cardFonts';
 import type { DuelSettingsSource } from '@/lib/cardRarity';
 import { storageUrl } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
@@ -47,6 +49,11 @@ interface Card {
     thumbnail_image: string | null;
     artwork_image: string | null;
     generated_image: string | null;
+    fade_color: string;
+    accent_color: AccentColor | null;
+    title_font_family: CardFontId;
+    title_font_weight: number;
+    title_font_size: TitleSize;
     model_file: string | null;
     is_active: boolean;
     sort_order: number;
@@ -321,6 +328,11 @@ defineOptions({
             :rapidez="card.rapidez ?? null"
             :fuerza="card.fuerza ?? null"
             :artwork-url="storageUrl(card.artwork_image)"
+            :fade-color="card.fade_color"
+            :accent-color="card.accent_color"
+            :title-font-family="card.title_font_family"
+            :title-font-weight="card.title_font_weight"
+            :title-font-size="card.title_font_size"
         />
 
         <!-- Modelo 3D -->
@@ -352,7 +364,7 @@ defineOptions({
                 v-if="modelPreviewSource"
                 :source="modelPreviewSource"
                 extension="glb"
-                height-class="h-[420px]"
+                height-class="h-[520px]"
                 class="mb-3"
             />
 

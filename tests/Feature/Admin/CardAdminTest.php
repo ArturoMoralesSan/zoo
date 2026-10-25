@@ -53,6 +53,7 @@ class CardAdminTest extends TestCase
     public function test_admin_can_store_card_with_stats_and_duel_settings(): void
     {
         $response = $this->actingAs($this->admin)->post(route('admin.cards.store'), [
+            ...$this->designPayload(),
             'species_id' => $this->species->id,
             'name' => 'Águila Legendaria',
             'rarity' => 'epica',
@@ -121,6 +122,7 @@ class CardAdminTest extends TestCase
         );
 
         $response = $this->actingAs($this->admin)->put(route('admin.cards.update', $card), [
+            ...$this->designPayload(),
             'species_id' => $this->species->id,
             'name' => 'Águila Adulta',
             'rarity' => 'rara',
@@ -232,9 +234,21 @@ class CardAdminTest extends TestCase
         return UploadedFile::fake()->createWithContent($name, base64_decode($base64));
     }
 
+    private function designPayload(): array
+    {
+        return [
+            'fade_color' => '#4f6b5a',
+            'accent_color' => null,
+            'title_font_family' => 'cinzel',
+            'title_font_weight' => 800,
+            'title_font_size' => '6xl',
+        ];
+    }
+
     private function cardPayload(array $overrides = []): array
     {
         return array_merge([
+            ...$this->designPayload(),
             'species_id' => $this->species->id,
             'name' => 'Águila Modelo ' . uniqid(),
             'rarity' => 'comun',
@@ -329,6 +343,55 @@ class CardAdminTest extends TestCase
                 'generated_image' => $this->fakeImage('card.gif', self::GIF),
             ]))
             ->assertSessionHasErrors('generated_image');
+    }
+
+    public function test_admin_can_store_card_design(): void
+    {
+        $payload = $this->cardPayload([
+            'fade_color' => '#F2E8D5',
+            'accent_color' => 'black',
+            'title_font_family' => 'montserrat-alternates',
+            'title_font_weight' => 300,
+            'title_font_size' => '5xl',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('cards', [
+            'name' => $payload['name'],
+            'fade_color' => '#f2e8d5',
+            'accent_color' => 'black',
+            'title_font_family' => 'montserrat-alternates',
+            'title_font_weight' => 300,
+            'title_font_size' => '5xl',
+        ]);
+    }
+
+    public function test_card_design_is_validated(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload([
+                'fade_color' => 'verde',
+                'accent_color' => 'red',
+                'title_font_family' => 'comic-sans',
+                'title_font_size' => '9xl',
+            ]))
+            ->assertSessionHasErrors([
+                'fade_color',
+                'accent_color',
+                'title_font_family',
+                'title_font_size',
+            ]);
+
+        // Signika no tiene peso 900.
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload([
+                'title_font_family' => 'signika',
+                'title_font_weight' => 900,
+            ]))
+            ->assertSessionHasErrors('title_font_weight');
     }
 
     public function test_gltf_models_are_rejected(): void

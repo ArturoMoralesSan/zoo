@@ -371,6 +371,11 @@ class CardController extends Controller
             'rapidez' => $validated['rapidez'],
             'fuerza' => $validated['fuerza'],
             'duel_settings_source' => $validated['duel_settings_source'],
+            'fade_color' => strtolower($validated['fade_color']),
+            'accent_color' => $validated['accent_color'] ?? null,
+            'title_font_family' => $validated['title_font_family'],
+            'title_font_weight' => $validated['title_font_weight'],
+            'title_font_size' => $validated['title_font_size'],
 
             /*
              * Solo se guardan valores propios si la tarjeta

@@ -13,7 +13,6 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-cinzel: 'Cinzel', sans-serif;
     --font-card: 'Noto Sans', sans-serif;
 
     --font-sans:

@@ -1,5 +1,7 @@
 import { getFontEmbedCSS, toPng, toSvg } from 'html-to-image';
 
+import { fontsVersion } from '@/lib/cardFonts';
+
 /**
  * Calidad de las imágenes generadas a partir de la plantilla (572 × 1016 px).
  * - Descarga y servidor: 3× (1716 × 3048 px).
@@ -9,13 +11,20 @@ export const CARD_EXPORT_PIXEL_RATIO = 3;
 export const CARD_TEXTURE_PIXEL_RATIO = 2;
 
 /*
- * Las fuentes se incrustan en cada imagen; se calculan una sola vez
- * porque leerlas y convertirlas a base64 es lo más costoso.
+ * Las fuentes se incrustan en cada imagen; se recalculan solo cuando se
+ * carga una fuente nueva, porque leerlas y convertirlas a base64 es lo
+ * más costoso.
  */
 let fontEmbedCss: Promise<string> | null = null;
+let fontEmbedVersion = -1;
 
 const renderOptions = async (node: HTMLElement) => {
     await document.fonts.ready;
+
+    if (fontEmbedVersion !== fontsVersion()) {
+        fontEmbedVersion = fontsVersion();
+        fontEmbedCss = null;
+    }
 
     fontEmbedCss ??= getFontEmbedCSS(node).catch((error) => {
         fontEmbedCss = null;
