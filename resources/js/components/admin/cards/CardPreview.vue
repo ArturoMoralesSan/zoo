@@ -74,7 +74,17 @@ type CardMaterial = Material & {
     baseColorTexture?: Nullable<BaseTexture>;
 };
 
-let scene: Scene | null = null;
+/*
+ * Lo que se usa del visor: la escena y el aviso de que cambió.
+ * El visor solo vuelve a dibujar cuando algo cambia (cámara, animación);
+ * cambiar una textura no cuenta, así que hay que avisarle.
+ */
+type ViewerScene = {
+    scene: Scene;
+    markSceneMutated: () => void;
+};
+
+let viewerScene: ViewerScene | null = null;
 let TextureClass: typeof Texture | null = null;
 let pendingTexture: Texture | null = null;
 
@@ -82,11 +92,12 @@ const textureUrl = ref<string | null>(null);
 const renderFailed = ref(false);
 
 const applyTexture = () => {
-    const material = scene?.getMaterialByName(
+    const current = viewerScene;
+    const material = current?.scene.getMaterialByName(
         CARD_MATERIAL,
     ) as CardMaterial | null;
 
-    if (!scene || !TextureClass || !material || !textureUrl.value) {
+    if (!current || !TextureClass || !material || !textureUrl.value) {
         return;
     }
 
@@ -97,7 +108,7 @@ const applyTexture = () => {
     pendingTexture?.dispose();
 
     // Se reemplaza al terminar de cargar para evitar parpadeos.
-    const next: Texture = new TextureClass(textureUrl.value, scene, {
+    const next: Texture = new TextureClass(textureUrl.value, current.scene, {
         invertY: false, // Convención de glTF.
         onLoad: () => {
             if (next !== pendingTexture) {
@@ -111,19 +122,20 @@ const applyTexture = () => {
             next.anisotropicFilteringLevel = 8;
             material[slot] = next;
             previous?.dispose();
+            current.markSceneMutated();
         },
     });
 
     pendingTexture = next;
 };
 
-const onModelLoaded = async (details: { scene: Scene }) => {
+const onModelLoaded = async (details: ViewerScene) => {
     // Babylon se carga solo junto con el visor (igual que en ModelViewer).
     TextureClass ??= (
         await import('@babylonjs/core/Materials/Textures/texture')
     ).Texture;
 
-    scene = details.scene;
+    viewerScene = details;
     applyTexture();
 };
 
@@ -175,7 +187,7 @@ onMounted(regenerate);
 
 onBeforeUnmount(() => {
     renderId++;
-    scene = null;
+    viewerScene = null;
 });
 
 /*
