@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Card;
 use App\Models\CardCapture;
+use App\Models\CardQuizState;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
@@ -17,7 +18,9 @@ class CardTest extends TestCase
     use DatabaseTransactions;
 
     protected User $user;
+
     protected SpeciesCategory $category;
+
     protected Species $species;
 
     protected function setUp(): void
@@ -93,8 +96,11 @@ class CardTest extends TestCase
         $this->assertSame([
             'id', 'name', 'thumbnail_image', 'rarity', 'species_name', 'category_name',
             'sort_order', 'stats', 'encountered', 'captured_at', 'model_url',
-            'card_image_url',
+            'card_image_url', 'attempts',
         ], array_keys($data));
+
+        // Tarjeta sin intentos usados: los intentos completos de la ronda.
+        $this->assertSame(['max' => 3, 'used' => 0, 'left' => 3, 'cooldown_minutes' => 1440, 'locked_until' => null], $data['attempts']);
 
         $this->assertFalse($data['encountered']);
         $this->assertNull($data['captured_at']);
@@ -116,6 +122,7 @@ class CardTest extends TestCase
 
         $this->assertTrue($data['encountered']);
         $this->assertNotNull($data['captured_at']);
+        $this->assertNull($data['attempts']);
         $this->assertSame(
             Storage::disk('public')->url('cards/1/models/jaguar.glb'),
             $data['model_url']
@@ -137,6 +144,34 @@ class CardTest extends TestCase
 
         $this->assertTrue($data['encountered']);
         $this->assertNull($data['model_url']);
+    }
+
+    public function test_cards_index_reports_attempts_and_lock_for_unowned_cards(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $card = $this->createCard();
+
+        CardQuizState::create([
+            'user_id' => $this->user->id,
+            'card_id' => $card->id,
+            'failed_attempts' => 3,
+            'locked_until' => now()->addMinutes(30),
+        ]);
+
+        $attempts = $this->cardFromIndex($card)['attempts'];
+
+        $this->assertSame(0, $attempts['left']);
+        $this->assertSame(3, $attempts['used']);
+        $this->assertNotNull($attempts['locked_until']);
+
+        // Al terminar el bloqueo, los intentos se muestran reiniciados.
+        $this->travel(31)->minutes();
+
+        $attempts = $this->cardFromIndex($card)['attempts'];
+
+        $this->assertSame(3, $attempts['left']);
+        $this->assertNull($attempts['locked_until']);
     }
 
     public function test_cards_index_excludes_inactive_cards(): void

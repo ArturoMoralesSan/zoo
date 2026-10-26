@@ -20,6 +20,7 @@ import admin from '@/routes/admin';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import DataTable from '@/components/admin/DataTable.vue';
 import TableActions from '@/components/admin/TableActions.vue';
+import DuelMessagesSettings from '@/components/admin/cards/DuelMessagesSettings.vue';
 import RaritySettingsTable from '@/components/admin/cards/RaritySettingsTable.vue';
 
 interface Species {
@@ -65,6 +66,14 @@ const props = defineProps<{
     };
     species: Species[];
     raritySettings: CardRaritySetting[];
+    duelMessages: Record<
+        'win_message' | 'retry_message' | 'locked_message',
+        string | null
+    >;
+    duelMessagesBuiltIn: Record<
+        'win_message' | 'retry_message' | 'locked_message',
+        string
+    >;
 }>();
 
 const search = ref(props.filters?.search ?? '');
@@ -187,6 +196,11 @@ defineOptions({
         />
 
         <RaritySettingsTable :settings="raritySettings" />
+
+        <DuelMessagesSettings
+            :messages="duelMessages"
+            :built-in="duelMessagesBuiltIn"
+        />
 
         <DataTable
             v-model:search="search"

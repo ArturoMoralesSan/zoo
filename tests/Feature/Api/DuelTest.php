@@ -6,6 +6,7 @@ use App\Models\Card;
 use App\Models\CardCapture;
 use App\Models\CardQrCode;
 use App\Models\CardRaritySetting;
+use App\Models\DuelMessageSetting;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
 use App\Models\Species;
@@ -21,7 +22,9 @@ class DuelTest extends TestCase
     use DatabaseTransactions;
 
     protected User $user;
+
     protected Species $species;
+
     protected Card $card;
 
     protected function setUp(): void
@@ -50,6 +53,13 @@ class DuelTest extends TestCase
             'cooldown_minutes' => 60,
         ]);
 
+        // Las pruebas esperan los mensajes integrados.
+        DuelMessageSetting::current()->update([
+            'win_message' => null,
+            'retry_message' => null,
+            'locked_message' => null,
+        ]);
+
         Sanctum::actingAs($this->user);
     }
 
@@ -71,7 +81,6 @@ class DuelTest extends TestCase
             $question = $card->quizQuestions()->create([
                 'question' => "Pregunta {$i}",
                 'is_active' => true,
-                'sort_order' => $i,
             ]);
 
             $question->answers()->createMany([
@@ -140,7 +149,9 @@ class DuelTest extends TestCase
         $this->assertCount(2, $duel->json('data.questions'));
         $this->assertCount(3, $duel->json('data.questions.0.answers'));
         $this->assertSame(['id', 'answer'], array_keys($duel->json('data.questions.0.answers.0')));
-        $this->assertSame(2, $duel->json('data.retries_left'));
+        $this->assertSame(['max' => 2, 'used' => 0, 'left' => 2, 'cooldown_minutes' => 60, 'locked_until' => null], $duel->json('data.attempts'));
+        $this->assertSame(600, $duel->json('data.time_limit_seconds'));
+        $this->assertSame(600, $duel->json('data.time_left_seconds'));
         $this->assertStringNotContainsString('is_correct', $duel->getContent());
         $this->assertArrayNotHasKey('model_url', $duel->json('data.card'));
         $this->assertStringEndsWith('cards/9/quetzal.png', $duel->json('data.card.card_image_url'));
@@ -191,7 +202,12 @@ class DuelTest extends TestCase
 
         $this->submit($duel, $this->answersFor($duel))
             ->assertCreated()
+            ->assertJsonPath('data.outcome', 'won')
             ->assertJsonPath('data.passed', true)
+            ->assertJsonPath('message', '¡Ganaste el duelo! Quetzal Dorado ya es parte de tu colección.')
+            ->assertJsonPath('data.attempts', null)
+            ->assertJsonPath('data.review', null)
+            ->assertJsonPath('data.card.attempts', null)
             ->assertJsonPath('data.card.id', $this->card->id)
             ->assertJsonPath('data.card.encountered', true)
             ->assertJsonPath('data.card.model_url', fn ($url) => str_ends_with($url, 'cards/9/models/quetzal.glb'));
@@ -204,21 +220,31 @@ class DuelTest extends TestCase
         $this->startDuel()->assertStatus(409);
     }
 
-    public function test_one_wrong_answer_returns_score_only_and_does_not_capture(): void
+    public function test_one_wrong_answer_returns_feedback_without_revealing_answers(): void
     {
         $duel = $this->startDuel();
+        $answers = $this->answersFor($duel, wrong: 1);
 
-        $response = $this->submit($duel, $this->answersFor($duel, wrong: 1))
+        $response = $this->submit($duel, $answers)
             ->assertOk()
+            ->assertJsonPath('data.outcome', 'retry')
             ->assertJsonPath('data.passed', false)
             ->assertJsonPath('data.correct_count', 1)
             ->assertJsonPath('data.total_questions', 2)
-            ->assertJsonPath('data.retries_left', 1)
-            ->assertJsonPath('data.locked_until', null);
+            ->assertJsonPath('data.attempts.left', 1)
+            ->assertJsonPath('data.attempts.used', 1)
+            ->assertJsonPath('data.attempts.locked_until', null)
+            ->assertJsonPath('data.review', null)
+            ->assertJsonPath('data.card', null)
+            ->assertJsonPath('message', 'Acertaste 1 de 2. Te quedan 1 de 2 intentos.');
+
+        // Por pregunta: la respuesta elegida y si fue correcta, en el orden servido.
+        $this->assertSame([
+            ['question_id' => $answers[0]['question_id'], 'answer_id' => $answers[0]['answer_id'], 'is_correct' => false],
+            ['question_id' => $answers[1]['question_id'], 'answer_id' => $answers[1]['answer_id'], 'is_correct' => true],
+        ], $response->json('data.results'));
 
         $this->assertStringNotContainsString('correct_answer', $response->getContent());
-        $this->assertStringNotContainsString('is_correct', $response->getContent());
-        $this->assertArrayNotHasKey('results', $response->json('data'));
 
         $this->assertDatabaseMissing('card_captures', [
             'user_id' => $this->user->id,
@@ -274,7 +300,7 @@ class DuelTest extends TestCase
 
         $this->submit($duel, $this->answersFor($duel))
             ->assertStatus(410)
-            ->assertJsonPath('data.retries_left', 1);
+            ->assertJsonPath('data.attempts.left', 1);
 
         $this->assertDatabaseHas('quiz_attempts', [
             'id' => $duel->json('data.attempt_id'),
@@ -290,7 +316,7 @@ class DuelTest extends TestCase
 
         $second = $this->startDuel()
             ->assertOk()
-            ->assertJsonPath('data.retries_left', 1);
+            ->assertJsonPath('data.attempts.left', 1);
 
         $this->assertNotSame($first->json('data.attempt_id'), $second->json('data.attempt_id'));
     }
@@ -305,18 +331,21 @@ class DuelTest extends TestCase
         $duel = $this->startDuel();
         $this->submit($duel, $this->answersFor($duel, wrong: 2))
             ->assertOk()
-            ->assertJsonPath('data.retries_left', 0)
-            ->assertJsonPath('data.locked_until', now()->addMinutes(60)->toJSON());
+            ->assertJsonPath('data.outcome', 'locked')
+            ->assertJsonPath('data.attempts.left', 0)
+            ->assertJsonPath('data.attempts.locked_until', now()->addMinutes(60)->toJSON())
+            ->assertJsonPath('message', 'Acertaste 0 de 2 y ya no te quedan intentos. Vuelve a intentarlo en 1 hora.');
 
         $this->startDuel()
             ->assertStatus(423)
-            ->assertJsonPath('data.locked_until', now()->addMinutes(60)->toJSON());
+            ->assertJsonPath('data.attempts.left', 0)
+            ->assertJsonPath('data.attempts.locked_until', now()->addMinutes(60)->toJSON());
 
         $this->travel(61)->minutes();
 
         $this->startDuel()
             ->assertOk()
-            ->assertJsonPath('data.retries_left', 2);
+            ->assertJsonPath('data.attempts.left', 2);
     }
 
     public function test_rarity_cooldown_applies_when_card_uses_rarity_settings(): void
@@ -339,8 +368,104 @@ class DuelTest extends TestCase
 
         $this->submit($duel, $this->answersFor($duel, wrong: 1))
             ->assertOk()
-            ->assertJsonPath('data.retries_left', 0)
-            ->assertJsonPath('data.locked_until', now()->addMinutes(30)->toJSON());
+            ->assertJsonPath('data.outcome', 'locked')
+            ->assertJsonPath('data.attempts.left', 0)
+            ->assertJsonPath('data.attempts.locked_until', now()->addMinutes(30)->toJSON());
+    }
+
+    public function test_lockout_reveals_answers_only_for_rarities_that_allow_it(): void
+    {
+        CardRaritySetting::updateOrCreate(['rarity' => 'rara'], ['reveal_answers_on_lockout' => true]);
+        CardRaritySetting::updateOrCreate(['rarity' => 'epica'], ['reveal_answers_on_lockout' => false]);
+
+        // Mientras quedan intentos, nunca hay repaso.
+        $duel = $this->startDuel();
+        $this->submit($duel, $this->answersFor($duel, wrong: 1))
+            ->assertJsonPath('data.outcome', 'retry')
+            ->assertJsonPath('data.review', null);
+
+        // Al agotar los intentos (rara): repaso con la respuesta elegida y la correcta.
+        $duel = $this->startDuel();
+        $answers = $this->answersFor($duel, wrong: 1);
+
+        $review = $this->submit($duel, $answers)
+            ->assertJsonPath('data.outcome', 'locked')
+            ->json('data.review');
+
+        $this->assertCount(2, $review);
+        $this->assertSame($answers[0]['question_id'], $review[0]['question_id']);
+        $this->assertSame($answers[0]['answer_id'], $review[0]['selected_answer_id']);
+        $this->assertCount(3, $review[0]['answers']);
+        $this->assertCount(1, array_filter(array_column($review[0]['answers'], 'is_correct')));
+
+        // Rareza que no revela respuestas (épica).
+        $epica = $this->createCard([
+            'rarity' => 'epica',
+            'duel_settings_source' => 'card',
+            'questions_per_duel' => 1,
+            'retries' => 1,
+            'cooldown_minutes' => 30,
+        ]);
+
+        $duel = $this->startDuel($epica);
+        $this->submit($duel, $this->answersFor($duel, wrong: 1))
+            ->assertJsonPath('data.outcome', 'locked')
+            ->assertJsonPath('data.review', null);
+    }
+
+    public function test_card_messages_override_the_default_messages(): void
+    {
+        DuelMessageSetting::current()->update([
+            'win_message' => 'Mensaje predeterminado',
+            'retry_message' => 'Reintento predeterminado: {intentos_restantes}',
+        ]);
+
+        // Mensaje propio solo para la victoria: el reintento usa el predeterminado.
+        $this->card->update([
+            'messages_source' => 'card',
+            'win_message' => '¡{tarjeta} es tuya!',
+            'retry_message' => null,
+        ]);
+
+        $duel = $this->startDuel();
+        $this->submit($duel, $this->answersFor($duel, wrong: 1))
+            ->assertJsonPath('message', 'Reintento predeterminado: 1');
+
+        $duel = $this->startDuel();
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertJsonPath('message', '¡Quetzal Dorado es tuya!');
+    }
+
+    public function test_card_using_default_messages_ignores_its_own_texts(): void
+    {
+        DuelMessageSetting::current()->update([
+            'win_message' => 'Mensaje predeterminado',
+        ]);
+
+        $this->card->update([
+            'messages_source' => 'default',
+            'win_message' => 'Mensaje viejo de la tarjeta',
+        ]);
+
+        $duel = $this->startDuel();
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertJsonPath('message', 'Mensaje predeterminado');
+    }
+
+    public function test_default_messages_fill_placeholders(): void
+    {
+        DuelMessageSetting::current()->update([
+            'win_message' => '{tarjeta}: {correctas}/{total}',
+            'retry_message' => 'Quedan {intentos_restantes} de {intentos_maximos}',
+        ]);
+
+        $duel = $this->startDuel();
+        $this->submit($duel, $this->answersFor($duel, wrong: 1))
+            ->assertJsonPath('message', 'Quedan 1 de 2');
+
+        $duel = $this->startDuel();
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertJsonPath('message', 'Quetzal Dorado: 2/2');
     }
 
     public function test_unknown_qr_code_returns_404(): void

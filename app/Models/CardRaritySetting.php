@@ -22,6 +22,7 @@ class CardRaritySetting extends Model
         'questions_per_duel',
         'retries',
         'cooldown_minutes',
+        'reveal_answers_on_lockout',
     ];
 
     protected function casts(): array
@@ -31,6 +32,7 @@ class CardRaritySetting extends Model
             'questions_per_duel' => 'integer',
             'retries' => 'integer',
             'cooldown_minutes' => 'integer',
+            'reveal_answers_on_lockout' => 'boolean',
         ];
     }
 

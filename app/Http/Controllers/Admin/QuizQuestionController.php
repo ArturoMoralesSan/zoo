@@ -58,7 +58,6 @@ class QuizQuestionController extends Controller
                     )
                 )
             )
-            ->orderBy('sort_order')
             ->orderBy('id')
             ->paginate(10)
             ->withQueryString();
@@ -110,12 +109,6 @@ class QuizQuestionController extends Controller
                 'boolean',
             ],
 
-            'sort_order' => [
-                'nullable',
-                'integer',
-                'min:0',
-            ],
-
             'answers' => [
                 'required',
                 'array',
@@ -145,7 +138,6 @@ class QuizQuestionController extends Controller
             $question = $card->quizQuestions()->create([
                 'question' => $validated['question'],
                 'is_active' => $validated['is_active'] ?? true,
-                'sort_order' => $validated['sort_order'] ?? 0,
             ]);
 
             foreach ($validated['answers'] as $index => $answer) {
@@ -241,12 +233,6 @@ class QuizQuestionController extends Controller
                 'boolean',
             ],
 
-            'sort_order' => [
-                'nullable',
-                'integer',
-                'min:0',
-            ],
-
             'answers' => [
                 'required',
                 'array',
@@ -281,7 +267,6 @@ class QuizQuestionController extends Controller
             $quizQuestion->update([
                 'question' => $validated['question'],
                 'is_active' => $validated['is_active'] ?? true,
-                'sort_order' => $validated['sort_order'] ?? 0,
             ]);
 
             /*

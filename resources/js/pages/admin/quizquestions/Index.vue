@@ -44,7 +44,6 @@ interface Question {
     card_id: number;
     question: string;
     is_active: boolean;
-    sort_order: number;
     answers: Answer[];
 }
 
@@ -195,7 +194,7 @@ defineOptions({
         <DataTable
             :pagination="questions"
             :is-empty="questions.data.length === 0"
-            :empty-colspan="6"
+            :empty-colspan="5"
             :search="search"
             search-placeholder="Buscar pregunta o respuesta..."
             :has-filters="hasFilters()"
@@ -265,9 +264,6 @@ defineOptions({
                         Correcta
                     </th>
 
-                    <th class="px-5 py-4 font-semibold sm:px-6">
-                        Orden
-                    </th>
 
                     <th class="px-5 py-4 font-semibold sm:px-6">
                         Estado
@@ -355,14 +351,6 @@ defineOptions({
                         >
                             <CircleOff class="h-3.5 w-3.5" />
                             Sin correcta
-                        </span>
-                    </td>
-
-                    <td class="px-5 py-4 sm:px-6">
-                        <span
-                            class="inline-flex rounded-full border border-[#DCE7DF] bg-[#F5F8F5] px-2.5 py-1 text-xs font-medium text-[#42604C]"
-                        >
-                            {{ question.sort_order }}
                         </span>
                     </td>
 

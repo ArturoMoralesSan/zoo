@@ -12,6 +12,7 @@ import {
     ImageOff,
     Info,
     Layers3,
+    MessageSquareText,
     Palette,
     Pencil,
     QrCode,
@@ -38,6 +39,8 @@ import type { CardFontId, TitleSize } from '@/lib/cardFonts';
 import { getRarityLabel } from '@/lib/cardRarity';
 import type { DuelSettingsSource } from '@/lib/cardRarity';
 import { CARD_STATS } from '@/lib/cardStats';
+import { DUEL_MESSAGE_FIELDS, renderDuelMessage } from '@/lib/duelMessages';
+import type { DuelMessages } from '@/lib/duelMessages';
 import { storageUrl } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
 
@@ -82,9 +85,42 @@ interface Card {
     species: Species;
     quiz_questions_count?: number;
     active_quiz_questions_count?: number;
+    messages_source?: 'default' | 'card';
+    win_message?: string | null;
+    retry_message?: string | null;
+    locked_message?: string | null;
 }
 
-const props = defineProps<{ card: Card }>();
+const props = defineProps<{
+    card: Card;
+    duelMessageDefaults: DuelMessages;
+}>();
+
+/*
+ * Mensajes del duelo efectivos: los de la tarjeta (si son personalizados
+ * y no están vacíos); si no, los predeterminados del panel.
+ */
+const duelMessages = computed(() => {
+    const custom = props.card.messages_source === 'card';
+
+    return DUEL_MESSAGE_FIELDS.map((field) => {
+        const own = custom ? props.card[field.key] : null;
+
+        const [template, origin] = own
+            ? [own, 'Personalizado']
+            : [props.duelMessageDefaults[field.key], 'Predeterminado'];
+
+        return {
+            ...field,
+            origin,
+            text: renderDuelMessage(field.key, template, {
+                cardName: props.card.name,
+                retries: props.card.effective_retries ?? 3,
+                cooldownMinutes: props.card.effective_cooldown_minutes ?? 1440,
+            }),
+        };
+    });
+});
 
 const modelPreviewSource = computed(() => storageUrl(props.card.model_file));
 
@@ -476,6 +512,34 @@ defineOptions({
 
                         <CardDetailField label="Espera tras agotar reintentos">
                             {{ card.effective_cooldown_minutes ?? 1440 }} min
+                        </CardDetailField>
+                    </div>
+                </AdminCard>
+
+                <!-- Mensajes del duelo -->
+                <AdminCard
+                    title="Mensajes del duelo"
+                    :description="`Origen: ${card.messages_source === 'card' ? 'personalizado' : 'predeterminados'}. Vista previa con valores de ejemplo.`"
+                    :icon="MessageSquareText"
+                >
+                    <div class="grid gap-3 lg:grid-cols-3">
+                        <CardDetailField
+                            v-for="message in duelMessages"
+                            :key="message.key"
+                            :label="`${message.label} (${message.outcome})`"
+                        >
+                            <p class="font-normal">{{ message.text }}</p>
+
+                            <span
+                                class="mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                                :class="
+                                    message.origin === 'Personalizado'
+                                        ? 'bg-[#EAF5EE] text-[#187744]'
+                                        : 'bg-white text-[#718477]'
+                                "
+                            >
+                                {{ message.origin }}
+                            </span>
                         </CardDetailField>
                     </div>
                 </AdminCard>

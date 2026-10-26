@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CardQrCodeController;
 use App\Http\Controllers\Admin\CardRaritySettingController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DonationController;
+use App\Http\Controllers\Admin\DuelMessageSettingController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\MapMarkerController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\PointMovementController;
 use App\Http\Controllers\Admin\PointRuleController;
+use App\Http\Controllers\Admin\QuizQuestionController;
 use App\Http\Controllers\Admin\RewardController;
 use App\Http\Controllers\Admin\RewardRedemptionController;
 use App\Http\Controllers\Admin\RoleController;
@@ -23,7 +25,6 @@ use App\Http\Controllers\Admin\TicketOrderController;
 use App\Http\Controllers\Admin\TicketTypeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZooZoneController;
-use App\Http\Controllers\Admin\QuizQuestionController;
 use App\Http\Controllers\MapController;
 use Illuminate\Support\Facades\Route;
 
@@ -310,6 +311,12 @@ Route::middleware(['auth', 'verified'])
         )->middleware('permission:cards.edit')
             ->name('cards.rarity-settings.update');
 
+        Route::put(
+            'cards/duel-messages',
+            [DuelMessageSettingController::class, 'update']
+        )->middleware('permission:cards.edit')
+            ->name('cards.duel-messages.update');
+
         /*
          * middlewareFor asigna el permiso por acción; ->middleware([...])
          * ignora las llaves y exigiría todos los permisos en cada ruta.
@@ -332,7 +339,7 @@ Route::middleware(['auth', 'verified'])
             [CardController::class, 'destroyModel']
         )->middleware('permission:cards.edit')
             ->name('cards.model.destroy');
-        
+
         /*
         |--------------------------------------------------------------------------
         | Quiz de Cards
@@ -376,7 +383,5 @@ Route::middleware(['auth', 'verified'])
                 });
             });
     });
-
-
 
 require __DIR__.'/settings.php';

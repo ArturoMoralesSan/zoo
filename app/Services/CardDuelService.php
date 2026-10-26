@@ -8,11 +8,19 @@ use App\Models\Card;
 use App\Models\CardCapture;
 use App\Models\CardQrCode;
 use App\Models\CardQuizState;
+use App\Models\DuelMessageSetting;
 use App\Models\QuizAttempt;
 use App\Models\QuizQuestion;
 use App\Models\User;
+use App\Services\Duel\DuelAttempts;
+use App\Services\Duel\DuelQuestionResult;
+use App\Services\Duel\DuelResult;
+use App\Services\Duel\DuelReviewItem;
+use App\Services\Duel\DuelStart;
 use Carbon\CarbonInterface;
+use Carbon\CarbonInterval;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,6 +30,8 @@ use Illuminate\Support\Facades\DB;
  * - Se eligen las preguntas y nunca se envía cuál es la correcta.
  * - Se cuentan los reintentos y se aplica el tiempo de espera.
  * - La captura solo se crea si todas las respuestas son correctas.
+ * - Las respuestas correctas solo se revelan al agotar los intentos,
+ *   y solo si la rareza de la tarjeta lo permite.
  */
 class CardDuelService
 {
@@ -35,10 +45,8 @@ class CardDuelService
      *
      * Es la única forma de iniciar un duelo: la tarjeta se obtiene
      * del QR, nunca de un id enviado por la app.
-     *
-     * @return array<string, mixed>
      */
-    public function startFromQr(User $user, string $token): array
+    public function startFromQr(User $user, string $token): DuelStart
     {
         $qrCode = CardQrCode::query()
             ->with('card')
@@ -62,10 +70,8 @@ class CardDuelService
 
     /**
      * Iniciar un duelo o reanudar el que está pendiente.
-     *
-     * @return array<string, mixed>
      */
-    private function start(User $user, Card $card): array
+    private function start(User $user, Card $card): DuelStart
     {
         $this->ensureCardIsAvailable($card);
 
@@ -98,7 +104,7 @@ class CardDuelService
             }
 
             if ($state->isLocked()) {
-                return DuelException::locked($state->locked_until);
+                return DuelException::locked($this->attempts($card, $state));
             }
 
             /*
@@ -142,32 +148,20 @@ class CardDuelService
 
         [$attempt, $state] = $result;
 
-        return [
-            'attempt_id' => $attempt->id,
-            'expires_at' => $attempt->expires_at->toJSON(),
-            'retries_left' => $this->retriesLeft($card, $state),
-            'card' => [
-                'id' => $card->id,
-                'name' => $card->name,
-                'thumbnail_image' => CardResource::publicUrl($card->thumbnail_image),
-                'card_image_url' => CardResource::publicUrl($card->generated_image),
-                'rarity' => $card->rarity,
-                'species_name' => $card->species?->common_name,
-                'stats' => [
-                    'astucia' => $card->astucia,
-                    'rapidez' => $card->rapidez,
-                    'fuerza' => $card->fuerza,
-                ],
-            ],
-            'questions' => $this->presentQuestions($attempt),
-        ];
+        return new DuelStart(
+            attempt: $attempt,
+            timeLimitSeconds: self::ATTEMPT_TTL_MINUTES * 60,
+            timeLeftSeconds: max(0, (int) ceil(now()->diffInSeconds($attempt->expires_at, false))),
+            attempts: $this->attempts($card, $state),
+            card: $card,
+            questions: $this->presentQuestions($attempt),
+        );
     }
 
     /**
      * Calificar un duelo.
      *
      * @param  array<int, array{question_id: int, answer_id: int}>  $answers
-     * @return array<string, mixed>
      */
     public function submit(
         User $user,
@@ -175,7 +169,7 @@ class CardDuelService
         array $answers,
         ?float $latitude = null,
         ?float $longitude = null
-    ): array {
+    ): DuelResult {
         $card = $attempt->card;
 
         $this->ensureCardIsAvailable($card);
@@ -201,8 +195,7 @@ class CardDuelService
                 $this->expireAttempt($attempt, $card, $state);
 
                 return DuelException::attemptExpired(
-                    $this->retriesLeft($card, $state),
-                    $state->locked_until
+                    $this->attempts($card, $state)
                 );
             }
 
@@ -212,11 +205,15 @@ class CardDuelService
                 return DuelException::noQuestions();
             }
 
-            $correctCount = $this->grade($questions, $answers);
+            $results = $this->grade($attempt, $questions, $answers);
 
-            if ($correctCount === null) {
+            if ($results === null) {
                 return DuelException::invalidAnswers();
             }
+
+            $correctCount = collect($results)
+                ->filter(fn (DuelQuestionResult $result) => $result->isCorrect)
+                ->count();
 
             $passed = $correctCount === $questions->count();
 
@@ -243,25 +240,40 @@ class CardDuelService
 
                 $state->delete();
 
-                return [
-                    'passed' => true,
-                    'card' => new CardResource($card, $capture->captured_at),
-                ];
+                return new DuelResult(
+                    outcome: DuelResult::OUTCOME_WON,
+                    message: $this->resultMessage($card, DuelResult::OUTCOME_WON, $correctCount, $questions->count(), null),
+                    correctCount: $correctCount,
+                    totalQuestions: $questions->count(),
+                    results: $results,
+                    attempts: null,
+                    review: null,
+                    card: $card,
+                    capturedAt: $capture->captured_at,
+                );
             }
 
             $this->registerFailure($card, $state, now());
 
-            /*
-             * Solo se informa el puntaje, nunca cuáles
-             * respuestas eran las correctas.
-             */
-            return [
-                'passed' => false,
-                'correct_count' => $correctCount,
-                'total_questions' => $questions->count(),
-                'retries_left' => $this->retriesLeft($card, $state),
-                'locked_until' => $state->locked_until?->toJSON(),
-            ];
+            $attempts = $this->attempts($card, $state);
+
+            $outcome = $attempts->left === 0
+                ? DuelResult::OUTCOME_LOCKED
+                : DuelResult::OUTCOME_RETRY;
+
+            return new DuelResult(
+                outcome: $outcome,
+                message: $this->resultMessage($card, $outcome, $correctCount, $questions->count(), $attempts),
+                correctCount: $correctCount,
+                totalQuestions: $questions->count(),
+                results: $results,
+                attempts: $attempts,
+                review: $outcome === DuelResult::OUTCOME_LOCKED
+                    ? $this->review($card, $attempt, $questions, $results)
+                    : null,
+                card: null,
+                capturedAt: null,
+            );
         });
 
         if ($result instanceof DuelException) {
@@ -355,6 +367,113 @@ class CardDuelService
     }
 
     /**
+     * Intentos del usuario para la tarjeta en la ronda actual.
+     */
+    private function attempts(Card $card, CardQuizState $state): DuelAttempts
+    {
+        $left = $this->retriesLeft($card, $state);
+
+        return new DuelAttempts(
+            max: $card->effective_retries,
+            used: $card->effective_retries - $left,
+            left: $left,
+            cooldownMinutes: $card->effective_cooldown_minutes,
+            lockedUntil: $state->isLocked() ? $state->locked_until : null,
+        );
+    }
+
+    /**
+     * Intentos para mostrar sin modificar nada (lista de tarjetas).
+     *
+     * Un bloqueo que ya terminó se muestra con los intentos reiniciados,
+     * igual que al iniciar el siguiente duelo.
+     */
+    public function attemptsFor(Card $card, ?CardQuizState $state): DuelAttempts
+    {
+        if (! $state || ($state->locked_until && ! $state->isLocked())) {
+            $state = new CardQuizState(['failed_attempts' => 0]);
+        }
+
+        return $this->attempts($card, $state);
+    }
+
+    /**
+     * Mensaje configurado (de la tarjeta o el predeterminado) para el resultado del duelo,
+     * con los marcadores reemplazados.
+     *
+     * @param  'won'|'retry'|'locked'  $outcome
+     */
+    private function resultMessage(
+        Card $card,
+        string $outcome,
+        int $correctCount,
+        int $totalQuestions,
+        ?DuelAttempts $attempts
+    ): string {
+        $field = match ($outcome) {
+            DuelResult::OUTCOME_WON => 'win_message',
+            DuelResult::OUTCOME_RETRY => 'retry_message',
+            default => 'locked_message',
+        };
+
+        /*
+         * Mensaje propio de la tarjeta (si usa mensajes personalizados y no
+         * está vacío); si no, el predeterminado configurado en el panel.
+         */
+        $template = (! $card->usesDefaultMessages() ? $card->{$field} : null)
+            ?: DuelMessageSetting::current()->effective()[$field];
+
+        return strtr($template, [
+            '{tarjeta}' => $card->name,
+            '{correctas}' => (string) $correctCount,
+            '{total}' => (string) $totalQuestions,
+            '{intentos_restantes}' => (string) ($attempts->left ?? 0),
+            '{intentos_maximos}' => (string) $card->effective_retries,
+            '{espera}' => self::readableMinutes($card->effective_cooldown_minutes),
+        ]);
+    }
+
+    /**
+     * Minutos como texto legible, p. ej. "1 día" o "2 horas 30 minutos".
+     */
+    public static function readableMinutes(int $minutes): string
+    {
+        return CarbonInterval::minutes($minutes)
+            ->cascade()
+            ->locale('es')
+            ->forHumans(['parts' => 2]);
+    }
+
+    /**
+     * Repaso con las respuestas correctas de las preguntas del duelo.
+     *
+     * Solo si la rareza de la tarjeta permite mostrarlas al agotar los intentos.
+     *
+     * @param  Collection<int, QuizQuestion>  $questions
+     * @param  list<DuelQuestionResult>  $results
+     * @return list<DuelReviewItem>|null
+     */
+    private function review(Card $card, QuizAttempt $attempt, Collection $questions, array $results): ?array
+    {
+        if (! $card->raritySetting?->reveal_answers_on_lockout) {
+            return null;
+        }
+
+        $selected = collect($results)->mapWithKeys(
+            fn (DuelQuestionResult $result) => [$result->questionId => $result->answerId]
+        );
+
+        return collect($attempt->question_ids)
+            ->filter(fn (int $id) => $questions->has($id))
+            ->map(fn (int $id) => new DuelReviewItem(
+                question: $questions[$id],
+                selectedAnswerId: $selected[$id],
+            ))
+            ->values()
+            ->all();
+    }
+
+    /**
      * Preguntas servidas en el duelo que todavía existen.
      *
      * @return Collection<int, QuizQuestion>
@@ -369,43 +488,35 @@ class CardDuelService
     }
 
     /**
-     * Preguntas en el orden servido, con respuestas mezcladas
-     * y sin indicar cuál es la correcta.
+     * Preguntas en el orden servido, con respuestas mezcladas.
+     * El recurso de la API nunca incluye cuál es la correcta.
      *
-     * @return array<int, array<string, mixed>>
+     * @return SupportCollection<int, QuizQuestion>
      */
-    private function presentQuestions(QuizAttempt $attempt): array
+    private function presentQuestions(QuizAttempt $attempt): SupportCollection
     {
         $questions = $this->servedQuestions($attempt);
 
         return collect($attempt->question_ids)
             ->filter(fn (int $id) => $questions->has($id))
-            ->map(fn (int $id) => [
-                'id' => $id,
-                'question' => $questions[$id]->question,
-                'answers' => $questions[$id]->answers
-                    ->shuffle()
-                    ->map(fn ($answer) => [
-                        'id' => $answer->id,
-                        'answer' => $answer->answer,
-                    ])
-                    ->values()
-                    ->all(),
-            ])
-            ->values()
-            ->all();
+            ->map(fn (int $id) => $questions[$id]->setRelation(
+                'answers',
+                $questions[$id]->answers->shuffle()
+            ))
+            ->values();
     }
 
     /**
-     * Contar las respuestas correctas.
+     * Calificar cada respuesta, en el orden en que se sirvieron las preguntas.
      *
      * Devuelve null si las respuestas no corresponden exactamente
      * a las preguntas servidas o a sus opciones.
      *
      * @param  Collection<int, QuizQuestion>  $questions
      * @param  array<int, array{question_id: int, answer_id: int}>  $answers
+     * @return list<DuelQuestionResult>|null
      */
-    private function grade(Collection $questions, array $answers): ?int
+    private function grade(QuizAttempt $attempt, Collection $questions, array $answers): ?array
     {
         $submitted = collect($answers)->mapWithKeys(fn (array $answer) => [
             (int) $answer['question_id'] => (int) $answer['answer_id'],
@@ -418,20 +529,26 @@ class CardDuelService
             return null;
         }
 
-        $correctCount = 0;
+        $results = [];
 
-        foreach ($submitted as $questionId => $answerId) {
+        $servedOrder = collect($attempt->question_ids)
+            ->filter(fn (int $id) => $submitted->has($id));
+
+        foreach ($servedOrder as $questionId) {
+            $answerId = $submitted[$questionId];
             $answer = $questions[$questionId]->answers->firstWhere('id', $answerId);
 
             if (! $answer) {
                 return null;
             }
 
-            if ($answer->is_correct) {
-                $correctCount++;
-            }
+            $results[] = new DuelQuestionResult(
+                questionId: $questionId,
+                answerId: $answerId,
+                isCorrect: (bool) $answer->is_correct,
+            );
         }
 
-        return $correctCount;
+        return $results;
     }
 }

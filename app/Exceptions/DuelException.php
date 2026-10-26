@@ -3,7 +3,8 @@
 namespace App\Exceptions;
 
 use App\Http\Resources\CardResource;
-use Carbon\CarbonInterface;
+use App\Http\Resources\Duel\DuelAttemptsResource;
+use App\Services\Duel\DuelAttempts;
 use Exception;
 use Illuminate\Http\JsonResponse;
 
@@ -45,12 +46,12 @@ class DuelException extends Exception
         ]);
     }
 
-    public static function locked(CarbonInterface $lockedUntil): self
+    public static function locked(DuelAttempts $attempts): self
     {
         return new self(
-            'Agotaste tus reintentos. Podrás volver a intentarlo más tarde.',
+            'Agotaste tus intentos. Podrás volver a intentarlo más tarde.',
             423,
-            ['locked_until' => $lockedUntil->toJSON()]
+            ['attempts' => new DuelAttemptsResource($attempts)]
         );
     }
 
@@ -64,11 +65,10 @@ class DuelException extends Exception
         return new self('Este duelo ya fue respondido.', 409);
     }
 
-    public static function attemptExpired(int $retriesLeft, ?CarbonInterface $lockedUntil): self
+    public static function attemptExpired(DuelAttempts $attempts): self
     {
         return new self('El tiempo del duelo terminó. Se contó como un intento fallido.', 410, [
-            'retries_left' => $retriesLeft,
-            'locked_until' => $lockedUntil?->toJSON(),
+            'attempts' => new DuelAttemptsResource($attempts),
         ]);
     }
 

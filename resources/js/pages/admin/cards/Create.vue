@@ -30,11 +30,13 @@ import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import CardDesignFields from '@/components/admin/cards/CardDesignFields.vue';
 import CardImageField from '@/components/admin/cards/CardImageField.vue';
+import CardMessagesFields from '@/components/admin/cards/CardMessagesFields.vue';
 import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import CardStatField from '@/components/admin/cards/CardStatField.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import { cardStat } from '@/lib/cardStats';
+import type { DuelMessages } from '@/lib/duelMessages';
 
 interface Species {
     id: number;
@@ -47,6 +49,7 @@ interface Species {
 const props = defineProps<{
     species: Species[];
     raritySettings: CardRaritySetting[];
+    duelMessageDefaults: DuelMessages;
 }>();
 
 const form = useForm({
@@ -71,6 +74,10 @@ const form = useForm({
     questions_per_duel: null as number | null,
     retries: null as number | null,
     cooldown_minutes: null as number | null,
+    messages_source: 'default' as 'default' | 'card',
+    win_message: null as string | null,
+    retry_message: null as string | null,
+    locked_message: null as string | null,
 });
 
 /*
@@ -425,6 +432,22 @@ defineOptions({
                     v-model:cooldown-minutes="form.cooldown_minutes"
                     :rarity="form.rarity"
                     :rarity-settings="raritySettings"
+                    :errors="form.errors"
+                />
+
+                <!-- Mensajes del duelo -->
+                <CardMessagesFields
+                    v-model:source="form.messages_source"
+                    v-model:win-message="form.win_message"
+                    v-model:retry-message="form.retry_message"
+                    v-model:locked-message="form.locked_message"
+                    :rarity="form.rarity"
+                    :rarity-settings="raritySettings"
+                    :defaults="duelMessageDefaults"
+                    :card-name="form.name"
+                    :duel-settings-source="form.duel_settings_source"
+                    :retries="form.retries"
+                    :cooldown-minutes="form.cooldown_minutes"
                     :errors="form.errors"
                 />
 

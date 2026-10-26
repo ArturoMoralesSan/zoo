@@ -28,6 +28,7 @@ class UpdateCardRaritySettingsRequest extends FormRequest
             ],
 
             'settings.*.questions_per_duel' => [
+                'sometimes',
                 'required',
                 'integer',
                 'min:1',
@@ -35,6 +36,7 @@ class UpdateCardRaritySettingsRequest extends FormRequest
             ],
 
             'settings.*.retries' => [
+                'sometimes',
                 'required',
                 'integer',
                 'min:1',
@@ -42,10 +44,16 @@ class UpdateCardRaritySettingsRequest extends FormRequest
             ],
 
             'settings.*.cooldown_minutes' => [
+                'sometimes',
                 'required',
                 'integer',
                 'min:1',
                 'max:43200',
+            ],
+
+            'settings.*.reveal_answers_on_lockout' => [
+                'sometimes',
+                'boolean',
             ],
         ];
     }
@@ -56,6 +64,7 @@ class UpdateCardRaritySettingsRequest extends FormRequest
             'settings.*.questions_per_duel' => 'preguntas por duelo',
             'settings.*.retries' => 'reintentos',
             'settings.*.cooldown_minutes' => 'tiempo de espera',
+            'settings.*.reveal_answers_on_lockout' => 'mostrar respuestas',
         ];
     }
 }

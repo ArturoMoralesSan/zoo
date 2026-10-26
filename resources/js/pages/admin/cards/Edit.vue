@@ -34,11 +34,13 @@ import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import CardDesignFields from '@/components/admin/cards/CardDesignFields.vue';
 import CardImageField from '@/components/admin/cards/CardImageField.vue';
+import CardMessagesFields from '@/components/admin/cards/CardMessagesFields.vue';
 import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import CardStatField from '@/components/admin/cards/CardStatField.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import { cardStat } from '@/lib/cardStats';
+import type { DuelMessages } from '@/lib/duelMessages';
 
 interface Species {
     id: number;
@@ -71,6 +73,10 @@ interface Card {
     questions_per_duel?: number | null;
     retries?: number | null;
     cooldown_minutes?: number | null;
+    messages_source?: 'default' | 'card';
+    win_message?: string | null;
+    retry_message?: string | null;
+    locked_message?: string | null;
     species?: Species;
 }
 
@@ -78,6 +84,7 @@ const props = defineProps<{
     card: Card;
     species: Species[];
     raritySettings: CardRaritySetting[];
+    duelMessageDefaults: DuelMessages;
 }>();
 
 const form = useForm({
@@ -103,6 +110,10 @@ const form = useForm({
     questions_per_duel: props.card.questions_per_duel ?? null,
     retries: props.card.retries ?? null,
     cooldown_minutes: props.card.cooldown_minutes ?? null,
+    messages_source: props.card.messages_source ?? 'default',
+    win_message: props.card.win_message ?? null,
+    retry_message: props.card.retry_message ?? null,
+    locked_message: props.card.locked_message ?? null,
 });
 
 /*
@@ -513,6 +524,22 @@ defineOptions({
                     v-model:cooldown-minutes="form.cooldown_minutes"
                     :rarity="form.rarity"
                     :rarity-settings="raritySettings"
+                    :errors="form.errors"
+                />
+
+                <!-- Mensajes del duelo -->
+                <CardMessagesFields
+                    v-model:source="form.messages_source"
+                    v-model:win-message="form.win_message"
+                    v-model:retry-message="form.retry_message"
+                    v-model:locked-message="form.locked_message"
+                    :rarity="form.rarity"
+                    :rarity-settings="raritySettings"
+                    :defaults="duelMessageDefaults"
+                    :card-name="form.name"
+                    :duel-settings-source="form.duel_settings_source"
+                    :retries="form.retries"
+                    :cooldown-minutes="form.cooldown_minutes"
                     :errors="form.errors"
                 />
 

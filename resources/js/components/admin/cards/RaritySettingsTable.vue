@@ -49,6 +49,7 @@ const form = useForm({
         questions_per_duel: setting.questions_per_duel,
         retries: setting.retries,
         cooldown_minutes: setting.cooldown_minutes,
+        reveal_answers_on_lockout: setting.reveal_answers_on_lockout,
     })),
 });
 
@@ -125,6 +126,10 @@ const submit = () => {
 
                                     <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
                                         Espera tras agotar reintentos (min)
+                                    </th>
+
+                                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
+                                        Mostrar respuestas al agotar intentos
                                     </th>
                                 </tr>
                             </thead>
@@ -213,6 +218,18 @@ const submit = () => {
                                             {{ fieldError(index, 'cooldown_minutes') }}
                                         </p>
                                     </td>
+
+                                    <!-- Repaso con las respuestas correctas -->
+                                    <td class="px-5 py-4 sm:px-6">
+                                        <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-[#435D4C]">
+                                            <input
+                                                v-model="setting.reveal_answers_on_lockout"
+                                                type="checkbox"
+                                                class="h-4 w-4 cursor-pointer accent-[#187744]"
+                                            />
+                                            {{ setting.reveal_answers_on_lockout ? 'Sí' : 'No' }}
+                                        </label>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -220,7 +237,9 @@ const submit = () => {
 
                     <div class="flex flex-col gap-3 border-t border-[#DCE7DF] bg-[#FAFCFA] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                         <p class="text-xs text-[#718477]">
-                            Las tarjetas con configuración personalizada no se ven afectadas.
+                            Preguntas, reintentos y espera no afectan a las tarjetas con configuración
+                            personalizada. Mostrar respuestas aplica a todas las tarjetas de la rareza:
+                            al agotar los intentos, la app recibe un repaso con las respuestas correctas.
                         </p>
 
                         <AdminButton

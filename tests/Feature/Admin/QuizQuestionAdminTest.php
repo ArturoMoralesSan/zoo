@@ -17,6 +17,7 @@ class QuizQuestionAdminTest extends TestCase
     use DatabaseTransactions;
 
     protected User $admin;
+
     protected Card $card;
 
     protected function setUp(): void
@@ -65,7 +66,6 @@ class QuizQuestionAdminTest extends TestCase
         return [
             'question' => $question,
             'is_active' => true,
-            'sort_order' => 0,
             'answers' => collect(['Roedores', 'Frutas', 'Hojas'])
                 ->map(fn (string $answer, int $index) => [
                     'answer' => $answer,
@@ -135,7 +135,6 @@ class QuizQuestionAdminTest extends TestCase
             ->put(route('admin.cards.quiz.update', [$this->card, $question]), [
                 'question' => '¿Dónde vive el ocelote?',
                 'is_active' => false,
-                'sort_order' => 2,
                 'answers' => $answers->map(fn ($answer, int $index) => [
                     'id' => $answer->id,
                     'answer' => "Respuesta {$index}",

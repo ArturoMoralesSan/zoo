@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Card;
 use App\Models\CardRaritySetting;
+use App\Models\DuelMessageSetting;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
@@ -18,7 +19,9 @@ class CardAdminTest extends TestCase
     use DatabaseTransactions;
 
     protected User $admin;
+
     protected SpeciesCategory $category;
+
     protected Species $species;
 
     protected function setUp(): void
@@ -107,7 +110,6 @@ class CardAdminTest extends TestCase
         $q1 = $card->quizQuestions()->create([
             'question' => 'Pregunta antigua',
             'is_active' => true,
-            'sort_order' => 0,
         ]);
         $q1->answers()->createMany([
             ['answer' => 'Opcion 1', 'is_correct' => true, 'sort_order' => 0],
@@ -205,6 +207,59 @@ class CardAdminTest extends TestCase
         ]);
     }
 
+    public function test_reveal_setting_is_saved_without_touching_other_rarity_settings(): void
+    {
+        CardRaritySetting::updateOrCreate(['rarity' => 'epica'], [
+            'questions_per_duel' => 4,
+            'retries' => 2,
+            'cooldown_minutes' => 90,
+            'reveal_answers_on_lockout' => false,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.rarity-settings.update'), [
+                'settings' => [
+                    [
+                        'rarity' => 'epica',
+                        'reveal_answers_on_lockout' => true,
+                    ],
+                ],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('card_rarity_settings', [
+            'rarity' => 'epica',
+            'questions_per_duel' => 4,
+            'retries' => 2,
+            'cooldown_minutes' => 90,
+            'reveal_answers_on_lockout' => true,
+        ]);
+    }
+
+    public function test_default_duel_messages_can_be_updated(): void
+    {
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.duel-messages.update'), [
+                'win_message' => '¡{tarjeta} es tuya!',
+                'retry_message' => '   ',
+                'locked_message' => null,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $setting = DuelMessageSetting::current();
+
+        $this->assertSame('¡{tarjeta} es tuya!', $setting->win_message);
+        // Un mensaje vacío usa el texto integrado.
+        $this->assertNull($setting->retry_message);
+        $this->assertSame(DuelMessageSetting::BUILT_IN['retry_message'], $setting->effective()['retry_message']);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.duel-messages.update'), [
+                'win_message' => str_repeat('a', 256),
+            ])
+            ->assertSessionHasErrors('win_message');
+    }
+
     public function test_rarity_settings_update_validates_input(): void
     {
         $response = $this->actingAs($this->admin)
@@ -242,6 +297,7 @@ class CardAdminTest extends TestCase
             'title_font_family' => 'cinzel',
             'title_font_weight' => 800,
             'title_font_size' => '6xl',
+            'messages_source' => 'default',
         ];
     }
 
@@ -367,6 +423,52 @@ class CardAdminTest extends TestCase
             'title_font_weight' => 300,
             'title_font_size' => '5xl',
         ]);
+    }
+
+    public function test_card_can_have_its_own_duel_messages(): void
+    {
+        $payload = $this->cardPayload([
+            'messages_source' => 'card',
+            'win_message' => '¡{tarjeta} es tuya!',
+            'retry_message' => '   ',
+            'locked_message' => null,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors();
+
+        $card = Card::where('name', $payload['name'])->firstOrFail();
+
+        $this->assertSame('card', $card->messages_source);
+        $this->assertSame('¡{tarjeta} es tuya!', $card->win_message);
+        // Un mensaje vacío usa el predeterminado.
+        $this->assertNull($card->retry_message);
+        $this->assertNull($card->locked_message);
+
+        // Al volver a los mensajes predeterminados, los propios se borran.
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->cardPayload([
+                'name' => $card->name,
+                'messages_source' => 'default',
+                'win_message' => 'Ignorado',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $card->refresh();
+
+        $this->assertSame('default', $card->messages_source);
+        $this->assertNull($card->win_message);
+    }
+
+    public function test_duel_messages_source_is_validated(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload([
+                'messages_source' => 'otro',
+                'win_message' => str_repeat('a', 256),
+            ]))
+            ->assertSessionHasErrors(['messages_source', 'win_message']);
     }
 
     public function test_card_design_is_validated(): void

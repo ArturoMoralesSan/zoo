@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\Card\StoreCardRequest;
 use App\Http\Requests\Admin\Card\UpdateCardRequest;
 use App\Models\Card;
 use App\Models\CardRaritySetting;
+use App\Models\DuelMessageSetting;
 use App\Models\Species;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
@@ -86,6 +87,15 @@ class CardController extends Controller
 
                 'raritySettings' => $this->raritySettings(),
 
+                /*
+                 * Mensajes predeterminados del duelo: los guardados (vacíos = texto
+                 * integrado) y los textos integrados.
+                 */
+                'duelMessages' => DuelMessageSetting::current()
+                    ->only(['win_message', 'retry_message', 'locked_message']),
+
+                'duelMessagesBuiltIn' => DuelMessageSetting::BUILT_IN,
+
                 'species' => Species::query()
                     ->where('is_active', true)
                     ->orderBy('common_name')
@@ -126,6 +136,8 @@ class CardController extends Controller
             'admin/cards/Show',
             [
                 'card' => $card,
+
+                'duelMessageDefaults' => $this->duelMessageDefaults(),
             ]
         );
     }
@@ -139,6 +151,8 @@ class CardController extends Controller
             'admin/cards/Create',
             [
                 'raritySettings' => $this->raritySettings(),
+
+                'duelMessageDefaults' => $this->duelMessageDefaults(),
 
                 'species' => Species::query()
                     ->where('is_active', true)
@@ -196,6 +210,8 @@ class CardController extends Controller
                 'card' => $card,
 
                 'raritySettings' => $this->raritySettings(),
+
+                'duelMessageDefaults' => $this->duelMessageDefaults(),
 
                 'species' => Species::query()
                     ->where('is_active', true)
@@ -338,6 +354,16 @@ class CardController extends Controller
     /**
      * Configuración de duelos de cada rareza.
      */
+    /**
+     * Mensajes predeterminados del duelo (los usan las tarjetas sin mensajes propios).
+     *
+     * @return array<string, string>
+     */
+    private function duelMessageDefaults(): array
+    {
+        return DuelMessageSetting::current()->effective();
+    }
+
     private function raritySettings(): Collection
     {
         return CardRaritySetting::query()
@@ -348,6 +374,7 @@ class CardController extends Controller
                 'questions_per_duel',
                 'retries',
                 'cooldown_minutes',
+                'reveal_answers_on_lockout',
             ]);
     }
 
@@ -360,6 +387,14 @@ class CardController extends Controller
     ): array {
         $usesCardSettings =
             $validated['duel_settings_source'] === Card::DUEL_SETTINGS_CARD;
+
+        $usesCardMessages =
+            $validated['messages_source'] === Card::MESSAGES_CARD;
+
+        // Un mensaje vacío usa el de la rareza.
+        $message = fn (string $field): ?string => $usesCardMessages
+            ? (trim((string) ($validated[$field] ?? '')) ?: null)
+            : null;
 
         return [
             'species_id' => $validated['species_id'],
@@ -390,6 +425,15 @@ class CardController extends Controller
             'cooldown_minutes' => $usesCardSettings
                 ? $validated['cooldown_minutes']
                 : null,
+
+            /*
+             * Mensajes del resultado del duelo: solo se guardan
+             * si la tarjeta no usa los de su rareza.
+             */
+            'messages_source' => $validated['messages_source'],
+            'win_message' => $message('win_message'),
+            'retry_message' => $message('retry_message'),
+            'locked_message' => $message('locked_message'),
         ];
     }
 

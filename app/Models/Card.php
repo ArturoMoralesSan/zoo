@@ -34,6 +34,10 @@ class Card extends Model
         'questions_per_duel',
         'retries',
         'cooldown_minutes',
+        'messages_source',
+        'win_message',
+        'retry_message',
+        'locked_message',
     ];
 
     protected $casts = [
@@ -61,6 +65,22 @@ class Card extends Model
     public function usesRarityDuelSettings(): bool
     {
         return $this->duel_settings_source !== self::DUEL_SETTINGS_CARD;
+    }
+
+    /**
+     * Origen de los mensajes del resultado del duelo:
+     * los predeterminados del panel o los propios de la tarjeta.
+     */
+    public const MESSAGES_DEFAULT = 'default';
+
+    public const MESSAGES_CARD = 'card';
+
+    /**
+     * Indica si la tarjeta usa los mensajes predeterminados.
+     */
+    public function usesDefaultMessages(): bool
+    {
+        return $this->messages_source !== self::MESSAGES_CARD;
     }
 
     /**
@@ -132,8 +152,8 @@ class Card extends Model
         return $this->hasMany(QuizAttempt::class);
     }
 
-    public function quizQuestions(): HasMany 
-    { 
-        return $this->hasMany(QuizQuestion::class) ->orderBy('sort_order') ->orderBy('id'); 
+    public function quizQuestions(): HasMany
+    {
+        return $this->hasMany(QuizQuestion::class)->orderBy('id');
     }
 }

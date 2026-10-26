@@ -42,7 +42,6 @@ interface Question {
     card_id: number;
     question: string;
     is_active: boolean;
-    sort_order: number;
     answers: Answer[];
 }
 
@@ -209,21 +208,6 @@ defineOptions({
                         >
                             <CircleOff :size="14" />
                             Inactiva
-                        </span>
-                    </div>
-
-                    <!-- Orden -->
-                    <div>
-                        <span
-                            class="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                        >
-                            Orden
-                        </span>
-
-                        <span
-                            class="inline-flex rounded-full border border-sidebar-border bg-muted/40 px-2.5 py-1 text-xs font-medium"
-                        >
-                            {{ question.sort_order }}
                         </span>
                     </div>
 

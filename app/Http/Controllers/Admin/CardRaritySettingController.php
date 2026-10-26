@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Card\UpdateCardRaritySettingsRequest;
 use App\Models\CardRaritySetting;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
 class CardRaritySettingController extends Controller
@@ -17,14 +18,18 @@ class CardRaritySettingController extends Controller
         UpdateCardRaritySettingsRequest $request
     ): RedirectResponse {
         DB::transaction(function () use ($request) {
+            // Solo se actualizan los campos recibidos.
             foreach ($request->validated('settings') as $setting) {
+                $values = Arr::only($setting, [
+                    'questions_per_duel',
+                    'retries',
+                    'cooldown_minutes',
+                    'reveal_answers_on_lockout',
+                ]);
+
                 CardRaritySetting::updateOrCreate(
                     ['rarity' => $setting['rarity']],
-                    [
-                        'questions_per_duel' => $setting['questions_per_duel'],
-                        'retries' => $setting['retries'],
-                        'cooldown_minutes' => $setting['cooldown_minutes'],
-                    ]
+                    $values
                 );
             }
         });

@@ -46,7 +46,6 @@ interface Question {
     card_id: number;
     question: string;
     is_active: boolean;
-    sort_order: number;
     answers: Answer[];
 }
 
@@ -64,12 +63,10 @@ const props = defineProps<{
 const form = useForm<{
     question: string;
     is_active: boolean;
-    sort_order: number;
     answers: AnswerForm[];
 }>({
     question: props.question.question,
     is_active: props.question.is_active,
-    sort_order: props.question.sort_order,
     answers: props.question.answers
         .slice()
         .sort((a, b) => a.sort_order - b.sort_order)
@@ -304,38 +301,10 @@ defineOptions({
             <!-- Configuración -->
             <AdminCard
                 title="Configuración"
-                description="Define el orden y el estado de la pregunta."
+                description="Define el estado de la pregunta."
                 :icon="ToggleLeft"
             >
                 <div class="form-grid">
-                    <!-- Orden -->
-                    <div class="form-field">
-                        <label for="sort_order" class="form-label">
-                            Orden
-                        </label>
-
-                        <input
-                            id="sort_order"
-                            v-model.number="form.sort_order"
-                            type="number"
-                            min="0"
-                            step="1"
-                            class="form-input"
-                            :class="{
-                                'form-input-error': form.errors.sort_order,
-                            }"
-                        />
-
-                        <p v-if="form.errors.sort_order" class="form-error">
-                            {{ form.errors.sort_order }}
-                        </p>
-
-                        <p v-else class="form-help">
-                            Determina la posición de la pregunta dentro del
-                            quiz.
-                        </p>
-                    </div>
-
                     <!-- Estado -->
                     <div class="form-field form-field-full">
                         <ActiveSwitch

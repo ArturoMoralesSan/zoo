@@ -2,7 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Duel\DuelAttemptsResource;
 use App\Models\Card;
+use App\Services\Duel\DuelAttempts;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -22,10 +24,12 @@ class CardResource extends JsonResource
     /**
      * @param  Card  $resource
      * @param  CarbonInterface|string|null  $capturedAt  Fecha de captura del usuario; null si no la posee.
+     * @param  DuelAttempts|null  $attempts  Intentos para obtenerla; null si ya la posee.
      */
     public function __construct(
         $resource,
-        private CarbonInterface|string|null $capturedAt = null
+        private CarbonInterface|string|null $capturedAt = null,
+        private ?DuelAttempts $attempts = null
     ) {
         parent::__construct($resource);
     }
@@ -54,6 +58,13 @@ class CardResource extends JsonResource
             'captured_at' => Carbon::make($this->capturedAt)?->toJSON(),
             'model_url' => $isOwned ? self::publicUrl($this->model_file) : null,
             'card_image_url' => $isOwned ? self::publicUrl($this->generated_image) : null,
+
+            /**
+             * Intentos para obtener la tarjeta en la ronda actual. `null` si ya la posee.
+             */
+            'attempts' => $this->attempts
+                ? new DuelAttemptsResource($this->attempts)
+                : null,
         ];
     }
 
