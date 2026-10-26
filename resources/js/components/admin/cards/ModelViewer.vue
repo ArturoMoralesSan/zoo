@@ -103,6 +103,7 @@ const selectedAnimation = ref<number | null>(null);
  * sin opción para quitarlo. Se oculta con estilos dentro de su shadow DOM
  * (se usa "Restablecer vista" de los controles de zoom), junto con el
  * separador anterior y la barra completa si ya no le queda ningún control.
+ * Sin controles de zoom (vista previa de la tarjeta) se conserva el botón.
  */
 const TOOLBAR_STYLES = `
     button[aria-label="Reset Camera Pose"],
@@ -120,7 +121,7 @@ let toolbarSheet: CSSStyleSheet | null = null;
 watch(viewer, (element) => {
     const root = element?.shadowRoot;
 
-    if (!root) {
+    if (!root || !props.zoomControls) {
         return;
     }
 
