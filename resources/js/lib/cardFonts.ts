@@ -81,14 +81,59 @@ export const nearestWeight = (id: CardFontId, weight: number): number =>
             : best,
     );
 
+export type CardFontStyle = 'normal' | 'italic';
+
 /*
- * Hojas de estilo de Fontsource (solo latin), cargadas bajo demanda.
+ * Archivos woff2 de Fontsource (solo latin). Solo se importan sus URLs;
+ * cada archivo se descarga cuando se usa la fuente.
+ *
+ * Las fuentes se registran con la API FontFace en lugar de importar las
+ * hojas de estilo de Fontsource: así no dependen de los <style> que Vite
+ * inyecta (y puede quitar al recargar módulos), y la imagen de la tarjeta
+ * obtiene el archivo de cada fuente directamente de aquí.
  */
-const fontStyles = import.meta.glob(
-    '/node_modules/@fontsource/*/latin-[1-9]00.css',
+const fontFiles = import.meta.glob<string>(
+    [
+        '/node_modules/@fontsource/*/files/*-latin-[1-9]00-normal.woff2',
+        '/node_modules/@fontsource/noto-sans/files/noto-sans-latin-400-italic.woff2',
+    ],
+    { query: '?url', import: 'default', eager: true },
 );
 
-const loadedStyles = new Set<string>();
+const fontFileUrl = (
+    id: CardFontId,
+    weight: number,
+    style: CardFontStyle,
+): string | null =>
+    fontFiles[
+        `/node_modules/@fontsource/${id}/files/${id}-latin-${weight}-${style}.woff2`
+    ] ?? null;
+
+/**
+ * URL del archivo de una fuente a partir de su nombre de familia
+ * (para incrustarla en la imagen de la tarjeta).
+ */
+export const cardFontFileUrl = (
+    family: string,
+    weight: number,
+    style: CardFontStyle,
+): string | null => {
+    const font = cardFontOptions.find((option) => option.family === family);
+
+    return font ? fontFileUrl(font.id, weight, style) : null;
+};
+
+const findLoadedFace = (
+    family: string,
+    weight: number,
+    style: CardFontStyle,
+): FontFace | undefined =>
+    [...document.fonts].find(
+        (face) =>
+            face.family.replace(/["']/g, '') === family &&
+            face.weight === String(weight) &&
+            face.style === style,
+    );
 
 /**
  * Cargar una fuente y esperar a que esté lista para dibujarse.
@@ -96,20 +141,35 @@ const loadedStyles = new Set<string>();
 export const ensureCardFont = async (
     id: CardFontId,
     weight: number,
+    style: CardFontStyle = 'normal',
 ): Promise<void> => {
     const font = CARD_FONTS[id];
+    const url = font ? fontFileUrl(id, weight, style) : null;
 
-    if (!font) {
+    if (!font || !url) {
         return;
     }
 
-    const key = `/node_modules/@fontsource/${id}/latin-${weight}.css`;
+    let face = findLoadedFace(font.family, weight, style);
 
-    if (!loadedStyles.has(key)) {
-        await fontStyles[key]?.();
+    if (!face) {
+        face = new FontFace(font.family, `url("${url}") format("woff2")`, {
+            weight: String(weight),
+            style,
+        });
 
-        loadedStyles.add(key);
+        document.fonts.add(face);
     }
 
-    await document.fonts.load(`${weight} 60px "${font.family}"`);
+    await face.load();
 };
+
+/**
+ * Fuentes fijas de la tarjeta: nombre científico (itálica) y estadísticas.
+ */
+export const ensureCardBaseFonts = (): Promise<void[]> =>
+    Promise.all([
+        ensureCardFont('noto-sans', 400),
+        ensureCardFont('noto-sans', 500),
+        ensureCardFont('noto-sans', 400, 'italic'),
+    ]);

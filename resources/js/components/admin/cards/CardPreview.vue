@@ -21,7 +21,7 @@ import CardTemplate from '@/components/admin/cards/CardTemplate.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import { resolveAccent } from '@/lib/cardColors';
 import type { AccentColor } from '@/lib/cardColors';
-import { ensureCardFont } from '@/lib/cardFonts';
+import { ensureCardBaseFonts, ensureCardFont } from '@/lib/cardFonts';
 import type { CardFontId, TitleSize } from '@/lib/cardFonts';
 import {
     CARD_EXPORT_PIXEL_RATIO,
@@ -88,7 +88,10 @@ const templateNode = (): HTMLElement | null =>
  * se carga bajo demanda y debe estar disponible antes de dibujar.
  */
 const readyTemplateNode = async (): Promise<HTMLElement | null> => {
-    await ensureCardFont(props.titleFontFamily, props.titleFontWeight);
+    await Promise.all([
+        ensureCardBaseFonts(),
+        ensureCardFont(props.titleFontFamily, props.titleFontWeight),
+    ]);
 
     return templateNode();
 };

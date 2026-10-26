@@ -1,5 +1,8 @@
 import { toCanvas, toSvg } from 'html-to-image';
 
+import { cardFontFileUrl } from '@/lib/cardFonts';
+import type { CardFontStyle } from '@/lib/cardFonts';
+
 /**
  * Calidad de las imágenes generadas a partir de la plantilla (572 × 1016 px).
  * - Descarga y servidor: 3× (1716 × 3048 px).
@@ -21,7 +24,7 @@ export const CARD_TEXTURE_PIXEL_RATIO = 2;
 interface UsedFontFace {
     family: string;
     weight: string;
-    style: string;
+    style: CardFontStyle;
 }
 
 const firstFamily = (fontFamily: string): string =>
@@ -41,7 +44,7 @@ const usedFontFaces = (node: HTMLElement): UsedFontFace[] => {
         .filter(hasOwnText)
         .forEach((element) => {
             const style = getComputedStyle(element);
-            const face = {
+            const face: UsedFontFace = {
                 family: firstFamily(style.fontFamily),
                 weight: style.fontWeight,
                 style: style.fontStyle === 'italic' ? 'italic' : 'normal',
@@ -51,38 +54,6 @@ const usedFontFaces = (node: HTMLElement): UsedFontFace[] => {
         });
 
     return [...faces.values()];
-};
-
-/*
- * Los descriptores de @font-face se leen con getPropertyValue: en Firefox
- * rule.style.fontFamily (y fontWeight/fontStyle) no existen. Por eso
- * html-to-image no incrustaba ninguna fuente en Firefox.
- */
-const findFontFaceRule = (face: UsedFontFace): CSSFontFaceRule | undefined => {
-    for (const sheet of document.styleSheets) {
-        let rules: CSSRuleList;
-
-        try {
-            rules = sheet.cssRules;
-        } catch {
-            continue; // Hojas de otro origen.
-        }
-
-        for (const rule of rules) {
-            if (
-                rule instanceof CSSFontFaceRule &&
-                firstFamily(rule.style.getPropertyValue('font-family')) ===
-                    face.family &&
-                rule.style.getPropertyValue('font-weight') === face.weight &&
-                (rule.style.getPropertyValue('font-style') || 'normal') ===
-                    face.style
-            ) {
-                return rule;
-            }
-        }
-    }
-
-    return undefined;
 };
 
 const blobToDataUrl = (blob: Blob): Promise<string> =>
@@ -104,20 +75,21 @@ const embedFontFace = (face: UsedFontFace): Promise<string> => {
         return cached;
     }
 
-    const rule = findFontFaceRule(face);
-    const src = rule?.style.getPropertyValue('src') ?? '';
-    const url = (src.match(/url\(["']?([^"')]+\.woff2)["']?\)/) ??
-        src.match(/url\(["']?([^"')]+)["']?\)/))?.[1];
+    const url = cardFontFileUrl(face.family, Number(face.weight), face.style);
 
-    // Fuente aún no cargada (o del sistema): no se guarda en caché.
-    if (!rule || !url) {
+    // Fuente que no es de la tarjeta (p. ej. del sistema): no se incrusta.
+    if (!url) {
         return Promise.resolve('');
     }
 
-    const css = fetch(
-        new URL(url, rule.parentStyleSheet?.href ?? document.baseURI),
-    )
-        .then((response) => response.blob())
+    const css = fetch(new URL(url, document.baseURI))
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`No se pudo cargar la fuente: ${url}`);
+            }
+
+            return response.blob();
+        })
         .then(blobToDataUrl)
         .then(
             (dataUrl) =>
