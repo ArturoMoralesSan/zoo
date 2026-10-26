@@ -141,11 +141,10 @@ const sizeOptions = Object.entries(TITLE_SIZES) as [
  * Mismo aspecto que .form-select (las utilidades de Tailwind ganan a la clase).
  */
 const triggerClass =
-    "h-auto min-h-11 w-full cursor-pointer rounded-xl border-[#C8DCCF] bg-[#FCFEFC] px-4 text-base text-[#244334] shadow-none hover:border-[#A9CBB5] focus-visible:border-[#187744] focus-visible:ring-2 focus-visible:ring-[#187744]/10 data-[state=open]:border-[#187744] dark:bg-[#FCFEFC] dark:hover:bg-[#FCFEFC] [&_svg]:opacity-100 [&_svg:not([class*='text-'])]:text-[#718477]";
+    "h-auto min-h-11 w-full cursor-pointer rounded-xl border-[#C8DCCF] bg-[#FCFEFC] px-4 text-base text-[#244334] shadow-none hover:border-[#A9CBB5] focus-visible:border-[#187744] focus-visible:ring-2 focus-visible:ring-[#187744]/10 data-[state=open]:border-[#187744] [&_svg]:opacity-100 [&_svg:not([class*='text-'])]:text-[#718477]";
 
 /*
- * El componente Select usa los colores del tema (oscuros en modo oscuro);
- * el formulario del panel usa siempre colores claros fijos.
+ * Colores del formulario del panel en el menú desplegable.
  */
 const contentClass =
     'rounded-xl border-[#C8DCCF] bg-[#FCFEFC] text-[#244334] shadow-md';
