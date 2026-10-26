@@ -126,7 +126,7 @@ defineOptions({
             },
             {
                 title: 'Tarjetas',
-                href: admin.cards.index,
+                href: admin.cards.index(),
             },
             {
                 title: 'Agregar tarjeta',

@@ -166,8 +166,12 @@ defineOptions({
                 href: admin.dashboard(),
             },
             {
-                title: 'Preguntas',
-                href: admin.cards.quiz.index,
+                title: 'Tarjetas',
+                href: admin.cards.index(),
+            },
+            {
+                title: 'Preguntas del quiz',
+                href: admin.cards.index(),
             },
         ],
     },

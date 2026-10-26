@@ -54,6 +54,29 @@ const props = defineProps<{
 const answerLabel = (index: number) => {
     return String.fromCharCode(65 + index);
 };
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Panel',
+                href: admin.dashboard(),
+            },
+            {
+                title: 'Tarjetas',
+                href: admin.cards.index(),
+            },
+            {
+                title: 'Preguntas del quiz',
+                href: admin.cards.index(),
+            },
+            {
+                title: 'Ver pregunta',
+                href: admin.cards.index(),
+            },
+        ],
+    },
+});
 </script>
 
 <template>
