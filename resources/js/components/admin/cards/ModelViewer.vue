@@ -26,12 +26,17 @@ const props = withDefaults(
          * Acercamiento predeterminado y botones de zoom (Completo / Normal / Cerca).
          */
         zoomControls?: boolean;
+        /*
+         * Motor de render; por defecto el visor elige (WebGPU en Chromium).
+         */
+        engine?: 'WebGL' | 'WebGPU' | null;
         emptyText?: string;
     }>(),
     {
         extension: null,
         heightClass: 'h-[360px]',
         height: null,
+        engine: null,
         zoomControls: true,
         emptyText: 'Selecciona un archivo GLB para previsualizar el modelo.',
     },
@@ -235,6 +240,7 @@ const selectAnimation = (index: number) => {
                 ref="viewer"
                 :source.attr="source"
                 :extension.attr="extension ? `.${extension}` : null"
+                :engine.attr="engine"
                 clear-color="#F6F9F6"
                 class="model-viewer block h-full w-full"
                 @modelchange="onModelChange"

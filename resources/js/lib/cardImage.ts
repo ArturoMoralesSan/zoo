@@ -1,6 +1,4 @@
-import { getFontEmbedCSS, toPng, toSvg } from 'html-to-image';
-
-import { fontsVersion } from '@/lib/cardFonts';
+import { toCanvas, toSvg } from 'html-to-image';
 
 /**
  * Calidad de las imágenes generadas a partir de la plantilla (572 × 1016 px).
@@ -11,26 +9,137 @@ export const CARD_EXPORT_PIXEL_RATIO = 3;
 export const CARD_TEXTURE_PIXEL_RATIO = 2;
 
 /*
- * Las fuentes se incrustan en cada imagen; se recalculan solo cuando se
- * carga una fuente nueva, porque leerlas y convertirlas a base64 es lo
- * más costoso.
+ * Fuentes incrustadas en la imagen.
+ *
+ * html-to-image incrusta todas las variantes cargadas de cada familia
+ * (todos los pesos, en woff2 y woff). Con los selectores de fuente se cargan
+ * muchas, y el SVG resultante es tan grande que el navegador lo dibuja antes
+ * de terminar de leer las fuentes: el texto sale con una fuente genérica.
+ * Por eso se incrusta solo cada variante (familia, peso y estilo) que usa
+ * el texto de la tarjeta, una vez y en woff2.
  */
-let fontEmbedCss: Promise<string> | null = null;
-let fontEmbedVersion = -1;
+interface UsedFontFace {
+    family: string;
+    weight: string;
+    style: string;
+}
+
+const firstFamily = (fontFamily: string): string =>
+    fontFamily.split(',')[0].trim().replace(/["']/g, '');
+
+const hasOwnText = (element: Element): boolean =>
+    [...element.childNodes].some(
+        (child) =>
+            child.nodeType === Node.TEXT_NODE &&
+            Boolean(child.textContent?.trim()),
+    );
+
+const usedFontFaces = (node: HTMLElement): UsedFontFace[] => {
+    const faces = new Map<string, UsedFontFace>();
+
+    [node, ...node.querySelectorAll('*')]
+        .filter(hasOwnText)
+        .forEach((element) => {
+            const style = getComputedStyle(element);
+            const face = {
+                family: firstFamily(style.fontFamily),
+                weight: style.fontWeight,
+                style: style.fontStyle === 'italic' ? 'italic' : 'normal',
+            };
+
+            faces.set(`${face.family}|${face.weight}|${face.style}`, face);
+        });
+
+    return [...faces.values()];
+};
+
+/*
+ * Los descriptores de @font-face se leen con getPropertyValue: en Firefox
+ * rule.style.fontFamily (y fontWeight/fontStyle) no existen. Por eso
+ * html-to-image no incrustaba ninguna fuente en Firefox.
+ */
+const findFontFaceRule = (face: UsedFontFace): CSSFontFaceRule | undefined => {
+    for (const sheet of document.styleSheets) {
+        let rules: CSSRuleList;
+
+        try {
+            rules = sheet.cssRules;
+        } catch {
+            continue; // Hojas de otro origen.
+        }
+
+        for (const rule of rules) {
+            if (
+                rule instanceof CSSFontFaceRule &&
+                firstFamily(rule.style.getPropertyValue('font-family')) ===
+                    face.family &&
+                rule.style.getPropertyValue('font-weight') === face.weight &&
+                (rule.style.getPropertyValue('font-style') || 'normal') ===
+                    face.style
+            ) {
+                return rule;
+            }
+        }
+    }
+
+    return undefined;
+};
+
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+    });
+
+const fontFaceCss = new Map<string, Promise<string>>();
+
+const embedFontFace = (face: UsedFontFace): Promise<string> => {
+    const key = `${face.family}|${face.weight}|${face.style}`;
+    const cached = fontFaceCss.get(key);
+
+    if (cached) {
+        return cached;
+    }
+
+    const rule = findFontFaceRule(face);
+    const src = rule?.style.getPropertyValue('src') ?? '';
+    const url = (src.match(/url\(["']?([^"')]+\.woff2)["']?\)/) ??
+        src.match(/url\(["']?([^"')]+)["']?\)/))?.[1];
+
+    // Fuente aún no cargada (o del sistema): no se guarda en caché.
+    if (!rule || !url) {
+        return Promise.resolve('');
+    }
+
+    const css = fetch(
+        new URL(url, rule.parentStyleSheet?.href ?? document.baseURI),
+    )
+        .then((response) => response.blob())
+        .then(blobToDataUrl)
+        .then(
+            (dataUrl) =>
+                `@font-face { font-family: "${face.family}"; font-style: ${face.style}; font-weight: ${face.weight}; src: url("${dataUrl}"); }`,
+        )
+        .catch((error) => {
+            fontFaceCss.delete(key);
+
+            throw error;
+        });
+
+    fontFaceCss.set(key, css);
+
+    return css;
+};
 
 const renderOptions = async (node: HTMLElement) => {
     await document.fonts.ready;
 
-    if (fontEmbedVersion !== fontsVersion()) {
-        fontEmbedVersion = fontsVersion();
-        fontEmbedCss = null;
-    }
-
-    fontEmbedCss ??= getFontEmbedCSS(node).catch((error) => {
-        fontEmbedCss = null;
-
-        throw error;
-    });
+    const fontEmbedCss = (
+        await Promise.all(usedFontFaces(node).map(embedFontFace))
+    ).join('\n');
 
     /*
      * Sin cacheBust: añadiría "?t=..." también a las URLs blob: de los
@@ -38,18 +147,31 @@ const renderOptions = async (node: HTMLElement) => {
      * guardados tienen nombres únicos, así que la caché no queda obsoleta.
      */
     return {
-        fontEmbedCSS: await fontEmbedCss,
+        fontEmbedCSS: fontEmbedCss,
     };
 };
 
 /**
- * PNG (data URL) de la tarjeta.
+ * PNG de la tarjeta. Se codifica con canvas.toBlob (asíncrono) en lugar de
+ * un data URL, que bloquea la página mientras se genera.
  */
 export const renderCardPng = async (
     node: HTMLElement,
     pixelRatio = CARD_EXPORT_PIXEL_RATIO,
-): Promise<string> =>
-    toPng(node, { ...(await renderOptions(node)), pixelRatio });
+): Promise<Blob> => {
+    const canvas = await toCanvas(node, {
+        ...(await renderOptions(node)),
+        pixelRatio,
+    });
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) =>
+            blob
+                ? resolve(blob)
+                : reject(new Error('No se pudo crear el PNG.')),
+        );
+    });
+};
 
 /**
  * SVG (data URL) de la tarjeta. Usa <foreignObject>: se ve bien en
@@ -59,25 +181,13 @@ export const renderCardSvg = async (node: HTMLElement): Promise<string> =>
     toSvg(node, await renderOptions(node));
 
 /**
- * Archivo PNG listo para enviarse en un formulario.
+ * Descargar un archivo a partir de una URL (data: o blob:).
  */
-export const dataUrlToFile = async (
-    dataUrl: string,
-    filename: string,
-): Promise<File> => {
-    const blob = await (await fetch(dataUrl)).blob();
-
-    return new File([blob], filename, { type: blob.type });
-};
-
-/**
- * Descargar un data URL como archivo.
- */
-export const downloadDataUrl = (dataUrl: string, filename: string): void => {
+export const downloadUrl = (url: string, filename: string): void => {
     const link = document.createElement('a');
 
     link.download = filename;
-    link.href = dataUrl;
+    link.href = url;
     link.click();
 };
 

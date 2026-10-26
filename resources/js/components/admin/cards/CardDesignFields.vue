@@ -103,10 +103,34 @@ const loadFamilyWeights = (open: boolean) => {
     }
 };
 
+/*
+ * La fuente se carga antes de aplicarla: así el selector, los botones de
+ * tamaño y la tarjeta cambian a la vez, sin mostrar antes una fuente genérica.
+ */
+let fontSelection = 0;
+
+const applyFont = async (family: CardFontId, weight: number) => {
+    const selection = ++fontSelection;
+
+    await ensureCardFont(family, weight);
+
+    // Solo se aplica la última selección si se eligieron varias seguidas.
+    if (selection === fontSelection) {
+        titleFontFamily.value = family;
+        titleFontWeight.value = weight;
+    }
+};
+
 // Al cambiar de familia se conserva el peso más cercano disponible.
-watch(titleFontFamily, (family) => {
-    titleFontWeight.value = nearestWeight(family, titleFontWeight.value);
-});
+const selectFamily = (family: unknown) => {
+    const id = family as CardFontId;
+
+    void applyFont(id, nearestWeight(id, titleFontWeight.value));
+};
+
+const selectWeight = (weight: unknown) => {
+    void applyFont(titleFontFamily.value, Number(weight));
+};
 
 const sizeOptions = Object.entries(TITLE_SIZES) as [
     TitleSize,
@@ -117,7 +141,17 @@ const sizeOptions = Object.entries(TITLE_SIZES) as [
  * Mismo aspecto que .form-select (las utilidades de Tailwind ganan a la clase).
  */
 const triggerClass =
-    'h-auto min-h-11 w-full rounded-xl border-[#C8DCCF] bg-[#FCFEFC] px-4 text-base text-[#244334] shadow-none hover:border-[#A9CBB5] focus-visible:border-[#187744] focus-visible:ring-2 focus-visible:ring-[#187744]/10';
+    "h-auto min-h-11 w-full cursor-pointer rounded-xl border-[#C8DCCF] bg-[#FCFEFC] px-4 text-base text-[#244334] shadow-none hover:border-[#A9CBB5] focus-visible:border-[#187744] focus-visible:ring-2 focus-visible:ring-[#187744]/10 data-[state=open]:border-[#187744] dark:bg-[#FCFEFC] dark:hover:bg-[#FCFEFC] [&_svg]:opacity-100 [&_svg:not([class*='text-'])]:text-[#718477]";
+
+/*
+ * El componente Select usa los colores del tema (oscuros en modo oscuro);
+ * el formulario del panel usa siempre colores claros fijos.
+ */
+const contentClass =
+    'rounded-xl border-[#C8DCCF] bg-[#FCFEFC] text-[#244334] shadow-md';
+
+const itemClass =
+    "cursor-pointer text-base focus:bg-[#EAF5EE] focus:text-[#187744] [&_svg:not([class*='text-'])]:text-[#187744]";
 </script>
 
 <template>
@@ -226,7 +260,10 @@ const triggerClass =
                         <span class="text-red-500">*</span>
                     </label>
 
-                    <Select v-model="titleFontFamily">
+                    <Select
+                        :model-value="titleFontFamily"
+                        @update:model-value="selectFamily"
+                    >
                         <SelectTrigger
                             id="title_font_family"
                             :class="triggerClass"
@@ -239,12 +276,12 @@ const triggerClass =
                             </SelectValue>
                         </SelectTrigger>
 
-                        <SelectContent>
+                        <SelectContent :class="contentClass">
                             <SelectItem
                                 v-for="font in cardFontOptions"
                                 :key="font.id"
                                 :value="font.id"
-                                class="text-base"
+                                :class="itemClass"
                                 :style="fontStyle(font.id)"
                             >
                                 {{ font.family }}
@@ -265,7 +302,8 @@ const triggerClass =
                     </label>
 
                     <Select
-                        v-model="titleFontWeight"
+                        :model-value="titleFontWeight"
+                        @update:model-value="selectWeight"
                         @update:open="loadFamilyWeights"
                     >
                         <SelectTrigger
@@ -288,12 +326,12 @@ const triggerClass =
                             </SelectValue>
                         </SelectTrigger>
 
-                        <SelectContent>
+                        <SelectContent :class="contentClass">
                             <SelectItem
                                 v-for="weight in weights"
                                 :key="weight"
                                 :value="weight"
-                                class="text-base"
+                                :class="itemClass"
                                 :style="fontStyle(titleFontFamily, weight)"
                             >
                                 {{ weight }} · {{ WEIGHT_LABELS[weight] }}

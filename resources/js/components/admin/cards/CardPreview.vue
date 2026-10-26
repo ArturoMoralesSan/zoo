@@ -27,8 +27,7 @@ import {
     CARD_EXPORT_PIXEL_RATIO,
     CARD_TEXTURE_PIXEL_RATIO,
     cardFilename,
-    dataUrlToFile,
-    downloadDataUrl,
+    downloadUrl,
     renderCardPng,
     renderCardSvg,
 } from '@/lib/cardImage';
@@ -103,6 +102,9 @@ type CardMaterial = Material & {
 };
 
 /*
+ * El visor de la tarjeta usa WebGL: con WebGPU el visor graba los comandos
+ * de dibujo (snapshot rendering) y no ve el cambio de textura del material.
+ *
  * Lo que se usa del visor: la escena y el aviso de que cambió.
  * El visor solo vuelve a dibujar cuando algo cambia (cámara, animación);
  * cambiar una textura no cuenta, así que hay que avisarle.
@@ -181,12 +183,24 @@ const regenerate = async () => {
     }
 
     try {
-        const url = await renderCardPng(node, CARD_TEXTURE_PIXEL_RATIO);
+        const blob = await renderCardPng(node, CARD_TEXTURE_PIXEL_RATIO);
 
-        if (id === renderId) {
-            textureUrl.value = url;
-            renderFailed.value = false;
-            applyTexture();
+        if (id !== renderId) {
+            return;
+        }
+
+        /*
+         * La textura se carga desde una URL blob: (sin base64). La anterior
+         * se libera al reemplazarla: si aún cargaba, applyTexture la descarta.
+         */
+        const previousUrl = textureUrl.value;
+
+        textureUrl.value = URL.createObjectURL(blob);
+        renderFailed.value = false;
+        applyTexture();
+
+        if (previousUrl) {
+            URL.revokeObjectURL(previousUrl);
         }
     } catch {
         if (id === renderId) {
@@ -195,7 +209,7 @@ const regenerate = async () => {
     }
 };
 
-const scheduleRegenerate = useDebounceFn(regenerate, 400);
+const scheduleRegenerate = useDebounceFn(regenerate, 300);
 
 watch(
     () => [
@@ -220,6 +234,10 @@ onMounted(regenerate);
 onBeforeUnmount(() => {
     renderId++;
     viewerScene = null;
+
+    if (textureUrl.value) {
+        URL.revokeObjectURL(textureUrl.value);
+    }
 });
 
 /*
@@ -241,12 +259,20 @@ const download = async (format: 'png' | 'svg') => {
             return;
         }
 
-        const dataUrl =
-            format === 'png'
-                ? await renderCardPng(node, CARD_EXPORT_PIXEL_RATIO)
-                : await renderCardSvg(node);
+        const filename = cardFilename(props.title, format);
 
-        downloadDataUrl(dataUrl, cardFilename(props.title, format));
+        if (format === 'svg') {
+            downloadUrl(await renderCardSvg(node), filename);
+
+            return;
+        }
+
+        const url = URL.createObjectURL(
+            await renderCardPng(node, CARD_EXPORT_PIXEL_RATIO),
+        );
+
+        downloadUrl(url, filename);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
         renderFailed.value = true;
     } finally {
@@ -274,9 +300,10 @@ const generatePngFile = async (): Promise<File | null> => {
         return null;
     }
 
-    return dataUrlToFile(
-        await renderCardPng(node, CARD_EXPORT_PIXEL_RATIO),
+    return new File(
+        [await renderCardPng(node, CARD_EXPORT_PIXEL_RATIO)],
         cardFilename(props.title, 'png'),
+        { type: 'image/png' },
     );
 };
 
@@ -332,6 +359,7 @@ defineExpose({ generatePngFile });
                         extension="glb"
                         :height="viewerHeight"
                         :zoom-controls="false"
+                        engine="WebGL"
                         @loaded="onModelLoaded"
                     />
                 </div>

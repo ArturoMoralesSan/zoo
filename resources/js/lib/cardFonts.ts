@@ -90,14 +90,6 @@ const fontStyles = import.meta.glob(
 
 const loadedStyles = new Set<string>();
 
-let version = 0;
-
-/**
- * Cambia cada vez que se carga una fuente nueva
- * (las fuentes incrustadas en las imágenes deben recalcularse).
- */
-export const fontsVersion = (): number => version;
-
 /**
  * Cargar una fuente y esperar a que esté lista para dibujarse.
  */
@@ -117,7 +109,6 @@ export const ensureCardFont = async (
         await fontStyles[key]?.();
 
         loadedStyles.add(key);
-        version++;
     }
 
     await document.fonts.load(`${weight} 60px "${font.family}"`);
