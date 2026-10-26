@@ -38,6 +38,7 @@ import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import CardStatField from '@/components/admin/cards/CardStatField.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
+import { cardStat } from '@/lib/cardStats';
 
 interface Species {
     id: number;
@@ -353,6 +354,7 @@ defineOptions({
                         <CardStatField
                             id="astucia"
                             v-model="form.astucia"
+                            :icon="cardStat('astucia').icon"
                             label="Astucia"
                             help="Nivel de ingenio y astucia."
                             :error="form.errors.astucia"
@@ -361,6 +363,7 @@ defineOptions({
                         <CardStatField
                             id="rapidez"
                             v-model="form.rapidez"
+                            :icon="cardStat('rapidez').icon"
                             label="Rapidez"
                             help="Velocidad y agilidad."
                             :error="form.errors.rapidez"
@@ -369,6 +372,7 @@ defineOptions({
                         <CardStatField
                             id="fuerza"
                             v-model="form.fuerza"
+                            :icon="cardStat('fuerza').icon"
                             label="Fuerza"
                             help="Potencia y resistencia física."
                             :error="form.errors.fuerza"

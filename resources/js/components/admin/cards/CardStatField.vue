@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { HugeiconsIcon } from '@hugeicons/vue';
+
+import type { CardStatIcon } from '@/lib/cardStats';
+
 /*
  * Estadística de la tarjeta (1-100): número y control deslizante.
  */
@@ -8,9 +12,12 @@ withDefaults(
         label: string;
         help: string;
         error?: string;
+        // Icono de la estadística (el mismo que en la tarjeta).
+        icon?: CardStatIcon | null;
     }>(),
     {
         error: '',
+        icon: null,
     },
 );
 
@@ -20,7 +27,16 @@ const value = defineModel<number>({ required: true });
 <template>
     <div class="form-field rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4">
         <label :for="id" class="form-label flex items-center justify-between">
-            <span>{{ label }}</span>
+            <span class="flex items-center gap-2">
+                <HugeiconsIcon
+                    v-if="icon"
+                    :icon="icon"
+                    :size="18"
+                    :stroke-width="2"
+                    class="text-[#187744]"
+                />
+                {{ label }}
+            </span>
             <span
                 class="rounded bg-[#EAF5EE] px-2 py-0.5 text-xs font-bold text-[#187744]"
             >
