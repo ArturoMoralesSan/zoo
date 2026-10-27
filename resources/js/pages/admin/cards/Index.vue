@@ -1,27 +1,35 @@
 
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
-    Plus,
-    ImageOff,
-    FilterX,
+    Box,
+    CircleCheck,
     CircleOff,
+    FilterX,
+    HelpCircle,
+    ImageOff,
+    Plus,
+    QrCode,
+    Settings2,
+    Tag,
+    TriangleAlert,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
-import { ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 
+import DuelMessagesSettings from '@/components/admin/cards/DuelMessagesSettings.vue';
+import RaritySettingsTable from '@/components/admin/cards/RaritySettingsTable.vue';
+import DataTable from '@/components/admin/DataTable.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import TableActions from '@/components/admin/TableActions.vue';
 import {
     getRarityClasses,
     getRarityLabel,
     rarityOptions,
 } from '@/lib/cardRarity';
 import type { CardRaritySetting } from '@/lib/cardRarity';
+import { storageUrl } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
-import PageHeader from '@/components/admin/PageHeader.vue';
-import DataTable from '@/components/admin/DataTable.vue';
-import TableActions from '@/components/admin/TableActions.vue';
-import DuelMessagesSettings from '@/components/admin/cards/DuelMessagesSettings.vue';
-import RaritySettingsTable from '@/components/admin/cards/RaritySettingsTable.vue';
 
 interface Species {
     id: number;
@@ -35,10 +43,14 @@ interface Card {
     name: string;
     rarity: string;
     thumbnail_image: string | null;
+    generated_image: string | null;
     model_file: string | null;
     is_active: boolean;
     sort_order: number;
     species: Species;
+    qr_codes_count?: number;
+    active_quiz_questions_count?: number;
+    effective_questions_per_duel?: number;
 }
 
 interface PaginationLink {
@@ -140,30 +152,87 @@ const deleteCard = (card: Card) => {
     });
 };
 
-const getModelLabel = (card: Card) =>
-    card.model_file ? 'GLB' : 'Sin modelo';
+const columns = ['Tarjeta', 'Rareza', 'Duelos', 'Acciones'];
 
-const getModelClasses = (card: Card) => {
-    if (card.model_file) {
-        return 'border-[#c9e4d2] bg-[#e4f2e8] text-[#187744]';
+// Imagen final de la tarjeta; si no existe, la miniatura.
+const cardImageUrl = (card: Card) =>
+    storageUrl(card.generated_image ?? card.thumbnail_image);
+
+/*
+ * Si la tarjeta se puede obtener en un duelo y, si no, por qué.
+ * Una tarjeta inactiva se muestra en gris (no es un problema por resolver).
+ */
+const duelReadiness = (card: Card) => {
+    if (!card.is_active) {
+        return { status: 'inactive', label: 'Inactiva' } as const;
     }
 
-    return 'border-[#dce7df] bg-[#f2f7f4] text-[#84958a]';
-};
-
-const cardImageUrl = (path: string | null) => {
-    if (!path) return null;
-
-    if (
-        path.startsWith('http://') ||
-        path.startsWith('https://') ||
-        path.startsWith('/')
-    ) {
-        return path;
+    if (!card.active_quiz_questions_count) {
+        return { status: 'warning', label: 'Sin preguntas activas' } as const;
     }
 
-    return `/storage/${path}`;
+    if (!card.qr_codes_count) {
+        return { status: 'warning', label: 'Sin códigos QR' } as const;
+    }
+
+    return { status: 'ready', label: 'Lista para duelos' } as const;
 };
+
+const readinessClasses = {
+    ready: 'text-[#187744]',
+    warning: 'text-amber-700',
+    inactive: 'text-[#718477]',
+};
+
+const chipClass = (warning: boolean) =>
+    warning
+        ? 'border-amber-200 bg-amber-50 text-amber-700'
+        : 'border-[#dce7df] bg-[#f2f7f4] text-[#435d4c]';
+
+/*
+ * Pestañas: lista de tarjetas y configuración de duelos.
+ * Se recuerda la última pestaña usada.
+ */
+type Tab = 'cards' | 'settings';
+
+const TAB_STORAGE_KEY = 'admin.cards.tab';
+
+const tab = ref<Tab>('cards');
+
+// Se lee al montar para que coincida con el HTML renderizado en el servidor.
+onMounted(() => {
+    try {
+        if (localStorage.getItem(TAB_STORAGE_KEY) === 'settings') {
+            tab.value = 'settings';
+        }
+    } catch {
+        // Almacenamiento no disponible: se muestra la lista.
+    }
+});
+
+watch(tab, (value) => {
+    try {
+        localStorage.setItem(TAB_STORAGE_KEY, value);
+    } catch {
+        // Almacenamiento no disponible: no se recuerda la pestaña.
+    }
+});
+
+const tabs: {
+    value: Tab;
+    label: string;
+    // Etiqueta corta para pantallas pequeñas.
+    shortLabel: string;
+    icon: typeof Tag;
+}[] = [
+    { value: 'cards', label: 'Tarjetas', shortLabel: 'Tarjetas', icon: Tag },
+    {
+        value: 'settings',
+        label: 'Configuración de duelos',
+        shortLabel: 'Configuración',
+        icon: Settings2,
+    },
+];
 
 defineOptions({
     layout: {
@@ -174,8 +243,8 @@ defineOptions({
             },
             {
                 title: 'Tarjetas',
-                href: admin.cards.index,
-            }
+                href: admin.cards.index(),
+            },
         ],
     },
 });
@@ -187,27 +256,70 @@ defineOptions({
     <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4 sm:p-6">
         <PageHeader
             title="Tarjetas"
-            description="Administra las tarjetas coleccionables de las especies."
+            description="Tarjetas coleccionables, su contenido para duelos y la configuración general."
             section="Colección"
-            :icon="ImageOff"
+            :icon="Tag"
             :action-icon="Plus"
             action-label="Nueva tarjeta"
             :action-href="admin.cards.create().url"
         />
 
-        <RaritySettingsTable :settings="raritySettings" />
+        <!-- Pestañas -->
+        <div
+            role="tablist"
+            aria-label="Secciones de tarjetas"
+            class="flex w-full gap-1 rounded-xl border border-[#d7e2da] bg-white p-1 sm:w-fit"
+        >
+            <button
+                v-for="item in tabs"
+                :key="item.value"
+                type="button"
+                role="tab"
+                :aria-selected="tab === item.value"
+                class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors sm:flex-none"
+                :class="
+                    tab === item.value
+                        ? 'bg-[#187744] text-white'
+                        : 'text-[#435d4c] hover:bg-[#f2f7f4]'
+                "
+                @click="tab = item.value"
+            >
+                <component :is="item.icon" :size="16" />
+                <span class="sm:hidden">{{ item.shortLabel }}</span>
+                <span class="hidden sm:inline">{{ item.label }}</span>
+                <span
+                    v-if="item.value === 'cards'"
+                    class="rounded-full px-2 py-0.5 text-xs"
+                    :class="
+                        tab === item.value
+                            ? 'bg-white/20 text-white'
+                            : 'bg-[#edf4ef] text-[#435d4c]'
+                    "
+                >
+                    {{ cards.total }}
+                </span>
+            </button>
+        </div>
 
-        <DuelMessagesSettings
-            :messages="duelMessages"
-            :built-in="duelMessagesBuiltIn"
-        />
+        <!-- Configuración de duelos -->
+        <div v-if="tab === 'settings'" class="space-y-4">
+            <RaritySettingsTable :settings="raritySettings" always-open />
 
+            <DuelMessagesSettings
+                :messages="duelMessages"
+                :built-in="duelMessagesBuiltIn"
+                always-open
+            />
+        </div>
+
+        <!-- Tarjetas -->
         <DataTable
+            v-else
             v-model:search="search"
             :pagination="cards"
             :is-empty="cards.data.length === 0"
-            :empty-colspan="6"
-            search-placeholder="Buscar tarjeta..."
+            :empty-colspan="columns.length"
+            search-placeholder="Buscar tarjeta o especie..."
             :has-filters="hasFilters()"
             @search="submitSearch"
             @clear-filters="clearFilters"
@@ -280,29 +392,13 @@ defineOptions({
             <!-- Encabezados -->
             <template #table-head>
                 <tr>
-                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
-                        Tarjeta
-                    </th>
-
-                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
-                        Especie
-                    </th>
-
-                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
-                        Rareza
-                    </th>
-
-
-                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
-                        Modelo 3D
-                    </th>
-
-                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
-                        Estado
-                    </th>
-
-                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-right text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
-                        Acciones
+                    <th
+                        v-for="column in columns"
+                        :key="column"
+                        class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold tracking-wide text-[#435d4c] uppercase sm:px-6"
+                        :class="{ 'text-right': column === 'Acciones' }"
+                    >
+                        {{ column }}
                     </th>
                 </tr>
             </template>
@@ -316,12 +412,19 @@ defineOptions({
                 >
                     <!-- Tarjeta -->
                     <td class="px-5 py-4 sm:px-6">
-                        <div class="flex min-w-[190px] items-center gap-3">
-                            <div class="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-[#e1e9e3] bg-[#f2f7f4]">
+                        <Link
+                            :href="admin.cards.show(card.id).url"
+                            class="group flex min-w-60 items-center gap-3"
+                        >
+                            <div
+                                class="h-16 w-9 shrink-0 overflow-hidden rounded-md border border-[#e1e9e3] bg-[#f2f7f4]"
+                                :class="{ 'opacity-50 grayscale': !card.is_active }"
+                            >
                                 <img
-                                    v-if="card.thumbnail_image"
-                                    :src="cardImageUrl(card.thumbnail_image) ?? ''"
+                                    v-if="cardImageUrl(card)"
+                                    :src="cardImageUrl(card) ?? ''"
                                     :alt="card.name"
+                                    loading="lazy"
                                     class="h-full w-full object-cover"
                                 />
 
@@ -330,37 +433,32 @@ defineOptions({
                                     class="flex h-full w-full items-center justify-center text-[#84958a]"
                                     title="Sin imagen"
                                 >
-                                    <ImageOff :size="20" />
+                                    <ImageOff :size="16" />
                                 </div>
                             </div>
 
                             <div class="min-w-0">
-                                <div class="text-sm font-semibold text-[#244334]">
+                                <div
+                                    class="text-sm font-semibold text-[#244334] group-hover:text-[#187744]"
+                                >
                                     {{ card.name }}
                                 </div>
 
-                                <div class="mt-1 text-xs text-[#84958a]">
-                                    ID {{ card.id }}
+                                <div class="mt-0.5 text-xs text-[#435d4c]">
+                                    {{ card.species?.common_name ?? 'Sin especie' }}
+                                    <span
+                                        v-if="card.species?.scientific_name"
+                                        class="text-[#84958a] italic"
+                                    >
+                                        · {{ card.species.scientific_name }}
+                                    </span>
                                 </div>
                             </div>
-                        </div>
-                    </td>
-
-                    <!-- Especie -->
-                    <td class="px-5 py-4 sm:px-6">
-                        <div class="min-w-[130px]">
-                            <div class="text-sm font-semibold text-[#244334]">
-                                {{ card.species?.common_name ?? 'Sin especie' }}
-                            </div>
-
-                            <div class="mt-1 text-xs italic text-[#718477]">
-                                {{ card.species?.scientific_name ?? '—' }}
-                            </div>
-                        </div>
+                        </Link>
                     </td>
 
                     <!-- Rareza -->
-                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                    <td class="px-5 py-4 whitespace-nowrap sm:px-6">
                         <span
                             class="inline-flex rounded-lg border px-2.5 py-1.5 text-xs font-semibold"
                             :class="getRarityClasses(card.rarity)"
@@ -369,36 +467,63 @@ defineOptions({
                         </span>
                     </td>
 
-                    <!-- Modelo 3D -->
-                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
-                        <span
-                            class="inline-flex rounded-lg border px-2.5 py-1.5 text-xs font-semibold"
-                            :class="getModelClasses(card)"
-                        >
-                            {{ getModelLabel(card) }}
-                        </span>
+                    <!-- Duelos -->
+                    <td class="px-5 py-4 sm:px-6">
+                        <div class="min-w-57.5 space-y-2">
+                            <p
+                                class="inline-flex items-center gap-1.5 text-xs font-semibold"
+                                :class="readinessClasses[duelReadiness(card).status]"
+                            >
+                                <CircleCheck
+                                    v-if="duelReadiness(card).status === 'ready'"
+                                    :size="14"
+                                />
+                                <CircleOff
+                                    v-else-if="duelReadiness(card).status === 'inactive'"
+                                    :size="14"
+                                />
+                                <TriangleAlert v-else :size="14" />
+                                {{ duelReadiness(card).label }}
+                            </p>
+
+                            <div class="flex flex-wrap gap-1.5">
+                                <span
+                                    class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium"
+                                    :class="
+                                        chipClass(
+                                            (card.active_quiz_questions_count ?? 0) <
+                                                (card.effective_questions_per_duel ?? 3),
+                                        )
+                                    "
+                                    title="Preguntas activas / preguntas por duelo"
+                                >
+                                    <HelpCircle :size="12" />
+                                    {{ card.active_quiz_questions_count ?? 0 }}/{{
+                                        card.effective_questions_per_duel ?? 3
+                                    }}
+                                    preguntas
+                                </span>
+
+                                <span
+                                    class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium"
+                                    :class="chipClass((card.qr_codes_count ?? 0) === 0)"
+                                >
+                                    <QrCode :size="12" />
+                                    {{ card.qr_codes_count ?? 0 }} QR
+                                </span>
+
+                                <span
+                                    class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium"
+                                    :class="chipClass(false)"
+                                >
+                                    <Box :size="12" />
+                                    {{ card.model_file ? 'Modelo 3D' : 'Sin modelo' }}
+                                </span>
+                            </div>
+                        </div>
                     </td>
 
-                    <!-- Estado -->
-                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
-                        <span
-                            v-if="card.is_active"
-                            class="inline-flex items-center gap-1.5 rounded-full border border-[#c9e4d2] bg-[#dcefe2] px-3 py-1.5 text-xs font-semibold text-[#176b3d]"
-                        >
-                            <span class="h-2 w-2 rounded-full bg-[#187744]" />
-                            Activa
-                        </span>
-
-                        <span
-                            v-else
-                            class="inline-flex items-center gap-1.5 rounded-full border border-[#e1e7e2] bg-[#f2f5f3] px-3 py-1.5 text-xs font-medium text-[#718477]"
-                        >
-                            <CircleOff :size="14" />
-                            Inactiva
-                        </span>
-                    </td>
-
-                    <!-- Acciones reutilizables -->
+                    <!-- Acciones -->
                     <TableActions
                         :questions-url="admin.cards.quiz.index(card.id).url"
                         :qr-codes-url="admin.cards.qrCodes.index(card.id).url"

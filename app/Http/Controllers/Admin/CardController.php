@@ -35,7 +35,17 @@ class CardController extends Controller
     public function index(): Response
     {
         $cards = Card::query()
-            ->with('species:id,common_name,scientific_name')
+            ->with([
+                'species:id,common_name,scientific_name',
+                'raritySetting',
+            ])
+            /*
+             * Contenido para duelos que se muestra en cada tarjeta.
+             */
+            ->withCount([
+                'qrCodes',
+                'quizQuestions as active_quiz_questions_count' => fn ($query) => $query->where('is_active', true),
+            ])
             ->when(
                 request('search'),
                 function ($query, $search) {
@@ -77,8 +87,10 @@ class CardController extends Controller
             )
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->paginate(1)
+            ->paginate(12)
             ->withQueryString();
+
+        $cards->getCollection()->each->append('effective_questions_per_duel');
 
         return Inertia::render(
             'admin/cards/Index',

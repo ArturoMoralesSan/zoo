@@ -16,6 +16,8 @@ import admin from '@/routes/admin';
 
 const props = defineProps<{
     settings: CardRaritySetting[];
+    // Siempre abierto (sin acordeón), p. ej. en su propia pestaña.
+    alwaysOpen?: boolean;
 }>();
 
 /*
@@ -24,10 +26,14 @@ const props = defineProps<{
  */
 const OPEN_STORAGE_KEY = 'admin.cards.rarity-settings.open';
 
-const isOpen = ref(false);
+const isOpen = ref(props.alwaysOpen);
 
 // Se lee al montar para que coincida con el HTML renderizado en el servidor.
 onMounted(() => {
+    if (props.alwaysOpen) {
+        return;
+    }
+
     try {
         isOpen.value = localStorage.getItem(OPEN_STORAGE_KEY) === '1';
     } catch {
@@ -36,6 +42,10 @@ onMounted(() => {
 });
 
 watch(isOpen, (open) => {
+    if (props.alwaysOpen) {
+        return;
+    }
+
     try {
         localStorage.setItem(OPEN_STORAGE_KEY, open ? '1' : '0');
     } catch {
@@ -67,13 +77,14 @@ const submit = () => {
 </script>
 
 <template>
-    <Collapsible v-model:open="isOpen">
+    <Collapsible v-model:open="isOpen" :disabled="alwaysOpen">
         <AdminCard :padding="false">
             <CollapsibleTrigger as-child>
                 <button
                     type="button"
                     class="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-[#F7FAF8] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#187744]/20 sm:px-6"
                     :aria-expanded="isOpen"
+                    :class="{ 'cursor-default hover:bg-white': alwaysOpen }"
                 >
                     <div
                         class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E2F3E8] text-[#187744]"
@@ -92,6 +103,7 @@ const submit = () => {
                     </div>
 
                     <span
+                        v-if="!alwaysOpen"
                         class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#435D4C] transition-colors"
                         :class="isOpen ? 'bg-[#E4F2E8] text-[#187744]' : 'bg-[#F2F7F4]'"
                         aria-hidden="true"
