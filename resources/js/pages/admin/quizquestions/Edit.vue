@@ -12,6 +12,7 @@ import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
+import CardContextInfo from '@/components/admin/cards/CardContextInfo.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import admin from '@/routes/admin';
 
@@ -135,22 +136,11 @@ defineOptions({
             :action-href="admin.cards.quiz.index(card.id).url"
         />
 
-        <!-- Información de la tarjeta -->
-        <div class="form-info">
-            <div class="form-info-icon">
-                <CheckCircle2 class="h-5 w-5" />
-            </div>
-
-            <p class="form-info-text">
-                <span class="font-semibold">{{ card.name }}</span>
-
-                <span v-if="card.species?.common_name">
-                    · {{ card.species.common_name }}
-                </span>
-
-                — Estás editando una pregunta asociada a esta tarjeta.
-            </p>
-        </div>
+        <!-- Tarjeta asociada -->
+        <CardContextInfo
+            :card="card"
+            message="Estás editando una pregunta asociada a esta tarjeta."
+        />
 
         <form class="form-container" @submit.prevent="submit">
             <!-- Pregunta -->

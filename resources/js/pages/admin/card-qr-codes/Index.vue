@@ -5,6 +5,7 @@ import {
     CheckCircle2,
     CircleOff,
     Download,
+    Eye,
     FilterX,
     Plus,
     QrCode,
@@ -15,6 +16,7 @@ import { ref } from 'vue';
 import CardQrImage from '@/components/admin/cards/CardQrImage.vue';
 import DataTable from '@/components/admin/DataTable.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
+import PageHeaderLink from '@/components/admin/PageHeaderLink.vue';
 import TableActions from '@/components/admin/TableActions.vue';
 import {
     downloadQrPng,
@@ -22,7 +24,7 @@ import {
     isQrExpired,
     qrFilename,
 } from '@/lib/cardQrCode';
-import type { CardQrCode } from '@/lib/cardQrCode';
+import type { CardQrCode, CardSummary } from '@/lib/cardQrCode';
 import admin from '@/routes/admin';
 
 interface PaginationLink {
@@ -42,7 +44,7 @@ interface QrCodesPagination {
 }
 
 const props = defineProps<{
-    card: { id: number; name: string };
+    card: CardSummary;
     qrCodes: QrCodesPagination;
     filters: {
         search?: string;
@@ -133,13 +135,21 @@ defineOptions({
     <div class="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader
             :title="card.name"
-            description="Cada código QR permite iniciar un duelo por esta tarjeta al escanearlo desde la app."
+            :description="`${card.species?.common_name ?? 'Sin especie'} · Cada código QR permite iniciar un duelo por esta tarjeta al escanearlo desde la app.`"
             section="Códigos QR de tarjeta"
             :icon="QrCode"
             :action-icon="Plus"
             action-label="Nuevo QR"
             :action-href="admin.cards.qrCodes.create(card.id).url"
-        />
+        >
+            <template #actions>
+                <PageHeaderLink
+                    :href="admin.cards.show(card.id).url"
+                    label="Ver tarjeta"
+                    :icon="Eye"
+                />
+            </template>
+        </PageHeader>
 
         <DataTable
             v-model:search="search"

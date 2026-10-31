@@ -149,12 +149,12 @@ class QuizQuestionController extends Controller
             }
         });
 
-        return redirect()
-            ->route('admin.cards.quiz.index', $card)
-            ->with('toast', [
-                'type' => 'success',
-                'message' => 'Pregunta creada correctamente.',
-            ]);
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Pregunta creada correctamente.',
+        ]);
+
+        return redirect()->route('admin.cards.quiz.index', $card);
     }
 
     /**
@@ -300,12 +300,12 @@ class QuizQuestionController extends Controller
                 ->delete();
         });
 
-        return redirect()
-            ->route('admin.cards.quiz.index', $card)
-            ->with('toast', [
-                'type' => 'success',
-                'message' => 'Pregunta actualizada correctamente.',
-            ]);
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Pregunta actualizada correctamente.',
+        ]);
+
+        return redirect()->route('admin.cards.quiz.index', $card);
     }
 
     /**
@@ -322,12 +322,12 @@ class QuizQuestionController extends Controller
 
         $quizQuestion->delete();
 
-        return redirect()
-            ->route('admin.cards.quiz.index', $card)
-            ->with('toast', [
-                'type' => 'success',
-                'message' => 'Pregunta eliminada correctamente.',
-            ]);
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Pregunta eliminada correctamente.',
+        ]);
+
+        return redirect()->route('admin.cards.quiz.index', $card);
     }
 
     /**

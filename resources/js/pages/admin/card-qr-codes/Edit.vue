@@ -7,6 +7,7 @@ import { ref } from 'vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
+import CardContextInfo from '@/components/admin/cards/CardContextInfo.vue';
 import CardQrImage from '@/components/admin/cards/CardQrImage.vue';
 import QrCodeFormFields from '@/components/admin/cards/QrCodeFormFields.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
@@ -16,11 +17,11 @@ import {
     qrFilename,
     toDateTimeLocal,
 } from '@/lib/cardQrCode';
-import type { CardQrCode, QrExpiryOption } from '@/lib/cardQrCode';
+import type { CardSummary, CardQrCode, QrExpiryOption } from '@/lib/cardQrCode';
 import admin from '@/routes/admin';
 
 const props = defineProps<{
-    card: { id: number; name: string };
+    card: CardSummary;
     qrCode: CardQrCode;
 }>();
 
@@ -116,6 +117,12 @@ defineOptions({
             :action-href="admin.cards.qrCodes.index(card.id).url"
         />
 
+        <!-- Tarjeta asociada -->
+        <CardContextInfo
+            :card="card"
+            message="Estás editando un código QR asociado a esta tarjeta."
+        />
+
         <!-- Vista previa -->
         <AdminCard
             title="Código QR"
@@ -174,7 +181,7 @@ defineOptions({
             </div>
         </AdminCard>
 
-        <form class="space-y-5" @submit.prevent="submit">
+        <form class="form-container" @submit.prevent="submit">
             <QrCodeFormFields
                 v-model:label="form.label"
                 v-model:is-active="form.is_active"

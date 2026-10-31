@@ -45,7 +45,7 @@ class CardQrCodeController extends Controller
         return Inertia::render(
             'admin/card-qr-codes/Index',
             [
-                'card' => $card->only('id', 'name'),
+                'card' => $this->cardSummary($card),
 
                 'qrCodes' => $qrCodes,
 
@@ -65,7 +65,7 @@ class CardQrCodeController extends Controller
         return Inertia::render(
             'admin/card-qr-codes/Create',
             [
-                'card' => $card->only('id', 'name'),
+                'card' => $this->cardSummary($card),
             ]
         );
     }
@@ -81,12 +81,9 @@ class CardQrCodeController extends Controller
             $request->qrCodeAttributes()
         );
 
-        return redirect()
-            ->route('admin.cards.qr-codes.index', $card)
-            ->with(
-                'success',
-                'Código QR creado correctamente.'
-            );
+        $this->flashSuccess('Código QR creado correctamente.');
+
+        return redirect()->route('admin.cards.qr-codes.index', $card);
     }
 
     /**
@@ -99,7 +96,7 @@ class CardQrCodeController extends Controller
         return Inertia::render(
             'admin/card-qr-codes/Edit',
             [
-                'card' => $card->only('id', 'name'),
+                'card' => $this->cardSummary($card),
                 'qrCode' => $qrCode->makeVisible('token'),
             ]
         );
@@ -117,12 +114,9 @@ class CardQrCodeController extends Controller
             $request->qrCodeAttributes()
         );
 
-        return redirect()
-            ->route('admin.cards.qr-codes.index', $card)
-            ->with(
-                'success',
-                'Código QR actualizado correctamente.'
-            );
+        $this->flashSuccess('Código QR actualizado correctamente.');
+
+        return redirect()->route('admin.cards.qr-codes.index', $card);
     }
 
     /**
@@ -134,10 +128,9 @@ class CardQrCodeController extends Controller
     ): RedirectResponse {
         $qrCode->regenerateToken();
 
-        return back()->with(
-            'success',
-            'Código QR regenerado. Descarga e imprime el nuevo QR.'
-        );
+        $this->flashSuccess('Código QR regenerado. Descarga e imprime el nuevo QR.');
+
+        return back();
     }
 
     /**
@@ -149,11 +142,32 @@ class CardQrCodeController extends Controller
     ): RedirectResponse {
         $qrCode->delete();
 
-        return redirect()
-            ->route('admin.cards.qr-codes.index', $card)
-            ->with(
-                'success',
-                'Código QR eliminado correctamente.'
-            );
+        $this->flashSuccess('Código QR eliminado correctamente.');
+
+        return redirect()->route('admin.cards.qr-codes.index', $card);
+    }
+
+    /**
+     * Datos de la tarjeta para las pantallas de códigos QR.
+     *
+     * @return array{id: int, name: string, species: array{common_name: string}|null}
+     */
+    private function cardSummary(Card $card): array
+    {
+        return [
+            ...$card->only('id', 'name'),
+            'species' => $card->species?->only('common_name'),
+        ];
+    }
+
+    /**
+     * Mensaje de éxito (toast) para la siguiente página.
+     */
+    private function flashSuccess(string $message): void
+    {
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $message,
+        ]);
     }
 }

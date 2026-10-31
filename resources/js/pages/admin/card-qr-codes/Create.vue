@@ -4,13 +4,14 @@ import { ArrowLeft, Info, QrCode, Save } from 'lucide-vue-next';
 
 import AdminButton from '@/components/admin/AdminButton.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
+import CardContextInfo from '@/components/admin/cards/CardContextInfo.vue';
 import QrCodeFormFields from '@/components/admin/cards/QrCodeFormFields.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
-import type { QrExpiryOption } from '@/lib/cardQrCode';
+import type { CardSummary, QrExpiryOption } from '@/lib/cardQrCode';
 import admin from '@/routes/admin';
 
 const props = defineProps<{
-    card: { id: number; name: string };
+    card: CardSummary;
 }>();
 
 const form = useForm({
@@ -66,7 +67,13 @@ defineOptions({
             :action-href="admin.cards.qrCodes.index(card.id).url"
         />
 
-        <form class="space-y-5" @submit.prevent="submit">
+        <!-- Tarjeta asociada -->
+        <CardContextInfo
+            :card="card"
+            message="El código QR se asociará a esta tarjeta."
+        />
+
+        <form class="form-container" @submit.prevent="submit">
             <QrCodeFormFields
                 v-model:label="form.label"
                 v-model:is-active="form.is_active"

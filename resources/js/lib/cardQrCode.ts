@@ -14,6 +14,15 @@ export interface CardQrCode {
 
 export type QrExpiryOption = 'never' | 'date';
 
+/**
+ * Tarjeta a la que pertenecen los códigos QR (pantallas de QR).
+ */
+export interface CardSummary {
+    id: number;
+    name: string;
+    species: { common_name: string } | null;
+}
+
 /*
  * Mismas opciones que los QR de boletos (ticket-orders/Show.vue).
  */
