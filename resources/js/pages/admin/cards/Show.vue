@@ -25,6 +25,7 @@ import { computed, onMounted } from 'vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import CardDetailField from '@/components/admin/cards/CardDetailField.vue';
 import CardPreview from '@/components/admin/cards/CardPreview.vue';
+import ModelSizeSummary from '@/components/admin/cards/ModelSizeSummary.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import { autoAccent } from '@/lib/cardColors';
@@ -70,6 +71,11 @@ interface Card {
     title_font_weight: number;
     title_font_size: TitleSize;
     model_file: string | null;
+    // Medidas del modelo 3D en metros (null en modelos anteriores al escalado).
+    model_original_height?: number | null;
+    model_final_height?: number | null;
+    model_final_width?: number | null;
+    model_final_depth?: number | null;
     is_active: boolean;
     sort_order: number;
     astucia?: number;
@@ -595,11 +601,26 @@ defineOptions({
                     :icon="Box"
                 >
                     <div class="space-y-3">
+                        <!-- Tamaño real -->
+                        <ModelSizeSummary
+                            v-if="modelPreviewSource"
+                            :height="card.model_final_height ?? null"
+                            :width="card.model_final_width ?? null"
+                            :depth="card.model_final_depth ?? null"
+                            :original-height="card.model_original_height ?? null"
+                            :edit-url="admin.cards.edit(card.id).url"
+                        />
+
+                        <!--
+                            Con referencia de tamaño (persona, cubo y cuadrícula de 1 m).
+                            El archivo ya tiene su tamaño real: no se vuelve a escalar.
+                        -->
                         <ModelViewer
                             v-if="modelPreviewSource"
                             :source="modelPreviewSource"
                             extension="glb"
                             height-class="h-[460px]"
+                            size-preview
                         />
 
                         <a

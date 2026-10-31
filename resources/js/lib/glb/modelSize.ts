@@ -9,21 +9,25 @@ export interface GlbSizeConfig {
 }
 
 /*
- * Medidas rápidas con animales de ejemplo (alto total aproximado de un
- * adulto, de la base del modelo a su punto más alto).
+ * Medidas rápidas con animales representativos del Zoológico Sahuatoba.
+ * Alto total aproximado de un adulto en pose natural, del suelo a su punto
+ * más alto (cabeza, orejas o joroba), que es lo que mide "Alto final".
+ * Los animales bajos y largos (cocodrilo, serpientes) tienen poco alto.
  */
 export const QUICK_HEIGHTS = [
-    { value: 0.05, example: 'Rana, insecto' },
-    { value: 0.1, example: 'Colibrí, ratón' },
-    { value: 0.25, example: 'Conejo, tortuga' },
-    { value: 0.5, example: 'Zorro, mapache' },
-    { value: 0.75, example: 'Jaguar, lobo' },
-    { value: 1, example: 'Venado, oso' },
-    { value: 1.5, example: 'Caballo, bisonte' },
-    { value: 2, example: 'Camello, avestruz' },
-    { value: 3, example: 'Elefante asiático' },
-    { value: 4, example: 'Elefante africano' },
-    { value: 5.5, example: 'Jirafa' },
+    { value: 0.05, example: 'Rana de White' },
+    { value: 0.15, example: 'Tortuga de Mapimí' },
+    { value: 0.25, example: 'Iguana verde' },
+    { value: 0.4, example: 'Mapache, cocodrilo' },
+    { value: 0.5, example: 'Zorro gris, gato montés' },
+    { value: 0.75, example: 'Coyote, búho real' },
+    { value: 0.9, example: 'Lobo mexicano, jaguar' },
+    { value: 1, example: 'Oso negro' },
+    { value: 1.25, example: 'León, tigre de Bengala' },
+    { value: 1.5, example: 'Venado cola blanca, hipopótamo' },
+    { value: 1.7, example: 'Cebra, llama' },
+    { value: 2, example: 'Bisonte americano, eland' },
+    { value: 2.5, example: 'Dromedario, avestruz' },
 ] as const;
 
 /*

@@ -40,7 +40,7 @@ export async function createSizeStage(
         { CreateBox },
         { CreateCapsule },
         { CreateSphere },
-        { StandardMaterial },
+        { PBRMaterial },
         { Color3 },
         { Vector3 },
         { TransformNode },
@@ -49,7 +49,7 @@ export async function createSizeStage(
         import('@babylonjs/core/Meshes/Builders/boxBuilder'),
         import('@babylonjs/core/Meshes/Builders/capsuleBuilder'),
         import('@babylonjs/core/Meshes/Builders/sphereBuilder'),
-        import('@babylonjs/core/Materials/standardMaterial'),
+        import('@babylonjs/core/Materials/PBR/pbrMaterial'),
         import('@babylonjs/core/Maths/math.color'),
         import('@babylonjs/core/Maths/math.vector'),
         import('@babylonjs/core/Meshes/transformNode'),
@@ -104,12 +104,14 @@ export async function createSizeStage(
     };
 
     /*
-     * Material opaco y congelado: sin transparencias que ordenar en cada
-     * cuadro mientras se reproduce una animación.
+     * Material PBR mate, opaco y congelado. El visor ilumina los modelos glTF
+     * solo con el entorno (IBL) y no agrega luces, así que un material
+     * estándar se vería negro. Sin transparencias que ordenar en cada cuadro.
      */
-    const material = new StandardMaterial('size-reference-material', scene);
-    material.diffuseColor = Color3.FromHexString('#B7CCBE');
-    material.specularColor = Color3.Black();
+    const material = new PBRMaterial('size-reference-material', scene);
+    material.albedoColor = Color3.FromHexString('#B7CCBE').toLinearSpace();
+    material.metallic = 0;
+    material.roughness = 1;
     material.freeze();
 
     /*

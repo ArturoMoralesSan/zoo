@@ -56,12 +56,16 @@ Código principal:
 2. En **Alto final**, escribe el alto en **metros**: `1`, `1.5`, `0.75`, `0.05`…
    Se acepta punto o coma decimal (`1,5`) y hasta 2 decimales. También puede:
    - usar los botones **−/+** (±0.1 m, o ±0.01 m por debajo de 0.5 m);
-   - elegir una medida rápida con un animal de ejemplo (alto total aproximado
-     de un adulto): 0.05 m (rana, insecto), 0.1 (colibrí, ratón), 0.25 (conejo,
-     tortuga), 0.5 (zorro, mapache), 0.75 (jaguar, lobo), 1 (venado, oso),
-     1.5 (caballo, bisonte), 2 (camello, avestruz), 3 (elefante asiático),
-     4 (elefante africano) o 5.5 m (jirafa). Son referencias: usa la medida
-     real del ejemplar si la conoces;
+   - elegir una medida rápida con un animal representativo del Zoológico
+     Sahuatoba (alto total aproximado de un adulto, del suelo a la cabeza,
+     orejas o joroba): 0.05 m (rana de White), 0.15 (tortuga de Mapimí),
+     0.25 (iguana verde), 0.4 (mapache, cocodrilo), 0.5 (zorro gris, gato
+     montés), 0.75 (coyote, búho real), 0.9 (lobo mexicano, jaguar), 1 (oso
+     negro), 1.25 (león, tigre de Bengala), 1.5 (venado cola blanca,
+     hipopótamo), 1.7 (cebra, llama), 2 (bisonte americano, eland) o 2.5 m
+     (dromedario, avestruz). Son referencias: usa la medida real del ejemplar
+     si la conoces. Los animales bajos y largos (cocodrilo, serpientes) tienen
+     poco alto aunque sean largos;
    - pulsar **Usar tamaño del archivo** para conservar el tamaño original.
 3. Revisa las tarjetas **Alto / Ancho / Largo** (original → final) y la escala (×0.41).
 4. En la vista previa, compara con la referencia: **Persona 1.70 m**, **Cubo 1 m**
