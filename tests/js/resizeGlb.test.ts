@@ -9,7 +9,9 @@ import { MeshoptDecoder } from 'meshoptimizer';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
+    QUICK_HEIGHTS,
     clampMeters,
+    isHeightInRange,
     parseMeters,
     stepMeters,
 } from '@/lib/glb/modelSize';
@@ -198,6 +200,15 @@ describe('modelSize', () => {
         expect(stepMeters(0.5, -1, config)).toBe(0.49);
         expect(stepMeters(0.01, -1, config)).toBe(0.01);
         expect(stepMeters(100, 1, config)).toBe(100);
+    });
+
+    it('las medidas rápidas están ordenadas y dentro del rango', () => {
+        const values = QUICK_HEIGHTS.map((quick) => quick.value);
+
+        expect(values).toEqual([...values].sort((a, b) => a - b));
+        expect(values.every((value) => isHeightInRange(value, config))).toBe(true);
+        // Las medidas originales se conservan.
+        expect(values).toEqual(expect.arrayContaining([0.25, 0.5, 1, 1.5, 2]));
     });
 
     it('limita al rango configurado', () => {

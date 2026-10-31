@@ -56,12 +56,17 @@ Código principal:
 2. En **Alto final**, escribe el alto en **metros**: `1`, `1.5`, `0.75`, `0.05`…
    Se acepta punto o coma decimal (`1,5`) y hasta 2 decimales. También puede:
    - usar los botones **−/+** (±0.1 m, o ±0.01 m por debajo de 0.5 m);
-   - elegir una medida rápida: 0.25, 0.5, 1, 1.5 o 2 m;
+   - elegir una medida rápida con un animal de ejemplo (alto total aproximado
+     de un adulto): 0.05 m (rana, insecto), 0.1 (colibrí, ratón), 0.25 (conejo,
+     tortuga), 0.5 (zorro, mapache), 0.75 (jaguar, lobo), 1 (venado, oso),
+     1.5 (caballo, bisonte), 2 (camello, avestruz), 3 (elefante asiático),
+     4 (elefante africano) o 5.5 m (jirafa). Son referencias: usa la medida
+     real del ejemplar si la conoces;
    - pulsar **Usar tamaño del archivo** para conservar el tamaño original.
 3. Revisa las tarjetas **Alto / Ancho / Largo** (original → final) y la escala (×0.41).
 4. En la vista previa, compara con la referencia: **Persona 1.70 m**, **Cubo 1 m**
    o **Ninguna**. La cuadrícula del suelo tiene líneas cada 1 m y la etiqueta
-   inferior muestra el alto final.
+   de la esquina superior derecha muestra el alto final.
 5. Guarda. La barra inferior muestra "Procesando modelo…" y luego "Subiendo N%".
 
 En **Editar**, el campo ya trae el alto guardado. "Modelo actual" muestra el

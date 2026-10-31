@@ -8,7 +8,23 @@ export interface GlbSizeConfig {
     supportedExtensions: string[];
 }
 
-export const QUICK_HEIGHTS = [0.25, 0.5, 1, 1.5, 2] as const;
+/*
+ * Medidas rápidas con animales de ejemplo (alto total aproximado de un
+ * adulto, de la base del modelo a su punto más alto).
+ */
+export const QUICK_HEIGHTS = [
+    { value: 0.05, example: 'Rana, insecto' },
+    { value: 0.1, example: 'Colibrí, ratón' },
+    { value: 0.25, example: 'Conejo, tortuga' },
+    { value: 0.5, example: 'Zorro, mapache' },
+    { value: 0.75, example: 'Jaguar, lobo' },
+    { value: 1, example: 'Venado, oso' },
+    { value: 1.5, example: 'Caballo, bisonte' },
+    { value: 2, example: 'Camello, avestruz' },
+    { value: 3, example: 'Elefante asiático' },
+    { value: 4, example: 'Elefante africano' },
+    { value: 5.5, example: 'Jirafa' },
+] as const;
 
 /*
  * Avisos de tamaño sospechoso (no bloquean el guardado).

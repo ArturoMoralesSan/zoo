@@ -81,11 +81,11 @@ const heightError = computed(
         >
             <div class="h-4 w-24 rounded bg-[#E4EEE7]" />
             <div class="h-11 w-full rounded-lg bg-[#E4EEE7] sm:w-72" />
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
                 <div
-                    v-for="index in 5"
+                    v-for="index in 6"
                     :key="index"
-                    class="h-8 w-14 rounded-lg bg-[#E4EEE7]"
+                    class="h-11 w-24 rounded-lg bg-[#E4EEE7]"
                 />
             </div>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -167,22 +167,36 @@ const heightError = computed(
                     </button>
                 </div>
 
-                <!-- Medidas rápidas -->
+                <!-- Medidas rápidas (con animales de ejemplo) -->
                 <div class="mt-1 flex flex-wrap gap-2">
                     <button
                         v-for="quick in QUICK_HEIGHTS"
-                        :key="quick"
+                        :key="quick.value"
                         type="button"
-                        class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
+                        class="flex flex-col items-start rounded-lg border px-3 py-1.5 text-left transition"
                         :class="
-                            model.height === quick
+                            model.height === quick.value
                                 ? 'border-[#187744] bg-[#E4F2E8] text-[#187744]'
                                 : 'border-[#DCE7DF] bg-white text-[#435D4C] hover:bg-[#F2F7F4]'
                         "
-                        :aria-pressed="model.height === quick"
-                        @click="model.setHeight(quick)"
+                        :aria-pressed="model.height === quick.value"
+                        :aria-label="`${quick.value} m (${quick.example})`"
+                        :title="`Alto aproximado: ${quick.example}`"
+                        @click="model.setHeight(quick.value)"
                     >
-                        {{ quick }} m
+                        <span class="text-xs font-semibold">
+                            {{ quick.value }} m
+                        </span>
+                        <span
+                            class="text-[11px] leading-tight"
+                            :class="
+                                model.height === quick.value
+                                    ? 'text-[#187744]'
+                                    : 'text-[#718477]'
+                            "
+                        >
+                            {{ quick.example }}
+                        </span>
                     </button>
                 </div>
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HTML3DElement } from '@babylonjs/viewer';
+import { useDebounceFn } from '@vueuse/core';
 import {
     Box,
     CircleOff,
@@ -171,10 +172,14 @@ const setupSizeStage = async (
     applySize(true);
 };
 
-watch(
-    () => [props.targetHeight, sizeReference.value] as const,
-    () => applySize(true),
-);
+/*
+ * Mientras se escribe el alto se espera un momento antes de volver a medir
+ * el modelo y encuadrar la cámara; el cambio de referencia es inmediato.
+ */
+const applySizeDebounced = useDebounceFn(() => applySize(true), 150);
+
+watch(() => props.targetHeight, applySizeDebounced);
+watch(sizeReference, () => applySize(true));
 
 onBeforeUnmount(disposeSizeStage);
 
@@ -347,7 +352,7 @@ const selectAnimation = (index: number) => {
             <!-- Zoom -->
             <div
                 v-if="zoomControls && isReady && !isLoading && !hasError"
-                class="absolute top-4 left-4 flex items-center gap-1 rounded-xl border border-[#DCE7DF] bg-white/90 p-1 backdrop-blur-sm"
+                class="absolute top-4 left-4 flex items-center gap-1 rounded-xl border border-[#DCE7DF] bg-white/95 p-1"
             >
                 <button
                     v-for="preset in ZOOM_PRESETS"
@@ -382,7 +387,7 @@ const selectAnimation = (index: number) => {
             <!-- Referencia de tamaño -->
             <div
                 v-if="sizePreview && isReady && !isLoading && !hasError"
-                class="absolute left-4 flex items-center gap-1 rounded-xl border border-[#DCE7DF] bg-white/90 p-1 backdrop-blur-sm"
+                class="absolute left-4 flex items-center gap-1 rounded-xl border border-[#DCE7DF] bg-white/95 p-1"
                 :class="zoomControls ? 'top-[4.25rem]' : 'top-4'"
                 role="radiogroup"
                 aria-label="Referencia de tamaño"
@@ -414,10 +419,14 @@ const selectAnimation = (index: number) => {
                 </button>
             </div>
 
-            <!-- Alto final -->
+            <!--
+                Alto final: arriba a la derecha para no tapar los controles
+                de animación del visor (abajo). Sin backdrop-blur: sobre un
+                canvas animado obliga a recalcular el desenfoque en cada cuadro.
+            -->
             <div
                 v-if="sizePreview && displayedHeight !== null && !isLoading && !hasError"
-                class="pointer-events-none absolute bottom-4 left-4 rounded-full border border-[#C8DCCF] bg-white/90 px-3 py-1 text-[13px] font-semibold text-[#187744] backdrop-blur-sm"
+                class="pointer-events-none absolute top-4 right-4 rounded-full border border-[#C8DCCF] bg-white/95 px-3 py-1 text-[13px] font-semibold text-[#187744]"
             >
                 {{ formatMeters(displayedHeight) }} de alto
             </div>
