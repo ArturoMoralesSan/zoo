@@ -341,6 +341,15 @@ Route::middleware(['auth', 'verified'])
             ->name('cards.model.destroy');
 
         /*
+         * Modelo 3D original (disco privado) para volver a escalarlo.
+         */
+        Route::get(
+            'cards/{card}/model/original',
+            [CardController::class, 'originalModel']
+        )->middleware('permission:cards.edit')
+            ->name('cards.model.original');
+
+        /*
         |--------------------------------------------------------------------------
         | Quiz de Cards
         |--------------------------------------------------------------------------

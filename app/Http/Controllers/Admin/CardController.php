@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exceptions\InvalidGlbException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Card\StoreCardRequest;
 use App\Http\Requests\Admin\Card\UpdateCardRequest;
@@ -9,6 +10,8 @@ use App\Models\Card;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
 use App\Models\Species;
+use App\Services\GlbInspection;
+use App\Services\GlbInspector;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\RedirectResponse;
@@ -16,8 +19,12 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class CardController extends Controller
 {
@@ -27,6 +34,19 @@ class CardController extends Controller
     public const IMAGE_FIELDS = [
         'thumbnail' => 'thumbnail_image',
         'artwork' => 'artwork_image',
+    ];
+
+    /**
+     * Columnas del modelo 3D vacías (tarjeta sin modelo).
+     */
+    private const EMPTY_MODEL = [
+        'model_file' => null,
+        'model_original_file' => null,
+        'model_target_height' => null,
+        'model_original_height' => null,
+        'model_final_height' => null,
+        'model_final_width' => null,
+        'model_final_depth' => null,
     ];
 
     /**
@@ -166,6 +186,8 @@ class CardController extends Controller
 
                 'duelMessageDefaults' => $this->duelMessageDefaults(),
 
+                'glbConfig' => $this->glbConfig(),
+
                 'species' => Species::query()
                     ->where('is_active', true)
                     ->orderBy('common_name')
@@ -186,25 +208,37 @@ class CardController extends Controller
     ): RedirectResponse {
         $validated = $request->validated();
 
-        $card = DB::transaction(function () use (
-            $request,
-            $validated
-        ) {
-            $card = Card::create(
-                $this->cardAttributes($request, $validated)
-            );
+        /*
+         * El modelo escalado se valida antes de escribir cualquier archivo.
+         */
+        $inspection = $this->inspectModel($request);
 
-            $this->storeCardFiles($request, $card);
+        $written = [];
 
-            return $card;
-        });
+        try {
+            DB::transaction(function () use (
+                $request,
+                $validated,
+                $inspection,
+                &$written
+            ) {
+                $card = Card::create(
+                    $this->cardAttributes($request, $validated)
+                );
 
-        return redirect()
-            ->route('admin.cards.index')
-            ->with(
-                'success',
-                'Tarjeta creada correctamente.'
-            );
+                $this->storeCardFiles($request, $card);
+
+                $this->storeModelFiles($request, $card, $inspection, $written);
+            });
+        } catch (Throwable $exception) {
+            $this->deleteStoredFiles($written);
+
+            throw $exception;
+        }
+
+        $this->flashSaved('Tarjeta creada correctamente.', $inspection);
+
+        return redirect()->route('admin.cards.index');
     }
 
     /**
@@ -224,6 +258,16 @@ class CardController extends Controller
                 'raritySettings' => $this->raritySettings(),
 
                 'duelMessageDefaults' => $this->duelMessageDefaults(),
+
+                'glbConfig' => $this->glbConfig(),
+
+                /*
+                 * Original guardado (o el archivo actual en modelos anteriores)
+                 * para volver a escalar el modelo.
+                 */
+                'modelOriginalUrl' => $card->model_file
+                    ? route('admin.cards.model.original', $card)
+                    : null,
 
                 'species' => Species::query()
                     ->where('is_active', true)
@@ -246,24 +290,42 @@ class CardController extends Controller
     ): RedirectResponse {
         $validated = $request->validated();
 
-        DB::transaction(function () use (
-            $request,
-            $card,
-            $validated
-        ) {
-            $card->update(
-                $this->cardAttributes($request, $validated)
-            );
+        $inspection = $this->inspectModel($request);
 
-            $this->storeCardFiles($request, $card);
-        });
+        $written = [];
+        $obsolete = [];
 
-        return redirect()
-            ->route('admin.cards.index')
-            ->with(
-                'success',
-                'Tarjeta actualizada correctamente.'
-            );
+        try {
+            DB::transaction(function () use (
+                $request,
+                $card,
+                $validated,
+                $inspection,
+                &$written,
+                &$obsolete
+            ) {
+                $card->update(
+                    $this->cardAttributes($request, $validated)
+                );
+
+                $this->storeCardFiles($request, $card);
+
+                $obsolete = $this->storeModelFiles($request, $card, $inspection, $written);
+            });
+        } catch (Throwable $exception) {
+            $this->deleteStoredFiles($written);
+
+            throw $exception;
+        }
+
+        /*
+         * Los archivos anteriores se eliminan solo después de guardar.
+         */
+        $this->deleteStoredFiles($obsolete);
+
+        $this->flashSaved('Tarjeta actualizada correctamente.', $inspection);
+
+        return redirect()->route('admin.cards.index');
     }
 
     /**
@@ -277,7 +339,7 @@ class CardController extends Controller
          * que ya tenga capturas.
          */
         if ($card->captures()->exists()) {
-            return back()->with(
+            return $this->backWithToast(
                 'error',
                 'No se puede eliminar esta tarjeta porque ya tiene capturas.'
             );
@@ -299,15 +361,24 @@ class CardController extends Controller
                 );
             }
 
+            /*
+             * Modelo original (disco privado).
+             */
+            $originalDisk = Storage::disk(config('glb.disks.original'));
+
+            if ($originalDisk->exists($cardDirectory)) {
+                $originalDisk->deleteDirectory($cardDirectory);
+            }
+
             $card->delete();
         });
 
-        return redirect()
-            ->route('admin.cards.index')
-            ->with(
-                'success',
-                'Tarjeta eliminada correctamente.'
-            );
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Tarjeta eliminada correctamente.',
+        ]);
+
+        return redirect()->route('admin.cards.index');
     }
 
     /**
@@ -320,7 +391,7 @@ class CardController extends Controller
         $field = self::IMAGE_FIELDS[$image];
 
         if (! $card->{$field}) {
-            return back()->with(
+            return $this->backWithToast(
                 'error',
                 'La tarjeta no tiene esta imagen.'
             );
@@ -332,7 +403,7 @@ class CardController extends Controller
             $field => null,
         ]);
 
-        return back()->with(
+        return $this->backWithToast(
             'success',
             'Imagen de la tarjeta eliminada correctamente.'
         );
@@ -345,22 +416,55 @@ class CardController extends Controller
         Card $card
     ): RedirectResponse {
         if (! $card->model_file) {
-            return back()->with(
+            return $this->backWithToast(
                 'error',
                 'La tarjeta no tiene un archivo 3D.'
             );
         }
 
-        $this->deletePublicFile($card->model_file);
+        $obsolete = [
+            [config('glb.disks.resized'), $card->model_file],
+            [config('glb.disks.original'), $card->model_original_file],
+        ];
 
-        $card->update([
-            'model_file' => null,
-        ]);
+        $card->update(self::EMPTY_MODEL);
 
-        return back()->with(
+        $this->deleteStoredFiles($obsolete);
+
+        return $this->backWithToast(
             'success',
             'Modelo 3D eliminado correctamente.'
         );
+    }
+
+    /**
+     * Descargar el modelo original para volver a escalarlo en el navegador.
+     *
+     * En modelos subidos antes del escalado no hay original: el archivo
+     * actual es el original.
+     */
+    public function originalModel(
+        Card $card
+    ): StreamedResponse {
+        $candidates = [
+            [config('glb.disks.original'), $card->model_original_file],
+            [config('glb.disks.resized'), $card->model_file],
+        ];
+
+        foreach ($candidates as [$disk, $path]) {
+            if ($path && Storage::disk($disk)->exists($path)) {
+                return Storage::disk($disk)->download(
+                    $path,
+                    'modelo-original-'.$card->id.'.glb',
+                    [
+                        'Content-Type' => 'model/gltf-binary',
+                        'Cache-Control' => 'private, no-store',
+                    ]
+                );
+            }
+        }
+
+        abort(404);
     }
 
     /**
@@ -460,7 +564,6 @@ class CardController extends Controller
             'thumbnail_image' => 'cards/'.$card->id,
             'artwork_image' => 'cards/'.$card->id,
             'generated_image' => 'cards/'.$card->id,
-            'model_file' => 'cards/'.$card->id.'/models',
         ];
 
         foreach ($directories as $field => $directory) {
@@ -480,6 +583,203 @@ class CardController extends Controller
                 ),
             ]);
         }
+    }
+
+    /**
+     * Configuración del tamaño de los modelos 3D para los formularios.
+     *
+     * @return array{minHeight: float, maxHeight: float, supportedExtensions: array<int, string>}
+     */
+    private function glbConfig(): array
+    {
+        return [
+            'minHeight' => (float) config('glb.min_height'),
+            'maxHeight' => (float) config('glb.max_height'),
+            'supportedExtensions' => array_values(config('glb.supported_extensions', [])),
+        ];
+    }
+
+    /**
+     * Validar el modelo escalado subido (si hay uno).
+     *
+     * @throws ValidationException
+     */
+    private function inspectModel(FormRequest $request): ?GlbInspection
+    {
+        if (! $request->hasFile('model_file')) {
+            return null;
+        }
+
+        try {
+            if ($request->hasFile('model_original_file')) {
+                app(GlbInspector::class)->readJson(
+                    $request->file('model_original_file')->getRealPath()
+                );
+            }
+
+            return app(GlbInspector::class)->inspectResized(
+                $request->file('model_file')->getRealPath(),
+                (float) $request->input('model_target_height')
+            );
+        } catch (InvalidGlbException $exception) {
+            throw ValidationException::withMessages([
+                'model_file' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Guardar el modelo escalado (disco público) y el original (disco privado).
+     *
+     * Registra en $written cada archivo escrito para borrarlo si algo falla y
+     * devuelve los archivos anteriores que se deben borrar después de guardar.
+     *
+     * @param  array<int, array{0: string, 1: string}>  $written
+     * @return array<int, array{0: string, 1: ?string}>
+     */
+    private function storeModelFiles(
+        FormRequest $request,
+        Card $card,
+        ?GlbInspection $inspection,
+        array &$written
+    ): array {
+        if (! $inspection) {
+            return [];
+        }
+
+        $resizedDisk = config('glb.disks.resized');
+        $originalDisk = config('glb.disks.original');
+        $directory = 'cards/'.$card->id.'/models';
+
+        $resizedPath = Storage::disk($resizedDisk)->putFileAs(
+            $directory,
+            $request->file('model_file'),
+            uniqid('', true).'.glb'
+        );
+
+        if (! $resizedPath) {
+            throw new RuntimeException('No se pudo guardar el modelo 3D.');
+        }
+
+        $written[] = [$resizedDisk, $resizedPath];
+
+        $obsolete = [[$resizedDisk, $card->model_file]];
+        $originalPath = $card->model_original_file;
+
+        if ($request->hasFile('model_original_file')) {
+            $originalPath = Storage::disk($originalDisk)->putFileAs(
+                $directory.'/originals',
+                $request->file('model_original_file'),
+                uniqid('', true).'.glb'
+            );
+
+            if (! $originalPath) {
+                throw new RuntimeException('No se pudo guardar el modelo 3D original.');
+            }
+
+            $written[] = [$originalDisk, $originalPath];
+            $obsolete[] = [$originalDisk, $card->model_original_file];
+        } elseif (! $originalPath && $card->model_file) {
+            /*
+             * Modelo anterior al escalado: el archivo actual es el original.
+             * Se copia al disco privado antes de reemplazarlo.
+             */
+            $originalPath = $this->keepLegacyOriginal($card, $directory, $written);
+        }
+
+        /*
+         * Medidas calculadas por el servidor; si no se pudieron verificar
+         * (modelos con piel), las del navegador.
+         */
+        $card->update([
+            'model_file' => $resizedPath,
+            'model_original_file' => $originalPath,
+            'model_target_height' => (float) $request->input('model_target_height'),
+            'model_original_height' => (float) $request->input('model_original_height'),
+            'model_final_height' => $inspection->height ?? (float) $request->input('model_final_height'),
+            'model_final_width' => $inspection->width ?? (float) $request->input('model_final_width'),
+            'model_final_depth' => $inspection->depth ?? (float) $request->input('model_final_depth'),
+        ]);
+
+        return $obsolete;
+    }
+
+    /**
+     * Copiar el modelo actual (sin original guardado) al disco privado.
+     *
+     * @param  array<int, array{0: string, 1: string}>  $written
+     */
+    private function keepLegacyOriginal(
+        Card $card,
+        string $directory,
+        array &$written
+    ): ?string {
+        $resized = Storage::disk(config('glb.disks.resized'));
+        $originalDisk = config('glb.disks.original');
+
+        if (! $resized->exists($card->model_file)) {
+            return null;
+        }
+
+        $path = $directory.'/originals/'.uniqid('', true).'.glb';
+        $stream = $resized->readStream($card->model_file);
+
+        try {
+            if (! Storage::disk($originalDisk)->writeStream($path, $stream)) {
+                throw new RuntimeException('No se pudo conservar el modelo 3D original.');
+            }
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }
+
+        $written[] = [$originalDisk, $path];
+
+        return $path;
+    }
+
+    /**
+     * Eliminar archivos de sus discos (si existen).
+     *
+     * @param  array<int, array{0: string, 1: ?string}>  $files
+     */
+    private function deleteStoredFiles(array $files): void
+    {
+        foreach ($files as [$disk, $path]) {
+            if ($path && Storage::disk($disk)->exists($path)) {
+                Storage::disk($disk)->delete($path);
+            }
+        }
+    }
+
+    /**
+     * Mensaje de guardado y advertencias del modelo 3D.
+     */
+    private function flashSaved(
+        string $message,
+        ?GlbInspection $inspection
+    ): void {
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $message,
+        ]);
+
+        if ($inspection?->warnings) {
+            Inertia::flash('model_warnings', $inspection->warnings);
+        }
+    }
+
+    private function backWithToast(
+        string $type,
+        string $message
+    ): RedirectResponse {
+        Inertia::flash('toast', [
+            'type' => $type,
+            'message' => $message,
+        ]);
+
+        return back();
     }
 
     /**

@@ -41,6 +41,8 @@ class CardResource extends JsonResource
     {
         $isOwned = $this->capturedAt !== null;
 
+        $modelUrl = $isOwned ? self::publicUrl($this->model_file) : null;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -56,7 +58,19 @@ class CardResource extends JsonResource
             ],
             'encountered' => $isOwned,
             'captured_at' => Carbon::make($this->capturedAt)?->toJSON(),
-            'model_url' => $isOwned ? self::publicUrl($this->model_file) : null,
+            'model_url' => $modelUrl,
+
+            /**
+             * Tamaño real del modelo en metros (1 unidad = 1 m), con el origen en
+             * su centro inferior. `null` sin modelo o en modelos anteriores al escalado.
+             */
+            'model_dimensions' => $modelUrl && $this->model_final_height !== null
+                ? [
+                    'height' => (float) $this->model_final_height,
+                    'width' => (float) $this->model_final_width,
+                    'depth' => (float) $this->model_final_depth,
+                ]
+                : null,
             'card_image_url' => $isOwned ? self::publicUrl($this->generated_image) : null,
 
             /**

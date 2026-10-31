@@ -15,7 +15,10 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref, useTemplateRef } from 'vue';
 
+import { useCardModelSize } from '@/composables/useCardModelSize';
+import type { ModelFormFields } from '@/composables/useCardModelSize';
 import { useObjectUrl } from '@/composables/useObjectUrl';
+import type { GlbSizeConfig } from '@/lib/glb/modelSize';
 import { rarityOptions } from '@/lib/cardRarity';
 import { DEFAULT_FADE_COLOR } from '@/lib/cardColors';
 import type { AccentColor } from '@/lib/cardColors';
@@ -34,6 +37,7 @@ import CardMessagesFields from '@/components/admin/cards/CardMessagesFields.vue'
 import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import CardStatField from '@/components/admin/cards/CardStatField.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
+import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import { cardStat } from '@/lib/cardStats';
 import type { DuelMessages } from '@/lib/duelMessages';
@@ -50,6 +54,7 @@ const props = defineProps<{
     species: Species[];
     raritySettings: CardRaritySetting[];
     duelMessageDefaults: DuelMessages;
+    glbConfig: GlbSizeConfig;
 }>();
 
 const form = useForm({
@@ -64,7 +69,6 @@ const form = useForm({
     title_font_family: DEFAULT_TITLE_FONT.family as CardFontId,
     title_font_weight: DEFAULT_TITLE_FONT.weight,
     title_font_size: DEFAULT_TITLE_FONT.size as TitleSize,
-    model_file: null as File | null,
     is_active: true,
     sort_order: 0,
     astucia: 50,
@@ -93,7 +97,18 @@ const artworkPreviewUrl = useObjectUrl(() => form.artwork_image);
 
 const generatingImage = ref(false);
 
+const SAVING_TEXT = 'Guardando...';
+
 const submit = async () => {
+    /*
+     * El modelo 3D se escala en el navegador antes de enviarlo.
+     */
+    const modelFields = await processModel();
+
+    if (!modelFields) {
+        return;
+    }
+
     /*
      * La imagen final se genera al guardar para que coincida
      * con los datos enviados.
@@ -108,22 +123,86 @@ const submit = async () => {
         generatingImage.value = false;
     }
 
-    form.post(admin.cards.store().url, {
+    form.transform((data) => ({
+        ...data,
+        ...modelFields,
+    })).post(admin.cards.store().url, {
         forceFormData: true,
     });
 };
 
+/*
+ * Archivo 3D elegido (original). Se envía junto con el archivo escalado.
+ */
+const modelFile = ref<File | null>(null);
+
 const handleModelFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
-    form.model_file = target.files?.[0] ?? null;
+    modelFile.value = target.files?.[0] ?? null;
 };
+
+const modelSize = useCardModelSize(props.glbConfig, modelFile);
 
 /*
  * Vista previa del archivo seleccionado.
  */
-const modelFilePreviewUrl = useObjectUrl(() => form.model_file);
+const modelFilePreviewUrl = useObjectUrl(() => modelFile.value);
 
 const modelPreviewSource = computed(() => modelFilePreviewUrl.value);
+
+/*
+ * Alto que muestra la vista previa (null = tamaño del archivo).
+ */
+const previewHeight = computed(() =>
+    modelSize.heightError === null ? modelSize.height : null,
+);
+
+const modelErrors = computed(
+    () => form.errors as Partial<Record<keyof ModelFormFields, string>>,
+);
+
+const processingModel = ref(false);
+
+/*
+ * Devuelve los campos del modelo a enviar, o null si no se pudo procesar
+ * (el error se muestra en el panel de tamaño).
+ */
+const processModel = async (): Promise<ModelFormFields | null> => {
+    processingModel.value = true;
+
+    try {
+        return await modelSize.process();
+    } catch {
+        document
+            .getElementById('model_target_height')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        return null;
+    } finally {
+        processingModel.value = false;
+    }
+};
+
+const uploadPercentage = computed(() =>
+    Math.round(form.progress?.percentage ?? 0),
+);
+
+const saving = computed(
+    () => processingModel.value || generatingImage.value || form.processing,
+);
+
+const savingText = computed(() => {
+    if (processingModel.value) {
+        return 'Procesando modelo…';
+    }
+
+    if (form.processing && form.progress) {
+        return `Subiendo ${uploadPercentage.value}%`;
+    }
+
+    return SAVING_TEXT;
+});
+
 
 defineOptions({
     layout: {
@@ -474,7 +553,7 @@ defineOptions({
 
                                 <div class="min-w-0 flex-1">
                                     <p class="break-words text-sm font-medium text-[#244334]">
-                                        {{ form.model_file?.name || 'Seleccionar archivo 3D' }}
+                                        {{ modelFile?.name || 'Seleccionar archivo 3D' }}
                                     </p>
 
                                     <p class="form-upload-description mt-1">
@@ -499,12 +578,31 @@ defineOptions({
                             </label>
 
                             <p
-                                v-if="form.errors.model_file"
+
+                                v-if="modelErrors.model_file || modelErrors.model_original_file"
+
                                 class="form-error"
+
                             >
-                                {{ form.errors.model_file }}
+
+                                {{ modelErrors.model_file ?? modelErrors.model_original_file }}
+
                             </p>
+
                         </div>
+
+
+                        <!-- Tamaño real -->
+
+                        <ModelSizeField
+
+                            v-if="modelSize.hasModel"
+
+                            :model="modelSize"
+
+                            :errors="modelErrors"
+
+                        />
 
                         <!-- Vista previa del modelo -->
                         <div class="form-field">
@@ -514,6 +612,8 @@ defineOptions({
                                 :source="modelPreviewSource"
                                 extension="glb"
                                 height-class="h-[460px]"
+                                :size-preview="modelSize.hasModel"
+                                :target-height="previewHeight"
                             />
                         </div>
                     </div>
@@ -540,6 +640,21 @@ defineOptions({
                     class="sticky bottom-0 z-10 border-t-2 border-t-[#DCE7DF]"
                 >
                     <template #default>
+                        <!-- Progreso de la subida -->
+                        <div
+                            v-if="form.processing && form.progress"
+                            class="absolute inset-x-0 top-0 h-1 overflow-hidden rounded-t-2xl bg-[#E4EEE7]"
+                            role="progressbar"
+                            :aria-valuenow="uploadPercentage"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                        >
+                            <div
+                                class="h-full bg-[#187744] transition-[width] duration-200"
+                                :style="{ width: `${uploadPercentage}%` }"
+                            />
+                        </div>
+
                         <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
                             <p class="form-help sm:mr-auto">
                                 <span class="text-red-500">*</span>
@@ -555,10 +670,10 @@ defineOptions({
 
                             <AdminButton
                                 type="submit"
-                                :disabled="form.processing || generatingImage"
-                                :loading="form.processing || generatingImage"
+                                :disabled="saving || modelSize.inspecting"
+                                :loading="saving"
                                 :icon="Save"
-                                loading-text="Guardando..."
+                                :loading-text="savingText"
                             >
                                 Guardar tarjeta
                             </AdminButton>

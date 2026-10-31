@@ -2,15 +2,20 @@
 import type { HTML3DElement } from '@babylonjs/viewer';
 import {
     Box,
+    CircleOff,
     LoaderCircle,
+    PersonStanding,
     RotateCcw,
+    Ruler,
     Scan,
     TriangleAlert,
     ZoomIn,
     ZoomOut,
 } from 'lucide-vue-next';
-import { onMounted, ref, watch } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
+import { formatMeters } from '@/lib/glb/modelSize';
+import type { SizeReference, SizeStage } from '@/lib/glb/sizeStage';
 import type { ModelExtension } from '@/lib/modelPreview';
 
 const props = withDefaults(
@@ -31,12 +36,20 @@ const props = withDefaults(
          */
         engine?: 'WebGL' | 'WebGPU' | null;
         emptyText?: string;
+        /*
+         * Tamaño real: cuadrícula de 1 m, objeto de referencia y el modelo
+         * escalado a targetHeight (null = tamaño del archivo).
+         */
+        sizePreview?: boolean;
+        targetHeight?: number | null;
     }>(),
     {
         extension: null,
         heightClass: 'h-[360px]',
         height: null,
         engine: null,
+        sizePreview: false,
+        targetHeight: null,
         zoomControls: true,
         emptyText: 'Selecciona un archivo GLB para previsualizar el modelo.',
     },
@@ -86,9 +99,84 @@ const applyZoom = (preset: ZoomPreset) => {
 };
 
 const resetView = () => {
-    viewer.value?.viewerDetails?.viewer.resetCamera(true);
+    if (sizeStage) {
+        framedRadius = sizeStage.fitCamera();
+    } else {
+        viewer.value?.viewerDetails?.viewer.resetCamera(true);
+    }
+
     applyZoom(DEFAULT_ZOOM);
 };
+
+/*
+ * Referencia de tamaño (solo con sizePreview).
+ */
+const SIZE_REFERENCES: {
+    id: SizeReference;
+    label: string;
+    icon: typeof Box;
+}[] = [
+    { id: 'person', label: 'Persona 1.70 m', icon: PersonStanding },
+    { id: 'cube', label: 'Cubo 1 m', icon: Box },
+    { id: 'none', label: 'Ninguna', icon: CircleOff },
+];
+
+const sizeReference = ref<SizeReference>('person');
+const displayedHeight = ref<number | null>(null);
+
+let sizeStage: SizeStage | null = null;
+
+const disposeSizeStage = () => {
+    sizeStage?.dispose();
+    sizeStage = null;
+    displayedHeight.value = null;
+};
+
+const applySize = (reframe: boolean) => {
+    if (!sizeStage) {
+        return;
+    }
+
+    displayedHeight.value = sizeStage.update(
+        props.targetHeight,
+        sizeReference.value,
+    );
+
+    if (reframe) {
+        framedRadius = sizeStage.fitCamera();
+        applyZoom(
+            ZOOM_PRESETS.find((preset) => preset.id === activeZoom.value) ??
+                DEFAULT_ZOOM,
+        );
+    }
+};
+
+const setupSizeStage = async (
+    details: NonNullable<HTML3DElement['viewerDetails']>,
+) => {
+    disposeSizeStage();
+
+    const { createSizeStage } = await import('@/lib/glb/sizeStage');
+    const stage = await createSizeStage(details);
+
+    // El modelo pudo cambiar mientras se cargaba.
+    if (viewer.value?.viewerDetails?.model !== details.model) {
+        stage?.dispose();
+
+        return;
+    }
+
+    sizeStage = stage;
+    activeZoom.value = DEFAULT_ZOOM.id;
+    applySize(true);
+};
+
+watch(
+    () => [props.targetHeight, sizeReference.value] as const,
+    () => applySize(true),
+);
+
+onBeforeUnmount(disposeSizeStage);
 
 // Al acercar o girar a mano ya no aplica ningún preajuste.
 const clearActiveZoom = () => {
@@ -152,6 +240,7 @@ watch(
         selectedAnimation.value = null;
         framedRadius = null;
         activeZoom.value = DEFAULT_ZOOM.id;
+        disposeSizeStage();
     },
     { immediate: true },
 );
@@ -181,6 +270,10 @@ const onModelChange = () => {
 
     if (props.zoomControls) {
         applyZoom(DEFAULT_ZOOM);
+    }
+
+    if (props.sizePreview) {
+        void setupSizeStage(details);
     }
 
     emit('loaded', details);
@@ -284,6 +377,49 @@ const selectAnimation = (index: number) => {
                 >
                     <RotateCcw :size="15" />
                 </button>
+            </div>
+
+            <!-- Referencia de tamaño -->
+            <div
+                v-if="sizePreview && isReady && !isLoading && !hasError"
+                class="absolute left-4 flex items-center gap-1 rounded-xl border border-[#DCE7DF] bg-white/90 p-1 backdrop-blur-sm"
+                :class="zoomControls ? 'top-[4.25rem]' : 'top-4'"
+                role="radiogroup"
+                aria-label="Referencia de tamaño"
+            >
+                <span
+                    class="hidden items-center gap-1 px-2 text-[11px] font-semibold tracking-wider text-[#718477] uppercase sm:inline-flex"
+                >
+                    <Ruler :size="13" />
+                    Referencia
+                </span>
+
+                <button
+                    v-for="reference in SIZE_REFERENCES"
+                    :key="reference.id"
+                    type="button"
+                    role="radio"
+                    :aria-checked="sizeReference === reference.id"
+                    :title="reference.label"
+                    class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors"
+                    :class="
+                        sizeReference === reference.id
+                            ? 'bg-[#EAF5EE] text-[#187744]'
+                            : 'text-[#435D4C] hover:bg-[#F2F7F4]'
+                    "
+                    @click="sizeReference = reference.id"
+                >
+                    <component :is="reference.icon" :size="15" />
+                    <span class="hidden sm:inline">{{ reference.label }}</span>
+                </button>
+            </div>
+
+            <!-- Alto final -->
+            <div
+                v-if="sizePreview && displayedHeight !== null && !isLoading && !hasError"
+                class="pointer-events-none absolute bottom-4 left-4 rounded-full border border-[#C8DCCF] bg-white/90 px-3 py-1 text-[13px] font-semibold text-[#187744] backdrop-blur-sm"
+            >
+                {{ formatMeters(displayedHeight) }} de alto
             </div>
 
             <!-- Cargando -->

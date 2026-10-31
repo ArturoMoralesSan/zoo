@@ -25,6 +25,12 @@ class Card extends Model
         'title_font_weight',
         'title_font_size',
         'model_file',
+        'model_original_file',
+        'model_target_height',
+        'model_original_height',
+        'model_final_height',
+        'model_final_width',
+        'model_final_depth',
         'is_active',
         'sort_order',
         'astucia',
@@ -50,6 +56,13 @@ class Card extends Model
         'questions_per_duel' => 'integer',
         'retries' => 'integer',
         'cooldown_minutes' => 'integer',
+
+        // Medidas del modelo 3D, en metros.
+        'model_target_height' => 'float',
+        'model_original_height' => 'float',
+        'model_final_height' => 'float',
+        'model_final_width' => 'float',
+        'model_final_depth' => 'float',
     ];
 
     /**

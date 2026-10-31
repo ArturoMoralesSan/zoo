@@ -95,7 +95,7 @@ class CardTest extends TestCase
         $this->assertNotNull($data);
         $this->assertSame([
             'id', 'name', 'thumbnail_image', 'rarity', 'species_name', 'category_name',
-            'sort_order', 'stats', 'encountered', 'captured_at', 'model_url',
+            'sort_order', 'stats', 'encountered', 'captured_at', 'model_url', 'model_dimensions',
             'card_image_url', 'attempts',
         ], array_keys($data));
 
@@ -131,6 +131,38 @@ class CardTest extends TestCase
             Storage::disk('public')->url('cards/1/jaguar.png'),
             $data['card_image_url']
         );
+    }
+
+    public function test_owned_card_returns_model_dimensions(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $card = $this->createCard([
+            'model_final_height' => 1.5,
+            'model_final_width' => 0.375,
+            'model_final_depth' => 0.75,
+        ]);
+        $this->capture($card);
+
+        $data = $this->cardFromIndex($card);
+
+        $this->assertSame(
+            ['height' => 1.5, 'width' => 0.375, 'depth' => 0.75],
+            $data['model_dimensions']
+        );
+    }
+
+    public function test_model_dimensions_are_null_for_legacy_or_not_owned_cards(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $legacy = $this->createCard();
+        $this->capture($legacy);
+
+        $notOwned = $this->createCard(['model_final_height' => 1, 'model_final_width' => 1, 'model_final_depth' => 1]);
+
+        $this->assertNull($this->cardFromIndex($legacy)['model_dimensions']);
+        $this->assertNull($this->cardFromIndex($notOwned)['model_dimensions']);
     }
 
     public function test_owned_card_without_model_file_returns_null_model_url(): void

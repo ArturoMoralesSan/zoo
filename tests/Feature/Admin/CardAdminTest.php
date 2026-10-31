@@ -11,6 +11,8 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Support\SessionKey;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -318,27 +320,33 @@ class CardAdminTest extends TestCase
 
     public function test_admin_can_upload_a_glb_model(): void
     {
-        $payload = $this->cardPayload([
-            'model_file' => UploadedFile::fake()->create('aguila.glb', 100, 'model/gltf-binary'),
-        ]);
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $payload = $this->cardPayload($this->modelPayload());
 
         $this->actingAs($this->admin)
             ->post(route('admin.cards.store'), $payload)
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('admin.cards.index'));
+            ->assertRedirect(route('admin.cards.index'))
+            ->assertInertiaFlash('toast.type', 'success')
+            ->assertInertiaFlashMissing('model_warnings');
 
         $card = Card::where('name', $payload['name'])->firstOrFail();
 
+        $this->assertStringStartsWith('cards/'.$card->id.'/models/', $card->model_file);
         $this->assertStringEndsWith('.glb', $card->model_file);
+        Storage::disk('public')->assertExists($card->model_file);
 
-        $path = storage_path('app/public/' . $card->model_file);
-        $this->assertFileExists($path);
+        $this->assertStringStartsWith('cards/'.$card->id.'/models/originals/', $card->model_original_file);
+        Storage::disk('local')->assertExists($card->model_original_file);
+        Storage::disk('public')->assertMissing($card->model_original_file);
 
-        // Solo se borra lo creado por la prueba: el archivo (nombre único)
-        // y sus carpetas si quedaron vacías (rmdir falla si contienen algo).
-        File::delete($path);
-        @rmdir(dirname($path));
-        @rmdir(dirname($path, 2));
+        $this->assertSame(1.5, $card->model_target_height);
+        $this->assertSame(2.0, $card->model_original_height);
+        $this->assertEqualsWithDelta(1.5, $card->model_final_height, 0.0001);
+        $this->assertEqualsWithDelta(0.375, $card->model_final_width, 0.0001);
+        $this->assertEqualsWithDelta(0.75, $card->model_final_depth, 0.0001);
     }
 
     public function test_admin_can_upload_card_images(): void
@@ -526,5 +534,497 @@ class CardAdminTest extends TestCase
             ->assertRedirect(route('admin.cards.index'));
 
         $this->assertDatabaseHas('cards', ['name' => $payload['name']]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tamaño real de los modelos 3D
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Copia temporal de un GLB de tests/Fixtures/glb como archivo subido.
+     */
+    private function glbUpload(string $fixture, string $name = 'aguila.glb'): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'glb');
+        copy(base_path('tests/Fixtures/glb/'.$fixture), $path);
+
+        return new UploadedFile($path, $name, 'model/gltf-binary', null, true);
+    }
+
+    /**
+     * Original (2 m de alto) y archivo escalado a 1.5 m, como los envía el navegador.
+     */
+    private function modelPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'model_original_file' => $this->glbUpload('input/plain.glb'),
+            'model_file' => $this->glbUpload('valid.glb'),
+            'model_target_height' => '1.5',
+            'model_original_height' => '2',
+            'model_final_height' => '1.5',
+            'model_final_width' => '0.375',
+            'model_final_depth' => '0.75',
+        ], $overrides);
+    }
+
+    /**
+     * Tarjeta con modelo ya guardado en los discos falsos.
+     */
+    private function cardWithModel(bool $legacy = false): Card
+    {
+        $card = Card::create($this->cardPayload());
+
+        $model = 'cards/'.$card->id.'/models/actual.glb';
+        Storage::disk('public')->put($model, 'escalado');
+
+        $attributes = ['model_file' => $model];
+
+        if (! $legacy) {
+            $original = 'cards/'.$card->id.'/models/originals/original.glb';
+            Storage::disk('local')->put($original, 'original');
+
+            $attributes += [
+                'model_original_file' => $original,
+                'model_target_height' => 1,
+                'model_original_height' => 2,
+                'model_final_height' => 1,
+                'model_final_width' => 0.25,
+                'model_final_depth' => 0.5,
+            ];
+        }
+
+        $card->update($attributes);
+
+        return $card->fresh();
+    }
+
+    private function updatePayload(Card $card, array $overrides = []): array
+    {
+        return $this->cardPayload([
+            'name' => $card->name,
+            ...$overrides,
+        ]);
+    }
+
+    public function test_card_can_be_created_without_a_model(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $payload = $this->cardPayload();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('admin.cards.index'));
+
+        $card = Card::where('name', $payload['name'])->firstOrFail();
+
+        $this->assertNull($card->model_file);
+        $this->assertNull($card->model_original_file);
+        $this->assertNull($card->model_final_height);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_invalid_glb_is_rejected_without_writing_files(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $payload = $this->cardPayload($this->modelPayload([
+            'model_file' => $this->glbUpload('bad-magic.glb'),
+        ]));
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasErrors('model_file');
+
+        $this->assertDatabaseMissing('cards', ['name' => $payload['name']]);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_file_that_does_not_match_the_height_is_rejected(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $payload = $this->cardPayload($this->modelPayload([
+            'model_target_height' => '2',
+        ]));
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasErrors(['model_file' => 'El modelo mide 1.500 m de alto, pero se pidió 2.000 m.']);
+
+        $this->assertDatabaseMissing('cards', ['name' => $payload['name']]);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    public function test_compressed_resized_file_is_rejected(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload($this->modelPayload([
+                'model_file' => $this->glbUpload('draco.glb'),
+            ])))
+            ->assertSessionHasErrors('model_file');
+    }
+
+    public function test_model_height_must_be_within_range(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        foreach (['0', '0.001', '150', 'alto'] as $height) {
+            $this->actingAs($this->admin)
+                ->post(route('admin.cards.store'), $this->cardPayload($this->modelPayload([
+                    'model_target_height' => $height,
+                ])))
+                ->assertSessionHasErrors('model_target_height');
+        }
+    }
+
+    public function test_decimal_heights_are_accepted(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        // 1.51 m está dentro de la tolerancia del 1 % del archivo de 1.5 m.
+        foreach (['1.5', '1.51'] as $height) {
+            $payload = $this->cardPayload($this->modelPayload([
+                'model_target_height' => $height,
+            ]));
+
+            $this->actingAs($this->admin)
+                ->post(route('admin.cards.store'), $payload)
+                ->assertSessionHasNoErrors();
+
+            $card = Card::where('name', $payload['name'])->firstOrFail();
+
+            $this->assertSame((float) $height, $card->model_target_height);
+        }
+    }
+
+    public function test_model_fields_must_be_sent_together(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        // Original sin archivo escalado ni alto.
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload([
+                'model_original_file' => $this->glbUpload('input/plain.glb'),
+            ]))
+            ->assertSessionHasErrors(['model_file', 'model_target_height']);
+
+        // Archivo escalado sin original al crear.
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload(
+                collect($this->modelPayload())->except('model_original_file')->all()
+            ))
+            ->assertSessionHasErrors('model_original_file');
+
+        // Alto sin archivo escalado al editar.
+        $card = $this->cardWithModel();
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->updatePayload($card, [
+                'model_target_height' => '1.5',
+            ]))
+            ->assertSessionHasErrors('model_file');
+    }
+
+    public function test_size_only_edit_replaces_the_resized_file_and_keeps_the_original(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel();
+        $oldModel = $card->model_file;
+        $original = $card->model_original_file;
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->updatePayload(
+                $card,
+                collect($this->modelPayload())->except('model_original_file')->all()
+            ))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('admin.cards.index'));
+
+        $card->refresh();
+
+        $this->assertNotSame($oldModel, $card->model_file);
+        Storage::disk('public')->assertMissing($oldModel);
+        Storage::disk('public')->assertExists($card->model_file);
+
+        $this->assertSame($original, $card->model_original_file);
+        Storage::disk('local')->assertExists($original);
+
+        $this->assertSame(1.5, $card->model_target_height);
+        $this->assertEqualsWithDelta(1.5, $card->model_final_height, 0.0001);
+    }
+
+    public function test_legacy_card_keeps_its_current_file_as_the_original(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel(legacy: true);
+        $legacyModel = $card->model_file;
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->updatePayload(
+                $card,
+                collect($this->modelPayload())->except('model_original_file')->all()
+            ))
+            ->assertSessionHasNoErrors();
+
+        $card->refresh();
+
+        $this->assertNotNull($card->model_original_file);
+        $this->assertSame('escalado', Storage::disk('local')->get($card->model_original_file));
+        Storage::disk('public')->assertMissing($legacyModel);
+        Storage::disk('public')->assertExists($card->model_file);
+    }
+
+    public function test_new_model_replaces_both_files_after_saving(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel();
+        $oldModel = $card->model_file;
+        $oldOriginal = $card->model_original_file;
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->updatePayload($card, $this->modelPayload()))
+            ->assertSessionHasNoErrors();
+
+        $card->refresh();
+
+        Storage::disk('public')->assertMissing($oldModel);
+        Storage::disk('local')->assertMissing($oldOriginal);
+        Storage::disk('public')->assertExists($card->model_file);
+        Storage::disk('local')->assertExists($card->model_original_file);
+    }
+
+    public function test_update_without_model_fields_does_not_touch_files(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel();
+        $before = $card->only(['model_file', 'model_original_file', 'model_target_height', 'model_final_height']);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->updatePayload($card, ['astucia' => 80]))
+            ->assertSessionHasNoErrors();
+
+        $card->refresh();
+
+        $this->assertSame($before, $card->only(array_keys($before)));
+        Storage::disk('public')->assertExists($card->model_file);
+        Storage::disk('local')->assertExists($card->model_original_file);
+    }
+
+    public function test_resized_file_requires_an_original_when_the_card_has_no_model(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = Card::create($this->cardPayload());
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->updatePayload(
+                $card,
+                collect($this->modelPayload())->except('model_original_file')->all()
+            ))
+            ->assertSessionHasErrors('model_file');
+    }
+
+    public function test_failure_while_saving_leaves_no_orphan_files(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        Card::updating(function (Card $card) {
+            if ($card->isDirty('model_file')) {
+                throw new \RuntimeException('Fallo simulado');
+            }
+        });
+
+        $payload = $this->cardPayload($this->modelPayload());
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertServerError();
+
+        $this->assertDatabaseMissing('cards', ['name' => $payload['name']]);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_failure_while_updating_keeps_the_previous_files(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel();
+
+        Card::updating(function (Card $card) {
+            if ($card->isDirty('model_file')) {
+                throw new \RuntimeException('Fallo simulado');
+            }
+        });
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->updatePayload($card, $this->modelPayload()))
+            ->assertServerError();
+
+        $this->assertSame([$card->model_file], Storage::disk('public')->allFiles());
+        $this->assertSame([$card->model_original_file], Storage::disk('local')->allFiles());
+    }
+
+    public function test_warnings_are_returned_on_save(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        config(['glb.supported_extensions' => ['KHR_materials_unlit']]);
+
+        $response = $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload($this->modelPayload([
+                'model_file' => $this->glbUpload('unsupported-extension.glb'),
+            ])));
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast.type', 'success')
+            ->assertInertiaFlash('model_warnings.0');
+
+        $this->assertStringContainsString(
+            'KHR_materials_clearcoat',
+            $response->session()->get(SessionKey::FLASH_DATA)['model_warnings'][0]
+        );
+    }
+
+    public function test_skinned_model_is_saved_with_browser_dimensions_and_a_warning(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $payload = $this->cardPayload($this->modelPayload([
+            'model_original_file' => $this->glbUpload('input/skinned.glb'),
+            'model_file' => $this->glbUpload('skinned.glb'),
+            'model_final_width' => '0.4',
+        ]));
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('model_warnings');
+
+        $card = Card::where('name', $payload['name'])->firstOrFail();
+
+        $this->assertSame(0.4, $card->model_final_width);
+    }
+
+    public function test_destroy_model_removes_both_files_and_dimensions(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel();
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.model.destroy', $card))
+            ->assertRedirect()
+            ->assertInertiaFlash('toast.type', 'success');
+
+        Storage::disk('public')->assertMissing($card->model_file);
+        Storage::disk('local')->assertMissing($card->model_original_file);
+
+        $card->refresh();
+
+        $this->assertNull($card->model_file);
+        $this->assertNull($card->model_original_file);
+        $this->assertNull($card->model_target_height);
+        $this->assertNull($card->model_final_height);
+    }
+
+    public function test_destroy_card_removes_the_private_original(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel();
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.destroy', $card))
+            ->assertRedirect(route('admin.cards.index'));
+
+        $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_original_model_download_requires_permission(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel();
+
+        $this->get(route('admin.cards.model.original', $card))
+            ->assertRedirect(route('login'));
+
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo('cards.view');
+
+        $this->actingAs($viewer)
+            ->get(route('admin.cards.model.original', $card))
+            ->assertForbidden();
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.cards.model.original', $card))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'model/gltf-binary');
+
+        $this->assertSame('original', $response->streamedContent());
+    }
+
+    public function test_original_model_download_uses_the_current_file_for_legacy_cards(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel(legacy: true);
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.cards.model.original', $card))
+            ->assertOk();
+
+        $this->assertSame('escalado', $response->streamedContent());
+
+        $card->update(['model_file' => null]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cards.model.original', $card))
+            ->assertNotFound();
+    }
+
+    public function test_forms_receive_the_glb_config(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.cards.create'))
+            ->assertInertia(fn ($page) => $page
+                ->where('glbConfig.minHeight', 0.01)
+                ->where('glbConfig.maxHeight', 100)
+                ->has('glbConfig.supportedExtensions'));
     }
 }

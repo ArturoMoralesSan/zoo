@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin\Card;
 
 use App\Concerns\CardDesignValidationRules;
 use App\Concerns\CardMessagesValidationRules;
+use App\Concerns\CardModelValidationRules;
 use App\Enums\CardRarity;
 use App\Models\Card;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,6 +14,7 @@ class UpdateCardRequest extends FormRequest
 {
     use CardDesignValidationRules;
     use CardMessagesValidationRules;
+    use CardModelValidationRules;
 
     public function authorize(): bool
     {
@@ -68,13 +70,7 @@ class UpdateCardRequest extends FormRequest
                 'max:15360',
             ],
 
-            'model_file' => [
-                'nullable',
-                'file',
-                'extensions:glb',
-                'mimes:glb',
-                'max:51200',
-            ],
+            ...$this->cardModelRules($this->route('card')),
 
             'is_active' => [
                 'boolean',
@@ -137,5 +133,10 @@ class UpdateCardRequest extends FormRequest
                 'max:43200',
             ],
         ];
+    }
+
+    public function attributes(): array
+    {
+        return $this->cardModelAttributes();
     }
 }

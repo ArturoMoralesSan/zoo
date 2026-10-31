@@ -16,9 +16,13 @@ import {
     Zap,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
-import { computed, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, useTemplateRef } from 'vue';
 
+import { useCardModelSize } from '@/composables/useCardModelSize';
+import type { ModelFormFields } from '@/composables/useCardModelSize';
 import { useObjectUrl } from '@/composables/useObjectUrl';
+import { formatMeters } from '@/lib/glb/modelSize';
+import type { GlbSizeConfig } from '@/lib/glb/modelSize';
 import { rarityOptions } from '@/lib/cardRarity';
 import { DEFAULT_FADE_COLOR } from '@/lib/cardColors';
 import type { AccentColor } from '@/lib/cardColors';
@@ -38,6 +42,7 @@ import CardMessagesFields from '@/components/admin/cards/CardMessagesFields.vue'
 import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import CardStatField from '@/components/admin/cards/CardStatField.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
+import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import { cardStat } from '@/lib/cardStats';
 import type { DuelMessages } from '@/lib/duelMessages';
@@ -64,6 +69,11 @@ interface Card {
     title_font_weight: number;
     title_font_size: TitleSize;
     model_file: string | null;
+    // Medidas del modelo 3D en metros (null en modelos anteriores al escalado).
+    model_original_height?: number | null;
+    model_final_height?: number | null;
+    model_final_width?: number | null;
+    model_final_depth?: number | null;
     is_active: boolean;
     sort_order: number;
     astucia?: number;
@@ -85,6 +95,8 @@ const props = defineProps<{
     species: Species[];
     raritySettings: CardRaritySetting[];
     duelMessageDefaults: DuelMessages;
+    glbConfig: GlbSizeConfig;
+    modelOriginalUrl: string | null;
 }>();
 
 const form = useForm({
@@ -99,7 +111,6 @@ const form = useForm({
     title_font_family: props.card.title_font_family ?? DEFAULT_TITLE_FONT.family,
     title_font_weight: props.card.title_font_weight ?? DEFAULT_TITLE_FONT.weight,
     title_font_size: props.card.title_font_size ?? DEFAULT_TITLE_FONT.size,
-    model_file: null as File | null,
     is_active: props.card.is_active,
     sort_order: props.card.sort_order ?? 0,
     astucia: props.card.astucia ?? 50,
@@ -133,7 +144,18 @@ const artworkPreviewUrl = computed(
 
 const generatingImage = ref(false);
 
+const SAVING_TEXT = 'Guardando cambios...';
+
 const submit = async () => {
+    /*
+     * El modelo 3D se escala en el navegador antes de enviarlo.
+     */
+    const modelFields = await processModel();
+
+    if (!modelFields) {
+        return;
+    }
+
     /*
      * La imagen final se genera al guardar para que coincida
      * con los datos enviados.
@@ -150,6 +172,7 @@ const submit = async () => {
 
     form.transform((data) => ({
         ...data,
+        ...modelFields,
         _method: 'PUT',
     })).post(admin.cards.update(props.card.id).url, {
         forceFormData: true,
@@ -157,15 +180,91 @@ const submit = async () => {
     });
 };
 
+/*
+ * Archivo 3D nuevo (original). Se envía junto con el archivo escalado.
+ */
+const modelFile = ref<File | null>(null);
+
 const handleModelFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
-    form.model_file = target.files?.[0] ?? null;
+    modelFile.value = target.files?.[0] ?? null;
 };
+
+const modelSize = useCardModelSize(props.glbConfig, modelFile, {
+    modelFile: props.card.model_file,
+    originalHeight: props.card.model_original_height ?? null,
+    finalHeight: props.card.model_final_height ?? null,
+    finalWidth: props.card.model_final_width ?? null,
+    finalDepth: props.card.model_final_depth ?? null,
+    originalUrl: props.modelOriginalUrl,
+});
+
+/*
+ * Modelos anteriores al escalado: se mide el archivo actual (es el original).
+ */
+onMounted(() => {
+    if (props.card.model_file && props.card.model_final_height == null) {
+        void modelSize.inspectStoredOriginal();
+    }
+});
+
+/*
+ * Alto que muestra la vista previa (null = tamaño del archivo).
+ */
+const previewHeight = computed(() =>
+    modelSize.heightError === null ? modelSize.height : null,
+);
+
+const modelErrors = computed(
+    () => form.errors as Partial<Record<keyof ModelFormFields, string>>,
+);
+
+const processingModel = ref(false);
+
+/*
+ * Devuelve los campos del modelo a enviar, o null si no se pudo procesar
+ * (el error se muestra en el panel de tamaño).
+ */
+const processModel = async (): Promise<ModelFormFields | null> => {
+    processingModel.value = true;
+
+    try {
+        return await modelSize.process();
+    } catch {
+        document
+            .getElementById('model_target_height')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        return null;
+    } finally {
+        processingModel.value = false;
+    }
+};
+
+const uploadPercentage = computed(() =>
+    Math.round(form.progress?.percentage ?? 0),
+);
+
+const saving = computed(
+    () => processingModel.value || generatingImage.value || form.processing,
+);
+
+const savingText = computed(() => {
+    if (processingModel.value) {
+        return 'Procesando modelo…';
+    }
+
+    if (form.processing && form.progress) {
+        return `Subiendo ${uploadPercentage.value}%`;
+    }
+
+    return SAVING_TEXT;
+});
 
 /*
  * Vista previa: archivo nuevo o, si no hay, el archivo guardado.
  */
-const modelFilePreviewUrl = useObjectUrl(() => form.model_file);
+const modelFilePreviewUrl = useObjectUrl(() => modelFile.value);
 
 const modelPreviewSource = computed(
     () => modelFilePreviewUrl.value ?? storageUrl(props.card.model_file),
@@ -214,7 +313,7 @@ const deleteModel = () => {
         form.delete(admin.cards.model.destroy(props.card.id).url, {
             preserveScroll: true,
             onSuccess: () => {
-                form.model_file = null;
+                modelFile.value = null;
             },
         });
     });
@@ -562,12 +661,30 @@ defineOptions({
                                     <FileBox :size="20" />
                                 </div>
 
-                                <div class="min-w-0 flex-1">
+                                <div
+                                    class="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+                                >
                                     <p
                                         class="text-sm font-semibold text-[#244334]"
                                     >
                                         Modelo actual
                                     </p>
+
+                                    <!-- Tamaño guardado -->
+                                    <span
+                                        v-if="card.model_final_height"
+                                        class="inline-flex items-center rounded-lg border border-[#C8DCCF] bg-[#EAF5EE] px-2.5 py-1 text-xs font-semibold text-[#187744]"
+                                    >
+                                        {{ formatMeters(card.model_final_height) }}
+                                        de alto
+                                    </span>
+
+                                    <span
+                                        v-else
+                                        class="inline-flex items-center rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800"
+                                    >
+                                        Sin tamaño definido
+                                    </span>
                                 </div>
                             </div>
 
@@ -629,7 +746,7 @@ defineOptions({
                                         class="break-all text-sm font-medium text-[#244334]"
                                     >
                                         {{
-                                            form.model_file?.name ||
+                                            modelFile?.name ||
                                             'Seleccionar archivo 3D'
                                         }}
                                     </p>
@@ -656,12 +773,25 @@ defineOptions({
                             </label>
 
                             <p
-                                v-if="form.errors.model_file"
+                                v-if="
+                                    modelErrors.model_file ||
+                                    modelErrors.model_original_file
+                                "
                                 class="form-error"
                             >
-                                {{ form.errors.model_file }}
+                                {{
+                                    modelErrors.model_file ??
+                                    modelErrors.model_original_file
+                                }}
                             </p>
                         </div>
+
+                        <!-- Tamaño real -->
+                        <ModelSizeField
+                            v-if="modelSize.hasModel"
+                            :model="modelSize"
+                            :errors="modelErrors"
+                        />
 
                         <!-- Vista previa del modelo -->
                         <div class="form-field">
@@ -671,6 +801,8 @@ defineOptions({
                                 :source="modelPreviewSource"
                                 extension="glb"
                                 height-class="h-[460px]"
+                                :size-preview="modelSize.hasModel"
+                                :target-height="previewHeight"
                             />
                         </div>
                     </div>
@@ -693,8 +825,23 @@ defineOptions({
 
                 <!-- Acciones -->
                 <div
-                    class="sticky bottom-0 z-10 flex flex-col gap-3 rounded-2xl border border-[#DCE7DF] bg-white p-4 border-t-2 border-t-[#DCE7DF] sm:flex-row sm:items-center sm:justify-end sm:px-6"
+                    class="sticky bottom-0 z-10 flex flex-col gap-3 overflow-hidden rounded-2xl border border-[#DCE7DF] bg-white p-4 border-t-2 border-t-[#DCE7DF] sm:flex-row sm:items-center sm:justify-end sm:px-6"
                 >
+                    <!-- Progreso de la subida -->
+                    <div
+                        v-if="form.processing && form.progress"
+                        class="absolute inset-x-0 top-0 h-1 bg-[#E4EEE7]"
+                        role="progressbar"
+                        :aria-valuenow="uploadPercentage"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                    >
+                        <div
+                            class="h-full bg-[#187744] transition-[width] duration-200"
+                            :style="{ width: `${uploadPercentage}%` }"
+                        />
+                    </div>
+
                     <p class="form-help sm:mr-auto">
                         Actualiza los campos necesarios antes de guardar.
                     </p>
@@ -708,9 +855,9 @@ defineOptions({
 
                     <AdminButton
                         type="submit"
-                        :disabled="form.processing || generatingImage"
-                        :loading="form.processing || generatingImage"
-                        loading-text="Guardando cambios..."
+                        :disabled="saving || modelSize.inspecting"
+                        :loading="saving"
+                        :loading-text="savingText"
                         :icon="Save"
                     >
                         Guardar cambios
