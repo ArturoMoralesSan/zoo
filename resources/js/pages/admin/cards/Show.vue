@@ -25,9 +25,11 @@ import { computed, onMounted } from 'vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import CardDetailField from '@/components/admin/cards/CardDetailField.vue';
 import CardPreview from '@/components/admin/cards/CardPreview.vue';
+import CardPreviewPanel from '@/components/admin/cards/CardPreviewPanel.vue';
 import ModelSizeSummary from '@/components/admin/cards/ModelSizeSummary.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
+import { usePreviewTab } from '@/composables/usePreviewTab';
 import { autoAccent } from '@/lib/cardColors';
 import type { AccentColor } from '@/lib/cardColors';
 import {
@@ -129,6 +131,18 @@ const duelMessages = computed(() => {
 });
 
 const modelPreviewSource = computed(() => storageUrl(props.card.model_file));
+
+/*
+ * Vista previa lateral (Tarjeta | Modelo 3D): cambia sola al hacer clic en
+ * las secciones de la tarjeta o del modelo.
+ */
+const {
+    tab: previewTab,
+    isWide,
+    onFormInteraction,
+} = usePreviewTab();
+
+const SIDEBAR_VIEWER_HEIGHT = 'min(520px, calc(100dvh - 16rem))';
 
 const duelSettingsLabel = computed(() =>
     props.card.duel_settings_source === 'card' ? 'Personalizado' : 'Por rareza',
@@ -265,14 +279,51 @@ defineOptions({
         </PageHeader>
 
         <div
-            class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_30rem] xl:items-start"
+            class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_34rem] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_38rem]"
         >
             <!--
-                Vista previa: fija a la derecha en pantallas anchas;
-                en pantallas pequeñas aparece antes de los datos.
+                Vista previa: fija a la derecha en pantallas anchas, con
+                pestañas Tarjeta | Modelo 3D; en pantallas pequeñas aparece
+                antes de los datos (el modelo se ve en su sección).
             -->
             <div class="min-w-0 xl:sticky xl:top-5 xl:order-2">
+                <CardPreviewPanel
+                    v-if="isWide"
+                    v-model:tab="previewTab"
+                    :has-model="Boolean(modelPreviewSource)"
+                >
+                    <template #card>
+                        <CardPreview
+                            embedded
+                            :title="card.name"
+                            :scientific-name="card.species.scientific_name"
+                            :astucia="card.astucia ?? null"
+                            :rapidez="card.rapidez ?? null"
+                            :fuerza="card.fuerza ?? null"
+                            :artwork-url="storageUrl(card.artwork_image)"
+                            :fade-color="card.fade_color"
+                            :accent-color="card.accent_color"
+                            :title-font-family="card.title_font_family"
+                            :title-font-weight="card.title_font_weight"
+                            :title-font-size="card.title_font_size"
+                        />
+                    </template>
+
+                    <!-- El archivo ya tiene su tamaño real: no se vuelve a escalar. -->
+                    <template #model>
+                        <ModelViewer
+                            :source="modelPreviewSource"
+                            extension="glb"
+                            :height="SIDEBAR_VIEWER_HEIGHT"
+                            :size-preview="Boolean(modelPreviewSource)"
+                            :paused="previewTab !== 'model'"
+                            empty-text="Esta tarjeta no tiene un modelo 3D asociado."
+                        />
+                    </template>
+                </CardPreviewPanel>
+
                 <CardPreview
+                    v-else
                     :title="card.name"
                     :scientific-name="card.species.scientific_name"
                     :astucia="card.astucia ?? null"
@@ -287,9 +338,14 @@ defineOptions({
                 />
             </div>
 
-            <div class="min-w-0 space-y-5 xl:order-1">
+            <div
+                class="min-w-0 space-y-5 xl:order-1"
+                @pointerdown="onFormInteraction"
+                @focusin="onFormInteraction"
+            >
                 <!-- Contenido de la tarjeta -->
                 <AdminCard
+                    data-preview="card"
                     title="Contenido de la tarjeta"
                     description="Especie y nombre que aparecen en la tarjeta."
                     :icon="Info"
@@ -312,6 +368,7 @@ defineOptions({
 
                 <!-- Estadísticas de la tarjeta -->
                 <AdminCard
+                    data-preview="card"
                     title="Estadísticas de la tarjeta"
                     description="Valores de 1 a 100 de cada atributo de la tarjeta."
                     :icon="Zap"
@@ -361,6 +418,7 @@ defineOptions({
 
                 <!-- Imagen de la tarjeta -->
                 <AdminCard
+                    data-preview="card"
                     title="Imagen de la tarjeta"
                     description="Fondo de la plantilla de la tarjeta."
                     :icon="FileImage"
@@ -410,6 +468,7 @@ defineOptions({
 
                 <!-- Diseño de la tarjeta -->
                 <AdminCard
+                    data-preview="card"
                     title="Diseño de la tarjeta"
                     description="Colores de la plantilla y fuente del nombre de la especie."
                     :icon="Palette"
@@ -596,6 +655,7 @@ defineOptions({
 
                 <!-- Modelo 3D -->
                 <AdminCard
+                    data-preview="model"
                     title="Modelo 3D"
                     description="Modelo interactivo asociado a la tarjeta."
                     :icon="Box"
@@ -614,9 +674,19 @@ defineOptions({
                         <!--
                             Con referencia de tamaño (persona, cubo y cuadrícula de 1 m).
                             El archivo ya tiene su tamaño real: no se vuelve a escalar.
+                            En pantallas anchas está en la barra lateral.
                         -->
+                        <p
+                            v-if="isWide && modelPreviewSource"
+                            class="flex items-center gap-2 text-xs text-[#718477]"
+                        >
+                            <Info :size="14" class="shrink-0 text-[#187744]" />
+                            La vista previa a escala está en el panel derecho,
+                            pestaña "Modelo 3D".
+                        </p>
+
                         <ModelViewer
-                            v-if="modelPreviewSource"
+                            v-if="modelPreviewSource && !isWide"
                             :source="modelPreviewSource"
                             extension="glb"
                             height-class="h-[540px]"

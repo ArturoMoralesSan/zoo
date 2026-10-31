@@ -44,6 +44,11 @@ const props = defineProps<{
     titleFontFamily: CardFontId;
     titleFontWeight: number;
     titleFontSize: TitleSize;
+    /*
+     * Dentro de la vista previa lateral con pestañas: sin su propio
+     * encabezado (lo pone CardPreviewPanel).
+     */
+    embedded?: boolean;
 }>();
 
 /*
@@ -74,6 +79,11 @@ const template = useTemplateRef<InstanceType<typeof CardTemplate>>('template');
 const scale = ref(PREVIEW_MAX_HEIGHT / CARD_HEIGHT);
 
 useResizeObserver(container, ([entry]) => {
+    // Sin ancho (oculta o aún sin diseño) se conserva la escala anterior.
+    if (!entry.contentRect.width) {
+        return;
+    }
+
     scale.value = Math.min(
         entry.contentRect.width / CARD_WIDTH,
         PREVIEW_MAX_HEIGHT / CARD_HEIGHT,
@@ -314,10 +324,17 @@ defineExpose({ generatePngFile });
 </script>
 
 <template>
-    <AdminCard
-        title="Vista previa de la tarjeta"
-        description="Se actualiza mientras editas la tarjeta."
-        :icon="IdCard"
+    <component
+        :is="embedded ? 'div' : AdminCard"
+        v-bind="
+            embedded
+                ? {}
+                : {
+                      title: 'Vista previa de la tarjeta',
+                      description: 'Se actualiza mientras editas la tarjeta.',
+                      icon: IdCard,
+                  }
+        "
     >
         <div class="space-y-4">
             <div class="grid grid-cols-2 gap-3">
@@ -403,5 +420,5 @@ defineExpose({ generatePngFile });
                 No se pudo generar la imagen de la tarjeta.
             </p>
         </div>
-    </AdminCard>
+    </component>
 </template>

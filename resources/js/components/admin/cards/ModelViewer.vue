@@ -53,6 +53,10 @@ const props = withDefaults(
          * tienen el botón.
          */
         controlsKey?: string | null;
+        /*
+         * Detiene el dibujo (p. ej. en una pestaña oculta) sin descargar el modelo.
+         */
+        paused?: boolean;
     }>(),
     {
         extension: null,
@@ -62,6 +66,7 @@ const props = withDefaults(
         sizePreview: false,
         targetHeight: null,
         controlsKey: null,
+        paused: false,
         zoomControls: true,
         emptyText: 'Selecciona un archivo GLB para previsualizar el modelo.',
     },
@@ -368,6 +373,30 @@ watch(
 
 const hideControls = computed(() => canHideControls && controlsHidden.value);
 
+/*
+ * Pausa del dibujo mientras el visor no se ve.
+ */
+let renderSuspension: { dispose: () => void } | null = null;
+
+const syncPaused = () => {
+    const details = viewer.value?.viewerDetails;
+
+    if (props.paused && details && !renderSuspension) {
+        renderSuspension = details.suspendRendering();
+    } else if (!props.paused && renderSuspension) {
+        renderSuspension.dispose();
+        renderSuspension = null;
+        details?.markSceneMutated();
+    }
+};
+
+watch(() => props.paused, syncPaused);
+
+onBeforeUnmount(() => {
+    renderSuspension?.dispose();
+    renderSuspension = null;
+});
+
 const syncAnimationState = () => {
     selectedAnimation.value = viewer.value?.selectedAnimation ?? null;
 };
@@ -399,6 +428,8 @@ const onModelChange = () => {
     if (props.sizePreview) {
         void setupSizeStage(details);
     }
+
+    syncPaused();
 
     emit('loaded', details);
 };

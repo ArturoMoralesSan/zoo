@@ -16,11 +16,12 @@ import {
     Zap,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
-import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
 
 import { useCardModelSize } from '@/composables/useCardModelSize';
 import type { ModelFormFields } from '@/composables/useCardModelSize';
 import { useObjectUrl } from '@/composables/useObjectUrl';
+import { usePreviewTab } from '@/composables/usePreviewTab';
 import { formatMeters } from '@/lib/glb/modelSize';
 import type { GlbSizeConfig } from '@/lib/glb/modelSize';
 import { rarityOptions } from '@/lib/cardRarity';
@@ -40,6 +41,7 @@ import CardDesignFields from '@/components/admin/cards/CardDesignFields.vue';
 import CardImageField from '@/components/admin/cards/CardImageField.vue';
 import CardMessagesFields from '@/components/admin/cards/CardMessagesFields.vue';
 import CardPreview from '@/components/admin/cards/CardPreview.vue';
+import CardPreviewPanel from '@/components/admin/cards/CardPreviewPanel.vue';
 import CardStatField from '@/components/admin/cards/CardStatField.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
@@ -200,6 +202,28 @@ const modelSize = useCardModelSize(props.glbConfig, modelFile, {
 });
 
 /*
+ * Vista previa lateral (Tarjeta | Modelo 3D): cambia sola según la sección
+ * que se edita. Al elegir un modelo se muestra su vista previa.
+ */
+const {
+    tab: previewTab,
+    isWide,
+    onFormInteraction,
+} = usePreviewTab();
+
+watch(modelFile, (file) => {
+    if (file) {
+        previewTab.value = 'model';
+    }
+});
+
+/*
+ * Alto del visor en la barra lateral: cabe en la pantalla junto con el
+ * encabezado y la lista de animaciones.
+ */
+const SIDEBAR_VIEWER_HEIGHT = 'min(520px, calc(100dvh - 16rem))';
+
+/*
  * Modelos anteriores al escalado: se mide el archivo actual (es el original).
  */
 onMounted(() => {
@@ -231,6 +255,8 @@ const processModel = async (): Promise<ModelFormFields | null> => {
     try {
         return await modelSize.process();
     } catch {
+        previewTab.value = 'model';
+
         document
             .getElementById('model_target_height')
             ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -357,15 +383,52 @@ defineOptions({
 
         <form
             id="card-form"
-            class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_30rem] xl:items-start"
+            class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_34rem] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_38rem]"
             @submit.prevent="submit"
         >
             <!--
-                Vista previa: fija a la derecha en pantallas anchas;
-                en pantallas pequeñas aparece antes del formulario.
+                Vista previa: fija a la derecha en pantallas anchas, con
+                pestañas Tarjeta | Modelo 3D; en pantallas pequeñas aparece
+                antes del formulario (el modelo se ve en su sección).
             -->
             <div class="min-w-0 xl:sticky xl:top-5 xl:order-2">
+                <CardPreviewPanel
+                    v-if="isWide"
+                    v-model:tab="previewTab"
+                    :has-model="Boolean(modelPreviewSource)"
+                >
+                    <template #card>
+                        <CardPreview
+                            ref="preview"
+                            embedded
+                            :title="form.name"
+                            :scientific-name="selectedSpecies?.scientific_name ?? ''"
+                            :astucia="form.astucia"
+                            :rapidez="form.rapidez"
+                            :fuerza="form.fuerza"
+                            :artwork-url="artworkPreviewUrl"
+                            :fade-color="form.fade_color"
+                            :accent-color="form.accent_color"
+                            :title-font-family="form.title_font_family"
+                            :title-font-weight="form.title_font_weight"
+                            :title-font-size="form.title_font_size"
+                        />
+                    </template>
+
+                    <template #model>
+                        <ModelViewer
+                            :source="modelPreviewSource"
+                            extension="glb"
+                            :height="SIDEBAR_VIEWER_HEIGHT"
+                            :size-preview="modelSize.hasModel"
+                            :target-height="previewHeight"
+                            :paused="previewTab !== 'model'"
+                        />
+                    </template>
+                </CardPreviewPanel>
+
                 <CardPreview
+                    v-else
                     ref="preview"
                     :title="form.name"
                     :scientific-name="selectedSpecies?.scientific_name ?? ''"
@@ -381,9 +444,14 @@ defineOptions({
                 />
             </div>
 
-            <div class="min-w-0 space-y-5 xl:order-1">
+            <div
+                class="min-w-0 space-y-5 xl:order-1"
+                @focusin="onFormInteraction"
+                @pointerdown="onFormInteraction"
+            >
                 <!-- Contenido de la tarjeta -->
                 <AdminCard
+                    data-preview="card"
                     title="Contenido de la tarjeta"
                     description="Especie y nombre que aparecen en la tarjeta."
                     :icon="Info"
@@ -456,6 +524,7 @@ defineOptions({
 
                 <!-- Estadísticas de la tarjeta (Astucia, Rapidez, Fuerza: 1-100) -->
                 <AdminCard
+                    data-preview="card"
                     title="Estadísticas de la tarjeta"
                     description="Asigna un valor de 1 a 100 para cada atributo de la tarjeta."
                     :icon="Zap"
@@ -492,6 +561,7 @@ defineOptions({
 
                 <!-- Imagen de la tarjeta -->
                 <AdminCard
+                    data-preview="card"
                     title="Imagen de la tarjeta"
                     description="Fondo de la plantilla de la tarjeta."
                     :icon="FileImage"
@@ -515,6 +585,7 @@ defineOptions({
 
                 <!-- Diseño de la tarjeta -->
                 <CardDesignFields
+                    data-preview="card"
                     v-model:fade-color="form.fade_color"
                     v-model:accent-color="form.accent_color"
                     v-model:title-font-family="form.title_font_family"
@@ -644,6 +715,7 @@ defineOptions({
 
                 <!-- Modelo 3D -->
                 <AdminCard
+                    data-preview="model"
                     title="Modelo 3D"
                     description="Administra el modelo 3D asociado a esta tarjeta."
                     :icon="Box"
@@ -793,8 +865,20 @@ defineOptions({
                             :errors="modelErrors"
                         />
 
-                        <!-- Vista previa del modelo -->
-                        <div class="form-field">
+                        <!--
+                            Vista previa del modelo: en pantallas anchas está
+                            en la barra lateral (pestaña "Modelo 3D").
+                        -->
+                        <p
+                            v-if="isWide && modelSize.hasModel"
+                            class="flex items-center gap-2 text-xs text-[#718477]"
+                        >
+                            <Info :size="14" class="shrink-0 text-[#187744]" />
+                            La vista previa a escala está en el panel derecho,
+                            pestaña "Modelo 3D".
+                        </p>
+
+                        <div v-if="!isWide" class="form-field">
                             <span class="form-label">Vista previa</span>
 
                             <ModelViewer

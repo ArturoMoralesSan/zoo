@@ -68,6 +68,15 @@ Código principal:
    las vistas previas 3D (crear, editar y ver tarjeta).
 5. Guarda. La barra inferior muestra "Procesando modelo…" y luego "Subiendo N%".
 
+En pantallas anchas (≥ 1280 px) la vista previa está fija en el panel derecho
+con dos pestañas, **Tarjeta** y **Modelo 3D**, para ver el modelo junto al campo
+de alto sin desplazarse. La pestaña cambia sola: al editar la sección "Modelo
+3D" (archivo, alto, medidas rápidas) se muestra el modelo; al editar el
+contenido, las estadísticas, la imagen o el diseño, la tarjeta. También se
+puede cambiar a mano. La pestaña oculta deja de dibujar (no consume GPU). En
+pantallas más pequeñas el visor aparece dentro de la sección "Modelo 3D". La
+página de detalle de la tarjeta usa el mismo panel.
+
 En **Editar**, el campo ya trae el alto guardado. "Modelo actual" muestra el
 alto ("1.50 m de alto") o "Sin tamaño definido" en modelos anteriores. Si solo
 cambia el alto, se indica "1.00 m → 1.50 m · se volverá a escalar desde el
