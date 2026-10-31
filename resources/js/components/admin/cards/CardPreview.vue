@@ -362,6 +362,7 @@ defineExpose({ generatePngFile });
                         extension="glb"
                         :height="viewerHeight"
                         :zoom-controls="false"
+                        controls-key="admin.card-preview.controls-hidden"
                         engine="WebGL"
                         @loaded="onModelLoaded"
                     />

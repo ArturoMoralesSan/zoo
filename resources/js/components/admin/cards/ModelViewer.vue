@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { HTML3DElement } from '@babylonjs/viewer';
-import { useDebounceFn } from '@vueuse/core';
+import { useDebounceFn, useEventListener, useLocalStorage } from '@vueuse/core';
 import {
     Box,
     CircleOff,
+    Eye,
+    EyeOff,
     LoaderCircle,
     PersonStanding,
     RotateCcw,
@@ -13,7 +15,7 @@ import {
     ZoomIn,
     ZoomOut,
 } from 'lucide-vue-next';
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import { formatMeters } from '@/lib/glb/modelSize';
 import type { SizeReference, SizeStage } from '@/lib/glb/sizeStage';
@@ -43,14 +45,23 @@ const props = withDefaults(
          */
         sizePreview?: boolean;
         targetHeight?: number | null;
+        /*
+         * Clave en localStorage para el botón "Ocultar controles". Cada clave
+         * guarda su propia preferencia (p. ej. la vista previa de la tarjeta
+         * es independiente de los visores del modelo). Sin clave, los visores
+         * con zoom o referencia de tamaño usan la compartida; los demás no
+         * tienen el botón.
+         */
+        controlsKey?: string | null;
     }>(),
     {
         extension: null,
-        heightClass: 'h-[360px]',
+        heightClass: 'h-[420px]',
         height: null,
         engine: null,
         sizePreview: false,
         targetHeight: null,
+        controlsKey: null,
         zoomControls: true,
         emptyText: 'Selecciona un archivo GLB para previsualizar el modelo.',
     },
@@ -209,24 +220,128 @@ const TOOLBAR_STYLES = `
     }
 `;
 
+/*
+ * La barra del visor (animaciones) sigue a los controles propios: se vuelve
+ * más transparente al girar o animar y se oculta con "Ocultar controles".
+ * Los atributos los pone este componente en <babylon-viewer>.
+ */
+const CONTROLS_STYLES = `
+    .tool-bar {
+        transition: opacity 0.3s ease;
+    }
+
+    :host([data-controls-dimmed]) .tool-bar:not(:hover) {
+        opacity: 0.4;
+    }
+
+    :host([data-controls-hidden]) .tool-bar {
+        display: none !important;
+    }
+`;
+
 let toolbarSheet: CSSStyleSheet | null = null;
+let controlsSheet: CSSStyleSheet | null = null;
+
+const createSheet = (styles: string) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(styles);
+
+    return sheet;
+};
 
 watch(viewer, (element) => {
     const root = element?.shadowRoot;
 
-    if (!root || !props.zoomControls) {
+    if (!root) {
         return;
     }
 
-    if (!toolbarSheet) {
-        toolbarSheet = new CSSStyleSheet();
-        toolbarSheet.replaceSync(TOOLBAR_STYLES);
+    controlsSheet ??= createSheet(CONTROLS_STYLES);
+
+    const sheets = [controlsSheet];
+
+    if (props.zoomControls) {
+        toolbarSheet ??= createSheet(TOOLBAR_STYLES);
+        sheets.push(toolbarSheet);
     }
 
-    if (!root.adoptedStyleSheets.includes(toolbarSheet)) {
-        root.adoptedStyleSheets = [...root.adoptedStyleSheets, toolbarSheet];
-    }
+    root.adoptedStyleSheets = [
+        ...root.adoptedStyleSheets.filter((sheet) => !sheets.includes(sheet)),
+        ...sheets,
+    ];
 });
+
+/*
+ * Controles sobre el visor: más transparentes mientras se gira la vista o
+ * se reproduce una animación (vuelven a verse al pasar el cursor), y
+ * opción para ocultarlos. La preferencia se recuerda en este navegador.
+ */
+const MODEL_CONTROLS_KEY = 'admin.model-viewer.controls-hidden';
+
+const controlsKey =
+    props.controlsKey ??
+    (props.zoomControls || props.sizePreview ? MODEL_CONTROLS_KEY : null);
+
+const canHideControls = controlsKey !== null;
+
+const controlsHidden = canHideControls
+    ? useLocalStorage(controlsKey, false)
+    : ref(false);
+
+/*
+ * Arrastrar y usar la rueda se siguen por separado: el temporizador de la
+ * rueda no debe quitar el estado de un arrastre que empezó después.
+ */
+const isDragging = ref(false);
+const isWheeling = ref(false);
+const isAnimationPlaying = ref(false);
+
+let wheelTimer: ReturnType<typeof setTimeout> | undefined;
+
+const startDrag = () => {
+    clearActiveZoom();
+    isDragging.value = true;
+};
+
+const stopDrag = () => {
+    isDragging.value = false;
+};
+
+const onWheel = () => {
+    clearActiveZoom();
+    isWheeling.value = true;
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(() => {
+        isWheeling.value = false;
+    }, 600);
+};
+
+/*
+ * El cursor puede soltarse fuera del visor. Se escucha en fase de captura
+ * por si la cámara del visor detiene la propagación del evento.
+ */
+useEventListener('pointerup', stopDrag, { capture: true });
+useEventListener('pointercancel', stopDrag, { capture: true });
+
+onBeforeUnmount(() => clearTimeout(wheelTimer));
+
+const syncAnimationPlaying = () => {
+    isAnimationPlaying.value = viewer.value?.isAnimationPlaying ?? false;
+};
+
+const controlsDimmed = computed(
+    () => isDragging.value || isWheeling.value || isAnimationPlaying.value,
+);
+
+/*
+ * Clases de cada control sobre el visor.
+ */
+const overlayClass = computed(() => [
+    'transition-opacity duration-300',
+    controlsDimmed.value
+        ? 'opacity-40 hover:opacity-100 focus-within:opacity-100'
+        : 'opacity-100',
+]);
 
 /*
  * Babylon.js es pesado: se carga solo cuando se usa el visor.
@@ -243,12 +358,15 @@ watch(
         isLoading.value = Boolean(source);
         animations.value = [];
         selectedAnimation.value = null;
+        isAnimationPlaying.value = false;
         framedRadius = null;
         activeZoom.value = DEFAULT_ZOOM.id;
         disposeSizeStage();
     },
     { immediate: true },
 );
+
+const hideControls = computed(() => canHideControls && controlsHidden.value);
 
 const syncAnimationState = () => {
     selectedAnimation.value = viewer.value?.selectedAnimation ?? null;
@@ -259,6 +377,7 @@ const onModelChange = () => {
     hasError.value = false;
     animations.value = [...(viewer.value?.animations ?? [])];
     syncAnimationState();
+    syncAnimationPlaying();
 
     const details = viewer.value?.viewerDetails;
 
@@ -344,15 +463,19 @@ const selectAnimation = (index: number) => {
                 class="model-viewer block h-full w-full"
                 @modelchange="onModelChange"
                 @modelerror="onModelError"
+                :data-controls-dimmed.attr="controlsDimmed ? '' : null"
+                :data-controls-hidden.attr="hideControls ? '' : null"
                 @selectedanimationchange="syncAnimationState"
-                @pointerdown="clearActiveZoom"
-                @wheel.passive="clearActiveZoom"
+                @animationplayingchange="syncAnimationPlaying"
+                @pointerdown.capture="startDrag"
+                @wheel.capture.passive="onWheel"
             />
 
             <!-- Zoom -->
             <div
-                v-if="zoomControls && isReady && !isLoading && !hasError"
+                v-if="zoomControls && isReady && !isLoading && !hasError && !hideControls"
                 class="absolute top-4 left-4 flex items-center gap-1 rounded-xl border border-[#DCE7DF] bg-white/95 p-1"
+                :class="overlayClass"
             >
                 <button
                     v-for="preset in ZOOM_PRESETS"
@@ -386,9 +509,9 @@ const selectAnimation = (index: number) => {
 
             <!-- Referencia de tamaño -->
             <div
-                v-if="sizePreview && isReady && !isLoading && !hasError"
+                v-if="sizePreview && isReady && !isLoading && !hasError && !hideControls"
                 class="absolute left-4 flex items-center gap-1 rounded-xl border border-[#DCE7DF] bg-white/95 p-1"
-                :class="zoomControls ? 'top-[4.25rem]' : 'top-4'"
+                :class="[zoomControls ? 'top-[4.25rem]' : 'top-4', overlayClass]"
                 role="radiogroup"
                 aria-label="Referencia de tamaño"
             >
@@ -420,15 +543,34 @@ const selectAnimation = (index: number) => {
             </div>
 
             <!--
-                Alto final: arriba a la derecha para no tapar los controles
-                de animación del visor (abajo). Sin backdrop-blur: sobre un
-                canvas animado obliga a recalcular el desenfoque en cada cuadro.
+                Arriba a la derecha: alto final y botón para ocultar los
+                controles (abajo están los controles de animación del visor).
+                Sin backdrop-blur: sobre un canvas animado obliga a recalcular
+                el desenfoque en cada cuadro.
             -->
             <div
-                v-if="sizePreview && displayedHeight !== null && !isLoading && !hasError"
-                class="pointer-events-none absolute top-4 right-4 rounded-full border border-[#C8DCCF] bg-white/95 px-3 py-1 text-[13px] font-semibold text-[#187744]"
+                v-if="canHideControls && isReady && !isLoading && !hasError"
+                class="absolute top-4 right-4 flex items-center gap-2"
+                :class="overlayClass"
             >
-                {{ formatMeters(displayedHeight) }} de alto
+                <div
+                    v-if="sizePreview && displayedHeight !== null && !hideControls"
+                    class="pointer-events-none rounded-full border border-[#C8DCCF] bg-white/95 px-3 py-1 text-[13px] font-semibold text-[#187744]"
+                >
+                    {{ formatMeters(displayedHeight) }} de alto
+                </div>
+
+                <button
+                    type="button"
+                    class="inline-flex items-center rounded-xl border border-[#DCE7DF] bg-white/95 p-2 text-[#435D4C] transition-colors hover:bg-[#F2F7F4]"
+                    :class="{ 'opacity-60 hover:opacity-100': controlsHidden }"
+                    :title="controlsHidden ? 'Mostrar controles' : 'Ocultar controles'"
+                    :aria-label="controlsHidden ? 'Mostrar controles' : 'Ocultar controles'"
+                    :aria-pressed="controlsHidden"
+                    @click="controlsHidden = !controlsHidden"
+                >
+                    <component :is="controlsHidden ? Eye : EyeOff" :size="15" />
+                </button>
             </div>
 
             <!-- Cargando -->

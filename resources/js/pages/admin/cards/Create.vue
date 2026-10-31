@@ -611,7 +611,7 @@ defineOptions({
                             <ModelViewer
                                 :source="modelPreviewSource"
                                 extension="glb"
-                                height-class="h-[460px]"
+                                height-class="h-[540px]"
                                 :size-preview="modelSize.hasModel"
                                 :target-height="previewHeight"
                             />

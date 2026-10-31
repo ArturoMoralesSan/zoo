@@ -9,26 +9,10 @@ export interface GlbSizeConfig {
 }
 
 /*
- * Medidas rápidas con animales representativos del Zoológico Sahuatoba.
- * Alto total aproximado de un adulto en pose natural, del suelo a su punto
- * más alto (cabeza, orejas o joroba), que es lo que mide "Alto final".
- * Los animales bajos y largos (cocodrilo, serpientes) tienen poco alto.
+ * Medidas rápidas (m): cubren los tamaños más comunes de los animales del
+ * zoológico, de reptiles y aves pequeñas hasta bisontes o dromedarios.
  */
-export const QUICK_HEIGHTS = [
-    { value: 0.05, example: 'Rana de White' },
-    { value: 0.15, example: 'Tortuga de Mapimí' },
-    { value: 0.25, example: 'Iguana verde' },
-    { value: 0.4, example: 'Mapache, cocodrilo' },
-    { value: 0.5, example: 'Zorro gris, gato montés' },
-    { value: 0.75, example: 'Coyote, búho real' },
-    { value: 0.9, example: 'Lobo mexicano, jaguar' },
-    { value: 1, example: 'Oso negro' },
-    { value: 1.25, example: 'León, tigre de Bengala' },
-    { value: 1.5, example: 'Venado cola blanca, hipopótamo' },
-    { value: 1.7, example: 'Cebra, llama' },
-    { value: 2, example: 'Bisonte americano, eland' },
-    { value: 2.5, example: 'Dromedario, avestruz' },
-] as const;
+export const QUICK_HEIGHTS = [0.25, 0.5, 1, 1.5, 2] as const;
 
 /*
  * Avisos de tamaño sospechoso (no bloquean el guardado).

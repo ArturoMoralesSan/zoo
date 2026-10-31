@@ -203,12 +203,8 @@ describe('modelSize', () => {
     });
 
     it('las medidas rápidas están ordenadas y dentro del rango', () => {
-        const values = QUICK_HEIGHTS.map((quick) => quick.value);
-
-        expect(values).toEqual([...values].sort((a, b) => a - b));
-        expect(values.every((value) => isHeightInRange(value, config))).toBe(true);
-        // Las medidas originales se conservan.
-        expect(values).toEqual(expect.arrayContaining([0.25, 0.5, 1, 1.5, 2]));
+        expect(QUICK_HEIGHTS).toEqual([0.25, 0.5, 1, 1.5, 2]);
+        expect(QUICK_HEIGHTS.every((value) => isHeightInRange(value, config))).toBe(true);
     });
 
     it('limita al rango configurado', () => {

@@ -619,7 +619,7 @@ defineOptions({
                             v-if="modelPreviewSource"
                             :source="modelPreviewSource"
                             extension="glb"
-                            height-class="h-[460px]"
+                            height-class="h-[540px]"
                             size-preview
                         />
 
