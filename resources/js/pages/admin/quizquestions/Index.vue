@@ -8,6 +8,7 @@ import {
     FilterX,
     HelpCircle,
     Plus,
+    Upload,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
@@ -189,6 +190,12 @@ defineOptions({
             :action-href="admin.cards.quiz.create(card.id).url"
         >
             <template #actions>
+                <PageHeaderLink
+                    :href="admin.cards.quiz.import(card.id).url"
+                    label="Importar preguntas"
+                    :icon="Upload"
+                />
+
                 <PageHeaderLink
                     :href="admin.cards.show(card.id).url"
                     label="Ver tarjeta"

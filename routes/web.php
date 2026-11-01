@@ -381,6 +381,18 @@ Route::middleware(['auth', 'verified'])
         Route::prefix('cards/{card}')
             ->name('cards.')
             ->group(function () {
+                /*
+                 * Importar preguntas en lote (JSON). Antes del resource para
+                 * que "import" no se tome como {quizQuestion}.
+                 */
+                Route::get('quiz/import', [QuizQuestionController::class, 'import'])
+                    ->middleware('permission:cards.edit')
+                    ->name('quiz.import');
+
+                Route::post('quiz/import', [QuizQuestionController::class, 'storeImport'])
+                    ->middleware('permission:cards.edit')
+                    ->name('quiz.import.store');
+
                 Route::resource('quiz', QuizQuestionController::class)
                     ->parameters([
                         'quiz' => 'quizQuestion',
