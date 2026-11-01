@@ -29,7 +29,9 @@ return new class extends Migration
         });
 
         /*
-         * Cada rareza siempre tiene su configuración por defecto.
+         * Cada rareza siempre tiene su configuración por defecto
+         * (CardRarity::defaultDuelSettings). Los minutos de espera se
+         * agregan en una migración posterior.
          */
         $now = now();
 
@@ -37,8 +39,8 @@ return new class extends Migration
             array_map(
                 fn (CardRarity $rarity) => [
                     'rarity' => $rarity->value,
-                    'questions_per_duel' => 3,
-                    'retries' => 3,
+                    'questions_per_duel' => $rarity->defaultDuelSettings()['questions_per_duel'],
+                    'retries' => $rarity->defaultDuelSettings()['retries'],
                     'created_at' => $now,
                     'updated_at' => $now,
                 ],
