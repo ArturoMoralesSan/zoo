@@ -12,14 +12,14 @@ use App\Models\QuizAttempt;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\RefreshesInMemoryDatabase;
 use Tests\TestCase;
 
 class DuelTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshesInMemoryDatabase;
 
     protected User $user;
 

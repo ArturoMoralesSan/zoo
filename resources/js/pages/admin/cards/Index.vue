@@ -5,6 +5,7 @@ import {
     Box,
     CircleCheck,
     CircleOff,
+    Copyright,
     FilterX,
     HelpCircle,
     ImageOff,
@@ -51,6 +52,8 @@ interface Card {
     qr_codes_count?: number;
     active_quiz_questions_count?: number;
     effective_questions_per_duel?: number;
+    // Recursos subidos sin licencia.
+    missing_credits?: string[];
 }
 
 interface PaginationLink {
@@ -453,6 +456,15 @@ defineOptions({
                                         · {{ card.species.scientific_name }}
                                     </span>
                                 </div>
+
+                                <span
+                                    v-if="card.missing_credits?.length"
+                                    class="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                                    title="Hay recursos subidos sin licencia"
+                                >
+                                    <Copyright :size="12" />
+                                    Falta licencia
+                                </span>
                             </div>
                         </Link>
                     </td>

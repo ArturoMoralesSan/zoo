@@ -6,6 +6,7 @@ import {
     Box,
     CheckCircle2,
     CircleOff,
+    Copyright,
     ExternalLink,
     FileImage,
     HelpCircle,
@@ -26,6 +27,7 @@ import AdminCard from '@/components/admin/AdminCard.vue';
 import CardDetailField from '@/components/admin/cards/CardDetailField.vue';
 import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import CardPreviewPanel from '@/components/admin/cards/CardPreviewPanel.vue';
+import CreditStatusChips from '@/components/admin/cards/CreditStatusChips.vue';
 import ModelSizeSummary from '@/components/admin/cards/ModelSizeSummary.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
@@ -42,6 +44,8 @@ import type { CardFontId, TitleSize } from '@/lib/cardFonts';
 import { getRarityLabel } from '@/lib/cardRarity';
 import type { DuelSettingsSource } from '@/lib/cardRarity';
 import { CARD_STATS } from '@/lib/cardStats';
+import { CREDIT_ASSETS } from '@/lib/credits/types';
+import type { CardCredits, CreditAsset } from '@/lib/credits/types';
 import { DUEL_MESSAGE_FIELDS, renderDuelMessage } from '@/lib/duelMessages';
 import type { DuelMessages } from '@/lib/duelMessages';
 import { storageUrl } from '@/lib/modelPreview';
@@ -102,7 +106,29 @@ interface Card {
 const props = defineProps<{
     card: Card;
     duelMessageDefaults: DuelMessages;
+    credits: CardCredits;
+    // Recursos subidos sin licencia.
+    missingCredits: CreditAsset[];
 }>();
+
+/*
+ * Licencia de cada recurso subido.
+ */
+const creditStatus = computed(() =>
+    Object.fromEntries([
+        ...Object.keys(props.credits).map((asset) => [asset, true]),
+        ...props.missingCredits.map((asset) => [asset, false]),
+    ]) as Partial<Record<CreditAsset, boolean>>,
+);
+
+const creditRows = computed(() =>
+    CREDIT_ASSETS.filter(
+        (asset) => creditStatus.value[asset.value] !== undefined,
+    ).map((asset) => ({
+        ...asset,
+        credit: props.credits[asset.value] ?? null,
+    })),
+);
 
 /*
  * Mensajes del duelo efectivos: los de la tarjeta (si son personalizados
@@ -265,6 +291,15 @@ defineOptions({
                         {{ card.is_active ? 'Activa' : 'Inactiva' }}
                     </span>
                 </div>
+
+                <CreditStatusChips
+                    class="mt-2"
+                    :status="creditStatus"
+                    :href="
+                        (asset) =>
+                            `${admin.cards.edit(card.id).url}#credit-${asset}`
+                    "
+                />
             </template>
 
             <template #actions>
@@ -607,6 +642,60 @@ defineOptions({
                             </span>
                         </CardDetailField>
                     </div>
+                </AdminCard>
+
+                <!-- Créditos y licencias -->
+                <AdminCard
+                    v-if="creditRows.length"
+                    title="Créditos y licencias"
+                    description="Licencia de cada recurso y cómo se atribuye en la app."
+                    :icon="Copyright"
+                >
+                    <ul class="divide-y divide-[#E4EEE7]">
+                        <li
+                            v-for="row in creditRows"
+                            :key="row.value"
+                            class="flex flex-col gap-1 py-3 first:pt-0 last:pb-0"
+                        >
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span
+                                    class="text-sm font-semibold text-[#244334]"
+                                >
+                                    {{ row.label }}
+                                </span>
+
+                                <span
+                                    v-if="row.credit"
+                                    class="rounded-lg border border-[#C8DCCF] bg-[#EAF5EE] px-2 py-0.5 text-xs font-semibold text-[#187744]"
+                                >
+                                    {{ row.credit.license_short_name }}
+                                </span>
+
+                                <span
+                                    v-else
+                                    class="rounded-lg border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800"
+                                >
+                                    Falta licencia
+                                </span>
+                            </div>
+
+                            <p
+                                v-if="row.credit"
+                                class="text-sm text-[#435D4C]"
+                            >
+                                {{ row.credit.attribution }}
+                            </p>
+                        </li>
+                    </ul>
+
+                    <Link
+                        :href="admin.cards.edit(card.id).url"
+                        :class="sectionLinkClass"
+                        class="mt-4"
+                    >
+                        <Pencil :size="13" />
+                        Editar licencias
+                    </Link>
                 </AdminCard>
 
                 <!-- Preguntas del quiz -->

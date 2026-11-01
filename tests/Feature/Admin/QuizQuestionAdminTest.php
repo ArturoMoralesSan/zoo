@@ -7,14 +7,14 @@ use App\Models\QuizQuestion;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
+use Tests\Concerns\RefreshesInMemoryDatabase;
 use Tests\TestCase;
 
 class QuizQuestionAdminTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshesInMemoryDatabase;
 
     protected User $admin;
 

@@ -7,13 +7,13 @@ use App\Models\CardQrCode;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Spatie\Permission\Models\Permission;
+use Tests\Concerns\RefreshesInMemoryDatabase;
 use Tests\TestCase;
 
 class CardQrCodeAdminTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshesInMemoryDatabase;
 
     protected User $admin;
     protected Card $card;

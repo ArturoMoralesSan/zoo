@@ -40,6 +40,10 @@ class CardController extends Controller
                 'thumbnail_image',
                 'generated_image',
                 'model_file',
+                // Tamaño real del modelo (model_dimensions).
+                'model_final_height',
+                'model_final_width',
+                'model_final_depth',
                 'sort_order',
                 'astucia',
                 'rapidez',

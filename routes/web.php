@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CardController;
 use App\Http\Controllers\Admin\CardQrCodeController;
 use App\Http\Controllers\Admin\CardRaritySettingController;
+use App\Http\Controllers\Admin\CreditController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DonationController;
 use App\Http\Controllers\Admin\DuelMessageSettingController;
@@ -348,6 +349,23 @@ Route::middleware(['auth', 'verified'])
             [CardController::class, 'originalModel']
         )->middleware('permission:cards.edit')
             ->name('cards.model.original');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Créditos y licencias de los recursos de las tarjetas
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('credits', [CreditController::class, 'index'])
+            ->middleware('permission:cards.view')
+            ->name('credits.index');
+
+        /*
+         * Autocompletar desde Wikimedia Commons (no guarda nada).
+         */
+        Route::post('credits/commons-lookup', [CreditController::class, 'commonsLookup'])
+            ->middleware(['permission:cards.edit', 'throttle:20,1'])
+            ->name('credits.commons-lookup');
 
         /*
         |--------------------------------------------------------------------------

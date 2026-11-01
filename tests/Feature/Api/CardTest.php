@@ -8,14 +8,14 @@ use App\Models\CardQuizState;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\RefreshesInMemoryDatabase;
 use Tests\TestCase;
 
 class CardTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshesInMemoryDatabase;
 
     protected User $user;
 

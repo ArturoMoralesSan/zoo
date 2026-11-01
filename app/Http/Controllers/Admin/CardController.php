@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\AssetSource;
+use App\Enums\CreditAsset;
 use App\Exceptions\InvalidGlbException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Card\StoreCardRequest;
 use App\Http\Requests\Admin\Card\UpdateCardRequest;
+use App\Models\AssetCredit;
 use App\Models\Card;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
+use App\Models\License;
 use App\Models\Species;
 use App\Services\GlbInspection;
 use App\Services\GlbInspector;
@@ -58,6 +62,7 @@ class CardController extends Controller
             ->with([
                 'species:id,common_name,scientific_name',
                 'raritySetting',
+                'credits:id,creditable_type,creditable_id,asset',
             ])
             /*
              * Contenido para duelos que se muestra en cada tarjeta.
@@ -110,7 +115,13 @@ class CardController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $cards->getCollection()->each->append('effective_questions_per_duel');
+        $cards->getCollection()->each(function (Card $card) {
+            $card->append('effective_questions_per_duel');
+
+            // Recursos subidos sin licencia (insignia "Falta licencia").
+            $card->setAttribute('missing_credits', $this->missingCreditValues($card));
+            $card->unsetRelation('credits');
+        });
 
         return Inertia::render(
             'admin/cards/Index',
@@ -170,6 +181,10 @@ class CardController extends Controller
                 'card' => $card,
 
                 'duelMessageDefaults' => $this->duelMessageDefaults(),
+
+                'credits' => $this->creditsForForm($card),
+
+                'missingCredits' => $this->missingCreditValues($card),
             ]
         );
     }
@@ -187,6 +202,8 @@ class CardController extends Controller
                 'duelMessageDefaults' => $this->duelMessageDefaults(),
 
                 'glbConfig' => $this->glbConfig(),
+
+                ...$this->licensingProps(),
 
                 'species' => Species::query()
                     ->where('is_active', true)
@@ -229,6 +246,8 @@ class CardController extends Controller
                 $this->storeCardFiles($request, $card);
 
                 $this->storeModelFiles($request, $card, $inspection, $written);
+
+                $this->saveCredits($validated, $card);
             });
         } catch (Throwable $exception) {
             $this->deleteStoredFiles($written);
@@ -268,6 +287,10 @@ class CardController extends Controller
                 'modelOriginalUrl' => $card->model_file
                     ? route('admin.cards.model.original', $card)
                     : null,
+
+                ...$this->licensingProps(),
+
+                'credits' => $this->creditsForForm($card),
 
                 'species' => Species::query()
                     ->where('is_active', true)
@@ -311,6 +334,8 @@ class CardController extends Controller
                 $this->storeCardFiles($request, $card);
 
                 $obsolete = $this->storeModelFiles($request, $card, $inspection, $written);
+
+                $this->saveCredits($validated, $card);
             });
         } catch (Throwable $exception) {
             $this->deleteStoredFiles($written);
@@ -370,6 +395,8 @@ class CardController extends Controller
                 $originalDisk->deleteDirectory($cardDirectory);
             }
 
+            $card->credits()->delete();
+
             $card->delete();
         });
 
@@ -399,9 +426,13 @@ class CardController extends Controller
 
         $this->deletePublicFile($card->{$field});
 
-        $card->update([
-            $field => null,
-        ]);
+        DB::transaction(function () use ($card, $field, $image) {
+            $card->update([
+                $field => null,
+            ]);
+
+            $card->credits()->where('asset', $image)->delete();
+        });
 
         return $this->backWithToast(
             'success',
@@ -427,7 +458,11 @@ class CardController extends Controller
             [config('glb.disks.original'), $card->model_original_file],
         ];
 
-        $card->update(self::EMPTY_MODEL);
+        DB::transaction(function () use ($card) {
+            $card->update(self::EMPTY_MODEL);
+
+            $card->credits()->where('asset', CreditAsset::Model->value)->delete();
+        });
 
         $this->deleteStoredFiles($obsolete);
 
@@ -583,6 +618,114 @@ class CardController extends Controller
                 ),
             ]);
         }
+    }
+
+    /**
+     * Guardar los créditos enviados de los recursos que tiene la tarjeta.
+     *
+     * Primero la ilustración, para que el modelo pueda enlazarse a su crédito.
+     */
+    private function saveCredits(
+        array $validated,
+        Card $card
+    ): void {
+        foreach (CreditAsset::cases() as $asset) {
+            $data = $validated['credits'][$asset->value] ?? null;
+
+            if (! $data || blank($card->{$asset->column()})) {
+                continue;
+            }
+
+            $license = License::findOrFail($data['license_id']);
+
+            $card->credits()->updateOrCreate(
+                ['asset' => $asset->value],
+                [
+                    'license_id' => $license->id,
+                    'source_name' => $data['source_name'],
+                    'source_url' => $data['source_url'] ?? null,
+                    'title' => $data['title'] ?? null,
+                    'author_name' => $data['author_name'] ?? null,
+                    'author_url' => $data['author_url'] ?? null,
+                    'acquired_at' => $data['acquired_at'] ?? null,
+                    'modified' => (bool) ($data['modified'] ?? false),
+                    'modification_note' => $data['modification_note'] ?? null,
+                    'attribution_override' => $data['attribution_override'] ?? null,
+                    'notes' => $data['notes'] ?? null,
+
+                    // Modelo generado a partir de la ilustración de la tarjeta.
+                    'derived_from_id' => $asset === CreditAsset::Model && ($data['based_on_artwork'] ?? false)
+                        ? $card->credits()->where('asset', CreditAsset::Artwork->value)->value('id')
+                        : null,
+                ]
+            );
+        }
+
+        $card->unsetRelation('credits');
+    }
+
+    /**
+     * Catálogo de licencias y opciones de los formularios de créditos.
+     *
+     * @return array<string, mixed>
+     */
+    private function licensingProps(): array
+    {
+        $licenses = License::query()->ordered()->get();
+
+        return [
+            'licenses' => $licenses->map->toFormOption(),
+
+            // Recursos y licencias que admite cada origen.
+            'assetSources' => AssetSource::formOptions($licenses),
+
+            'allowRestrictedLicenses' => (bool) config('licensing.allow_restricted'),
+        ];
+    }
+
+    /**
+     * Créditos guardados de la tarjeta, por recurso.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function creditsForForm(Card $card): array
+    {
+        return $card->credits()
+            ->with('license')
+            ->get()
+            ->mapWithKeys(fn (AssetCredit $credit) => [
+                $credit->asset->value => [
+                    ...$credit->only([
+                        'id',
+                        'license_id',
+                        'title',
+                        'author_name',
+                        'author_url',
+                        'source_url',
+                        'modified',
+                        'modification_note',
+                        'attribution_override',
+                        'notes',
+                    ]),
+                    'source_name' => $credit->source_name?->value,
+                    'acquired_at' => $credit->acquired_at?->format('Y-m-d'),
+                    'based_on_artwork' => $credit->isBasedOnArtwork(),
+                    'license_short_name' => $credit->license->short_name,
+                    'attribution' => $credit->attribution,
+                ],
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function missingCreditValues(Card $card): array
+    {
+        return array_map(
+            fn (CreditAsset $asset) => $asset->value,
+            $card->missingCredits()
+        );
     }
 
     /**

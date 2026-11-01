@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Enums\CreditAsset;
+use App\Observers\CreditsCacheObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
+#[ObservedBy(CreditsCacheObserver::class)]
 class Card extends Model
 {
     use HasFactory;
@@ -168,5 +173,38 @@ class Card extends Model
     public function quizQuestions(): HasMany
     {
         return $this->hasMany(QuizQuestion::class)->orderBy('id');
+    }
+
+    /**
+     * Créditos de los recursos de la tarjeta (ilustración, miniatura, modelo).
+     */
+    public function credits(): MorphMany
+    {
+        return $this->morphMany(AssetCredit::class, 'creditable');
+    }
+
+    /**
+     * Crédito de un recurso, si lo tiene.
+     */
+    public function credit(CreditAsset|string $asset): ?AssetCredit
+    {
+        $asset = CreditAsset::from($asset instanceof CreditAsset ? $asset->value : $asset);
+
+        return $this->credits->first(
+            fn (AssetCredit $credit) => $credit->asset === $asset
+        );
+    }
+
+    /**
+     * Recursos subidos que aún no tienen crédito.
+     *
+     * @return array<int, CreditAsset>
+     */
+    public function missingCredits(): array
+    {
+        return array_values(array_filter(
+            CreditAsset::cases(),
+            fn (CreditAsset $asset) => filled($this->{$asset->column()}) && ! $this->credit($asset)
+        ));
     }
 }

@@ -37,16 +37,31 @@ import AdminCard from '@/components/admin/AdminCard.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import AssetCreditFields from '@/components/admin/cards/AssetCreditFields.vue';
 import CardDesignFields from '@/components/admin/cards/CardDesignFields.vue';
 import CardImageField from '@/components/admin/cards/CardImageField.vue';
 import CardMessagesFields from '@/components/admin/cards/CardMessagesFields.vue';
 import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import CardPreviewPanel from '@/components/admin/cards/CardPreviewPanel.vue';
 import CardStatField from '@/components/admin/cards/CardStatField.vue';
+import CreditStatusChips from '@/components/admin/cards/CreditStatusChips.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import { cardStat } from '@/lib/cardStats';
+import {
+    DEFAULT_MODIFICATION_NOTES,
+    creditForm,
+    emptyCredit,
+    hasCredit,
+} from '@/lib/credits/types';
+import type {
+    AssetSourceOption,
+    CardCredits,
+    CreditAsset,
+    CreditForms,
+    License,
+} from '@/lib/credits/types';
 import type { DuelMessages } from '@/lib/duelMessages';
 
 interface Species {
@@ -99,6 +114,10 @@ const props = defineProps<{
     duelMessageDefaults: DuelMessages;
     glbConfig: GlbSizeConfig;
     modelOriginalUrl: string | null;
+    licenses: License[];
+    assetSources: AssetSourceOption[];
+    allowRestrictedLicenses: boolean;
+    credits: CardCredits;
 }>();
 
 const form = useForm({
@@ -127,7 +146,24 @@ const form = useForm({
     win_message: props.card.win_message ?? null,
     retry_message: props.card.retry_message ?? null,
     locked_message: props.card.locked_message ?? null,
+    /*
+     * Licencia y crédito de cada recurso (el guardado o vacío). Un modelo
+     * anterior al escalado no se marca como modificado.
+     */
+    credits: {
+        artwork: creditForm('artwork', props.credits.artwork),
+        thumbnail: creditForm('thumbnail', props.credits.thumbnail),
+        model: creditForm(
+            'model',
+            props.credits.model,
+            props.card.model_final_height != null,
+        ),
+    } as CreditForms,
 });
+
+const formErrors = computed(
+    () => form.errors as Record<string, string | undefined>,
+);
 
 /*
  * Vista previa de la tarjeta generada a partir de la plantilla.
@@ -187,6 +223,23 @@ const submit = async () => {
  */
 const modelFile = ref<File | null>(null);
 
+/*
+ * Estado de la licencia de los recursos (guardados o elegidos).
+ */
+const creditStatus = computed(() => {
+    const files: Record<CreditAsset, unknown> = {
+        artwork: form.artwork_image ?? props.card.artwork_image,
+        thumbnail: form.thumbnail_image ?? props.card.thumbnail_image,
+        model: modelFile.value ?? props.card.model_file,
+    };
+
+    return Object.fromEntries(
+        (Object.keys(files) as CreditAsset[])
+            .filter((asset) => files[asset])
+            .map((asset) => [asset, hasCredit(form.credits[asset])]),
+    ) as Partial<Record<CreditAsset, boolean>>;
+});
+
 const handleModelFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
     modelFile.value = target.files?.[0] ?? null;
@@ -214,6 +267,13 @@ const {
 watch(modelFile, (file) => {
     if (file) {
         previewTab.value = 'model';
+
+        // El modelo nuevo se escala para RA.
+        if (!form.credits.model.modified) {
+            form.credits.model.modified = true;
+            form.credits.model.modification_note ||=
+                DEFAULT_MODIFICATION_NOTES.model;
+        }
     }
 });
 
@@ -317,6 +377,7 @@ const deleteImage = (image: 'thumbnail' | 'artwork') => {
             preserveScroll: true,
             onSuccess: () => {
                 form[`${image}_image` as const] = null;
+                form.credits[image] = emptyCredit(image);
             },
         });
     });
@@ -340,6 +401,7 @@ const deleteModel = () => {
             preserveScroll: true,
             onSuccess: () => {
                 modelFile.value = null;
+                form.credits.model = emptyCredit('model');
             },
         });
     });
@@ -379,6 +441,11 @@ defineOptions({
             :action-icon="ArrowLeft"
             action-label="Volver a tarjetas"
             :action-href="admin.cards.index().url"
+        />
+
+        <CreditStatusChips
+            :status="creditStatus"
+            :href="(asset) => `#credit-${asset}`"
         />
 
         <form
@@ -578,6 +645,19 @@ defineOptions({
                         @delete="deleteImage('artwork')"
                     />
 
+                    <AssetCreditFields
+                        v-if="form.artwork_image || card.artwork_image"
+                        v-model="form.credits.artwork"
+                        class="mt-5"
+                        asset="artwork"
+                        :required="Boolean(form.artwork_image)"
+                        :licenses="licenses"
+                        :sources="assetSources"
+                        :allow-restricted="allowRestrictedLicenses"
+                        :stored-license-id="credits.artwork?.license_id"
+                        :errors="formErrors"
+                    />
+
                     <p v-if="form.errors.generated_image" class="form-error mt-3">
                         {{ form.errors.generated_image }}
                     </p>
@@ -682,6 +762,18 @@ defineOptions({
                             :error="form.errors.thumbnail_image"
                             :disabled="form.processing"
                             @delete="deleteImage('thumbnail')"
+                        />
+
+                        <AssetCreditFields
+                            v-if="form.thumbnail_image || card.thumbnail_image"
+                            v-model="form.credits.thumbnail"
+                            asset="thumbnail"
+                            :required="Boolean(form.thumbnail_image)"
+                            :licenses="licenses"
+                            :sources="assetSources"
+                            :allow-restricted="allowRestrictedLicenses"
+                            :stored-license-id="credits.thumbnail?.license_id"
+                            :errors="formErrors"
                         />
                     </div>
                 </AdminCard>
@@ -863,6 +955,24 @@ defineOptions({
                             v-if="modelSize.hasModel"
                             :model="modelSize"
                             :errors="modelErrors"
+                        />
+
+                        <!-- Licencia del modelo (volver a escalar la conserva) -->
+                        <AssetCreditFields
+                            v-if="modelFile || card.model_file"
+                            v-model="form.credits.model"
+                            asset="model"
+                            :required="Boolean(modelFile)"
+                            :licenses="licenses"
+                            :sources="assetSources"
+                            :allow-restricted="allowRestrictedLicenses"
+                            :stored-license-id="credits.model?.license_id"
+                            :errors="formErrors"
+                            :artwork-credit="
+                                form.artwork_image || card.artwork_image
+                                    ? form.credits.artwork
+                                    : null
+                            "
                         />
 
                         <!--

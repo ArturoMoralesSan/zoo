@@ -5,20 +5,22 @@ namespace Tests\Feature\Admin;
 use App\Models\Card;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
+use App\Models\License;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Database\Seeders\LicenseSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Support\SessionKey;
 use Spatie\Permission\Models\Permission;
+use Tests\Concerns\RefreshesInMemoryDatabase;
 use Tests\TestCase;
 
 class CardAdminTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshesInMemoryDatabase;
 
     protected User $admin;
 
@@ -35,6 +37,8 @@ class CardAdminTest extends TestCase
         Permission::findOrCreate('cards.create');
         Permission::findOrCreate('cards.edit');
         Permission::findOrCreate('cards.delete');
+
+        $this->seed(LicenseSeeder::class);
 
         $this->admin = User::factory()->create();
         $this->admin->givePermissionTo(['cards.view', 'cards.create', 'cards.edit', 'cards.delete']);
@@ -355,6 +359,10 @@ class CardAdminTest extends TestCase
             'thumbnail_image' => $this->fakeImage('miniatura.jpg'),
             'artwork_image' => $this->fakeImage('fondo.png'),
             'generated_image' => $this->fakeImage('card.png'),
+            'credits' => [
+                'artwork' => $this->ownCredit(),
+                'thumbnail' => $this->ownCredit(),
+            ],
         ]);
 
         $this->actingAs($this->admin)
@@ -556,9 +564,21 @@ class CardAdminTest extends TestCase
     /**
      * Original (2 m de alto) y archivo escalado a 1.5 m, como los envía el navegador.
      */
+    /**
+     * Crédito mínimo (obra propia) para los recursos subidos.
+     */
+    private function ownCredit(): array
+    {
+        return [
+            'source_name' => 'own',
+            'license_id' => License::where('slug', 'proprietary')->value('id'),
+        ];
+    }
+
     private function modelPayload(array $overrides = []): array
     {
         return array_merge([
+            'credits' => ['model' => $this->ownCredit()],
             'model_original_file' => $this->glbUpload('input/plain.glb'),
             'model_file' => $this->glbUpload('valid.glb'),
             'model_target_height' => '1.5',
@@ -910,7 +930,7 @@ class CardAdminTest extends TestCase
 
         $this->assertStringContainsString(
             'KHR_materials_clearcoat',
-            $response->session()->get(SessionKey::FLASH_DATA)['model_warnings'][0]
+            session()->get(SessionKey::FLASH_DATA)['model_warnings'][0]
         );
     }
 

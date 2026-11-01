@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CardController;
+use App\Http\Controllers\Api\CreditController;
 use App\Http\Controllers\Api\DuelController;
 use App\Http\Controllers\Api\DonationController;
 use App\Http\Controllers\Api\ExploreController;
@@ -21,6 +22,24 @@ Route::post('/login', [
     AuthController::class,
     'login',
 ]);
+
+/*
+|--------------------------------------------------------------------------
+| Créditos (público)
+|--------------------------------------------------------------------------
+|
+| Pantalla de créditos de la app: funciona antes de iniciar sesión.
+| Ver docs/api-credits.md.
+|
+*/
+
+Route::prefix('v1')->group(function () {
+    Route::get('/credits', [
+        CreditController::class,
+        'index',
+    ])->middleware('throttle:credits')
+        ->name('api.v1.credits.index');
+});
 
 Route::middleware('auth:sanctum')->group(function () {
 
