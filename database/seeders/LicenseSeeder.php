@@ -187,7 +187,52 @@ class LicenseSeeder extends Seeder
                 'attribution_template' => 'Modelo 3D creado con Meshy{basis}',
                 'summary' => 'Generado con un plan de pago: el modelo es nuestro y no requiere atribución, siempre que no se haya publicado en la comunidad de Meshy.',
             ],
+            ...$this->aiTools(),
         ];
+    }
+
+    /**
+     * Imágenes generadas con IA: los términos de cada herramienta. Una imagen
+     * hecha solo con IA probablemente no tiene derechos de autor (no hay
+     * autor humano), así que nadie la posee en exclusiva.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function aiTools(): array
+    {
+        $copyright = ' Una imagen hecha solo con IA probablemente no tiene derechos de autor: otros podrían copiarla.';
+
+        $tools = [
+            'ai-adobe-firefly' => [
+                'Adobe Firefly',
+                'Uso comercial permitido con los modelos propios de Firefly (no con modelos de terceros dentro de la app ni con funciones beta). El plan gratuito agrega marca de agua.',
+            ],
+            'ai-openai' => [
+                'ChatGPT / DALL·E',
+                'Los términos de OpenAI ceden la imagen al usuario y permiten uso comercial. No la presentes como hecha por una persona.',
+            ],
+            'ai-google' => [
+                'Google Gemini',
+                'Usa un plan de pago (Google AI Pro, Workspace o la API de pago): el gratuito no deja claro el uso comercial. Las imágenes llevan la marca invisible SynthID.',
+            ],
+            'ai-midjourney-paid' => [
+                'Midjourney',
+                'Requiere un plan de pago; una empresa con más de US$1 M de ingresos al año necesita el plan Pro o Mega. Las imágenes son públicas salvo en modo Stealth.',
+            ],
+            'ai-stable-diffusion' => [
+                'Stable Diffusion',
+                'SD 1.5 y SDXL (CreativeML OpenRAIL) permiten uso comercial; SD 3 y 3.5 solo si la organización ingresa menos de US$1 M al año (Stability Community License).',
+            ],
+        ];
+
+        return array_map(fn (string $slug) => [
+            'slug' => $slug,
+            'name' => "Términos de {$tools[$slug][0]} (imagen generada con IA)",
+            'short_name' => "IA · {$tools[$slug][0]}",
+            // {basis}: "a partir de la ilustración de la tarjeta", si aplica.
+            'attribution_template' => "Imagen generada con IA ({$tools[$slug][0]}){basis}",
+            'summary' => $tools[$slug][1].$copyright,
+        ], array_keys($tools));
     }
 
     /**

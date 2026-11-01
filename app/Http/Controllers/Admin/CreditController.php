@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\AssetSource;
 use App\Enums\CreditAsset;
+use App\Enums\CreditRole;
 use App\Http\Controllers\Controller;
-use App\Models\AssetCredit;
 use App\Models\Card;
+use App\Models\Credit;
 use App\Models\License;
 use App\Services\Licensing\CommonsMetadataFetcher;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +23,8 @@ class CreditController extends Controller
     private const PER_PAGE = 20;
 
     /**
-     * Créditos y licencias: un renglón por cada recurso subido de cada tarjeta.
+     * Créditos y licencias: un renglón por crédito, más uno por cada recurso
+     * subido que aún no tiene licencia completa.
      */
     public function index(Request $request): Response
     {
@@ -31,6 +33,7 @@ class CreditController extends Controller
             'source' => $request->input('source'),
             'license' => $request->input('license'),
             'asset' => $request->input('asset'),
+            'role' => $request->input('role'),
             'missing' => $request->boolean('missing') ? '1' : null,
         ];
 
@@ -69,6 +72,11 @@ class CreditController extends Controller
                     'label' => $asset->label(),
                 ], CreditAsset::cases()),
 
+                'roles' => array_map(fn (CreditRole $role) => [
+                    'value' => $role->value,
+                    'label' => $role->label(),
+                ], CreditRole::cases()),
+
                 'missingCount' => $rows->where('missing', true)->count(),
             ]
         );
@@ -95,7 +103,8 @@ class CreditController extends Controller
     }
 
     /**
-     * Recursos con archivo (o con crédito) de todas las tarjetas.
+     * Créditos de los recursos con archivo de todas las tarjetas, y los
+     * recursos sin licencia completa.
      *
      * @return Collection<int, array<string, mixed>>
      */
@@ -108,27 +117,26 @@ class CreditController extends Controller
             ->orderBy('name')
             ->get()
             ->flatMap(fn (Card $card) => collect(CreditAsset::cases())
-                ->map(fn (CreditAsset $asset) => $this->row($card, $asset, $card->credit($asset)))
-                ->filter());
+                ->filter(fn (CreditAsset $asset) => $card->hasAsset($asset))
+                ->flatMap(fn (CreditAsset $asset) => [
+                    ...($card->hasCompleteCredits($asset) ? [] : [$this->row($card, $asset, null)]),
+                    ...$card->creditsFor($asset)->map(fn (Credit $credit) => $this->row($card, $asset, $credit)),
+                ]));
     }
 
     /**
-     * @return array<string, mixed>|null
+     * Renglón de un crédito, o de un recurso al que le falta la licencia.
+     *
+     * @return array<string, mixed>
      */
-    private function row(Card $card, CreditAsset $asset, ?AssetCredit $credit): ?array
+    private function row(Card $card, CreditAsset $asset, ?Credit $credit): array
     {
-        $hasFile = filled($card->{$asset->column()});
-
-        if (! $hasFile) {
-            return null;
-        }
-
         $preview = $asset === CreditAsset::Model
             ? ($card->thumbnail_image ?: $card->artwork_image)
             : $card->{$asset->column()};
 
         return [
-            'key' => $card->id.'-'.$asset->value,
+            'key' => $card->id.'-'.$asset->value.'-'.($credit?->id ?? 'missing'),
             'card' => [
                 'id' => $card->id,
                 'name' => $card->name,
@@ -138,6 +146,8 @@ class CreditController extends Controller
             'asset_label' => $asset->label(),
             'preview_url' => $preview ? Storage::disk('public')->url($preview) : null,
             'missing' => $credit === null,
+            'role' => $credit?->role->value,
+            'role_label' => $credit?->role->label(),
             'source' => $credit?->source_name?->value,
             'source_label' => $credit?->source_name?->label(),
             'source_url' => $credit?->source_url,
@@ -146,7 +156,9 @@ class CreditController extends Controller
             'license_url' => $credit?->license?->url,
             'is_proprietary' => (bool) $credit?->license?->is_proprietary,
             'attribution' => $credit?->attribution,
-            'edit_url' => route('admin.cards.edit', $card).'#credit-'.$asset->value,
+            'edit_url' => $credit
+                ? route('admin.cards.credits.edit', [$card, $credit])
+                : route('admin.cards.credits.index', $card).'#credit-'.$asset->value,
         ];
     }
 
@@ -162,6 +174,7 @@ class CreditController extends Controller
             && (! $filters['source'] || $row['source'] === $filters['source'])
             && (! $filters['license'] || $row['license'] === $filters['license'])
             && (! $filters['asset'] || $row['asset'] === $filters['asset'])
+            && (! $filters['role'] || $row['role'] === $filters['role'])
             && (! $filters['missing'] || $row['missing']);
     }
 }

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Api;
 
-use App\Models\AssetCredit;
 use App\Models\Card;
 use App\Models\CardCapture;
+use App\Models\Credit;
 use App\Models\License;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
@@ -60,10 +60,11 @@ class CreditTest extends TestCase
         ], $attributes));
     }
 
-    private function credit(Card $card, string $asset, string $license, array $attributes = []): AssetCredit
+    private function credit(Card $card, string $asset, string $license, array $attributes = []): Credit
     {
         return $card->credits()->create(array_merge([
             'asset' => $asset,
+            'role' => 'origin',
             'license_id' => License::where('slug', $license)->value('id'),
             'title' => 'Título '.$asset,
             'author_name' => 'Jane Doe',
@@ -91,7 +92,7 @@ class CreditTest extends TestCase
             'source_name' => 'meshy',
             'source_url' => null,
             'modification_note' => 'Escalado para RA',
-            'derived_from_id' => $artwork->id,
+            'based_on_asset' => 'artwork',
         ]);
 
         $this->credits()
@@ -108,6 +109,8 @@ class CreditTest extends TestCase
                             'id' => $artwork->id,
                             'asset' => 'artwork',
                             'asset_label' => 'Ilustración',
+                            'role' => 'origin',
+                            'role_label' => 'Origen',
                             'title' => 'Jaguar resting',
                             'author' => ['name' => 'Jane Doe', 'url' => 'https://commons.wikimedia.org/wiki/User:Jane_Doe'],
                             'source' => ['name' => 'wikimedia_commons', 'label' => 'Wikimedia Commons', 'url' => 'https://commons.wikimedia.org/wiki/File:Jaguar.jpg'],
@@ -115,12 +118,14 @@ class CreditTest extends TestCase
                             'modified' => true,
                             'modification_note' => 'Recortada/adaptada para la tarjeta',
                             'attribution' => '“Jaguar resting” de Jane Doe, vía Wikimedia Commons, CC BY-SA 4.0, con cambios: Recortada/adaptada para la tarjeta',
-                            'based_on_artwork' => false,
+                            'based_on_asset' => null,
                         ],
                         [
                             'id' => $artwork->id + 1,
                             'asset' => 'model',
                             'asset_label' => 'Modelo 3D',
+                            'role' => 'origin',
+                            'role_label' => 'Origen',
                             'title' => null,
                             'author' => null,
                             'source' => ['name' => 'meshy', 'label' => 'Meshy', 'url' => null],
@@ -129,7 +134,7 @@ class CreditTest extends TestCase
                             'modification_note' => 'Escalado para RA',
                             // Una sola línea: el crédito de la imagen es la fila anterior.
                             'attribution' => 'Modelo 3D creado con Meshy a partir de la ilustración de la tarjeta – CC BY 4.0',
-                            'based_on_artwork' => true,
+                            'based_on_asset' => 'artwork',
                         ],
                     ],
                 ]],
@@ -186,12 +191,12 @@ class CreditTest extends TestCase
     {
         $card = $this->createCard();
         $artwork = $this->credit($card, 'artwork', 'proprietary', ['title' => 'Ilustración propia', 'author_name' => null, 'source_name' => 'own']);
-        $this->credit($card, 'model', 'meshy-free', ['source_name' => 'meshy', 'derived_from_id' => $artwork->id]);
+        $this->credit($card, 'model', 'meshy-free', ['source_name' => 'meshy', 'based_on_asset' => 'artwork']);
 
         $response = $this->credits()->assertOk();
 
         $this->assertSame('“Ilustración propia” – obra propia', $response->json('data.0.credits.0.attribution'));
-        $this->assertTrue($response->json('data.0.credits.1.based_on_artwork'));
+        $this->assertSame('artwork', $response->json('data.0.credits.1.based_on_asset'));
         $this->assertSame(
             'Modelo 3D creado con Meshy a partir de la ilustración de la tarjeta – CC BY 4.0',
             $response->json('data.0.credits.1.attribution')
@@ -200,6 +205,34 @@ class CreditTest extends TestCase
         $this->assertSame(1, collect($response->json('data.0.credits.*.attribution'))
             ->filter(fn (string $line) => str_contains($line, 'Ilustración propia'))
             ->count());
+    }
+
+    public function test_credits_are_ordered_by_asset_then_role_and_carry_their_role(): void
+    {
+        $card = $this->createCard();
+        $this->credit($card, 'thumbnail', 'proprietary', ['title' => 'Jaguar en la selva', 'author_name' => null, 'source_name' => 'own', 'based_on_asset' => 'model']);
+        $this->credit($card, 'thumbnail', 'cc0-1.0', ['role' => 'component', 'title' => 'Forest HDRI', 'author_name' => null, 'source_name' => 'poly_haven', 'modified' => false]);
+        $this->credit($card, 'artwork', 'ai-adobe-firefly', ['title' => null, 'author_name' => null, 'source_name' => 'ai', 'ai_prompt' => 'jaguar', 'ai_checked_at' => now(), 'modified' => false]);
+        $this->credit($card, 'model', 'meshy-free', ['title' => null, 'author_name' => null, 'source_name' => 'meshy', 'based_on_asset' => 'artwork']);
+        $this->credit($card, 'model', 'pexels-license', ['role' => 'based_on', 'title' => null, 'author_name' => 'Ana López', 'source_name' => 'pexels', 'modified' => false]);
+
+        $credits = $this->credits()->assertOk()->json('data.0.credits');
+
+        $this->assertSame(
+            [['artwork', 'origin'], ['thumbnail', 'origin'], ['thumbnail', 'component'], ['model', 'origin'], ['model', 'based_on']],
+            array_map(fn ($credit) => [$credit['asset'], $credit['role']], $credits)
+        );
+
+        $this->assertSame([
+            'Imagen generada con IA (Adobe Firefly)',
+            '“Jaguar en la selva”, a partir del modelo 3D de la tarjeta – obra propia',
+            'Incluye: “Forest HDRI”, vía Poly Haven, CC0 1.0',
+            'Modelo 3D creado con Meshy a partir de la ilustración de la tarjeta – CC BY 4.0',
+            'Basado en: Ana López, vía Pexels, Licencia de Pexels',
+        ], array_column($credits, 'attribution'));
+
+        $this->assertSame(['Origen', 'Origen', 'Incluye', 'Origen', 'Basado en'], array_column($credits, 'role_label'));
+        $this->assertSame('model', $credits[1]['based_on_asset']);
     }
 
     public function test_only_assets_that_still_exist_are_sent(): void
@@ -235,6 +268,8 @@ class CreditTest extends TestCase
     {
         $card = $this->createCard();
         $this->credit($card, 'artwork', 'cc-by-4.0', [
+            'ai_prompt' => 'PROMPT-SECRETO',
+            'ai_checked_at' => now(),
             'notes' => 'NOTA-INTERNA',
             'acquired_at' => '2026-01-15',
         ]);
@@ -243,6 +278,7 @@ class CreditTest extends TestCase
 
         foreach ([
             'NOTA-INTERNA', 'notes', 'show_in_credits', 'acquired_at', '2026-01-15', 'derived_from',
+            'PROMPT-SECRETO', 'ai_prompt', 'ai_checked',
             'creditable', 'created_at', 'updated_at', 'cards/1', 'storage', '.glb', '.png',
             'license_id', 'is_proprietary', 'sort_order',
         ] as $hidden) {

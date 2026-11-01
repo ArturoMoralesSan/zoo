@@ -5,7 +5,6 @@ namespace Tests\Feature\Admin;
 use App\Models\Card;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
-use App\Models\License;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
@@ -332,7 +331,8 @@ class CardAdminTest extends TestCase
         $this->actingAs($this->admin)
             ->post(route('admin.cards.store'), $payload)
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('admin.cards.index'))
+            // Con archivos, la tarjeta nueva abre su sección Créditos.
+            ->assertRedirectContains('/credits')
             ->assertInertiaFlash('toast.type', 'success')
             ->assertInertiaFlashMissing('model_warnings');
 
@@ -359,16 +359,14 @@ class CardAdminTest extends TestCase
             'thumbnail_image' => $this->fakeImage('miniatura.jpg'),
             'artwork_image' => $this->fakeImage('fondo.png'),
             'generated_image' => $this->fakeImage('card.png'),
-            'credits' => [
-                'artwork' => $this->ownCredit(),
-                'thumbnail' => $this->ownCredit(),
-            ],
+            'is_active' => false,
         ]);
 
         $this->actingAs($this->admin)
             ->post(route('admin.cards.store'), $payload)
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('admin.cards.index'));
+            // Con archivos, la tarjeta nueva abre su sección Créditos.
+            ->assertRedirectContains('/credits');
 
         $card = Card::where('name', $payload['name'])->firstOrFail();
 
@@ -383,6 +381,7 @@ class CardAdminTest extends TestCase
         $this->actingAs($this->admin)
             ->put(route('admin.cards.update', $card), $this->cardPayload([
                 'name' => $card->name,
+                'is_active' => false,
                 'generated_image' => $this->fakeImage('card.png'),
             ]))
             ->assertSessionHasNoErrors();
@@ -564,21 +563,11 @@ class CardAdminTest extends TestCase
     /**
      * Original (2 m de alto) y archivo escalado a 1.5 m, como los envía el navegador.
      */
-    /**
-     * Crédito mínimo (obra propia) para los recursos subidos.
-     */
-    private function ownCredit(): array
-    {
-        return [
-            'source_name' => 'own',
-            'license_id' => License::where('slug', 'proprietary')->value('id'),
-        ];
-    }
-
     private function modelPayload(array $overrides = []): array
     {
         return array_merge([
-            'credits' => ['model' => $this->ownCredit()],
+            // Con archivos nuevos se crea inactiva: los créditos se registran después.
+            'is_active' => false,
             'model_original_file' => $this->glbUpload('input/plain.glb'),
             'model_file' => $this->glbUpload('valid.glb'),
             'model_target_height' => '1.5',

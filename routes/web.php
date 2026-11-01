@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CardController;
+use App\Http\Controllers\Admin\CardCreditController;
 use App\Http\Controllers\Admin\CardQrCodeController;
 use App\Http\Controllers\Admin\CardRaritySettingController;
 use App\Http\Controllers\Admin\CreditController;
@@ -398,6 +399,15 @@ Route::middleware(['auth', 'verified'])
                         ->parameters([
                             'qr-codes' => 'qrCode',
                         ])
+                        ->middlewareFor('index', 'permission:cards.view')
+                        ->middlewareFor(['create', 'store', 'edit', 'update'], 'permission:cards.edit')
+                        ->middlewareFor('destroy', 'permission:cards.delete');
+
+                    /*
+                     * Créditos de los recursos (ilustración, miniatura, modelo).
+                     */
+                    Route::resource('credits', CardCreditController::class)
+                        ->except('show')
                         ->middlewareFor('index', 'permission:cards.view')
                         ->middlewareFor(['create', 'store', 'edit', 'update'], 'permission:cards.edit')
                         ->middlewareFor('destroy', 'permission:cards.delete');

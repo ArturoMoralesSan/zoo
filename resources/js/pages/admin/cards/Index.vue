@@ -539,11 +539,14 @@ defineOptions({
                     <TableActions
                         :questions-url="admin.cards.quiz.index(card.id).url"
                         :qr-codes-url="admin.cards.qrCodes.index(card.id).url"
+                        :credits-url="admin.cards.credits.index(card.id).url"
+                        :credits-warning="Boolean(card.missing_credits?.length)"
                         :view-url="admin.cards.show(card.id).url"
                         :edit-url="admin.cards.edit(card.id).url"
                         item-name="tarjeta"
                         show-questions
                         show-qr-codes
+                        show-credits
                         @delete="deleteCard(card)"
                     />
                 </tr>

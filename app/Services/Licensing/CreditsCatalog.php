@@ -4,8 +4,8 @@ namespace App\Services\Licensing;
 
 use App\Enums\CreditAsset;
 use App\Http\Resources\Credits\CreditSectionResource;
-use App\Models\AssetCredit;
 use App\Models\Card;
+use App\Models\Credit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Carbon;
@@ -60,7 +60,7 @@ class CreditsCatalog
             ->map(fn (Card $card) => (new CreditSectionResource(
                 $card,
                 $credits->get($card->id)
-                    ->sortBy(fn (AssetCredit $credit) => $credit->asset->order())
+                    ->sortBy(fn (Credit $credit) => $credit->sortKey())
                     ->values()
             ))->resolve())
             ->values()
@@ -82,21 +82,21 @@ class CreditsCatalog
      * existiendo, incluido el contenido propio. Las tarjetas inactivas
      * nunca se incluyen (su nombre puede no ser público).
      *
-     * @return Collection<int, AssetCredit>
+     * @return Collection<int, Credit>
      */
     private function activeCardCredits(): Collection
     {
-        return AssetCredit::query()
-            ->select('asset_credits.*')
+        return Credit::query()
+            ->select('credits.*')
             ->join('cards', function (JoinClause $join) {
-                $join->on('cards.id', '=', 'asset_credits.creditable_id')
-                    ->where('asset_credits.creditable_type', (new Card)->getMorphClass());
+                $join->on('cards.id', '=', 'credits.creditable_id')
+                    ->where('credits.creditable_type', (new Card)->getMorphClass());
             })
             ->where('cards.is_active', true)
             ->where(function (Builder $query) {
                 foreach (CreditAsset::cases() as $asset) {
                     $query->orWhere(fn (Builder $query) => $query
-                        ->where('asset_credits.asset', $asset->value)
+                        ->where('credits.asset', $asset->value)
                         ->whereNotNull('cards.'.$asset->column())
                         ->where('cards.'.$asset->column(), '!=', ''));
                 }

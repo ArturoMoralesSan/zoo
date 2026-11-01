@@ -4,7 +4,9 @@ namespace App\Concerns;
 
 use App\Enums\AssetSource;
 use App\Enums\CreditAsset;
+use App\Enums\CreditRole;
 use App\Models\Card;
+use App\Models\Credit;
 use App\Models\License;
 use App\Rules\CommonsFileUrl;
 use App\Rules\LicenseMatchesSource;
@@ -16,210 +18,250 @@ use Illuminate\Validation\Validator;
 /**
  * Reglas de los créditos de los recursos de la tarjeta.
  *
- * Forma: credits[artwork|thumbnail|model][campo]. Un crédito se valida si
- * se envió (licencia u origen) o si su recurso se sube en esta petición;
- * los demás se ignoran, para que una tarjeta sin créditos se pueda seguir
- * editando. Volver a escalar el modelo (solo llega model_file) conserva su
- * crédito y no lo exige.
+ * - Un crédito (sección "Créditos" de la tarjeta): creditRules() y creditChecks().
+ * - Formulario de la tarjeta: assetCreditsCheck(), que no deja activar una
+ *   tarjeta con recursos sin licencia.
  */
 trait AssetCreditValidationRules
 {
     /**
      * @return array<string, array<int, mixed>>
      */
-    protected function assetCreditRules(?Card $card = null): array
+    protected function creditRules(Card $card, ?Credit $current = null): array
     {
-        $rules = [];
+        $asset = CreditAsset::tryFrom((string) $this->input('asset'));
+        $role = CreditRole::tryFrom((string) $this->input('role'));
+        $source = AssetSource::tryFrom((string) $this->input('source_name'));
+        $license = License::find($this->input('license_id'));
 
-        foreach (CreditAsset::cases() as $asset) {
-            if (! $this->creditIsValidated($asset, $card)) {
-                continue;
-            }
+        /*
+         * Las licencias con plantilla (Meshy, herramientas de IA) ya dicen a
+         * quién se atribuye; no piden autor ni URL.
+         */
+        $needsAttribution = $license?->requires_attribution && ! $license->attribution_template;
 
-            $prefix = 'credits.'.$asset->value.'.';
+        $rules = [
+            'asset' => [
+                'required',
+                Rule::enum(CreditAsset::class),
+                function (string $attribute, mixed $value, Closure $fail) use ($card, $asset) {
+                    if ($asset && ! $card->hasAsset($asset)) {
+                        $fail("La tarjeta no tiene {$asset->withArticle()}: súbela primero en el formulario de la tarjeta.");
+                    }
+                },
+            ],
 
-            $license = License::find($this->input($prefix.'license_id'));
-            $source = AssetSource::tryFrom((string) $this->input($prefix.'source_name'));
+            'role' => [
+                'required',
+                Rule::enum(CreditRole::class),
+            ],
+
+            'source_name' => [
+                'required',
+                Rule::enum(AssetSource::class),
+                function (string $attribute, mixed $value, Closure $fail) use ($asset, $role, $source) {
+                    if ($asset && $role && $source && ! $source->allowsAsset($asset, $role)) {
+                        $fail($asset === CreditAsset::Model
+                            ? "{$source->label()} no ofrece modelos 3D: elige el origen del modelo."
+                            : "{$source->label()} solo ofrece modelos 3D: para una imagen hecha con un modelo, usa «Render de un modelo 3D».");
+                    }
+                },
+            ],
+
+            'license_id' => [
+                'required',
+                'integer',
+                'exists:licenses,id',
+                new SelectableLicense(array_filter([$current?->license_id])),
+                new LicenseMatchesSource($source),
+            ],
+
+            'source_url' => [
+                $needsAttribution ? 'required' : 'nullable',
+                'url:http,https',
+                'max:2048',
+                ...($source === AssetSource::WikimediaCommons ? [new CommonsFileUrl] : []),
+            ],
+
+            'title' => ['nullable', 'string', 'max:255'],
+
+            'author_name' => [
+                $needsAttribution ? 'required' : 'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'author_url' => ['nullable', 'url:http,https', 'max:2048'],
+
+            'acquired_at' => ['nullable', 'date', 'before_or_equal:today'],
+
+            'modified' => ['boolean'],
+
+            'modification_note' => ['nullable', 'string', 'max:255'],
+
+            'attribution_override' => ['nullable', 'string', 'max:1000'],
+
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+
+            'notes' => ['nullable', 'string', 'max:5000'],
 
             /*
-             * Las licencias con plantilla (Meshy gratuito) ya dicen a quién
-             * se atribuye; no piden autor ni URL.
+             * Solo el origen se hace a partir de otro recurso de la tarjeta
+             * (render del modelo, modelo de la ilustración).
              */
-            $needsAttribution = $license?->requires_attribution && ! $license->attribution_template;
+            'based_on_asset' => $role === CreditRole::Origin
+                ? [
+                    'nullable',
+                    Rule::enum(CreditAsset::class),
+                    'different:asset',
+                    function (string $attribute, mixed $value, Closure $fail) use ($card) {
+                        $basis = CreditAsset::tryFrom((string) $value);
 
-            $rules += [
-                $prefix.'license_id' => [
-                    'required',
-                    'integer',
-                    'exists:licenses,id',
-                    new SelectableLicense(array_filter([$card?->credit($asset)?->license_id])),
-                    new LicenseMatchesSource($source),
-                ],
-
-                $prefix.'source_name' => [
-                    'required',
-                    Rule::enum(AssetSource::class),
-                    function (string $attribute, mixed $value, Closure $fail) use ($asset, $source) {
-                        if ($source && ! in_array($asset, $source->assets(), true)) {
-                            $fail($asset === CreditAsset::Model
-                                ? "{$source->label()} no ofrece modelos 3D: elige el origen del modelo."
-                                : "{$source->label()} solo ofrece modelos 3D: elige el origen de la imagen.");
+                        if ($basis && ! $card->hasAsset($basis)) {
+                            $fail("La tarjeta no tiene {$basis->withArticle()}.");
                         }
                     },
-                ],
+                ]
+                : ['exclude'],
+        ];
 
-                $prefix.'source_url' => [
-                    $needsAttribution ? 'required' : 'nullable',
-                    'url:http,https',
-                    'max:2048',
-                    ...($source === AssetSource::WikimediaCommons ? [new CommonsFileUrl] : []),
-                ],
+        /*
+         * Imagen generada con IA: la indicación se guarda como registro y la
+         * revisión es obligatoria.
+         */
+        if ($source === AssetSource::Ai) {
+            $rules['ai_prompt'] = ['nullable', 'string', 'max:5000'];
+            $rules['ai_checked'] = ['accepted'];
+        }
 
-                $prefix.'title' => ['nullable', 'string', 'max:255'],
-
-                $prefix.'author_name' => [
-                    $needsAttribution ? 'required' : 'nullable',
-                    'string',
-                    'max:255',
-                ],
-
-                $prefix.'author_url' => ['nullable', 'url:http,https', 'max:2048'],
-
-                $prefix.'acquired_at' => ['nullable', 'date', 'before_or_equal:today'],
-
-                $prefix.'modified' => ['boolean'],
-
-                $prefix.'modification_note' => ['nullable', 'string', 'max:255'],
-
-                $prefix.'attribution_override' => ['nullable', 'string', 'max:1000'],
-
-                $prefix.'notes' => ['nullable', 'string', 'max:5000'],
-            ];
-
-            /*
-             * CompartirIgual: confirmación en el formulario (no se guarda).
-             */
-            if ($license?->share_alike) {
-                $rules[$prefix.'share_alike_ack'] = ['accepted'];
-            }
-
-            if ($asset === CreditAsset::Model) {
-                $rules[$prefix.'based_on_artwork'] = ['boolean'];
-            }
+        /*
+         * CompartirIgual: confirmación en el formulario (no se guarda).
+         */
+        if ($license?->share_alike) {
+            $rules['share_alike_ack'] = ['accepted'];
         }
 
         return $rules;
     }
 
     /**
-     * Comprobaciones que dependen de varios recursos:
-     * - Una tarjeta no se activa (ni se crea activa) si algún recurso
-     *   subido no tiene crédito. Una tarjeta ya activa sigue activa.
-     * - "Generado a partir de la ilustración" necesita el crédito de la ilustración.
+     * Comprobaciones con los demás créditos de la tarjeta.
      */
-    protected function assetCreditsCheck(?Card $card = null): Closure
+    protected function creditChecks(Card $card, ?Credit $current = null): Closure
     {
-        return function (Validator $validator) use ($card) {
-            $hasCredit = fn (CreditAsset $asset) => $this->creditIsSent($asset) ||
-                ($card?->credit($asset) !== null);
+        return function (Validator $validator) use ($card, $current) {
+            $asset = CreditAsset::tryFrom((string) $this->input('asset'));
+            $role = CreditRole::tryFrom((string) $this->input('role'));
 
-            if (
-                $this->boolean('credits.model.based_on_artwork') &&
-                ! $hasCredit(CreditAsset::Artwork)
-            ) {
-                $validator->errors()->add(
-                    'credits.model.based_on_artwork',
-                    'Primero registra la licencia de la ilustración de esta tarjeta.'
-                );
-            }
-
-            if (! $this->boolean('is_active') || $card?->is_active) {
+            if (! $asset || $role !== CreditRole::Origin) {
                 return;
             }
 
-            $missing = array_filter(
-                CreditAsset::cases(),
-                fn (CreditAsset $asset) => $this->creditAssetWillExist($asset, $card) && ! $hasCredit($asset)
-            );
+            $origin = $card->credit($asset);
 
-            if ($missing) {
-                $labels = array_map(fn (CreditAsset $asset) => $asset->label(), $missing);
-
+            if ($origin && $origin->id !== $current?->id) {
                 $validator->errors()->add(
-                    'is_active',
-                    'No se puede activar la tarjeta: falta la licencia de '.self::joinLabels($labels).'.'
+                    'role',
+                    'Este recurso ya tiene crédito de origen. Edítalo, o registra este como «Basado en» o «Incluye».'
+                );
+            }
+
+            /*
+             * Sin ciclos: un recurso no puede salir de otro que sale de él.
+             */
+            $basis = CreditAsset::tryFrom((string) $this->input('based_on_asset'));
+
+            if ($basis && $card->credit($basis)?->based_on_asset === $asset) {
+                $validator->errors()->add(
+                    'based_on_asset',
+                    ucfirst($basis->withArticle())." ya se hizo a partir {$asset->fromPhrase()}."
                 );
             }
         };
     }
 
     /**
+     * Una tarjeta no se activa (ni se crea activa) si algún recurso subido no
+     * tiene licencia completa. Una tarjeta ya activa sigue activa.
+     */
+    protected function assetCreditsCheck(?Card $card = null): Closure
+    {
+        return function (Validator $validator) use ($card) {
+            if (! $this->boolean('is_active') || $card?->is_active) {
+                return;
+            }
+
+            $missing = array_filter(
+                CreditAsset::cases(),
+                fn (CreditAsset $asset) => $this->creditAssetWillExist($asset, $card)
+                    && ! $card?->hasCompleteCredits($asset)
+            );
+
+            if (! $missing) {
+                return;
+            }
+
+            $labels = array_map(fn (CreditAsset $asset) => $asset->label(), $missing);
+
+            $validator->errors()->add(
+                'is_active',
+                'No se puede activar la tarjeta: falta la licencia de '.self::joinLabels($labels).'. '.
+                ($card
+                    ? 'Regístrala en la sección Créditos de la tarjeta.'
+                    : 'Crea la tarjeta inactiva, registra los créditos y después actívala.')
+            );
+        };
+    }
+
+    /**
      * @return array<string, string>
      */
-    protected function assetCreditMessages(): array
+    protected function creditMessages(): array
     {
         return [
-            'credits.*.license_id.required' => 'Elige la licencia del recurso.',
-            'credits.*.source_name.required' => 'Elige el origen del recurso.',
-            'credits.*.author_name.required' => 'La licencia elegida exige indicar el autor.',
-            'credits.*.source_url.required' => 'La licencia elegida exige indicar la URL de origen.',
-            'credits.*.share_alike_ack.accepted' => 'Confirma que la tarjeta resultante se compartirá con la misma licencia.',
+            'license_id.required' => 'Elige la licencia.',
+            'source_name.required' => 'Elige el origen.',
+            'author_name.required' => 'La licencia elegida exige indicar el autor.',
+            'source_url.required' => 'La licencia elegida exige indicar la URL de origen.',
+            'share_alike_ack.accepted' => 'Confirma que el recurso resultante se compartirá con la misma licencia.',
+            'ai_checked.accepted' => 'Confirma la revisión de la imagen generada con IA.',
+            'based_on_asset.different' => 'Un recurso no puede hacerse a partir de sí mismo.',
         ];
     }
 
     /**
      * @return array<string, string>
      */
-    protected function assetCreditAttributes(): array
+    protected function creditAttributes(): array
     {
         return [
-            'credits.*.license_id' => 'licencia',
-            'credits.*.source_name' => 'origen',
-            'credits.*.source_url' => 'URL de origen',
-            'credits.*.title' => 'título',
-            'credits.*.author_name' => 'autor',
-            'credits.*.author_url' => 'URL del autor',
-            'credits.*.acquired_at' => 'fecha de obtención',
-            'credits.*.modified' => 'modificada',
-            'credits.*.modification_note' => 'nota de modificación',
-            'credits.*.attribution_override' => 'texto del crédito',
-            'credits.*.notes' => 'notas',
+            'asset' => 'recurso',
+            'role' => 'tipo de crédito',
+            'license_id' => 'licencia',
+            'source_name' => 'origen',
+            'source_url' => 'URL de origen',
+            'title' => 'título',
+            'author_name' => 'autor',
+            'author_url' => 'URL del autor',
+            'acquired_at' => 'fecha de obtención',
+            'modification_note' => 'nota de modificación',
+            'attribution_override' => 'texto del crédito',
+            'based_on_asset' => 'recurso de origen',
+            'ai_prompt' => 'indicación (prompt)',
+            'notes' => 'notas',
         ];
     }
 
     /**
-     * Se valida el crédito si se envió o si su recurso se sube ahora, y solo
-     * si el recurso existirá después de guardar.
+     * El recurso existirá después de guardar la tarjeta.
      */
-    private function creditIsValidated(CreditAsset $asset, ?Card $card): bool
-    {
-        return $this->creditUploadsAsset($asset) ||
-            ($this->creditIsSent($asset) && $this->creditAssetWillExist($asset, $card));
-    }
-
-    private function creditIsSent(CreditAsset $asset): bool
-    {
-        return $this->filled('credits.'.$asset->value.'.license_id') ||
-            $this->filled('credits.'.$asset->value.'.source_name');
-    }
-
-    /**
-     * Archivo nuevo para el recurso. En el modelo, solo cuenta el original:
-     * volver a escalar envía solo el archivo escalado.
-     */
-    private function creditUploadsAsset(CreditAsset $asset): bool
-    {
-        return $this->hasFile(match ($asset) {
-            CreditAsset::Model => 'model_original_file',
-            default => $asset->column(),
-        });
-    }
-
     private function creditAssetWillExist(CreditAsset $asset, ?Card $card): bool
     {
-        return $this->creditUploadsAsset($asset) ||
-            ($asset === CreditAsset::Model && $this->hasFile('model_file') && ! $card?->model_file) ||
-            filled($card?->{$asset->column()});
+        $uploaded = $asset === CreditAsset::Model
+            ? $this->hasFile('model_file') || $this->hasFile('model_original_file')
+            : $this->hasFile($asset->column());
+
+        return $uploaded || (bool) $card?->hasAsset($asset);
     }
 
     /**

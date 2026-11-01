@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\CardSectionHelpers;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Card\StoreCardQrCodeRequest;
 use App\Models\Card;
@@ -12,6 +13,8 @@ use Inertia\Response;
 
 class CardQrCodeController extends Controller
 {
+    use CardSectionHelpers;
+
     /**
      * Códigos QR de una tarjeta.
      */
@@ -145,29 +148,5 @@ class CardQrCodeController extends Controller
         $this->flashSuccess('Código QR eliminado correctamente.');
 
         return redirect()->route('admin.cards.qr-codes.index', $card);
-    }
-
-    /**
-     * Datos de la tarjeta para las pantallas de códigos QR.
-     *
-     * @return array{id: int, name: string, species: array{common_name: string}|null}
-     */
-    private function cardSummary(Card $card): array
-    {
-        return [
-            ...$card->only('id', 'name'),
-            'species' => $card->species?->only('common_name'),
-        ];
-    }
-
-    /**
-     * Mensaje de éxito (toast) para la siguiente página.
-     */
-    private function flashSuccess(string $message): void
-    {
-        Inertia::flash('toast', [
-            'type' => 'success',
-            'message' => $message,
-        ]);
     }
 }

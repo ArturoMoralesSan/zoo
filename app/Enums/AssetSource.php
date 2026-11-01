@@ -9,6 +9,8 @@ use App\Models\License;
  *
  * Cada origen solo admite las licencias que realmente usa esa plataforma y
  * solo aplica a los recursos que ofrece (p. ej. Meshy solo genera modelos).
+ * Como "Basado en" o "Incluye" se acepta cualquier origen: un render usa
+ * modelos y HDRI, un modelo de Meshy parte de una foto…
  */
 enum AssetSource: string
 {
@@ -21,6 +23,7 @@ enum AssetSource: string
     case Sketchfab = 'sketchfab';
     case PolyPizza = 'poly_pizza';
     case PolyHaven = 'poly_haven';
+    case Ai = 'ai';
     case Other = 'other';
 
     /**
@@ -38,29 +41,34 @@ enum AssetSource: string
             self::Sketchfab => 'Sketchfab',
             self::PolyPizza => 'Poly Pizza',
             self::PolyHaven => 'Poly Haven',
+            self::Ai => 'Generada con IA',
             self::Other => 'Otro',
         };
     }
 
     /**
      * Nombre que aparece en el crédito ("vía …"). Los orígenes propios u
-     * "otro" no aportan nada a la atribución.
+     * "otro" no aportan nada; en las imágenes de IA lo dice la licencia.
      */
     public function creditName(): ?string
     {
         return match ($this) {
-            self::Own, self::Other => null,
+            self::Own, self::Other, self::Ai => null,
             default => $this->label(),
         };
     }
 
     /**
-     * Recursos que puede tener este origen.
+     * Recursos que puede tener este origen como crédito de un papel.
      *
      * @return array<int, CreditAsset>
      */
-    public function assets(): array
+    public function assets(CreditRole $role = CreditRole::Origin): array
     {
+        if ($role !== CreditRole::Origin) {
+            return CreditAsset::cases();
+        }
+
         $images = [CreditAsset::Artwork, CreditAsset::Thumbnail];
 
         return match ($this) {
@@ -69,6 +77,11 @@ enum AssetSource: string
             self::Meshy, self::Sketchfab, self::PolyPizza, self::PolyHaven => [CreditAsset::Model],
             default => $images,
         };
+    }
+
+    public function allowsAsset(CreditAsset $asset, CreditRole $role = CreditRole::Origin): bool
+    {
+        return in_array($asset, $this->assets($role), true);
     }
 
     /**
@@ -80,6 +93,7 @@ enum AssetSource: string
      * - Sketchfab: las Creative Commons que elige cada autor (no la licencia
      *   Standard: prohíbe redistribuir el modelo y el juego descarga el GLB).
      * - Poly Pizza: CC0 o CC BY, según el modelo. Poly Haven: siempre CC0.
+     * - Generada con IA: los términos de la herramienta (licencias "ai-").
      * - Otro: cualquier licencia abierta (CC, dominio público, GFDL).
      */
     public function allowsLicense(License $license): bool
@@ -93,6 +107,7 @@ enum AssetSource: string
             self::Sketchfab => str_starts_with($license->slug, 'cc'),
             self::PolyPizza => $license->slug === 'cc0-1.0' || preg_match('/^cc-by-\d/', $license->slug) === 1,
             self::PolyHaven => $license->slug === 'cc0-1.0',
+            self::Ai => str_starts_with($license->slug, 'ai-'),
             self::WikimediaCommons => $license->isOpen()
                 && $license->allows_commercial
                 && $license->allows_modification,
@@ -101,10 +116,11 @@ enum AssetSource: string
     }
 
     /**
-     * Opciones para los formularios: etiqueta, recursos y licencias permitidas.
+     * Opciones para los formularios: etiqueta, recursos por papel y
+     * licencias permitidas.
      *
      * @param  iterable<License>  $licenses
-     * @return array<int, array{value: string, label: string, assets: array<int, string>, licenses: array<int, string>}>
+     * @return array<int, array{value: string, label: string, assets: array<string, array<int, string>>, licenses: array<int, string>}>
      */
     public static function formOptions(iterable $licenses): array
     {
@@ -113,7 +129,11 @@ enum AssetSource: string
         return array_map(fn (self $source) => [
             'value' => $source->value,
             'label' => $source->label(),
-            'assets' => array_map(fn (CreditAsset $asset) => $asset->value, $source->assets()),
+            'assets' => collect(CreditRole::cases())
+                ->mapWithKeys(fn (CreditRole $role) => [
+                    $role->value => array_map(fn (CreditAsset $asset) => $asset->value, $source->assets($role)),
+                ])
+                ->all(),
             'licenses' => $licenses
                 ->filter(fn (License $license) => $source->allowsLicense($license))
                 ->pluck('slug')

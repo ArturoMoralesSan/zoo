@@ -2,8 +2,8 @@
 
 namespace App\Http\Resources\Credits;
 
-use App\Models\AssetCredit;
 use App\Models\Card;
+use App\Models\Credit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Collection;
@@ -17,7 +17,7 @@ class CreditSectionResource extends JsonResource
 {
     /**
      * @param  Card  $resource
-     * @param  Collection<int, AssetCredit>  $credits  Créditos de la tarjeta, ya ordenados.
+     * @param  Collection<int, Credit>  $credits  Créditos de la tarjeta, ya ordenados.
      */
     public function __construct(
         $resource,
@@ -39,7 +39,7 @@ class CreditSectionResource extends JsonResource
             ],
 
             'credits' => $this->credits
-                ->map(fn (AssetCredit $credit) => (new CreditResource($credit))->resolve($request))
+                ->map(fn (Credit $credit) => (new CreditResource($credit))->resolve($request))
                 ->all(),
         ];
     }

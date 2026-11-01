@@ -44,8 +44,7 @@ import type { CardFontId, TitleSize } from '@/lib/cardFonts';
 import { getRarityLabel } from '@/lib/cardRarity';
 import type { DuelSettingsSource } from '@/lib/cardRarity';
 import { CARD_STATS } from '@/lib/cardStats';
-import { CREDIT_ASSETS } from '@/lib/credits/types';
-import type { CardCredits, CreditAsset } from '@/lib/credits/types';
+import type { CreditAsset, CreditSummaryItem } from '@/lib/credits/types';
 import { DUEL_MESSAGE_FIELDS, renderDuelMessage } from '@/lib/duelMessages';
 import type { DuelMessages } from '@/lib/duelMessages';
 import { storageUrl } from '@/lib/modelPreview';
@@ -106,29 +105,20 @@ interface Card {
 const props = defineProps<{
     card: Card;
     duelMessageDefaults: DuelMessages;
-    credits: CardCredits;
-    // Recursos subidos sin licencia.
-    missingCredits: CreditAsset[];
+    // Estado de los créditos de cada recurso (se gestionan en su sección).
+    creditSummary: CreditSummaryItem[];
 }>();
 
-/*
- * Licencia de cada recurso subido.
- */
-const creditStatus = computed(() =>
-    Object.fromEntries([
-        ...Object.keys(props.credits).map((asset) => [asset, true]),
-        ...props.missingCredits.map((asset) => [asset, false]),
-    ]) as Partial<Record<CreditAsset, boolean>>,
+const creditStatus = computed(
+    () =>
+        Object.fromEntries(
+            props.creditSummary.map((item) => [item.asset, item.complete]),
+        ) as Partial<Record<CreditAsset, boolean>>,
 );
 
-const creditRows = computed(() =>
-    CREDIT_ASSETS.filter(
-        (asset) => creditStatus.value[asset.value] !== undefined,
-    ).map((asset) => ({
-        ...asset,
-        credit: props.credits[asset.value] ?? null,
-    })),
-);
+const creditsUrl = (asset?: CreditAsset) =>
+    admin.cards.credits.index(props.card.id).url +
+    (asset ? `#credit-${asset}` : '');
 
 /*
  * Mensajes del duelo efectivos: los de la tarjeta (si son personalizados
@@ -295,10 +285,7 @@ defineOptions({
                 <CreditStatusChips
                     class="mt-2"
                     :status="creditStatus"
-                    :href="
-                        (asset) =>
-                            `${admin.cards.edit(card.id).url}#credit-${asset}`
-                    "
+                    :href="creditsUrl"
                 />
             </template>
 
@@ -646,55 +633,66 @@ defineOptions({
 
                 <!-- Créditos y licencias -->
                 <AdminCard
-                    v-if="creditRows.length"
                     title="Créditos y licencias"
-                    description="Licencia de cada recurso y cómo se atribuye en la app."
+                    description="De dónde salió cada recurso y cómo se atribuye en la app."
                     :icon="Copyright"
                 >
-                    <ul class="divide-y divide-[#E4EEE7]">
+                    <ul
+                        v-if="creditSummary.length"
+                        class="divide-y divide-[#E4EEE7]"
+                    >
                         <li
-                            v-for="row in creditRows"
-                            :key="row.value"
+                            v-for="item in creditSummary"
+                            :key="item.asset"
                             class="flex flex-col gap-1 py-3 first:pt-0 last:pb-0"
                         >
                             <div class="flex flex-wrap items-center gap-2">
                                 <span
                                     class="text-sm font-semibold text-[#244334]"
                                 >
-                                    {{ row.label }}
+                                    {{ item.label }}
                                 </span>
 
                                 <span
-                                    v-if="row.credit"
-                                    class="rounded-lg border border-[#C8DCCF] bg-[#EAF5EE] px-2 py-0.5 text-xs font-semibold text-[#187744]"
-                                >
-                                    {{ row.credit.license_short_name }}
-                                </span>
-
-                                <span
-                                    v-else
+                                    v-if="!item.complete"
                                     class="rounded-lg border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800"
                                 >
                                     Falta licencia
                                 </span>
+
+                                <span
+                                    v-if="item.extra_count"
+                                    class="text-xs text-[#718477]"
+                                >
+                                    +{{ item.extra_count }}
+                                    {{
+                                        item.extra_count === 1
+                                            ? 'crédito más'
+                                            : 'créditos más'
+                                    }}
+                                </span>
                             </div>
 
                             <p
-                                v-if="row.credit"
+                                v-if="item.origin"
                                 class="text-sm text-[#435D4C]"
                             >
-                                {{ row.credit.attribution }}
+                                {{ item.origin }}
                             </p>
                         </li>
                     </ul>
 
+                    <p v-else class="text-sm text-[#718477]">
+                        La tarjeta aún no tiene imágenes ni modelo 3D.
+                    </p>
+
                     <Link
-                        :href="admin.cards.edit(card.id).url"
+                        :href="creditsUrl()"
                         :class="sectionLinkClass"
                         class="mt-4"
                     >
                         <Pencil :size="13" />
-                        Editar licencias
+                        Gestionar créditos
                     </Link>
                 </AdminCard>
 

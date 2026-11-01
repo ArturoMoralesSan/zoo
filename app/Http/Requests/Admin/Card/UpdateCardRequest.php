@@ -74,7 +74,6 @@ class UpdateCardRequest extends FormRequest
 
             ...$this->cardModelRules($this->route('card')),
 
-            ...$this->assetCreditRules($this->route('card')),
 
             'is_active' => [
                 'boolean',
@@ -149,16 +148,8 @@ class UpdateCardRequest extends FormRequest
         ];
     }
 
-    public function messages(): array
-    {
-        return $this->assetCreditMessages();
-    }
-
     public function attributes(): array
     {
-        return [
-            ...$this->cardModelAttributes(),
-            ...$this->assetCreditAttributes(),
-        ];
+        return $this->cardModelAttributes();
     }
 }

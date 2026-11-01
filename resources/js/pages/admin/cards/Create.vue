@@ -32,25 +32,16 @@ import AdminCard from '@/components/admin/AdminCard.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
-import AssetCreditFields from '@/components/admin/cards/AssetCreditFields.vue';
 import CardDesignFields from '@/components/admin/cards/CardDesignFields.vue';
 import CardImageField from '@/components/admin/cards/CardImageField.vue';
 import CardMessagesFields from '@/components/admin/cards/CardMessagesFields.vue';
 import CardPreview from '@/components/admin/cards/CardPreview.vue';
 import CardPreviewPanel from '@/components/admin/cards/CardPreviewPanel.vue';
 import CardStatField from '@/components/admin/cards/CardStatField.vue';
-import CreditStatusChips from '@/components/admin/cards/CreditStatusChips.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import { cardStat } from '@/lib/cardStats';
-import { emptyCredit, hasCredit } from '@/lib/credits/types';
-import type {
-    AssetSourceOption,
-    CreditAsset,
-    CreditForms,
-    License,
-} from '@/lib/credits/types';
 import type { DuelMessages } from '@/lib/duelMessages';
 
 interface Species {
@@ -66,9 +57,6 @@ const props = defineProps<{
     raritySettings: CardRaritySetting[];
     duelMessageDefaults: DuelMessages;
     glbConfig: GlbSizeConfig;
-    licenses: License[];
-    assetSources: AssetSourceOption[];
-    allowRestrictedLicenses: boolean;
 }>();
 
 const form = useForm({
@@ -96,17 +84,7 @@ const form = useForm({
     win_message: null as string | null,
     retry_message: null as string | null,
     locked_message: null as string | null,
-    // Licencia y crédito de cada recurso subido.
-    credits: {
-        artwork: emptyCredit('artwork'),
-        thumbnail: emptyCredit('thumbnail'),
-        model: emptyCredit('model'),
-    } as CreditForms,
 });
-
-const formErrors = computed(
-    () => form.errors as Record<string, string | undefined>,
-);
 
 /*
  * Vista previa de la tarjeta generada a partir de la plantilla.
@@ -161,21 +139,19 @@ const submit = async () => {
 const modelFile = ref<File | null>(null);
 
 /*
- * Estado de la licencia de los recursos elegidos.
+ * Con archivos nuevos la tarjeta se crea inactiva: sus créditos se registran
+ * después, en la sección Créditos, y entonces se activa.
  */
-const creditStatus = computed(() => {
-    const files: Record<CreditAsset, unknown> = {
-        artwork: form.artwork_image,
-        thumbnail: form.thumbnail_image,
-        model: modelFile.value,
-    };
+const hasUploads = computed(() =>
+    Boolean(form.artwork_image || form.thumbnail_image || modelFile.value),
+);
 
-    return Object.fromEntries(
-        (Object.keys(files) as CreditAsset[])
-            .filter((asset) => files[asset])
-            .map((asset) => [asset, hasCredit(form.credits[asset])]),
-    ) as Partial<Record<CreditAsset, boolean>>;
+watch(hasUploads, (uploads) => {
+    if (uploads) {
+        form.is_active = false;
+    }
 });
+
 
 const handleModelFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
@@ -304,11 +280,6 @@ defineOptions({
             :action-icon="ArrowLeft"
             action-label="Volver a tarjetas"
             :action-href="admin.cards.index().url"
-        />
-
-        <CreditStatusChips
-            :status="creditStatus"
-            :href="(asset) => `#credit-${asset}`"
         />
 
         <form
@@ -510,18 +481,6 @@ defineOptions({
                         :error="form.errors.artwork_image"
                     />
 
-                    <AssetCreditFields
-                        v-if="form.artwork_image"
-                        v-model="form.credits.artwork"
-                        class="mt-5"
-                        asset="artwork"
-                        required
-                        :licenses="licenses"
-                        :sources="assetSources"
-                        :allow-restricted="allowRestrictedLicenses"
-                        :errors="formErrors"
-                    />
-
                     <p v-if="form.errors.generated_image" class="form-error mt-3">
                         {{ form.errors.generated_image }}
                     </p>
@@ -626,17 +585,6 @@ defineOptions({
                             label="Miniatura"
                             help="Se muestra en los listados de la colección."
                             :error="form.errors.thumbnail_image"
-                        />
-
-                        <AssetCreditFields
-                            v-if="form.thumbnail_image"
-                            v-model="form.credits.thumbnail"
-                            asset="thumbnail"
-                            required
-                            :licenses="licenses"
-                            :sources="assetSources"
-                            :allow-restricted="allowRestrictedLicenses"
-                            :errors="formErrors"
                         />
                     </div>
                 </AdminCard>
@@ -743,19 +691,6 @@ defineOptions({
 
                         />
 
-                        <!-- Licencia del modelo -->
-                        <AssetCreditFields
-                            v-if="modelFile"
-                            v-model="form.credits.model"
-                            asset="model"
-                            required
-                            :licenses="licenses"
-                            :sources="assetSources"
-                            :allow-restricted="allowRestrictedLicenses"
-                            :errors="formErrors"
-                            :artwork-credit="form.artwork_image ? form.credits.artwork : null"
-                        />
-
                         <!--
                             Vista previa del modelo: en pantallas anchas está
                             en la barra lateral (pestaña "Modelo 3D").
@@ -795,7 +730,14 @@ defineOptions({
                         label="Tarjeta activa"
                         description="La tarjeta estará disponible para mostrarse y utilizarse en el sistema."
                         :error="form.errors.is_active"
+                        :disabled="hasUploads"
                     />
+
+                    <p v-if="hasUploads" class="form-help mt-3">
+                        La tarjeta se creará inactiva. Al guardar se abrirá su
+                        sección Créditos para indicar de dónde salió cada imagen
+                        y el modelo 3D; después podrás activarla.
+                    </p>
                 </AdminCard>
 
                 <!-- Acciones: pie -->

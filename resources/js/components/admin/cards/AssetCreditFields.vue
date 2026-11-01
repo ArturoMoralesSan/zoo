@@ -6,6 +6,7 @@ import {
     Download,
     ExternalLink,
     Info,
+    Sparkles,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
@@ -21,42 +22,38 @@ import type {
     AssetSourceValue,
     CreditAsset,
     CreditForm,
+    CreditRole,
     License,
 } from '@/lib/credits/types';
 import admin from '@/routes/admin';
 
 /*
- * Licencia y crédito de un recurso de la tarjeta (ilustración, miniatura o
- * modelo 3D). Los campos se envían como credits[asset][campo].
+ * Origen, licencia y datos de atribución de un crédito (sección "Créditos"
+ * de la tarjeta). El papel (origen, basado en, incluye) y el recurso los
+ * elige la página.
  */
 const props = withDefaults(
     defineProps<{
         asset: CreditAsset;
+        role: CreditRole;
         licenses: License[];
         sources: AssetSourceOption[];
         allowRestricted?: boolean;
-        // Se sube un archivo nuevo: el crédito es obligatorio.
-        required?: boolean;
         errors: Record<string, string | undefined>;
-        // Solo el modelo: crédito de la ilustración de la misma tarjeta.
-        artworkCredit?: CreditForm | null;
         // Licencia guardada (se muestra aunque ya no sea seleccionable).
         storedLicenseId?: number | null;
     }>(),
     {
         allowRestricted: false,
-        required: false,
-        artworkCredit: null,
         storedLicenseId: null,
     },
 );
 
 const credit = defineModel<CreditForm>({ required: true });
 
-const id = (field: string) => `credits_${props.asset}_${field}`;
+const id = (field: string) => `credit_${field}`;
 
-const error = (field: string) =>
-    props.errors[`credits.${props.asset}.${field}`];
+const error = (field: string) => props.errors[field];
 
 const SOURCE_HINTS: Record<AssetSourceValue, string> = {
     own: 'Creado por el zoológico',
@@ -68,12 +65,24 @@ const SOURCE_HINTS: Record<AssetSourceValue, string> = {
     sketchfab: 'sketchfab.com (CC)',
     poly_pizza: 'poly.pizza (CC0 / CC BY)',
     poly_haven: 'polyhaven.com (CC0)',
+    ai: 'Firefly, ChatGPT, Gemini…',
     other: 'Otro sitio o autor (CC)',
 };
 
 const STOCK_SOURCES: AssetSourceValue[] = ['pexels', 'unsplash', 'pixabay'];
 
 const isOwn = computed(() => credit.value.source_name === 'own');
+
+const isAi = computed(() => credit.value.source_name === 'ai');
+
+// Propio e IA no tienen autor ni página de origen que citar.
+const showsAuthor = computed(() => !isOwn.value && !isAi.value);
+
+const SOURCE_LABELS: Record<CreditRole, string> = {
+    origin: 'Origen',
+    based_on: '¿De dónde es la obra en que se basa?',
+    component: '¿De dónde es el material incluido?',
+};
 
 const license = computed(
     () =>
@@ -82,11 +91,14 @@ const license = computed(
 );
 
 /*
- * Orígenes de este recurso: Pexels, Unsplash y Pixabay solo para imágenes;
- * Meshy solo para modelos.
+ * Orígenes de este recurso y papel: como origen, Pexels, Unsplash y Pixabay
+ * solo para imágenes y Meshy solo para modelos; como "Basado en" o
+ * "Incluye", cualquiera.
  */
 const sourceOptions = computed(() =>
-    props.sources.filter((option) => option.assets.includes(props.asset)),
+    props.sources.filter((option) =>
+        option.assets[props.role].includes(props.asset),
+    ),
 );
 
 const currentSource = computed(
@@ -247,6 +259,9 @@ const preview = computed(() =>
     license.value
         ? buildAttribution({
               ...credit.value,
+              role: props.role,
+              based_on_asset:
+                  props.role === 'origin' ? credit.value.based_on_asset : null,
               source: creditSourceName(credit.value.source_name, props.sources),
               license: license.value,
           })
@@ -254,28 +269,28 @@ const preview = computed(() =>
 );
 
 /*
- * Modelo generado a partir de la ilustración: hereda sus obligaciones.
+ * Revisión de una imagen generada con IA: se guarda solo si se confirman
+ * los tres puntos.
  */
-const artworkLicense = computed(
-    () =>
-        props.licenses.find(
-            (item) => item.id === props.artworkCredit?.license_id,
-        ) ?? null,
-);
+const AI_CHECKS = [
+    'No reproduce personas reales, personajes conocidos, marcas ni logotipos.',
+    'No imita el estilo de un artista vivo en particular.',
+    'Revisé que el animal se vea correcto (la app es educativa).',
+];
 
-const inheritsObligations = computed(
-    () =>
-        credit.value.based_on_artwork &&
-        Boolean(artworkLicense.value?.requires_attribution) &&
-        !artworkLicense.value?.is_proprietary,
+const aiChecks = ref(AI_CHECKS.map(() => credit.value.ai_checked));
+
+watch(
+    aiChecks,
+    (checks) => {
+        credit.value.ai_checked = checks.every(Boolean);
+    },
+    { deep: true },
 );
 </script>
 
 <template>
-    <div
-        :id="`credit-${asset}`"
-        class="scroll-mt-24 rounded-xl border border-[#DCE7DF] bg-[#FCFEFC] p-4 sm:p-5"
-    >
+    <div class="rounded-xl border border-[#DCE7DF] bg-[#FCFEFC] p-4 sm:p-5">
         <div class="mb-4 flex items-start gap-3">
             <div
                 class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E2F3E8] text-[#187744]"
@@ -285,15 +300,11 @@ const inheritsObligations = computed(
 
             <div class="min-w-0">
                 <p class="text-sm font-semibold text-[#244334]">
-                    Licencia y crédito
-                    <span v-if="required" class="form-required">*</span>
+                    Licencia y datos del crédito
                 </p>
                 <p class="text-xs text-[#718477]">
-                    {{
-                        asset === 'model'
-                            ? 'Cómo se creó el modelo 3D y cómo se atribuye en la app. La ilustración se acredita en su propia sección.'
-                            : 'De dónde viene esta imagen y cómo se atribuye en la app.'
-                    }}
+                    De dónde viene, con qué licencia y cómo se atribuye en la
+                    app.
                 </p>
             </div>
         </div>
@@ -302,7 +313,8 @@ const inheritsObligations = computed(
             <!-- Origen -->
             <div class="form-field">
                 <span class="form-label">
-                    Origen <span class="form-required">*</span>
+                    {{ SOURCE_LABELS[role] }}
+                    <span class="form-required">*</span>
                 </span>
 
                 <div
@@ -343,7 +355,7 @@ const inheritsObligations = computed(
             </div>
 
             <!-- URL de origen -->
-            <div v-if="!isOwn" class="form-field">
+            <div v-if="showsAuthor" class="form-field">
                 <label :for="id('source_url')" class="form-label">
                     URL de origen
                     <span v-if="needsAttribution" class="form-required">*</span>
@@ -473,7 +485,7 @@ const inheritsObligations = computed(
                 <AlertTitle>Licencia CompartirIgual</AlertTitle>
                 <AlertDescription class="text-sky-800">
                     <p>
-                        La tarjeta generada con esta imagen es una obra
+                        El recurso de la tarjeta hecho con esta obra es una obra
                         derivada: debe compartirse con la misma licencia ({{
                             license.short_name
                         }}) y con atribución.
@@ -542,6 +554,70 @@ const inheritsObligations = computed(
                 </AlertDescription>
             </Alert>
 
+            <!-- Imagen generada con IA -->
+            <div
+                v-if="isAi"
+                class="space-y-4 rounded-xl border border-violet-200 bg-violet-50/50 p-4"
+            >
+                <p
+                    class="flex items-center gap-2 text-sm font-semibold text-violet-900"
+                >
+                    <Sparkles :size="16" />
+                    Imagen generada con IA
+                </p>
+
+                <p class="text-xs text-violet-900">
+                    Una imagen hecha solo con IA probablemente no tiene derechos
+                    de autor: nadie la posee en exclusiva y otros podrían
+                    copiarla. Los retoques hechos a mano sí se protegen:
+                    descríbelos en "La imagen fue modificada".
+                </p>
+
+                <div class="form-field">
+                    <label :for="id('ai_prompt')" class="form-label">
+                        Indicación (prompt)
+                        <span class="text-xs font-normal text-[#84958A]">
+                            (opcional, solo el panel)
+                        </span>
+                    </label>
+
+                    <textarea
+                        :id="id('ai_prompt')"
+                        v-model="credit.ai_prompt"
+                        rows="3"
+                        class="form-input"
+                        placeholder="Texto usado para generar la imagen; sirve como registro."
+                    />
+
+                    <p v-if="error('ai_prompt')" class="form-error">
+                        {{ error('ai_prompt') }}
+                    </p>
+                </div>
+
+                <fieldset class="form-field">
+                    <legend class="form-label">
+                        Revisión <span class="form-required">*</span>
+                    </legend>
+
+                    <label
+                        v-for="(check, index) in AI_CHECKS"
+                        :key="check"
+                        class="flex cursor-pointer items-start gap-2 text-sm text-[#244334]"
+                    >
+                        <input
+                            v-model="aiChecks[index]"
+                            type="checkbox"
+                            class="mt-0.5 accent-[#187744]"
+                        />
+                        {{ check }}
+                    </label>
+
+                    <p v-if="error('ai_checked')" class="form-error">
+                        {{ error('ai_checked') }}
+                    </p>
+                </fieldset>
+            </div>
+
             <!-- Título, autor -->
             <div class="form-grid">
                 <div class="form-field">
@@ -565,7 +641,7 @@ const inheritsObligations = computed(
                     </p>
                 </div>
 
-                <div v-if="!isOwn" class="form-field">
+                <div v-if="showsAuthor" class="form-field">
                     <label :for="id('author_name')" class="form-label">
                         Autor
                         <span v-if="needsAttribution" class="form-required"
@@ -589,7 +665,7 @@ const inheritsObligations = computed(
                     </p>
                 </div>
 
-                <div v-if="!isOwn" class="form-field">
+                <div v-if="showsAuthor" class="form-field">
                     <label :for="id('author_url')" class="form-label">
                         URL del autor
                         <span class="text-xs font-normal text-[#84958A]">
@@ -643,9 +719,11 @@ const inheritsObligations = computed(
                         class="accent-[#187744]"
                     />
                     {{
-                        asset === 'model'
-                            ? 'El modelo fue modificado'
-                            : 'La imagen fue modificada'
+                        role !== 'origin'
+                            ? 'La obra se modificó al usarla'
+                            : asset === 'model'
+                              ? 'El modelo fue modificado'
+                              : 'La imagen fue modificada'
                     }}
                 </label>
 
@@ -664,50 +742,6 @@ const inheritsObligations = computed(
 
                 <p v-if="error('modification_note')" class="form-error">
                     {{ error('modification_note') }}
-                </p>
-            </div>
-
-            <!-- Generado a partir de la ilustración (solo el modelo) -->
-            <div v-if="asset === 'model'" class="form-field">
-                <label
-                    class="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#244334]"
-                >
-                    <input
-                        v-model="credit.based_on_artwork"
-                        type="checkbox"
-                        class="accent-[#187744]"
-                    />
-                    Se generó a partir de la ilustración de esta tarjeta
-                </label>
-
-                <p class="form-help">
-                    La ilustración ya tiene su propio crédito. Aquí solo se
-                    indica que el modelo se basa en ella: su crédito dirá "a
-                    partir de la ilustración de la tarjeta".
-                </p>
-
-                <p
-                    v-if="credit.based_on_artwork && !artworkLicense"
-                    class="form-error"
-                >
-                    Registra primero la licencia de la ilustración.
-                </p>
-
-                <p
-                    v-if="inheritsObligations"
-                    class="mt-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-800"
-                >
-                    La ilustración es {{ artworkLicense?.short_name }}: el
-                    modelo es una obra derivada de ella y también debe respetar
-                    esa licencia{{
-                        artworkLicense?.share_alike
-                            ? ' (atribución y compartir con la misma licencia)'
-                            : ' (atribución)'
-                    }}.
-                </p>
-
-                <p v-if="error('based_on_artwork')" class="form-error">
-                    {{ error('based_on_artwork') }}
                 </p>
             </div>
 

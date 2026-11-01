@@ -24,6 +24,29 @@ enum CreditAsset: string
     }
 
     /**
+     * Con artículo, para frases: "la ilustración", "el modelo 3D".
+     */
+    public function withArticle(): string
+    {
+        return match ($this) {
+            self::Artwork => 'la ilustración',
+            self::Thumbnail => 'la miniatura',
+            self::Model => 'el modelo 3D',
+        };
+    }
+
+    /**
+     * "de la ilustración", "del modelo 3D".
+     */
+    public function fromPhrase(): string
+    {
+        return match ($this) {
+            self::Model => 'del modelo 3D',
+            default => 'de '.$this->withArticle(),
+        };
+    }
+
+    /**
      * Columna de la tarjeta con el archivo del recurso.
      */
     public function column(): string

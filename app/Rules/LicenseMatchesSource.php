@@ -34,6 +34,7 @@ class LicenseMatchesSource implements ValidationRule
             AssetSource::Sketchfab => 'Los modelos de Sketchfab usan la licencia Creative Commons que eligió su autor.',
             AssetSource::PolyPizza => 'Los modelos de Poly Pizza son CC0 o CC BY: revisa la licencia en la página del modelo.',
             AssetSource::PolyHaven => 'Los modelos de Poly Haven son CC0.',
+            AssetSource::Ai => 'Las imágenes generadas con IA usan los términos de la herramienta (Adobe Firefly, ChatGPT, Gemini, Midjourney o Stable Diffusion).',
             AssetSource::WikimediaCommons => 'Wikimedia Commons solo aloja archivos con licencias libres: CC0, dominio público, CC BY, CC BY-SA o GFDL.',
             AssetSource::Other => 'Con el origen "Otro" elige una licencia Creative Commons o de dominio público. Las licencias de Pexels, Unsplash, Pixabay y Meshy solo se usan con su origen.',
         });

@@ -4,9 +4,11 @@ namespace App\Models;
 
 use App\Enums\AssetSource;
 use App\Enums\CreditAsset;
+use App\Enums\CreditRole;
 use App\Observers\CreditsCacheObserver;
 use App\Services\Licensing\AttributionBuilder;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,13 +17,18 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 /**
  * Crédito de un recurso (ilustración, miniatura o modelo 3D) de una tarjeta.
  *
+ * Un recurso tiene un crédito de origen y, si hace falta, créditos de las
+ * obras en que se basa y del material de terceros que incluye.
+ *
  * @property-read string $attribution
  */
 #[ObservedBy(CreditsCacheObserver::class)]
-class AssetCredit extends Model
+class Credit extends Model
 {
     protected $fillable = [
         'asset',
+        'role',
+        'sort_order',
         'license_id',
         'title',
         'author_name',
@@ -32,7 +39,9 @@ class AssetCredit extends Model
         'modified',
         'modification_note',
         'attribution_override',
-        'derived_from_id',
+        'based_on_asset',
+        'ai_prompt',
+        'ai_checked_at',
         'notes',
     ];
 
@@ -40,8 +49,12 @@ class AssetCredit extends Model
     {
         return [
             'asset' => CreditAsset::class,
+            'role' => CreditRole::class,
             'source_name' => AssetSource::class,
+            'based_on_asset' => CreditAsset::class,
+            'sort_order' => 'integer',
             'acquired_at' => 'date:Y-m-d',
+            'ai_checked_at' => 'datetime',
             'modified' => 'boolean',
         ];
     }
@@ -56,17 +69,26 @@ class AssetCredit extends Model
         return $this->belongsTo(License::class);
     }
 
-    public function derivedFrom(): BelongsTo
+    /**
+     * Orden de los listados: recurso, papel y posición.
+     */
+    public function scopeOrdered(Builder $query): Builder
     {
-        return $this->belongsTo(self::class, 'derived_from_id');
+        return $query->orderBy('sort_order')->orderBy('id');
     }
 
     /**
-     * Modelo 3D generado a partir de la ilustración de la misma tarjeta.
+     * Clave para ordenar una colección: ilustración → miniatura → modelo,
+     * y dentro de cada recurso origen → basado en → incluye.
      */
-    public function isBasedOnArtwork(): bool
+    public function sortKey(): string
     {
-        return $this->asset === CreditAsset::Model && $this->derived_from_id !== null;
+        return sprintf('%d-%d-%05d-%010d', $this->asset->order(), $this->role->order(), $this->sort_order, $this->id);
+    }
+
+    public function isAiGenerated(): bool
+    {
+        return $this->source_name === AssetSource::Ai;
     }
 
     /**
@@ -75,13 +97,14 @@ class AssetCredit extends Model
     protected function attribution(): Attribute
     {
         return Attribute::get(fn (): string => AttributionBuilder::build([
+            'role' => $this->role?->value,
             'title' => $this->title,
             'author_name' => $this->author_name,
             'source' => $this->source_name?->creditName(),
             'modified' => $this->modified,
             'modification_note' => $this->modification_note,
             'attribution_override' => $this->attribution_override,
-            'based_on_artwork' => $this->isBasedOnArtwork(),
+            'based_on_asset' => $this->based_on_asset?->value,
             'license' => $this->license?->only([
                 'slug',
                 'short_name',

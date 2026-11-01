@@ -11,7 +11,11 @@ import { ref } from 'vue';
 
 import DataTable from '@/components/admin/DataTable.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
-import type { AssetSourceOption, CreditAsset } from '@/lib/credits/types';
+import type {
+    AssetSourceOption,
+    CreditAsset,
+    CreditRole,
+} from '@/lib/credits/types';
 import admin from '@/routes/admin';
 
 interface CreditRow {
@@ -21,6 +25,8 @@ interface CreditRow {
     asset_label: string;
     preview_url: string | null;
     missing: boolean;
+    role: CreditRole | null;
+    role_label: string | null;
     source: string | null;
     source_label: string | null;
     source_url: string | null;
@@ -55,11 +61,13 @@ const props = defineProps<{
         source?: string | null;
         license?: string | null;
         asset?: string | null;
+        role?: string | null;
         missing?: string | null;
     };
     licenses: { id: number; slug: string; short_name: string }[];
     assetSources: AssetSourceOption[];
     assets: { value: CreditAsset; label: string }[];
+    roles: { value: CreditRole; label: string }[];
     missingCount: number;
 }>();
 
@@ -67,6 +75,7 @@ const search = ref(props.filters.search ?? '');
 const source = ref(props.filters.source ?? '');
 const license = ref(props.filters.license ?? '');
 const asset = ref(props.filters.asset ?? '');
+const role = ref(props.filters.role ?? '');
 const missing = ref(Boolean(props.filters.missing));
 
 const hasFilters = (): boolean =>
@@ -75,6 +84,7 @@ const hasFilters = (): boolean =>
         source.value ||
         license.value ||
         asset.value ||
+        role.value ||
         missing.value,
     );
 
@@ -86,6 +96,7 @@ const applyFilters = (): void => {
             source: source.value || undefined,
             license: license.value || undefined,
             asset: asset.value || undefined,
+            role: role.value || undefined,
             missing: missing.value ? 1 : undefined,
         },
         {
@@ -101,6 +112,7 @@ const clearFilters = (): void => {
     source.value = '';
     license.value = '';
     asset.value = '';
+    role.value = '';
     missing.value = false;
     applyFilters();
 };
@@ -114,6 +126,15 @@ const licenseLabel = (slug: string): string =>
 const assetLabel = (value: string): string =>
     props.assets.find((option) => option.value === value)?.label ?? value;
 
+const roleLabel = (value: string): string =>
+    props.roles.find((option) => option.value === value)?.label ?? value;
+
+const ROLE_CLASSES: Record<CreditRole, string> = {
+    origin: 'border-[#C8DCCF] bg-[#EAF5EE] text-[#187744]',
+    based_on: 'border-sky-200 bg-sky-50 text-sky-800',
+    component: 'border-violet-200 bg-violet-50 text-violet-800',
+};
+
 const selectClass =
     'h-[42px] w-full min-w-0 rounded-lg border border-[#bfcfc6] bg-white px-3 text-sm text-[#244334] outline-none transition focus:border-[#187744] focus:ring-2 focus:ring-[#187744]/10 sm:w-auto sm:min-w-[150px]';
 
@@ -123,6 +144,7 @@ const headClass =
 const columns = [
     'Tarjeta',
     'Recurso',
+    'Rol',
     'Origen',
     'Licencia',
     'Atribución',
@@ -236,6 +258,22 @@ defineOptions({
                         </option>
                     </select>
 
+                    <select
+                        v-model="role"
+                        aria-label="Filtrar por rol"
+                        :class="selectClass"
+                        @change="applyFilters"
+                    >
+                        <option value="">Todos los roles</option>
+                        <option
+                            v-for="option in roles"
+                            :key="option.value"
+                            :value="option.value"
+                        >
+                            {{ option.label }}
+                        </option>
+                    </select>
+
                     <label
                         class="inline-flex h-[42px] cursor-pointer items-center gap-2 rounded-lg border border-[#bfcfc6] bg-white px-3 text-sm text-[#244334]"
                     >
@@ -274,6 +312,12 @@ defineOptions({
                     class="rounded-full border border-[#dce7df] bg-[#f2f7f4] px-3 py-1.5 text-xs text-[#244334]"
                 >
                     Recurso: {{ assetLabel(asset) }}
+                </span>
+                <span
+                    v-if="role"
+                    class="rounded-full border border-[#dce7df] bg-[#f2f7f4] px-3 py-1.5 text-xs text-[#244334]"
+                >
+                    Rol: {{ roleLabel(role) }}
                 </span>
                 <span
                     v-if="missing"
@@ -347,6 +391,17 @@ defineOptions({
                         class="px-5 py-4 text-sm whitespace-nowrap text-[#435d4c] sm:px-6"
                     >
                         {{ row.asset_label }}
+                    </td>
+
+                    <!-- Rol -->
+                    <td class="px-5 py-4 whitespace-nowrap sm:px-6">
+                        <span
+                            v-if="row.role"
+                            class="rounded-md border px-2 py-0.5 text-[11px] font-semibold"
+                            :class="ROLE_CLASSES[row.role]"
+                        >
+                            {{ row.role_label }}
+                        </span>
                     </td>
 
                     <!-- Origen -->

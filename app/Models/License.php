@@ -45,7 +45,7 @@ class License extends Model
 
     public function credits(): HasMany
     {
-        return $this->hasMany(AssetCredit::class);
+        return $this->hasMany(Credit::class);
     }
 
     public function scopeOrdered(Builder $query): Builder

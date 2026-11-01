@@ -2,17 +2,17 @@
 
 namespace App\Http\Resources\Credits;
 
-use App\Models\AssetCredit;
+use App\Models\Credit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Fila de la pantalla de créditos.
  *
- * Nunca incluye notas, fecha de obtención, rutas de archivos ni el tipo del
- * recurso dueño.
+ * Nunca incluye notas, fecha de obtención, indicaciones ni revisión de la IA,
+ * rutas de archivos ni el tipo del recurso dueño.
  *
- * @mixin AssetCredit
+ * @mixin Credit
  */
 class CreditResource extends JsonResource
 {
@@ -25,6 +25,8 @@ class CreditResource extends JsonResource
             'id' => $this->id,
             'asset' => $this->asset->value,
             'asset_label' => $this->asset->label(),
+            'role' => $this->role->value,
+            'role_label' => $this->role->label(),
             'title' => $this->title ?: null,
             'author' => self::objectOrNull([
                 'name' => $this->author_name ?: null,
@@ -45,10 +47,11 @@ class CreditResource extends JsonResource
             'attribution' => $this->attribution,
 
             /*
-             * Modelo generado a partir de la ilustración de la tarjeta (que
-             * tiene su propia fila). La línea `attribution` ya lo dice.
+             * Otro recurso de la tarjeta del que sale este (render del modelo,
+             * modelo de la ilustración). Ese recurso tiene sus propias filas;
+             * la línea `attribution` ya lo dice.
              */
-            'based_on_artwork' => $this->isBasedOnArtwork(),
+            'based_on_asset' => $this->based_on_asset?->value,
         ];
     }
 

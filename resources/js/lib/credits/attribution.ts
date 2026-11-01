@@ -4,10 +4,11 @@
  * Copia de app/Services/Licensing/AttributionBuilder.php para la vista previa
  * del panel; ambos se prueban con tests/Fixtures/credits/attribution-cases.json.
  *
- *   “Título” de Autor, vía Origen, LICENCIA, con cambios: nota
+ *   [Basado en: | Incluye: ]“Título” de Autor, vía Origen, LICENCIA, con cambios: nota
  *
- * Un modelo generado a partir de la ilustración de la tarjeta lo dice en la
- * misma línea; el crédito de la ilustración es su propia fila.
+ * Un recurso hecho a partir de otro de la misma tarjeta lo dice en la misma
+ * línea ("a partir del modelo 3D de la tarjeta"); el crédito del otro recurso
+ * es su propia fila.
  */
 
 import type { AssetSourceValue, AssetSourceOption } from './types';
@@ -20,6 +21,7 @@ export interface AttributionLicense {
 }
 
 export interface AttributionInput {
+    role?: string | null;
     title?: string | null;
     author_name?: string | null;
     // Nombre del origen para el crédito (null si no aporta).
@@ -27,7 +29,7 @@ export interface AttributionInput {
     modified?: boolean | null;
     modification_note?: string | null;
     attribution_override?: string | null;
-    based_on_artwork?: boolean | null;
+    based_on_asset?: string | null;
     license?: AttributionLicense | null;
 }
 
@@ -38,9 +40,20 @@ const PROPRIETARY_LABELS: Record<string, string> = {
 
 const PRIVATE_LICENSE_LABEL = 'licencia privada';
 
-export const BASIS = 'a partir de la ilustración de la tarjeta';
+// "A partir de…" según el recurso de la tarjeta en que se basa.
+export const BASIS: Record<string, string> = {
+    artwork: 'a partir de la ilustración de la tarjeta',
+    thumbnail: 'a partir de la miniatura de la tarjeta',
+    model: 'a partir del modelo 3D de la tarjeta',
+};
 
-// Marcador de las plantillas donde va BASIS (con un espacio antes).
+// Prefijo por papel del crédito (el origen no lleva).
+const ROLE_PREFIXES: Record<string, string> = {
+    based_on: 'Basado en: ',
+    component: 'Incluye: ',
+};
+
+// Marcador de las plantillas donde va el texto de BASIS (con un espacio antes).
 const BASIS_PLACEHOLDER = '{basis}';
 
 const clean = (value: string | null | undefined): string =>
@@ -54,7 +67,7 @@ const join = (parts: string[]): string =>
  * propia", "a partir de…"); los nombres de autor no se tocan.
  */
 const FIXED_STARTS = [
-    BASIS,
+    ...Object.values(BASIS),
     ...Object.values(PROPRIETARY_LABELS),
     PRIVATE_LICENSE_LABEL,
 ];
@@ -64,31 +77,26 @@ const capitalize = (line: string): string =>
         ? line.charAt(0).toUpperCase() + line.slice(1)
         : line;
 
-const fillTemplate = (template: string, basedOnArtwork: boolean): string => {
+const fillTemplate = (template: string, basis: string): string => {
     if (template.includes(BASIS_PLACEHOLDER)) {
         return template.replace(
             BASIS_PLACEHOLDER,
-            basedOnArtwork ? ` ${BASIS}` : '',
+            basis !== '' ? ` ${basis}` : '',
         );
     }
 
-    return basedOnArtwork ? `${template} (${BASIS})` : template;
+    return basis !== '' ? `${template} (${basis})` : template;
 };
 
-export function buildAttribution(credit: AttributionInput): string {
-    const override = clean(credit.attribution_override);
-
-    if (override !== '') {
-        return override;
-    }
-
+// Línea sin el prefijo del papel.
+function line(credit: AttributionInput): string {
     const license = credit.license ?? {};
-    const basedOnArtwork = Boolean(credit.based_on_artwork);
+    const basis = BASIS[credit.based_on_asset ?? ''] ?? '';
 
     const template = clean(license.attribution_template);
 
     if (template !== '') {
-        return fillTemplate(template, basedOnArtwork);
+        return fillTemplate(template, basis);
     }
 
     const title = clean(credit.title);
@@ -101,21 +109,17 @@ export function buildAttribution(credit: AttributionInput): string {
         work = author !== '' ? `“${title}” de ${author}` : `“${title}”`;
     }
 
-    const parts = [
-        work,
-        source !== '' ? `vía ${source}` : '',
-        basedOnArtwork ? BASIS : '',
-    ];
+    const parts = [work, source !== '' ? `vía ${source}` : '', basis];
 
     if (license.is_proprietary) {
         const label =
             PROPRIETARY_LABELS[license.slug ?? ''] ?? PRIVATE_LICENSE_LABEL;
 
-        const line = join(parts);
+        const joined = join(parts);
 
-        return line === ''
+        return joined === ''
             ? capitalize(label)
-            : `${capitalize(line)} – ${label}`;
+            : `${capitalize(joined)} – ${label}`;
     }
 
     const note = clean(credit.modification_note);
@@ -129,14 +133,25 @@ export function buildAttribution(credit: AttributionInput): string {
     return capitalize(join(parts));
 }
 
+export function buildAttribution(credit: AttributionInput): string {
+    const override = clean(credit.attribution_override);
+
+    if (override !== '') {
+        return override;
+    }
+
+    return (ROLE_PREFIXES[credit.role ?? ''] ?? '') + line(credit);
+}
+
 /**
- * Nombre del origen en el crédito ("vía …"): propio y "otro" no aportan nada.
+ * Nombre del origen en el crédito ("vía …"): propio, "otro" e IA no aportan
+ * nada (en la IA lo dice la licencia).
  */
 export function creditSourceName(
     source: AssetSourceValue | null,
     options: AssetSourceOption[],
 ): string | null {
-    if (!source || source === 'own' || source === 'other') {
+    if (!source || source === 'own' || source === 'other' || source === 'ai') {
         return null;
     }
 

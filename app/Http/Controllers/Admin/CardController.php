@@ -2,17 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\AssetSource;
 use App\Enums\CreditAsset;
 use App\Exceptions\InvalidGlbException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Card\StoreCardRequest;
 use App\Http\Requests\Admin\Card\UpdateCardRequest;
-use App\Models\AssetCredit;
 use App\Models\Card;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
-use App\Models\License;
 use App\Models\Species;
 use App\Services\GlbInspection;
 use App\Services\GlbInspector;
@@ -62,7 +59,7 @@ class CardController extends Controller
             ->with([
                 'species:id,common_name,scientific_name',
                 'raritySetting',
-                'credits:id,creditable_type,creditable_id,asset',
+                'credits:id,creditable_type,creditable_id,asset,role,based_on_asset,sort_order',
             ])
             /*
              * Contenido para duelos que se muestra en cada tarjeta.
@@ -182,9 +179,7 @@ class CardController extends Controller
 
                 'duelMessageDefaults' => $this->duelMessageDefaults(),
 
-                'credits' => $this->creditsForForm($card),
-
-                'missingCredits' => $this->missingCreditValues($card),
+                'creditSummary' => $this->creditSummary($card),
             ]
         );
     }
@@ -202,8 +197,6 @@ class CardController extends Controller
                 'duelMessageDefaults' => $this->duelMessageDefaults(),
 
                 'glbConfig' => $this->glbConfig(),
-
-                ...$this->licensingProps(),
 
                 'species' => Species::query()
                     ->where('is_active', true)
@@ -231,13 +224,15 @@ class CardController extends Controller
         $inspection = $this->inspectModel($request);
 
         $written = [];
+        $card = null;
 
         try {
             DB::transaction(function () use (
                 $request,
                 $validated,
                 $inspection,
-                &$written
+                &$written,
+                &$card
             ) {
                 $card = Card::create(
                     $this->cardAttributes($request, $validated)
@@ -246,13 +241,21 @@ class CardController extends Controller
                 $this->storeCardFiles($request, $card);
 
                 $this->storeModelFiles($request, $card, $inspection, $written);
-
-                $this->saveCredits($validated, $card);
             });
         } catch (Throwable $exception) {
             $this->deleteStoredFiles($written);
 
             throw $exception;
+        }
+
+        /*
+         * Con archivos, el siguiente paso es registrar sus créditos (sin ellos
+         * la tarjeta no se puede activar).
+         */
+        if ($card->missingCredits()) {
+            $this->flashSaved('Tarjeta creada. Registra los créditos de sus archivos para poder activarla.', $inspection);
+
+            return redirect()->route('admin.cards.credits.index', $card);
         }
 
         $this->flashSaved('Tarjeta creada correctamente.', $inspection);
@@ -288,9 +291,7 @@ class CardController extends Controller
                     ? route('admin.cards.model.original', $card)
                     : null,
 
-                ...$this->licensingProps(),
-
-                'credits' => $this->creditsForForm($card),
+                'creditSummary' => $this->creditSummary($card),
 
                 'species' => Species::query()
                     ->where('is_active', true)
@@ -315,6 +316,16 @@ class CardController extends Controller
 
         $inspection = $this->inspectModel($request);
 
+        /*
+         * Archivos nuevos en recursos que ya tienen créditos: los créditos se
+         * conservan, pero hay que revisarlos.
+         */
+        $replaced = array_filter(
+            CreditAsset::cases(),
+            fn (CreditAsset $asset) => $card->credits()->where('asset', $asset->value)->exists()
+                && $request->hasFile($asset === CreditAsset::Model ? 'model_original_file' : $asset->column())
+        );
+
         $written = [];
         $obsolete = [];
 
@@ -334,8 +345,6 @@ class CardController extends Controller
                 $this->storeCardFiles($request, $card);
 
                 $obsolete = $this->storeModelFiles($request, $card, $inspection, $written);
-
-                $this->saveCredits($validated, $card);
             });
         } catch (Throwable $exception) {
             $this->deleteStoredFiles($written);
@@ -348,7 +357,12 @@ class CardController extends Controller
          */
         $this->deleteStoredFiles($obsolete);
 
-        $this->flashSaved('Tarjeta actualizada correctamente.', $inspection);
+        $this->flashSaved(
+            'Tarjeta actualizada correctamente.'.($replaced
+                ? ' El archivo cambió: revisa los créditos de '.implode(', ', array_map(fn (CreditAsset $asset) => mb_strtolower($asset->label()), $replaced)).'.'
+                : ''),
+            $inspection
+        );
 
         return redirect()->route('admin.cards.index');
     }
@@ -431,7 +445,7 @@ class CardController extends Controller
                 $field => null,
             ]);
 
-            $card->credits()->where('asset', $image)->delete();
+            $this->deleteAssetCredits($card, CreditAsset::from($image));
         });
 
         return $this->backWithToast(
@@ -461,7 +475,7 @@ class CardController extends Controller
         DB::transaction(function () use ($card) {
             $card->update(self::EMPTY_MODEL);
 
-            $card->credits()->where('asset', CreditAsset::Model->value)->delete();
+            $this->deleteAssetCredits($card, CreditAsset::Model);
         });
 
         $this->deleteStoredFiles($obsolete);
@@ -621,100 +635,46 @@ class CardController extends Controller
     }
 
     /**
-     * Guardar los créditos enviados de los recursos que tiene la tarjeta.
-     *
-     * Primero la ilustración, para que el modelo pueda enlazarse a su crédito.
+     * Eliminar los créditos de un recurso y quitar las referencias a él
+     * (p. ej. la miniatura que era un render del modelo eliminado).
      */
-    private function saveCredits(
-        array $validated,
-        Card $card
-    ): void {
-        foreach (CreditAsset::cases() as $asset) {
-            $data = $validated['credits'][$asset->value] ?? null;
+    private function deleteAssetCredits(Card $card, CreditAsset $asset): void
+    {
+        $card->credits()->where('asset', $asset->value)->delete();
 
-            if (! $data || blank($card->{$asset->column()})) {
-                continue;
-            }
-
-            $license = License::findOrFail($data['license_id']);
-
-            $card->credits()->updateOrCreate(
-                ['asset' => $asset->value],
-                [
-                    'license_id' => $license->id,
-                    'source_name' => $data['source_name'],
-                    'source_url' => $data['source_url'] ?? null,
-                    'title' => $data['title'] ?? null,
-                    'author_name' => $data['author_name'] ?? null,
-                    'author_url' => $data['author_url'] ?? null,
-                    'acquired_at' => $data['acquired_at'] ?? null,
-                    'modified' => (bool) ($data['modified'] ?? false),
-                    'modification_note' => $data['modification_note'] ?? null,
-                    'attribution_override' => $data['attribution_override'] ?? null,
-                    'notes' => $data['notes'] ?? null,
-
-                    // Modelo generado a partir de la ilustración de la tarjeta.
-                    'derived_from_id' => $asset === CreditAsset::Model && ($data['based_on_artwork'] ?? false)
-                        ? $card->credits()->where('asset', CreditAsset::Artwork->value)->value('id')
-                        : null,
-                ]
-            );
-        }
+        $card->credits()
+            ->where('based_on_asset', $asset->value)
+            ->update(['based_on_asset' => null]);
 
         $card->unsetRelation('credits');
     }
 
     /**
-     * Catálogo de licencias y opciones de los formularios de créditos.
+     * Estado de los créditos de cada recurso con archivo, para el formulario
+     * y el detalle de la tarjeta (la gestión está en su sección Créditos).
      *
-     * @return array<string, mixed>
+     * @return array<int, array<string, mixed>>
      */
-    private function licensingProps(): array
+    private function creditSummary(Card $card): array
     {
-        $licenses = License::query()->ordered()->get();
+        $card->load('credits.license');
 
-        return [
-            'licenses' => $licenses->map->toFormOption(),
-
-            // Recursos y licencias que admite cada origen.
-            'assetSources' => AssetSource::formOptions($licenses),
-
-            'allowRestrictedLicenses' => (bool) config('licensing.allow_restricted'),
-        ];
-    }
-
-    /**
-     * Créditos guardados de la tarjeta, por recurso.
-     *
-     * @return array<string, array<string, mixed>>
-     */
-    private function creditsForForm(Card $card): array
-    {
-        return $card->credits()
-            ->with('license')
-            ->get()
-            ->mapWithKeys(fn (AssetCredit $credit) => [
-                $credit->asset->value => [
-                    ...$credit->only([
-                        'id',
-                        'license_id',
-                        'title',
-                        'author_name',
-                        'author_url',
-                        'source_url',
-                        'modified',
-                        'modification_note',
-                        'attribution_override',
-                        'notes',
-                    ]),
-                    'source_name' => $credit->source_name?->value,
-                    'acquired_at' => $credit->acquired_at?->format('Y-m-d'),
-                    'based_on_artwork' => $credit->isBasedOnArtwork(),
-                    'license_short_name' => $credit->license->short_name,
-                    'attribution' => $credit->attribution,
-                ],
+        $summary = collect(CreditAsset::cases())
+            ->filter(fn (CreditAsset $asset) => $card->hasAsset($asset))
+            ->map(fn (CreditAsset $asset) => [
+                'asset' => $asset->value,
+                'label' => $asset->label(),
+                'complete' => $card->hasCompleteCredits($asset),
+                'origin' => $card->credit($asset)?->attribution,
+                'extra_count' => $card->creditsFor($asset)->count() - ($card->credit($asset) ? 1 : 0),
             ])
+            ->values()
             ->all();
+
+        // La tarjeta se envía aparte: sin sus créditos.
+        $card->unsetRelation('credits');
+
+        return $summary;
     }
 
     /**

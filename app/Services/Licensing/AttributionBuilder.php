@@ -2,20 +2,23 @@
 
 namespace App\Services\Licensing;
 
+use Closure;
+
 /**
  * Línea de crédito (TASL: título, autor, origen, licencia) lista para mostrar.
  *
  * El mismo algoritmo está en resources/js/lib/credits/attribution.ts (vista
  * previa del panel); ambos se prueban con tests/Fixtures/credits/attribution-cases.json.
  *
- *   “Título” de Autor, vía Origen, LICENCIA, con cambios: nota
+ *   [Basado en: | Incluye: ]“Título” de Autor, vía Origen, LICENCIA, con cambios: nota
  *
- * - attribution_override siempre gana; después, la plantilla de la licencia.
+ * - attribution_override siempre gana (tal cual, sin prefijo); después, la
+ *   plantilla de la licencia (Meshy, herramientas de IA).
  * - Las partes sin datos se omiten (sin "Desconocido" ni separadores dobles).
  * - Licencias propias o privadas: “Título” de Autor – obra propia.
- * - Un modelo generado a partir de la ilustración de la tarjeta lo dice en
- *   la misma línea ("a partir de la ilustración de la tarjeta"); el crédito
- *   de la ilustración es su propia fila.
+ * - Un recurso hecho a partir de otro de la misma tarjeta lo dice en la misma
+ *   línea ("a partir del modelo 3D de la tarjeta"); el crédito del otro
+ *   recurso es su propia fila.
  */
 class AttributionBuilder
 {
@@ -29,22 +32,38 @@ class AttributionBuilder
 
     public const PRIVATE_LICENSE_LABEL = 'licencia privada';
 
-    public const BASIS = 'a partir de la ilustración de la tarjeta';
+    /**
+     * "A partir de…" según el recurso de la tarjeta en que se basa.
+     */
+    public const BASIS = [
+        'artwork' => 'a partir de la ilustración de la tarjeta',
+        'thumbnail' => 'a partir de la miniatura de la tarjeta',
+        'model' => 'a partir del modelo 3D de la tarjeta',
+    ];
 
     /**
-     * Marcador de las plantillas donde va BASIS (con un espacio antes).
+     * Prefijo por papel del crédito (el origen no lleva).
+     */
+    public const ROLE_PREFIXES = [
+        'based_on' => 'Basado en: ',
+        'component' => 'Incluye: ',
+    ];
+
+    /**
+     * Marcador de las plantillas donde va el texto de BASIS (con un espacio antes).
      */
     public const BASIS_PLACEHOLDER = '{basis}';
 
     /**
      * @param  array{
+     *     role?: ?string,
      *     title?: ?string,
      *     author_name?: ?string,
      *     source?: ?string,
      *     modified?: ?bool,
      *     modification_note?: ?string,
      *     attribution_override?: ?string,
-     *     based_on_artwork?: ?bool,
+     *     based_on_asset?: ?string,
      *     license?: ?array{slug?: ?string, short_name?: ?string, is_proprietary?: ?bool, attribution_template?: ?string},
      * }  $credit  `source` es el nombre del origen para el crédito (null si no aporta).
      */
@@ -58,13 +77,25 @@ class AttributionBuilder
             return $override;
         }
 
+        $prefix = self::ROLE_PREFIXES[$credit['role'] ?? ''] ?? '';
+
+        return $prefix.self::line($credit, $clean);
+    }
+
+    /**
+     * Línea sin el prefijo del papel.
+     *
+     * @param  array<string, mixed>  $credit
+     */
+    private static function line(array $credit, Closure $clean): string
+    {
         $license = $credit['license'] ?? [];
-        $basedOnArtwork = (bool) ($credit['based_on_artwork'] ?? false);
+        $basis = self::BASIS[$credit['based_on_asset'] ?? ''] ?? '';
 
         $template = $clean($license['attribution_template'] ?? null);
 
         if ($template !== '') {
-            return self::fillTemplate($template, $basedOnArtwork);
+            return self::fillTemplate($template, $basis);
         }
 
         $title = $clean($credit['title'] ?? null);
@@ -80,7 +111,7 @@ class AttributionBuilder
         $parts = [
             $work,
             $source !== '' ? "vía {$source}" : '',
-            $basedOnArtwork ? self::BASIS : '',
+            $basis,
         ];
 
         if ($license['is_proprietary'] ?? false) {
@@ -104,19 +135,19 @@ class AttributionBuilder
     }
 
     /**
-     * Plantilla de la licencia con el origen del modelo, si aplica.
+     * Plantilla de la licencia con el recurso en que se basa, si aplica.
      */
-    private static function fillTemplate(string $template, bool $basedOnArtwork): string
+    private static function fillTemplate(string $template, string $basis): string
     {
         if (str_contains($template, self::BASIS_PLACEHOLDER)) {
             return str_replace(
                 self::BASIS_PLACEHOLDER,
-                $basedOnArtwork ? ' '.self::BASIS : '',
+                $basis !== '' ? ' '.$basis : '',
                 $template
             );
         }
 
-        return $basedOnArtwork ? "{$template} (".self::BASIS.')' : $template;
+        return $basis !== '' ? "{$template} ({$basis})" : $template;
     }
 
     /**
@@ -135,7 +166,7 @@ class AttributionBuilder
      */
     private static function capitalize(string $line): string
     {
-        $fixed = [self::BASIS, ...array_values(self::PROPRIETARY_LABELS), self::PRIVATE_LICENSE_LABEL];
+        $fixed = [...array_values(self::BASIS), ...array_values(self::PROPRIETARY_LABELS), self::PRIVATE_LICENSE_LABEL];
 
         foreach ($fixed as $text) {
             if (str_starts_with($line, $text)) {
