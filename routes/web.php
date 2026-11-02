@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\CardRaritySettingController;
 use App\Http\Controllers\Admin\CreditController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DonationController;
+use App\Http\Controllers\Admin\CardCaptureController;
+use App\Http\Controllers\Admin\CardQuizStateController;
 use App\Http\Controllers\Admin\DuelMessageSettingController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\LevelController;
@@ -318,6 +320,18 @@ Route::middleware(['auth', 'verified'])
             [DuelMessageSettingController::class, 'update']
         )->middleware('permission:cards.edit')
             ->name('cards.duel-messages.update');
+
+        Route::delete(
+            'cards/captures/{capture}',
+            [CardCaptureController::class, 'destroy']
+        )->middleware('permission:cards.delete')
+            ->name('cards.captures.destroy');
+
+        Route::delete(
+            'cards/quiz-states/{state}',
+            [CardQuizStateController::class, 'destroy']
+        )->middleware('permission:cards.edit')
+            ->name('cards.quiz-states.destroy');
 
         /*
          * middlewareFor asigna el permiso por acción; ->middleware([...])

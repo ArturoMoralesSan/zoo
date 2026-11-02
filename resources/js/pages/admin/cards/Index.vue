@@ -11,9 +11,13 @@ import {
     ImageOff,
     Plus,
     QrCode,
+    RotateCcw,
     Settings2,
     Tag,
+    Timer,
     TriangleAlert,
+    Trophy,
+    Undo2,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { onMounted, ref, watch } from 'vue';
@@ -56,6 +60,24 @@ interface Card {
     missing_credits?: string[];
 }
 
+// Tarjeta obtenida por un usuario.
+interface Capture {
+    id: number;
+    captured_at: string;
+    user: { id: number; name: string; email: string } | null;
+    card: { id: number; name: string; rarity: string } | null;
+}
+
+// Intentos de un usuario con una tarjeta que aún no tiene.
+interface QuizState {
+    id: number;
+    failed_attempts: number;
+    max_attempts: number | null;
+    locked_until: string | null;
+    user: { id: number; name: string; email: string } | null;
+    card: { id: number; name: string; rarity: string } | null;
+}
+
 interface PaginationLink {
     url: string | null;
     label: string;
@@ -89,6 +111,8 @@ const props = defineProps<{
         'win_message' | 'retry_message' | 'locked_message',
         string
     >;
+    captures: Capture[];
+    quizStates: QuizState[];
 }>();
 
 const search = ref(props.filters?.search ?? '');
@@ -155,6 +179,62 @@ const deleteCard = (card: Card) => {
     });
 };
 
+/*
+ * Revocar una tarjeta obtenida: se borra también el historial de duelos
+ * del usuario con esa tarjeta, como si nunca la hubiera ganado.
+ */
+const revokeCapture = (capture: Capture) => {
+    Swal.fire({
+        title: '¿Revocar tarjeta?',
+        text: `${capture.user?.name ?? 'El usuario'} perderá "${capture.card?.name ?? 'la tarjeta'}" y su historial de duelos con ella. Podrá volver a ganarla desde cero.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, revocar',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#84958a',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(
+                admin.cards.captures.destroy(capture.id).url,
+                { preserveScroll: true, preserveState: true },
+            );
+        }
+    });
+};
+
+/*
+ * Reiniciar los intentos: quita el bloqueo y borra los duelos no ganados
+ * del usuario con esa tarjeta, como si nunca la hubiera intentado.
+ */
+const resetQuizState = (state: QuizState) => {
+    Swal.fire({
+        title: '¿Reiniciar intentos?',
+        text: `${state.user?.name ?? 'El usuario'} podrá retar a "${state.card?.name ?? 'la tarjeta'}" desde cero, sin bloqueo.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, reiniciar',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+        confirmButtonColor: '#187744',
+        cancelButtonColor: '#84958a',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(
+                admin.cards.quizStates.destroy(state.id).url,
+                { preserveScroll: true, preserveState: true },
+            );
+        }
+    });
+};
+
+const formatDate = (value: string) =>
+    new Date(value).toLocaleString('es-MX', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
+
 const columns = ['Tarjeta', 'Rareza', 'Duelos', 'Acciones'];
 
 // Imagen final de la tarjeta; si no existe, la miniatura.
@@ -193,10 +273,10 @@ const chipClass = (warning: boolean) =>
         : 'border-[#dce7df] bg-[#f2f7f4] text-[#435d4c]';
 
 /*
- * Pestañas: lista de tarjetas y configuración de duelos.
+ * Pestañas: lista de tarjetas, configuración de duelos y tarjetas obtenidas.
  * Se recuerda la última pestaña usada.
  */
-type Tab = 'cards' | 'settings';
+type Tab = 'cards' | 'settings' | 'captures' | 'attempts';
 
 const TAB_STORAGE_KEY = 'admin.cards.tab';
 
@@ -205,8 +285,14 @@ const tab = ref<Tab>('cards');
 // Se lee al montar para que coincida con el HTML renderizado en el servidor.
 onMounted(() => {
     try {
-        if (localStorage.getItem(TAB_STORAGE_KEY) === 'settings') {
-            tab.value = 'settings';
+        const saved = localStorage.getItem(TAB_STORAGE_KEY);
+
+        if (
+            saved === 'settings' ||
+            saved === 'captures' ||
+            saved === 'attempts'
+        ) {
+            tab.value = saved;
         }
     } catch {
         // Almacenamiento no disponible: se muestra la lista.
@@ -235,7 +321,27 @@ const tabs: {
         shortLabel: 'Configuración',
         icon: Settings2,
     },
+    {
+        value: 'captures',
+        label: 'Tarjetas obtenidas',
+        shortLabel: 'Obtenidas',
+        icon: Trophy,
+    },
+    {
+        value: 'attempts',
+        label: 'Intentos y bloqueos',
+        shortLabel: 'Intentos',
+        icon: Timer,
+    },
 ];
+
+const tabCount = (value: Tab) =>
+    ({
+        cards: props.cards.total,
+        captures: props.captures.length,
+        attempts: props.quizStates.length,
+        settings: null,
+    })[value];
 
 defineOptions({
     layout: {
@@ -291,7 +397,7 @@ defineOptions({
                 <span class="sm:hidden">{{ item.shortLabel }}</span>
                 <span class="hidden sm:inline">{{ item.label }}</span>
                 <span
-                    v-if="item.value === 'cards'"
+                    v-if="tabCount(item.value) !== null"
                     class="rounded-full px-2 py-0.5 text-xs"
                     :class="
                         tab === item.value
@@ -299,7 +405,7 @@ defineOptions({
                             : 'bg-[#edf4ef] text-[#435d4c]'
                     "
                 >
-                    {{ cards.total }}
+                    {{ tabCount(item.value) }}
                 </span>
             </button>
         </div>
@@ -313,6 +419,168 @@ defineOptions({
                 :built-in="duelMessagesBuiltIn"
                 always-open
             />
+        </div>
+
+        <!-- Tarjetas obtenidas -->
+        <div
+            v-else-if="tab === 'captures'"
+            class="overflow-x-auto rounded-xl border border-[#d7e2da] bg-white"
+        >
+            <table class="w-full text-sm">
+                <thead>
+                    <tr>
+                        <th
+                            v-for="column in ['Usuario', 'Tarjeta', 'Obtenida', 'Acciones']"
+                            :key="column"
+                            class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold tracking-wide text-[#435d4c] uppercase sm:px-6"
+                            :class="{ 'text-right': column === 'Acciones' }"
+                        >
+                            {{ column }}
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-[#edf2ee]">
+                    <tr
+                        v-for="capture in captures"
+                        :key="capture.id"
+                        class="transition-colors hover:bg-[#f7faf8]"
+                    >
+                        <td class="px-5 py-3 sm:px-6">
+                            <div class="font-semibold text-[#244334]">
+                                {{ capture.user?.name ?? 'Usuario eliminado' }}
+                            </div>
+                            <div class="text-xs text-[#718477]">
+                                {{ capture.user?.email }}
+                            </div>
+                        </td>
+
+                        <td class="px-5 py-3 whitespace-nowrap sm:px-6">
+                            <span class="mr-2 font-semibold text-[#244334]">
+                                {{ capture.card?.name ?? 'Tarjeta eliminada' }}
+                            </span>
+                            <span
+                                v-if="capture.card"
+                                class="inline-flex rounded-lg border px-2 py-0.5 text-[11px] font-semibold"
+                                :class="getRarityClasses(capture.card.rarity)"
+                            >
+                                {{ getRarityLabel(capture.card.rarity) }}
+                            </span>
+                        </td>
+
+                        <td class="px-5 py-3 whitespace-nowrap text-[#435d4c] sm:px-6">
+                            {{ formatDate(capture.captured_at) }}
+                        </td>
+
+                        <td class="px-5 py-3 text-right sm:px-6">
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100"
+                                @click="revokeCapture(capture)"
+                            >
+                                <Undo2 :size="14" />
+                                Revocar
+                            </button>
+                        </td>
+                    </tr>
+
+                    <tr v-if="captures.length === 0">
+                        <td
+                            colspan="4"
+                            class="px-6 py-10 text-center text-sm text-[#718477]"
+                        >
+                            Ningún usuario ha obtenido tarjetas todavía.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Intentos y bloqueos -->
+        <div
+            v-else-if="tab === 'attempts'"
+            class="overflow-x-auto rounded-xl border border-[#d7e2da] bg-white"
+        >
+            <table class="w-full text-sm">
+                <thead>
+                    <tr>
+                        <th
+                            v-for="column in ['Usuario', 'Tarjeta', 'Intentos usados', 'Estado', 'Acciones']"
+                            :key="column"
+                            class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold tracking-wide text-[#435d4c] uppercase sm:px-6"
+                            :class="{ 'text-right': column === 'Acciones' }"
+                        >
+                            {{ column }}
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-[#edf2ee]">
+                    <tr
+                        v-for="state in quizStates"
+                        :key="state.id"
+                        class="transition-colors hover:bg-[#f7faf8]"
+                    >
+                        <td class="px-5 py-3 sm:px-6">
+                            <div class="font-semibold text-[#244334]">
+                                {{ state.user?.name ?? 'Usuario eliminado' }}
+                            </div>
+                            <div class="text-xs text-[#718477]">
+                                {{ state.user?.email }}
+                            </div>
+                        </td>
+
+                        <td class="px-5 py-3 whitespace-nowrap sm:px-6">
+                            <span class="mr-2 font-semibold text-[#244334]">
+                                {{ state.card?.name ?? 'Tarjeta eliminada' }}
+                            </span>
+                            <span
+                                v-if="state.card"
+                                class="inline-flex rounded-lg border px-2 py-0.5 text-[11px] font-semibold"
+                                :class="getRarityClasses(state.card.rarity)"
+                            >
+                                {{ getRarityLabel(state.card.rarity) }}
+                            </span>
+                        </td>
+
+                        <td class="px-5 py-3 whitespace-nowrap text-[#435d4c] sm:px-6">
+                            {{ state.failed_attempts }}/{{ state.max_attempts ?? '—' }}
+                        </td>
+
+                        <td class="px-5 py-3 whitespace-nowrap sm:px-6">
+                            <span
+                                v-if="state.locked_until"
+                                class="text-xs font-semibold text-amber-700"
+                            >
+                                Bloqueada hasta {{ formatDate(state.locked_until) }}
+                            </span>
+                            <span v-else class="text-xs text-[#718477]">
+                                Sin bloqueo
+                            </span>
+                        </td>
+
+                        <td class="px-5 py-3 text-right sm:px-6">
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-[#bfcfc6] bg-white px-3 py-1.5 text-xs font-semibold text-[#244334] transition-colors hover:bg-[#f2f7f4]"
+                                @click="resetQuizState(state)"
+                            >
+                                <RotateCcw :size="14" />
+                                Reiniciar
+                            </button>
+                        </td>
+                    </tr>
+
+                    <tr v-if="quizStates.length === 0">
+                        <td
+                            colspan="5"
+                            class="px-6 py-10 text-center text-sm text-[#718477]"
+                        >
+                            Ningún usuario tiene intentos registrados.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
         <!-- Tarjetas -->

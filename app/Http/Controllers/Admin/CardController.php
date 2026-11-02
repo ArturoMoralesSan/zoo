@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Card\StoreCardRequest;
 use App\Http\Requests\Admin\Card\UpdateCardRequest;
 use App\Models\Card;
+use App\Models\CardCapture;
+use App\Models\CardQuizState;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
 use App\Models\Species;
@@ -135,6 +137,42 @@ class CardController extends Controller
                     ->only(['win_message', 'retry_message', 'locked_message']),
 
                 'duelMessagesBuiltIn' => DuelMessageSetting::BUILT_IN,
+
+                /*
+                 * Tarjetas obtenidas por los usuarios, para poder revocarlas.
+                 */
+                'captures' => CardCapture::query()
+                    ->with([
+                        'user:id,name,email',
+                        'card:id,name,rarity',
+                    ])
+                    ->latest('captured_at')
+                    ->latest('id')
+                    ->get(['id', 'user_id', 'card_id', 'captured_at']),
+
+                /*
+                 * Intentos de duelo de los usuarios con tarjetas que aún no tienen,
+                 * para poder reiniciarlos.
+                 */
+                'quizStates' => CardQuizState::query()
+                    ->with([
+                        'user:id,name,email',
+                        'card:id,name,rarity,duel_settings_source,retries',
+                        'card.raritySetting',
+                    ])
+                    ->latest('updated_at')
+                    ->latest('id')
+                    ->get()
+                    ->map(fn (CardQuizState $state) => [
+                        'id' => $state->id,
+                        'failed_attempts' => $state->failed_attempts,
+                        'max_attempts' => $state->card?->effective_retries,
+                        'locked_until' => $state->isLocked()
+                            ? $state->locked_until->toJSON()
+                            : null,
+                        'user' => $state->user?->only(['id', 'name', 'email']),
+                        'card' => $state->card?->only(['id', 'name', 'rarity']),
+                    ]),
 
                 'species' => Species::query()
                     ->where('is_active', true)
