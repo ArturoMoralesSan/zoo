@@ -13,8 +13,6 @@ class QuizAttempt extends Model
 
     public const STATUS_FAILED = 'failed';
 
-    public const STATUS_EXPIRED = 'expired';
-
     protected $fillable = [
         'user_id',
         'card_id',
@@ -22,7 +20,6 @@ class QuizAttempt extends Model
         'status',
         'correct_count',
         'total_questions',
-        'expires_at',
         'submitted_at',
     ];
 
@@ -32,7 +29,6 @@ class QuizAttempt extends Model
             'question_ids' => 'array',
             'correct_count' => 'integer',
             'total_questions' => 'integer',
-            'expires_at' => 'datetime',
             'submitted_at' => 'datetime',
         ];
     }
@@ -40,11 +36,6 @@ class QuizAttempt extends Model
     public function isPending(): bool
     {
         return $this->status === self::STATUS_PENDING;
-    }
-
-    public function isExpired(): bool
-    {
-        return $this->expires_at->isPast();
     }
 
     public function user(): BelongsTo

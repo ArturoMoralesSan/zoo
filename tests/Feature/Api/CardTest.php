@@ -84,7 +84,7 @@ class CardTest extends TestCase
         $this->getJson(route('api.cards.index'))->assertUnauthorized();
     }
 
-    public function test_cards_index_returns_hub_shape_without_model_when_not_owned(): void
+    public function test_unowned_card_only_reveals_its_attempts(): void
     {
         Sanctum::actingAs($this->user);
 
@@ -93,25 +93,14 @@ class CardTest extends TestCase
         $data = $this->cardFromIndex($card);
 
         $this->assertNotNull($data);
-        $this->assertSame([
-            'id', 'name', 'thumbnail_image', 'rarity', 'species_name', 'category_name',
-            'sort_order', 'stats', 'encountered', 'captured_at', 'model_url', 'model_dimensions',
-            'card_image_url', 'attempts',
-        ], array_keys($data));
+        $this->assertSame(['id', 'encountered', 'attempts'], array_keys($data));
+        $this->assertFalse($data['encountered']);
 
         // Tarjeta sin intentos usados: los intentos completos de la ronda.
-        $this->assertSame(['max' => 3, 'used' => 0, 'left' => 3, 'cooldown_minutes' => 1440, 'locked_until' => null], $data['attempts']);
-
-        $this->assertFalse($data['encountered']);
-        $this->assertNull($data['captured_at']);
-        $this->assertNull($data['model_url']);
-        $this->assertNull($data['card_image_url']);
-        $this->assertSame($this->species->common_name, $data['species_name']);
-        $this->assertSame($this->category->name, $data['category_name']);
-        $this->assertSame(['astucia' => 75, 'rapidez' => 85, 'fuerza' => 90], $data['stats']);
+        $this->assertSame(['max' => 3, 'left' => 3, 'locked_until' => null], $data['attempts']);
     }
 
-    public function test_cards_index_returns_uploaded_model_url_when_owned(): void
+    public function test_owned_card_returns_its_data_and_model(): void
     {
         Sanctum::actingAs($this->user);
 
@@ -120,9 +109,15 @@ class CardTest extends TestCase
 
         $data = $this->cardFromIndex($card);
 
+        $this->assertSame([
+            'id', 'encountered', 'name', 'rarity', 'category_name', 'thumbnail_image',
+            'card_image_url', 'stats', 'model_url',
+        ], array_keys($data));
+
         $this->assertTrue($data['encountered']);
-        $this->assertNotNull($data['captured_at']);
-        $this->assertNull($data['attempts']);
+        $this->assertSame($card->name, $data['name']);
+        $this->assertSame($this->category->name, $data['category_name']);
+        $this->assertSame(['astucia' => 75, 'rapidez' => 85, 'fuerza' => 90], $data['stats']);
         $this->assertSame(
             Storage::disk('public')->url('cards/1/models/jaguar.glb'),
             $data['model_url']
@@ -131,38 +126,6 @@ class CardTest extends TestCase
             Storage::disk('public')->url('cards/1/jaguar.png'),
             $data['card_image_url']
         );
-    }
-
-    public function test_owned_card_returns_model_dimensions(): void
-    {
-        Sanctum::actingAs($this->user);
-
-        $card = $this->createCard([
-            'model_final_height' => 1.5,
-            'model_final_width' => 0.375,
-            'model_final_depth' => 0.75,
-        ]);
-        $this->capture($card);
-
-        $data = $this->cardFromIndex($card);
-
-        $this->assertSame(
-            ['height' => 1.5, 'width' => 0.375, 'depth' => 0.75],
-            $data['model_dimensions']
-        );
-    }
-
-    public function test_model_dimensions_are_null_for_legacy_or_not_owned_cards(): void
-    {
-        Sanctum::actingAs($this->user);
-
-        $legacy = $this->createCard();
-        $this->capture($legacy);
-
-        $notOwned = $this->createCard(['model_final_height' => 1, 'model_final_width' => 1, 'model_final_depth' => 1]);
-
-        $this->assertNull($this->cardFromIndex($legacy)['model_dimensions']);
-        $this->assertNull($this->cardFromIndex($notOwned)['model_dimensions']);
     }
 
     public function test_owned_card_without_model_file_returns_null_model_url(): void
@@ -194,7 +157,6 @@ class CardTest extends TestCase
         $attempts = $this->cardFromIndex($card)['attempts'];
 
         $this->assertSame(0, $attempts['left']);
-        $this->assertSame(3, $attempts['used']);
         $this->assertNotNull($attempts['locked_until']);
 
         // Al terminar el bloqueo, los intentos se muestran reiniciados.

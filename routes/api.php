@@ -116,8 +116,8 @@ Route::middleware('auth:sanctum')->group(function () {
     | Cards (hub)
     |--------------------------------------------------------------------------
     |
-    | Todas las tarjetas con encountered; el modelo 3D solo si la posee.
-    | El ETag permite responder 304 cuando no hay cambios.
+    | Todas las tarjetas con encountered; las que no posee solo traen sus
+    | intentos. El ETag permite responder 304 cuando no hay cambios.
     |
     */
 
@@ -135,6 +135,7 @@ Route::middleware('auth:sanctum')->group(function () {
     | El duelo se inicia con el token de un código QR de la tarjeta.
     | El servidor elige las preguntas, califica, cuenta los reintentos
     | y captura la tarjeta solo si todas las respuestas son correctas.
+    | Un duelo no tiene tiempo límite; al agotar los intentos hay espera.
     |
     */
 

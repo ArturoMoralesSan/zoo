@@ -9,8 +9,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * Intentos del usuario para la tarjeta en la ronda actual.
  *
- * Al agotar los intentos la tarjeta se bloquea `cooldown_minutes` minutos;
- * al terminar la espera, los intentos se reinician.
+ * Cada duelo fallado gasta un intento. Al agotarlos la tarjeta se bloquea
+ * hasta `locked_until`; al terminar la espera, los intentos vuelven a `max`.
  *
  * @mixin DuelAttempts
  */
@@ -23,32 +23,18 @@ class DuelAttemptsResource extends JsonResource
     {
         return [
             /**
-             * Intentos por ronda.
+             * Intentos por ronda (configurados en la tarjeta o en su rareza).
              *
              * @example 3
              */
             'max' => $this->max,
 
             /**
-             * Intentos fallidos en la ronda actual.
-             *
-             * @example 1
-             */
-            'used' => $this->used,
-
-            /**
-             * Intentos que quedan antes del bloqueo.
+             * Intentos que quedan antes del bloqueo. Para "Reintentos: {left} de {max}".
              *
              * @example 2
              */
             'left' => $this->left,
-
-            /**
-             * Minutos de bloqueo al agotar los intentos.
-             *
-             * @example 1440
-             */
-            'cooldown_minutes' => $this->cooldownMinutes,
 
             /**
              * Fecha (ISO 8601) en que termina el bloqueo; `null` si no está bloqueada.

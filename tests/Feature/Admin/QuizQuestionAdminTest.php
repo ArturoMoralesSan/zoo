@@ -226,7 +226,7 @@ class QuizQuestionAdminTest extends TestCase
             'answers' => $answers,
         ])
             ->assertCreated()
-            ->assertJsonPath('data.passed', true);
+            ->assertJsonPath('data.outcome', 'won');
 
         $this->assertDatabaseHas('card_captures', [
             'user_id' => $player->id,

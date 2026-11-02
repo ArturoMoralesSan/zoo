@@ -17,7 +17,6 @@ use App\Services\Duel\DuelQuestionResult;
 use App\Services\Duel\DuelResult;
 use App\Services\Duel\DuelReviewItem;
 use App\Services\Duel\DuelStart;
-use Carbon\CarbonInterface;
 use Carbon\CarbonInterval;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
@@ -29,17 +28,13 @@ use Illuminate\Support\Facades\DB;
  * Toda la validación ocurre en el servidor:
  * - Se eligen las preguntas y nunca se envía cuál es la correcta.
  * - Se cuentan los reintentos y se aplica el tiempo de espera.
+ * - Un duelo no tiene tiempo límite: queda pendiente hasta que se responde.
  * - La captura solo se crea si todas las respuestas son correctas.
  * - Las respuestas correctas solo se revelan al agotar los intentos,
  *   y solo si la rareza de la tarjeta lo permite.
  */
 class CardDuelService
 {
-    /**
-     * Minutos que tiene el usuario para responder un duelo.
-     */
-    public const ATTEMPT_TTL_MINUTES = 10;
-
     /**
      * Iniciar (o reanudar) un duelo a partir del token de un código QR.
      *
@@ -75,7 +70,7 @@ class CardDuelService
     {
         $this->ensureCardIsAvailable($card);
 
-        $card->loadMissing(['raritySetting', 'species:id,common_name,species_category_id', 'species.category:id,name']);
+        $card->loadMissing(['raritySetting', 'species:id,species_category_id', 'species.category:id,name']);
 
         $capture = $user->cardCaptures()
             ->where('card_id', $card->id)
@@ -83,14 +78,13 @@ class CardDuelService
 
         if ($capture) {
             throw DuelException::alreadyOwned(
-                new CardResource($card, $capture->captured_at)
+                new CardResource($card, owned: true)
             );
         }
 
         $result = DB::transaction(function () use ($user, $card) {
             $state = $this->lockState($user, $card);
 
-            $this->expireStaleAttempts($user, $card, $state);
             $this->releaseFinishedLock($state);
 
             /*
@@ -114,13 +108,26 @@ class CardDuelService
             $attempt = $user->quizAttempts()
                 ->where('card_id', $card->id)
                 ->where('status', QuizAttempt::STATUS_PENDING)
-                ->where('expires_at', '>', now())
                 ->latest('id')
                 ->first();
 
+            /*
+             * Sin tiempo límite, un duelo pendiente puede quedarse sin preguntas
+             * si el administrador las borró; se reemplaza por uno nuevo.
+             */
+            if ($attempt && $this->servedQuestions($attempt)->isEmpty()) {
+                $attempt->delete();
+                $attempt = null;
+            }
+
             if (! $attempt) {
+                /*
+                 * reorder() quita el orden por id de la relación;
+                 * si no, siempre saldrían las primeras preguntas.
+                 */
                 $questionIds = $card->quizQuestions()
                     ->where('is_active', true)
+                    ->reorder()
                     ->inRandomOrder()
                     ->limit($card->effective_questions_per_duel)
                     ->pluck('id')
@@ -135,7 +142,6 @@ class CardDuelService
                     'question_ids' => $questionIds,
                     'status' => QuizAttempt::STATUS_PENDING,
                     'total_questions' => count($questionIds),
-                    'expires_at' => now()->addMinutes(self::ATTEMPT_TTL_MINUTES),
                 ]);
             }
 
@@ -150,8 +156,6 @@ class CardDuelService
 
         return new DuelStart(
             attempt: $attempt,
-            timeLimitSeconds: self::ATTEMPT_TTL_MINUTES * 60,
-            timeLeftSeconds: max(0, (int) ceil(now()->diffInSeconds($attempt->expires_at, false))),
             attempts: $this->attempts($card, $state),
             card: $card,
             questions: $this->presentQuestions($attempt),
@@ -174,7 +178,7 @@ class CardDuelService
 
         $this->ensureCardIsAvailable($card);
 
-        $card->loadMissing(['raritySetting', 'species:id,common_name,species_category_id', 'species.category:id,name']);
+        $card->loadMissing(['raritySetting', 'species:id,species_category_id', 'species.category:id,name']);
 
         $result = DB::transaction(function () use ($user, $attempt, $card, $answers, $latitude, $longitude) {
             $state = $this->lockState($user, $card);
@@ -186,17 +190,6 @@ class CardDuelService
 
             if (! $attempt->isPending()) {
                 return DuelException::attemptClosed();
-            }
-
-            /*
-             * Un duelo vencido cuenta como intento fallido.
-             */
-            if ($attempt->isExpired()) {
-                $this->expireAttempt($attempt, $card, $state);
-
-                return DuelException::attemptExpired(
-                    $this->attempts($card, $state)
-                );
             }
 
             $questions = $this->servedQuestions($attempt);
@@ -226,7 +219,7 @@ class CardDuelService
             ]);
 
             if ($passed) {
-                $capture = CardCapture::firstOrCreate(
+                CardCapture::firstOrCreate(
                     [
                         'user_id' => $user->id,
                         'card_id' => $card->id,
@@ -243,17 +236,14 @@ class CardDuelService
                 return new DuelResult(
                     outcome: DuelResult::OUTCOME_WON,
                     message: $this->resultMessage($card, DuelResult::OUTCOME_WON, $correctCount, $questions->count(), null),
-                    correctCount: $correctCount,
-                    totalQuestions: $questions->count(),
                     results: $results,
                     attempts: null,
                     review: null,
                     card: $card,
-                    capturedAt: $capture->captured_at,
                 );
             }
 
-            $this->registerFailure($card, $state, now());
+            $this->registerFailure($card, $state);
 
             $attempts = $this->attempts($card, $state);
 
@@ -264,15 +254,12 @@ class CardDuelService
             return new DuelResult(
                 outcome: $outcome,
                 message: $this->resultMessage($card, $outcome, $correctCount, $questions->count(), $attempts),
-                correctCount: $correctCount,
-                totalQuestions: $questions->count(),
                 results: $results,
                 attempts: $attempts,
                 review: $outcome === DuelResult::OUTCOME_LOCKED
-                    ? $this->review($card, $attempt, $questions, $results)
+                    ? $this->review($card, $attempt, $questions)
                     : null,
                 card: null,
-                capturedAt: null,
             );
         });
 
@@ -308,41 +295,16 @@ class CardDuelService
     }
 
     /**
-     * Marcar como vencidos los duelos pendientes que ya expiraron.
-     */
-    private function expireStaleAttempts(User $user, Card $card, CardQuizState $state): void
-    {
-        $user->quizAttempts()
-            ->where('card_id', $card->id)
-            ->where('status', QuizAttempt::STATUS_PENDING)
-            ->where('expires_at', '<=', now())
-            ->orderBy('id')
-            ->lockForUpdate()
-            ->get()
-            ->each(fn (QuizAttempt $attempt) => $this->expireAttempt($attempt, $card, $state));
-    }
-
-    private function expireAttempt(QuizAttempt $attempt, Card $card, CardQuizState $state): void
-    {
-        $attempt->update([
-            'status' => QuizAttempt::STATUS_EXPIRED,
-        ]);
-
-        $this->registerFailure($card, $state, $attempt->expires_at);
-    }
-
-    /**
      * Sumar un intento fallido y bloquear al agotar los reintentos.
      *
      * El tiempo de espera cuenta desde el momento del fallo.
      */
-    private function registerFailure(Card $card, CardQuizState $state, CarbonInterface $failedAt): void
+    private function registerFailure(Card $card, CardQuizState $state): void
     {
         $state->failed_attempts++;
 
         if ($state->failed_attempts >= $card->effective_retries) {
-            $state->locked_until = $failedAt->copy()
-                ->addMinutes($card->effective_cooldown_minutes);
+            $state->locked_until = now()->addMinutes($card->effective_cooldown_minutes);
         }
 
         $state->save();
@@ -375,9 +337,7 @@ class CardDuelService
 
         return new DuelAttempts(
             max: $card->effective_retries,
-            used: $card->effective_retries - $left,
             left: $left,
-            cooldownMinutes: $card->effective_cooldown_minutes,
             lockedUntil: $state->isLocked() ? $state->locked_until : null,
         );
     }
@@ -445,29 +405,26 @@ class CardDuelService
     }
 
     /**
-     * Repaso con las respuestas correctas de las preguntas del duelo.
+     * Repaso con la respuesta correcta de cada pregunta del último duelo.
      *
      * Solo si la rareza de la tarjeta permite mostrarlas al agotar los intentos.
      *
      * @param  Collection<int, QuizQuestion>  $questions
-     * @param  list<DuelQuestionResult>  $results
      * @return list<DuelReviewItem>|null
      */
-    private function review(Card $card, QuizAttempt $attempt, Collection $questions, array $results): ?array
+    private function review(Card $card, QuizAttempt $attempt, Collection $questions): ?array
     {
         if (! $card->raritySetting?->reveal_answers_on_lockout) {
             return null;
         }
 
-        $selected = collect($results)->mapWithKeys(
-            fn (DuelQuestionResult $result) => [$result->questionId => $result->answerId]
-        );
-
         return collect($attempt->question_ids)
             ->filter(fn (int $id) => $questions->has($id))
-            ->map(fn (int $id) => new DuelReviewItem(
-                question: $questions[$id],
-                selectedAnswerId: $selected[$id],
+            ->map(fn (int $id) => [$id, $questions[$id]->answers->firstWhere('is_correct', true)])
+            ->filter(fn (array $item) => $item[1] !== null)
+            ->map(fn (array $item) => new DuelReviewItem(
+                questionId: $item[0],
+                correctAnswerId: $item[1]->id,
             ))
             ->values()
             ->all();

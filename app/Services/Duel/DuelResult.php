@@ -3,7 +3,6 @@
 namespace App\Services\Duel;
 
 use App\Models\Card;
-use Carbon\CarbonInterface;
 
 /**
  * Resultado de responder un duelo.
@@ -33,13 +32,10 @@ final readonly class DuelResult
     public function __construct(
         public string $outcome,
         public string $message,
-        public int $correctCount,
-        public int $totalQuestions,
         public array $results,
         public ?DuelAttempts $attempts,
         public ?array $review,
         public ?Card $card,
-        public ?CarbonInterface $capturedAt,
     ) {}
 
     public function passed(): bool

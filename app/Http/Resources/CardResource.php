@@ -5,17 +5,15 @@ namespace App\Http\Resources;
 use App\Http\Resources\Duel\DuelAttemptsResource;
 use App\Models\Card;
 use App\Services\Duel\DuelAttempts;
-use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Tarjeta para el hub de la app móvil.
  *
- * El modelo 3D (archivo GLB) y la imagen final de la tarjeta solo se envían
- * si el usuario posee la tarjeta.
+ * - Obtenida (`encountered: true`): todos sus datos, imagen final y modelo 3D.
+ * - Sin obtener (`encountered: false`): solo `id` y `attempts`; la app la muestra
+ *   como "???" / "Sin descubrir" sin revelar el animal.
  *
  * @mixin Card
  */
@@ -23,12 +21,12 @@ class CardResource extends JsonResource
 {
     /**
      * @param  Card  $resource
-     * @param  CarbonInterface|string|null  $capturedAt  Fecha de captura del usuario; null si no la posee.
-     * @param  DuelAttempts|null  $attempts  Intentos para obtenerla; null si ya la posee.
+     * @param  bool  $owned  Si el usuario posee la tarjeta.
+     * @param  DuelAttempts|null  $attempts  Intentos para obtenerla; solo si no la posee.
      */
     public function __construct(
         $resource,
-        private CarbonInterface|string|null $capturedAt = null,
+        private bool $owned = false,
         private ?DuelAttempts $attempts = null
     ) {
         parent::__construct($resource);
@@ -39,51 +37,60 @@ class CardResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $isOwned = $this->capturedAt !== null;
-
-        $modelUrl = $isOwned ? self::publicUrl($this->model_file) : null;
-
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'thumbnail_image' => self::publicUrl($this->thumbnail_image),
-            'rarity' => $this->rarity,
-            'species_name' => $this->species?->common_name,
-            'category_name' => $this->species?->category?->name,
-            'sort_order' => $this->sort_order,
-            'stats' => [
-                'astucia' => $this->astucia,
-                'rapidez' => $this->rapidez,
-                'fuerza' => $this->fuerza,
-            ],
-            'encountered' => $isOwned,
-            'captured_at' => Carbon::make($this->capturedAt)?->toJSON(),
-            'model_url' => $modelUrl,
 
             /**
-             * Tamaño real del modelo en metros (1 unidad = 1 m), con el origen en
-             * su centro inferior. `null` sin modelo o en modelos anteriores al escalado.
+             * Si el usuario posee la tarjeta. Define cuáles de los demás campos vienen.
              */
-            'model_dimensions' => $modelUrl && $this->model_final_height !== null
-                ? [
-                    'height' => (float) $this->model_final_height,
-                    'width' => (float) $this->model_final_width,
-                    'depth' => (float) $this->model_final_depth,
-                ]
-                : null,
-            'card_image_url' => $isOwned ? self::publicUrl($this->generated_image) : null,
+            'encountered' => $this->owned,
 
-            /**
-             * Intentos para obtener la tarjeta en la ronda actual. `null` si ya la posee.
-             */
-            'attempts' => $this->attempts
-                ? new DuelAttemptsResource($this->attempts)
-                : null,
+            $this->mergeWhen($this->owned, fn () => [
+                'name' => $this->name,
+
+                /**
+                 * @var 'comun'|'rara'|'epica'|'edicion_especial'
+                 */
+                'rarity' => $this->rarity,
+                'category_name' => $this->species?->category?->name,
+
+                /**
+                 * Imagen del animal para la cuadrícula (A-24).
+                 */
+                'thumbnail_image' => self::publicUrl($this->thumbnail_image),
+
+                /**
+                 * Imagen final de la tarjeta, generada en el editor del panel (A-22, A-26).
+                 */
+                'card_image_url' => self::publicUrl($this->generated_image),
+                'stats' => [
+                    'astucia' => $this->astucia,
+                    'rapidez' => $this->rapidez,
+                    'fuerza' => $this->fuerza,
+                ],
+
+                /**
+                 * Modelo 3D (GLB) ya escalado a su tamaño real (1 unidad = 1 m). `null` si no tiene.
+                 */
+                'model_url' => self::publicUrl($this->model_file),
+            ]),
+
+            $this->mergeWhen(! $this->owned, fn () => [
+                /**
+                 * Intentos para obtenerla: `left > 0` y sin `locked_until` = disponible
+                 * para retar; con `locked_until` = bloqueada hasta esa fecha.
+                 */
+                'attempts' => new DuelAttemptsResource($this->attempts),
+            ]),
         ];
     }
 
     /**
      * URL absoluta de un archivo del disco público.
+     *
+     * Se arma con el host de la petición (url()), como en especies, y no con
+     * APP_URL: así la app móvil recibe una dirección que sí puede alcanzar
+     * (p. ej. la IP de la red local en desarrollo, no localhost).
      */
     public static function publicUrl(?string $path): ?string
     {
@@ -95,6 +102,6 @@ class CardResource extends JsonResource
             return $path;
         }
 
-        return Storage::disk('public')->url($path);
+        return url('storage/'.ltrim($path, '/'));
     }
 }

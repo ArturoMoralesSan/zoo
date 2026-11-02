@@ -12,6 +12,7 @@ use App\Models\QuizAttempt;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\RefreshesInMemoryDatabase;
@@ -149,12 +150,12 @@ class DuelTest extends TestCase
         $this->assertCount(2, $duel->json('data.questions'));
         $this->assertCount(3, $duel->json('data.questions.0.answers'));
         $this->assertSame(['id', 'answer'], array_keys($duel->json('data.questions.0.answers.0')));
-        $this->assertSame(['max' => 2, 'used' => 0, 'left' => 2, 'cooldown_minutes' => 60, 'locked_until' => null], $duel->json('data.attempts'));
-        $this->assertSame(600, $duel->json('data.time_limit_seconds'));
-        $this->assertSame(600, $duel->json('data.time_left_seconds'));
+        $this->assertSame(['max' => 2, 'left' => 2, 'locked_until' => null], $duel->json('data.attempts'));
+        $this->assertSame(['attempt_id', 'attempts', 'card', 'questions'], array_keys($duel->json('data')));
+        $this->assertSame(['name', 'rarity', 'category_name', 'thumbnail_image', 'stats', 'model_url'], array_keys($duel->json('data.card')));
+        $this->assertStringEndsWith('cards/9/models/quetzal.glb', $duel->json('data.card.model_url'));
+        $this->assertSame($this->species->category->name, $duel->json('data.card.category_name'));
         $this->assertStringNotContainsString('is_correct', $duel->getContent());
-        $this->assertArrayNotHasKey('model_url', $duel->json('data.card'));
-        $this->assertStringEndsWith('cards/9/quetzal.png', $duel->json('data.card.card_image_url'));
     }
 
     public function test_start_returns_404_for_inactive_card(): void
@@ -203,11 +204,10 @@ class DuelTest extends TestCase
         $this->submit($duel, $this->answersFor($duel))
             ->assertCreated()
             ->assertJsonPath('data.outcome', 'won')
-            ->assertJsonPath('data.passed', true)
             ->assertJsonPath('message', '¡Ganaste el duelo! Quetzal Dorado ya es parte de tu colección.')
             ->assertJsonPath('data.attempts', null)
             ->assertJsonPath('data.review', null)
-            ->assertJsonPath('data.card.attempts', null)
+            ->assertJsonMissingPath('data.card.attempts')
             ->assertJsonPath('data.card.id', $this->card->id)
             ->assertJsonPath('data.card.encountered', true)
             ->assertJsonPath('data.card.model_url', fn ($url) => str_ends_with($url, 'cards/9/models/quetzal.glb'));
@@ -228,20 +228,18 @@ class DuelTest extends TestCase
         $response = $this->submit($duel, $answers)
             ->assertOk()
             ->assertJsonPath('data.outcome', 'retry')
-            ->assertJsonPath('data.passed', false)
-            ->assertJsonPath('data.correct_count', 1)
-            ->assertJsonPath('data.total_questions', 2)
             ->assertJsonPath('data.attempts.left', 1)
-            ->assertJsonPath('data.attempts.used', 1)
             ->assertJsonPath('data.attempts.locked_until', null)
             ->assertJsonPath('data.review', null)
             ->assertJsonPath('data.card', null)
             ->assertJsonPath('message', 'Acertaste 1 de 2. Te quedan 1 de 2 intentos.');
 
-        // Por pregunta: la respuesta elegida y si fue correcta, en el orden servido.
+        $this->assertSame(['outcome', 'results', 'attempts', 'review', 'card'], array_keys($response->json('data')));
+
+        // Por pregunta: si la respuesta elegida fue correcta, en el orden servido.
         $this->assertSame([
-            ['question_id' => $answers[0]['question_id'], 'answer_id' => $answers[0]['answer_id'], 'is_correct' => false],
-            ['question_id' => $answers[1]['question_id'], 'answer_id' => $answers[1]['answer_id'], 'is_correct' => true],
+            ['question_id' => $answers[0]['question_id'], 'is_correct' => false],
+            ['question_id' => $answers[1]['question_id'], 'is_correct' => true],
         ], $response->json('data.results'));
 
         $this->assertStringNotContainsString('correct_answer', $response->getContent());
@@ -292,33 +290,56 @@ class DuelTest extends TestCase
         $this->submit($duel, $this->answersFor($duel))->assertStatus(409);
     }
 
-    public function test_expired_attempt_counts_as_a_failure_on_submit(): void
-    {
-        $duel = $this->startDuel();
-
-        $this->travel(11)->minutes();
-
-        $this->submit($duel, $this->answersFor($duel))
-            ->assertStatus(410)
-            ->assertJsonPath('data.attempts.left', 1);
-
-        $this->assertDatabaseHas('quiz_attempts', [
-            'id' => $duel->json('data.attempt_id'),
-            'status' => QuizAttempt::STATUS_EXPIRED,
-        ]);
-    }
-
-    public function test_abandoned_attempt_counts_as_a_failure_on_next_start(): void
+    public function test_pending_duel_never_expires_and_is_resumed(): void
     {
         $first = $this->startDuel();
 
-        $this->travel(11)->minutes();
+        $this->travel(3)->days();
 
         $second = $this->startDuel()
             ->assertOk()
-            ->assertJsonPath('data.attempts.left', 1);
+            ->assertJsonPath('data.attempts.left', 2);
+
+        $this->assertSame($first->json('data.attempt_id'), $second->json('data.attempt_id'));
+
+        $this->submit($second, $this->answersFor($second))->assertCreated();
+    }
+
+    public function test_resumed_duel_without_questions_is_replaced(): void
+    {
+        $first = $this->startDuel();
+
+        QuizAttempt::find($first->json('data.attempt_id'))->update([
+            'question_ids' => [999999],
+        ]);
+
+        $second = $this->startDuel()->assertOk();
 
         $this->assertNotSame($first->json('data.attempt_id'), $second->json('data.attempt_id'));
+        $this->assertCount(2, $second->json('data.questions'));
+        $this->assertDatabaseMissing('quiz_attempts', ['id' => $first->json('data.attempt_id')]);
+    }
+
+    public function test_each_new_attempt_draws_its_questions_again(): void
+    {
+        // Varios duelos seguidos superarían el límite de peticiones por minuto.
+        $this->withoutMiddleware(ThrottleRequests::class);
+
+        $card = $this->createCard([
+            'duel_settings_source' => 'card',
+            'questions_per_duel' => 1,
+            'retries' => 50,
+        ], questions: 5);
+
+        $served = [];
+
+        for ($i = 0; $i < 20; $i++) {
+            $duel = $this->startDuel($card)->assertOk();
+            $served[] = $duel->json('data.questions.0.id');
+            $this->submit($duel, $this->answersFor($duel, wrong: 1))->assertOk();
+        }
+
+        $this->assertGreaterThan(1, count(array_unique($served)));
     }
 
     public function test_exhausting_retries_locks_the_card_until_the_cooldown_ends(): void
@@ -384,19 +405,18 @@ class DuelTest extends TestCase
             ->assertJsonPath('data.outcome', 'retry')
             ->assertJsonPath('data.review', null);
 
-        // Al agotar los intentos (rara): repaso con la respuesta elegida y la correcta.
+        // Al agotar los intentos (rara): la respuesta correcta de las preguntas de este duelo.
         $duel = $this->startDuel();
-        $answers = $this->answersFor($duel, wrong: 1);
+        $correct = $this->answersFor($duel);
 
-        $review = $this->submit($duel, $answers)
+        $review = $this->submit($duel, $this->answersFor($duel, wrong: 1))
             ->assertJsonPath('data.outcome', 'locked')
             ->json('data.review');
 
-        $this->assertCount(2, $review);
-        $this->assertSame($answers[0]['question_id'], $review[0]['question_id']);
-        $this->assertSame($answers[0]['answer_id'], $review[0]['selected_answer_id']);
-        $this->assertCount(3, $review[0]['answers']);
-        $this->assertCount(1, array_filter(array_column($review[0]['answers'], 'is_correct')));
+        $this->assertSame(array_map(fn (array $answer) => [
+            'question_id' => $answer['question_id'],
+            'correct_answer_id' => $answer['answer_id'],
+        ], $correct), $review);
 
         // Rareza que no revela respuestas (épica).
         $epica = $this->createCard([

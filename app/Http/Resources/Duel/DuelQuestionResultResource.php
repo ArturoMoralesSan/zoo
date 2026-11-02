@@ -22,12 +22,8 @@ class DuelQuestionResultResource extends JsonResource
             'question_id' => $this->questionId,
 
             /**
-             * Respuesta que eligió el usuario.
-             */
-            'answer_id' => $this->answerId,
-
-            /**
-             * Si la respuesta elegida es correcta (no se indica cuál era la correcta).
+             * Si la respuesta que eligió el usuario es correcta. No indica cuál era
+             * la correcta: esa solo llega en `review`.
              */
             'is_correct' => $this->isCorrect,
         ];

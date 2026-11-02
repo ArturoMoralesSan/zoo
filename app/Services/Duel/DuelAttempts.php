@@ -14,9 +14,7 @@ final readonly class DuelAttempts
 {
     public function __construct(
         public int $max,
-        public int $used,
         public int $left,
-        public int $cooldownMinutes,
         public ?CarbonInterface $lockedUntil,
     ) {}
 }

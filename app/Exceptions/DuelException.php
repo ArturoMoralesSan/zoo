@@ -65,13 +65,6 @@ class DuelException extends Exception
         return new self('Este duelo ya fue respondido.', 409);
     }
 
-    public static function attemptExpired(DuelAttempts $attempts): self
-    {
-        return new self('El tiempo del duelo terminó. Se contó como un intento fallido.', 410, [
-            'attempts' => new DuelAttemptsResource($attempts),
-        ]);
-    }
-
     public static function invalidAnswers(): self
     {
         return new self(

@@ -17,8 +17,6 @@ final readonly class DuelStart
      */
     public function __construct(
         public QuizAttempt $attempt,
-        public int $timeLimitSeconds,
-        public int $timeLeftSeconds,
         public DuelAttempts $attempts,
         public Card $card,
         public Collection $questions,

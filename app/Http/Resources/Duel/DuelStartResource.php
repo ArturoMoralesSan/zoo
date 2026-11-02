@@ -28,45 +28,36 @@ class DuelStartResource extends JsonResource
             'attempt_id' => $this->attempt->id,
 
             /**
-             * Tiempo total para responder un duelo, en segundos.
-             * Si se responde después, o no se responde, cuenta como intento fallido.
-             *
-             * @example 600
+             * Intentos de la ronda actual. Para "Tienes {left} intentos" (A-20, A-21).
+             * Aquí `locked_until` siempre es `null`: con la tarjeta bloqueada se responde 423.
              */
-            'time_limit_seconds' => $this->timeLimitSeconds,
-
-            /**
-             * Segundos que quedan para responder, calculados en el servidor.
-             * Úsalo para el contador de la app (no depende del reloj del dispositivo).
-             * En un duelo nuevo es igual a `time_limit_seconds`; al reanudar uno, es menor.
-             *
-             * @example 600
-             */
-            'time_left_seconds' => $this->timeLeftSeconds,
-
-            /**
-             * Fecha y hora (ISO 8601) en que vence el duelo.
-             */
-            'expires_at' => $this->attempt->expires_at->toJSON(),
-
             'attempts' => new DuelAttemptsResource($this->attempts),
 
+            /**
+             * Animal que reta al usuario (A-19, A-20, A-21). La imagen final de la tarjeta
+             * solo llega al ganar, en `card` de la respuesta del duelo.
+             */
             'card' => [
-                'id' => $this->card->id,
                 'name' => $this->card->name,
-                'thumbnail_image' => CardResource::publicUrl($this->card->thumbnail_image),
-                'card_image_url' => CardResource::publicUrl($this->card->generated_image),
                 'rarity' => $this->card->rarity,
-                'species_name' => $this->card->species?->common_name,
+                'category_name' => $this->card->species?->category?->name,
+                'thumbnail_image' => CardResource::publicUrl($this->card->thumbnail_image),
                 'stats' => [
                     'astucia' => $this->card->astucia,
                     'rapidez' => $this->card->rapidez,
                     'fuerza' => $this->card->fuerza,
                 ],
+
+                /**
+                 * Modelo 3D (GLB) del animal para la batalla, ya escalado a su tamaño
+                 * real (1 unidad = 1 m). `null` si la tarjeta no tiene modelo.
+                 */
+                'model_url' => CardResource::publicUrl($this->card->model_file),
             ],
 
             /**
-             * Preguntas a responder, cada una con sus opciones.
+             * Preguntas a responder, en orden, cada una con sus opciones.
+             * Todas se envían juntas en `POST /duels/{attempt}/submit`.
              *
              * @var array<int, DuelQuestionResource>
              */
