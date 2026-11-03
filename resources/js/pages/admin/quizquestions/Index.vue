@@ -4,17 +4,20 @@ import { Head, router } from '@inertiajs/vue3';
 import {
     CheckCircle2,
     CircleOff,
+    Eye,
     FilterX,
     HelpCircle,
     Plus,
+    Upload,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
 
-import admin from '@/routes/admin';
-import PageHeader from '@/components/admin/PageHeader.vue';
 import DataTable from '@/components/admin/DataTable.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import PageHeaderLink from '@/components/admin/PageHeaderLink.vue';
 import TableActions from '@/components/admin/TableActions.vue';
+import admin from '@/routes/admin';
 
 interface Species {
     id: number;
@@ -27,9 +30,7 @@ interface Card {
     species_id?: number;
     name: string;
     rarity?: string;
-    edition?: string | null;
-    description?: string | null;
-    card_image?: string | null;
+    thumbnail_image?: string | null;
     species?: Species | null;
 }
 
@@ -46,7 +47,6 @@ interface Question {
     card_id: number;
     question: string;
     is_active: boolean;
-    sort_order: number;
     answers: Answer[];
 }
 
@@ -108,10 +108,6 @@ const applyFilters = (): void => {
     );
 };
 
-const submitSearch = (): void => {
-    applyFilters();
-};
-
 const clearFilters = (): void => {
     search.value = '';
     isActive.value = '';
@@ -130,7 +126,7 @@ const deleteQuestion = async (question: Question): Promise<void> => {
         reverseButtons: true,
         focusCancel: true,
         confirmButtonColor: '#187744',
-        cancelButtonColor: '#6B7280',
+        cancelButtonColor: '#84958a',
     });
 
     if (!result.isConfirmed) {
@@ -168,8 +164,12 @@ defineOptions({
                 href: admin.dashboard(),
             },
             {
-                title: 'Preguntas',
-                href: admin.cards.quiz.index,
+                title: 'Tarjetas',
+                href: admin.cards.index(),
+            },
+            {
+                title: 'Preguntas del quiz',
+                href: admin.cards.index(),
             },
         ],
     },
@@ -182,30 +182,43 @@ defineOptions({
     <div class="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader
             :title="card.name"
-            :description="`${card.species?.common_name ?? 'Sin especie'}${card.edition ? ` · ${card.edition}` : ''}`"
+            :description="`${card.species?.common_name ?? 'Sin especie'} · Preguntas que se muestran en el duelo por esta tarjeta.`"
             section="Quiz de tarjeta"
             :icon="HelpCircle"
             :action-icon="Plus"
             action-label="Nueva pregunta"
             :action-href="admin.cards.quiz.create(card.id).url"
-        />
+        >
+            <template #actions>
+                <PageHeaderLink
+                    :href="admin.cards.quiz.import(card.id).url"
+                    label="Importar preguntas"
+                    :icon="Upload"
+                />
+
+                <PageHeaderLink
+                    :href="admin.cards.show(card.id).url"
+                    label="Ver tarjeta"
+                    :icon="Eye"
+                />
+            </template>
+        </PageHeader>
 
         <DataTable
+            v-model:search="search"
             :pagination="questions"
             :is-empty="questions.data.length === 0"
-            :empty-colspan="6"
-            :search="search"
+            :empty-colspan="5"
             search-placeholder="Buscar pregunta o respuesta..."
             :has-filters="hasFilters()"
-            @update:search="search = $event"
-            @search="submitSearch"
+            @search="applyFilters"
             @clear-filters="clearFilters"
         >
             <template #filters>
                 <select
                     v-model="isActive"
                     aria-label="Filtrar por estado"
-                    class="w-full rounded-lg border border-[#DCE7DF] bg-white px-3 py-2.5 text-sm text-[#244334] outline-none transition focus:border-[#187744] focus:ring-2 focus:ring-[#187744]/15 sm:w-auto"
+                    class="h-[42px] w-full min-w-0 rounded-lg border border-[#bfcfc6] bg-white px-3 text-sm text-[#244334] outline-none transition focus:border-[#187744] focus:ring-2 focus:ring-[#187744]/10 sm:w-auto sm:min-w-[170px]"
                     @change="applyFilters"
                 >
                     <option value="">Todos los estados</option>
@@ -217,61 +230,38 @@ defineOptions({
             <template #active-filters>
                 <span
                     v-if="search.trim()"
-                    class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F9F6] px-3 py-1 text-xs font-medium text-[#42604C]"
+                    class="rounded-full border border-[#dce7df] bg-[#f2f7f4] px-3 py-1.5 text-xs text-[#244334]"
                 >
-                    Búsqueda: {{ search }}
+                    Búsqueda: "{{ search.trim() }}"
                 </span>
 
                 <span
-                    v-if="isActive === '1'"
-                    class="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700"
+                    v-if="isActive"
+                    class="rounded-full border border-[#dce7df] bg-[#f2f7f4] px-3 py-1.5 text-xs text-[#244334]"
                 >
-                    <CheckCircle2 class="h-3.5 w-3.5" />
-                    Estado: Activas
+                    Estado: {{ isActive === '1' ? 'Activas' : 'Inactivas' }}
                 </span>
-
-                <span
-                    v-if="isActive === '0'"
-                    class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F8F5] px-3 py-1 text-xs font-medium text-[#52685A]"
-                >
-                    <CircleOff class="h-3.5 w-3.5" />
-                    Estado: Inactivas
-                </span>
-
-                <button
-                    v-if="hasFilters()"
-                    type="button"
-                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-[#187744] transition hover:bg-[#E4F2E8]"
-                    @click="clearFilters"
-                >
-                    <FilterX class="h-3.5 w-3.5" />
-                    Limpiar filtros
-                </button>
             </template>
 
             <template #table-head>
                 <tr>
-                    <th class="min-w-[240px] px-5 py-4 font-semibold sm:px-6">
+                    <th class="min-w-[240px] border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
                         Pregunta
                     </th>
 
-                    <th class="min-w-[220px] px-5 py-4 font-semibold sm:px-6">
+                    <th class="min-w-[220px] border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
                         Respuestas
                     </th>
 
-                    <th class="min-w-[160px] px-5 py-4 font-semibold sm:px-6">
+                    <th class="min-w-[160px] border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
                         Correcta
                     </th>
 
-                    <th class="px-5 py-4 font-semibold sm:px-6">
-                        Orden
-                    </th>
-
-                    <th class="px-5 py-4 font-semibold sm:px-6">
+                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
                         Estado
                     </th>
 
-                    <th class="px-5 py-4 text-right font-semibold sm:px-6">
+                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-right text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
                         Acciones
                     </th>
                 </tr>
@@ -281,28 +271,30 @@ defineOptions({
                 <tr
                     v-for="question in questions.data"
                     :key="question.id"
-                    class="transition-colors hover:bg-[#F5F9F6]"
+                    class="transition-colors hover:bg-[#f7faf8]"
                 >
+                    <!-- Pregunta -->
                     <td class="px-5 py-4 sm:px-6">
                         <div class="flex items-start gap-3">
                             <span
-                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E4F2E8] text-[#187744]"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ef] text-[#187744]"
                             >
-                                <HelpCircle class="h-5 w-5" />
+                                <HelpCircle :size="20" />
                             </span>
 
                             <div class="min-w-0">
-                                <p class="max-w-xl font-medium text-[#244334]">
+                                <p class="max-w-xl text-sm font-semibold text-[#244334]">
                                     {{ question.question }}
                                 </p>
 
-                                <p class="mt-1 text-xs text-[#718477]">
-                                    ID: {{ question.id }}
+                                <p class="mt-1 text-xs text-[#84958a]">
+                                    ID {{ question.id }}
                                 </p>
                             </div>
                         </div>
                     </td>
 
+                    <!-- Respuestas -->
                     <td class="px-5 py-4 sm:px-6">
                         <div class="flex flex-wrap gap-1.5">
                             <span
@@ -311,8 +303,8 @@ defineOptions({
                                 class="inline-flex max-w-[180px] items-center gap-1.5 truncate rounded-full border px-2.5 py-1 text-xs font-medium"
                                 :class="
                                     answer.is_correct
-                                        ? 'border-green-200 bg-green-50 text-green-700'
-                                        : 'border-[#DCE7DF] bg-[#F5F8F5] text-[#52685A]'
+                                        ? 'border-[#c9e4d2] bg-[#dcefe2] text-[#176b3d]'
+                                        : 'border-[#dce7df] bg-[#f2f7f4] text-[#435d4c]'
                                 "
                                 :title="answer.answer"
                             >
@@ -334,13 +326,14 @@ defineOptions({
                         </p>
                     </td>
 
+                    <!-- Correcta -->
                     <td class="px-5 py-4 sm:px-6">
                         <span
                             v-if="getCorrectAnswer(question)"
-                            class="inline-flex max-w-[200px] items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700"
+                            class="inline-flex max-w-[200px] items-center gap-1.5 rounded-lg border border-[#dce7df] bg-white px-2.5 py-1.5 text-xs font-medium text-[#435d4c]"
                             :title="getCorrectAnswer(question)?.answer"
                         >
-                            <CheckCircle2 class="h-3.5 w-3.5 shrink-0" />
+                            <CheckCircle2 :size="14" class="shrink-0 text-[#187744]" />
 
                             <span class="truncate">
                                 {{ getCorrectAnswer(question)?.answer }}
@@ -349,39 +342,33 @@ defineOptions({
 
                         <span
                             v-else
-                            class="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-600"
                         >
-                            <CircleOff class="h-3.5 w-3.5" />
+                            <CircleOff :size="14" />
                             Sin correcta
                         </span>
                     </td>
 
-                    <td class="px-5 py-4 sm:px-6">
-                        <span
-                            class="inline-flex rounded-full border border-[#DCE7DF] bg-[#F5F8F5] px-2.5 py-1 text-xs font-medium text-[#42604C]"
-                        >
-                            {{ question.sort_order }}
-                        </span>
-                    </td>
-
-                    <td class="px-5 py-4 sm:px-6">
+                    <!-- Estado -->
+                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
                         <span
                             v-if="question.is_active"
-                            class="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-[#c9e4d2] bg-[#dcefe2] px-3 py-1.5 text-xs font-semibold text-[#176b3d]"
                         >
-                            <CheckCircle2 class="h-3.5 w-3.5" />
+                            <span class="h-2 w-2 rounded-full bg-[#187744]" />
                             Activa
                         </span>
 
                         <span
                             v-else
-                            class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F8F5] px-2.5 py-1 text-xs font-medium text-[#718477]"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-[#e1e7e2] bg-[#f2f5f3] px-3 py-1.5 text-xs font-medium text-[#718477]"
                         >
-                            <CircleOff class="h-3.5 w-3.5" />
+                            <CircleOff :size="14" />
                             Inactiva
                         </span>
                     </td>
 
+                    <!-- Acciones -->
                     <TableActions
                         :view-url="admin.cards.quiz.show({
                             card: card.id,
@@ -398,15 +385,13 @@ defineOptions({
             </template>
 
             <template #empty>
-                <div class="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
-                    <div
-                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF2EC] text-[#66816F]"
-                    >
-                        <FilterX v-if="hasFilters()" class="h-6 w-6" />
-                        <HelpCircle v-else class="h-6 w-6" />
+                <div class="mx-auto flex max-w-md flex-col items-center justify-center py-6 text-center">
+                    <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#edf4ef] text-[#187744]">
+                        <FilterX v-if="hasFilters()" :size="27" />
+                        <HelpCircle v-else :size="27" />
                     </div>
 
-                    <h3 class="mt-4 text-sm font-semibold text-[#244334]">
+                    <h3 class="text-base font-semibold text-[#244334]">
                         {{
                             hasFilters()
                                 ? 'No se encontraron resultados'
@@ -414,11 +399,11 @@ defineOptions({
                         }}
                     </h3>
 
-                    <p class="mt-1 max-w-md text-sm leading-6 text-[#718477]">
+                    <p class="mt-2 max-w-sm text-sm leading-6 text-[#718477]">
                         {{
                             hasFilters()
-                                ? 'No encontramos preguntas que coincidan con los filtros seleccionados. Intenta cambiar los criterios de búsqueda.'
-                                : 'Todavía no has registrado ninguna pregunta para este quiz. Comienza creando la primera.'
+                                ? 'No encontramos preguntas que coincidan con los filtros seleccionados.'
+                                : 'Crea la primera pregunta del quiz para que los visitantes puedan iniciar un duelo por esta tarjeta.'
                         }}
                     </p>
                 </div>

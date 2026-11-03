@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class QuizQuestion extends Model
 {
@@ -15,13 +16,25 @@ class QuizQuestion extends Model
         'card_id',
         'question',
         'is_active',
-        'sort_order',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'sort_order' => 'integer',
     ];
+
+    /**
+     * Texto comparable para detectar preguntas repetidas: minúsculas, sin
+     * acentos, sin signos al inicio y al final y con espacios simples.
+     * Igual que normalizeQuestionText() en resources/js/lib/quizImport.ts.
+     */
+    public static function normalizeText(string $text): string
+    {
+        // Str::ascii quita acentos y convierte ¿ ¡ en ? !.
+        $text = Str::ascii(mb_strtolower($text));
+        $text = preg_replace('/\s+/', ' ', $text);
+
+        return trim($text, ' ?!.');
+    }
 
     /**
      * Card a la que pertenece la pregunta.

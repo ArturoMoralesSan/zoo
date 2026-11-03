@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             TicketTypeSeeder::class,
             PointRuleSeeder::class,
             RewardSeeder::class,
+            LicenseSeeder::class,
         ]);
     }
 }

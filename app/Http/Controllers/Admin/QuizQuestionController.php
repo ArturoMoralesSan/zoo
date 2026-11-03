@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Card\ImportQuizQuestionsRequest;
 use App\Models\Card;
 use App\Models\QuizQuestion;
 use Illuminate\Http\RedirectResponse;
@@ -58,7 +59,6 @@ class QuizQuestionController extends Controller
                     )
                 )
             )
-            ->orderBy('sort_order')
             ->orderBy('id')
             ->paginate(10)
             ->withQueryString();
@@ -110,12 +110,6 @@ class QuizQuestionController extends Controller
                 'boolean',
             ],
 
-            'sort_order' => [
-                'nullable',
-                'integer',
-                'min:0',
-            ],
-
             'answers' => [
                 'required',
                 'array',
@@ -145,7 +139,6 @@ class QuizQuestionController extends Controller
             $question = $card->quizQuestions()->create([
                 'question' => $validated['question'],
                 'is_active' => $validated['is_active'] ?? true,
-                'sort_order' => $validated['sort_order'] ?? 0,
             ]);
 
             foreach ($validated['answers'] as $index => $answer) {
@@ -157,12 +150,110 @@ class QuizQuestionController extends Controller
             }
         });
 
-        return redirect()
-            ->route('admin.cards.quiz.index', $card)
-            ->with('toast', [
-                'type' => 'success',
-                'message' => 'Pregunta creada correctamente.',
-            ]);
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Pregunta creada correctamente.',
+        ]);
+
+        return redirect()->route('admin.cards.quiz.index', $card);
+    }
+
+    /**
+     * Importar preguntas en lote: prompt para un LLM, pegar o subir el JSON,
+     * vista previa e importación.
+     */
+    public function import(Card $card): Response
+    {
+        return Inertia::render(
+            'admin/quizquestions/Import',
+            [
+                'card' => $card->load('species'),
+
+                // Para detectar repetidas y pedirle al LLM que no las repita.
+                'existingQuestions' => $card->quizQuestions()->pluck('question'),
+
+                'maxQuestions' => ImportQuizQuestionsRequest::MAX_QUESTIONS,
+            ]
+        );
+    }
+
+    /**
+     * Guardar las preguntas importadas. Las repetidas (ya en la tarjeta o
+     * dentro del lote) se omiten.
+     */
+    public function storeImport(
+        ImportQuizQuestionsRequest $request,
+        Card $card
+    ): RedirectResponse {
+        $validated = $request->validated();
+
+        $seen = $card->quizQuestions()
+            ->pluck('question')
+            ->mapWithKeys(fn (string $question) => [QuizQuestion::normalizeText($question) => true])
+            ->all();
+
+        $imported = 0;
+        $skipped = 0;
+
+        DB::transaction(function () use (
+            $card,
+            $validated,
+            $request,
+            &$seen,
+            &$imported,
+            &$skipped
+        ) {
+            foreach ($validated['questions'] as $item) {
+                $key = QuizQuestion::normalizeText($item['question']);
+
+                if (isset($seen[$key])) {
+                    $skipped++;
+
+                    continue;
+                }
+
+                $seen[$key] = true;
+
+                $question = $card->quizQuestions()->create([
+                    'question' => trim($item['question']),
+                    'is_active' => $request->boolean('is_active', true),
+                ]);
+
+                /*
+                 * Orden al azar: la correcta no queda siempre primero en el
+                 * panel (en los duelos las respuestas se mezclan de todos modos).
+                 */
+                $answers = collect([
+                    ['answer' => $item['correct_answer'], 'is_correct' => true],
+                    ...array_map(fn (string $answer) => ['answer' => $answer, 'is_correct' => false], $item['wrong_answers']),
+                ])->shuffle();
+
+                foreach ($answers->values() as $index => $answer) {
+                    $question->answers()->create([
+                        'answer' => trim($answer['answer']),
+                        'is_correct' => $answer['is_correct'],
+                        'sort_order' => $index,
+                    ]);
+                }
+
+                $imported++;
+            }
+        });
+
+        $message = $imported === 1
+            ? '1 pregunta importada'
+            : "{$imported} preguntas importadas";
+
+        if ($skipped) {
+            $message .= " ({$skipped} omitida".($skipped === 1 ? '' : 's').' por repetida'.($skipped === 1 ? '' : 's').')';
+        }
+
+        Inertia::flash('toast', [
+            'type' => $imported ? 'success' : 'warning',
+            'message' => $message.'.',
+        ]);
+
+        return redirect()->route('admin.cards.quiz.index', $card);
     }
 
     /**
@@ -241,12 +332,6 @@ class QuizQuestionController extends Controller
                 'boolean',
             ],
 
-            'sort_order' => [
-                'nullable',
-                'integer',
-                'min:0',
-            ],
-
             'answers' => [
                 'required',
                 'array',
@@ -281,26 +366,45 @@ class QuizQuestionController extends Controller
             $quizQuestion->update([
                 'question' => $validated['question'],
                 'is_active' => $validated['is_active'] ?? true,
-                'sort_order' => $validated['sort_order'] ?? 0,
             ]);
 
-            $quizQuestion->answers()->delete();
+            /*
+             * Se actualizan las respuestas existentes en lugar de recrearlas,
+             * para conservar sus ids: un duelo en curso las envía al responder.
+             */
+            $existingAnswers = $quizQuestion->answers()->get()->keyBy('id');
+
+            $keptAnswerIds = [];
 
             foreach ($validated['answers'] as $index => $answer) {
-                $quizQuestion->answers()->create([
+                $attributes = [
                     'answer' => $answer['answer'],
                     'is_correct' => (bool) $answer['is_correct'],
                     'sort_order' => $index,
-                ]);
+                ];
+
+                $existing = $existingAnswers->get($answer['id'] ?? null);
+
+                if ($existing) {
+                    $existing->update($attributes);
+                } else {
+                    $existing = $quizQuestion->answers()->create($attributes);
+                }
+
+                $keptAnswerIds[] = $existing->id;
             }
+
+            $quizQuestion->answers()
+                ->whereNotIn('id', $keptAnswerIds)
+                ->delete();
         });
 
-        return redirect()
-            ->route('admin.cards.quiz.index', $card)
-            ->with('toast', [
-                'type' => 'success',
-                'message' => 'Pregunta actualizada correctamente.',
-            ]);
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Pregunta actualizada correctamente.',
+        ]);
+
+        return redirect()->route('admin.cards.quiz.index', $card);
     }
 
     /**
@@ -317,12 +421,12 @@ class QuizQuestionController extends Controller
 
         $quizQuestion->delete();
 
-        return redirect()
-            ->route('admin.cards.quiz.index', $card)
-            ->with('toast', [
-                'type' => 'success',
-                'message' => 'Pregunta eliminada correctamente.',
-            ]);
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Pregunta eliminada correctamente.',
+        ]);
+
+        return redirect()->route('admin.cards.quiz.index', $card);
     }
 
     /**

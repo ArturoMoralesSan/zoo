@@ -12,6 +12,7 @@ import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
+import CardContextInfo from '@/components/admin/cards/CardContextInfo.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import admin from '@/routes/admin';
 
@@ -26,14 +27,8 @@ interface Card {
     species_id: number;
     name: string;
     rarity: string;
-    edition: string | null;
-    description: string | null;
-    card_image: string | null;
-    model_name: string | null;
+    thumbnail_image: string | null;
     model_file: string | null;
-    model_url: string | null;
-    model_format: string | null;
-    model_description: string | null;
     is_active: boolean;
     sort_order: number;
     species: Species;
@@ -52,7 +47,6 @@ interface Question {
     card_id: number;
     question: string;
     is_active: boolean;
-    sort_order: number;
     answers: Answer[];
 }
 
@@ -70,12 +64,10 @@ const props = defineProps<{
 const form = useForm<{
     question: string;
     is_active: boolean;
-    sort_order: number;
     answers: AnswerForm[];
 }>({
     question: props.question.question,
     is_active: props.question.is_active,
-    sort_order: props.question.sort_order,
     answers: props.question.answers
         .slice()
         .sort((a, b) => a.sort_order - b.sort_order)
@@ -144,26 +136,11 @@ defineOptions({
             :action-href="admin.cards.quiz.index(card.id).url"
         />
 
-        <!-- Información de la tarjeta -->
-        <div class="form-info">
-            <div class="form-info-icon">
-                <CheckCircle2 class="h-5 w-5" />
-            </div>
-
-            <p class="form-info-text">
-                <span class="font-semibold">{{ card.name }}</span>
-
-                <span v-if="card.species?.common_name">
-                    · {{ card.species.common_name }}
-                </span>
-
-                <span v-if="card.edition">
-                    · {{ card.edition }}
-                </span>
-
-                — Estás editando una pregunta asociada a esta tarjeta.
-            </p>
-        </div>
+        <!-- Tarjeta asociada -->
+        <CardContextInfo
+            :card="card"
+            message="Estás editando una pregunta asociada a esta tarjeta."
+        />
 
         <form class="form-container" @submit.prevent="submit">
             <!-- Pregunta -->
@@ -314,38 +291,10 @@ defineOptions({
             <!-- Configuración -->
             <AdminCard
                 title="Configuración"
-                description="Define el orden y el estado de la pregunta."
+                description="Define el estado de la pregunta."
                 :icon="ToggleLeft"
             >
                 <div class="form-grid">
-                    <!-- Orden -->
-                    <div class="form-field">
-                        <label for="sort_order" class="form-label">
-                            Orden
-                        </label>
-
-                        <input
-                            id="sort_order"
-                            v-model.number="form.sort_order"
-                            type="number"
-                            min="0"
-                            step="1"
-                            class="form-input"
-                            :class="{
-                                'form-input-error': form.errors.sort_order,
-                            }"
-                        />
-
-                        <p v-if="form.errors.sort_order" class="form-error">
-                            {{ form.errors.sort_order }}
-                        </p>
-
-                        <p v-else class="form-help">
-                            Determina la posición de la pregunta dentro del
-                            quiz.
-                        </p>
-                    </div>
-
                     <!-- Estado -->
                     <div class="form-field form-field-full">
                         <ActiveSwitch

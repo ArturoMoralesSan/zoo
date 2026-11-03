@@ -2,9 +2,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import {
+    Copyright,
     HelpCircle,
     Eye,
     Pencil,
+    QrCode,
     Trash2,
 } from 'lucide-vue-next';
 
@@ -18,18 +20,27 @@ withDefaults(defineProps<{
     viewUrl?: string;
     editUrl?: string;
     questionsUrl?: string;
+    qrCodesUrl?: string;
+    creditsUrl?: string;
     deleteTitle?: string;
     deleteLabel?: string;
     itemName?: string;
     showView?: boolean;
     showEdit?: boolean;
     showQuestions?: boolean;
+    showQrCodes?: boolean;
+    showCredits?: boolean;
+    // Resalta "Créditos" cuando faltan licencias.
+    creditsWarning?: boolean;
     showDelete?: boolean;
     loading?: boolean;
 }>(), {
     showView: true,
     showEdit: true,
     showQuestions: false,
+    showQrCodes: false,
+    showCredits: false,
+    creditsWarning: false,
     showDelete: true,
     deleteTitle: '',
     deleteLabel: 'Eliminar',
@@ -58,6 +69,46 @@ const emit = defineEmits<{
                 <HelpCircle :size="16" />
                 Preguntas
             </Link>
+
+            <!-- Administrar códigos QR -->
+            <Link
+                v-if="showQrCodes && qrCodesUrl"
+                :href="qrCodesUrl"
+                title="Administrar códigos QR"
+                aria-label="Administrar códigos QR"
+                class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52685a] transition hover:bg-[#e4f2e8] hover:text-[#187744] focus:outline-none focus:ring-2 focus:ring-[#187744]/15"
+            >
+                <QrCode :size="16" />
+                QR
+            </Link>
+
+            <!-- Administrar créditos y licencias -->
+            <Link
+                v-if="showCredits && creditsUrl"
+                :href="creditsUrl"
+                :title="
+                    creditsWarning
+                        ? 'Administrar créditos (falta licencia)'
+                        : 'Administrar créditos'
+                "
+                :aria-label="
+                    creditsWarning
+                        ? 'Administrar créditos (falta licencia)'
+                        : 'Administrar créditos'
+                "
+                class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#187744]/15"
+                :class="
+                    creditsWarning
+                        ? 'text-amber-700 hover:bg-amber-50'
+                        : 'text-[#52685a] hover:bg-[#e4f2e8] hover:text-[#187744]'
+                "
+            >
+                <Copyright :size="16" />
+                Créditos
+            </Link>
+
+            <!-- Acciones adicionales -->
+            <slot />
 
             <!-- Ver -->
             <Link

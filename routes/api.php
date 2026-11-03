@@ -1,13 +1,13 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\CardCaptureController;
 use App\Http\Controllers\Api\CardController;
+use App\Http\Controllers\Api\CreditController;
+use App\Http\Controllers\Api\DuelController;
 use App\Http\Controllers\Api\DonationController;
 use App\Http\Controllers\Api\ExploreController;
 use App\Http\Controllers\Api\MapController;
 use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\QuizController;
 use App\Http\Controllers\Api\SpeciesController;
 use App\Http\Controllers\Api\TicketController;
 
@@ -22,6 +22,24 @@ Route::post('/login', [
     AuthController::class,
     'login',
 ]);
+
+/*
+|--------------------------------------------------------------------------
+| Créditos (público)
+|--------------------------------------------------------------------------
+|
+| Pantalla de créditos de la app: funciona antes de iniciar sesión.
+| Ver docs/api-credits.md.
+|
+*/
+
+Route::prefix('v1')->group(function () {
+    Route::get('/credits', [
+        CreditController::class,
+        'index',
+    ])->middleware('throttle:credits')
+        ->name('api.v1.credits.index');
+});
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -95,56 +113,43 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Cards
+    | Cards (hub)
     |--------------------------------------------------------------------------
+    |
+    | Todas las tarjetas con encountered; las que no posee solo traen sus
+    | intentos. El ETag permite responder 304 cuando no hay cambios.
+    |
     */
 
     Route::get('/cards', [
         CardController::class,
         'index',
-    ])->name('api.cards.index');
-
-    Route::get('/cards/{card}', [
-        CardController::class,
-        'show',
-    ])->name('api.cards.show');
+    ])->middleware('cache.headers:private;etag')
+        ->name('api.cards.index');
 
     /*
     |--------------------------------------------------------------------------
-    | Quiz de Cards
+    | Duelos
     |--------------------------------------------------------------------------
+    |
+    | El duelo se inicia con el token de un código QR de la tarjeta.
+    | El servidor elige las preguntas, califica, cuenta los reintentos
+    | y captura la tarjeta solo si todas las respuestas son correctas.
+    | Un duelo no tiene tiempo límite; al agotar los intentos hay espera.
+    |
     */
 
-    Route::get('/cards/{card}/quiz', [
-        QuizController::class,
-        'show',
-    ])->name('api.cards.quiz.show');
-
-    Route::post('/cards/{card}/quiz/submit', [
-        QuizController::class,
-        'submit',
-    ])->name('api.cards.quiz.submit');
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cards capturadas por el usuario
-    |--------------------------------------------------------------------------
-    */
-
-    Route::get('/my-cards', [
-        CardCaptureController::class,
-        'index',
-    ])->name('api.card-captures.index');
-
-    Route::get('/my-cards/{card}', [
-        CardCaptureController::class,
-        'show',
-    ])->name('api.card-captures.show');
-
-    Route::post('/cards/{card}/capture', [
-        CardCaptureController::class,
+    Route::post('/duels', [
+        DuelController::class,
         'store',
-    ])->name('api.card-captures.store');
+    ])->middleware('throttle:30,1')
+        ->name('api.duels.store');
+
+    Route::post('/duels/{attempt}/submit', [
+        DuelController::class,
+        'submit',
+    ])->middleware(['can:submit,attempt', 'throttle:10,1'])
+        ->name('api.duels.submit');
 
     /*
     |--------------------------------------------------------------------------

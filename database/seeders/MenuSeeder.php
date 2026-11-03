@@ -115,6 +115,15 @@ class MenuSeeder extends Seeder
             'map_paths.view'
         );
 
+        $this->link(
+            $zoo,
+            'Créditos y licencias',
+            'Copyright',
+            9,
+            'admin.credits.index',
+            'cards.view'
+        );
+
         /*
         |--------------------------------------------------------------------------
         | Taquilla

@@ -1,0 +1,352 @@
+[
+    {
+        "name": "CC BY con todos los datos y cambios",
+        "input": {
+            "title": "Jaguar resting",
+            "author_name": "Jane Doe",
+            "source": "Wikimedia Commons",
+            "modified": true,
+            "modification_note": "Recortada/adaptada para la tarjeta",
+            "license": {
+                "slug": "cc-by-4.0",
+                "short_name": "CC BY 4.0",
+                "is_proprietary": false,
+                "attribution_template": null
+            }
+        },
+        "expected": "“Jaguar resting” de Jane Doe, vía Wikimedia Commons, CC BY 4.0, con cambios: Recortada/adaptada para la tarjeta"
+    },
+    {
+        "name": "Meshy gratuito usa la plantilla de la licencia",
+        "input": {
+            "title": "Jaguar",
+            "author_name": null,
+            "source": "Meshy",
+            "modified": true,
+            "modification_note": "Escalado para RA",
+            "license": {
+                "slug": "meshy-free",
+                "short_name": "CC BY 4.0",
+                "is_proprietary": false,
+                "attribution_template": "Modelo 3D creado con Meshy{basis} – CC BY 4.0"
+            }
+        },
+        "expected": "Modelo 3D creado con Meshy – CC BY 4.0"
+    },
+    {
+        "name": "Meshy gratuito a partir de la ilustración",
+        "input": {
+            "source": "Meshy",
+            "modified": true,
+            "modification_note": "Escalado para RA",
+            "license": {
+                "slug": "meshy-free",
+                "short_name": "CC BY 4.0",
+                "is_proprietary": false,
+                "attribution_template": "Modelo 3D creado con Meshy{basis} – CC BY 4.0"
+            },
+            "based_on_asset": "artwork"
+        },
+        "expected": "Modelo 3D creado con Meshy a partir de la ilustración de la tarjeta – CC BY 4.0"
+    },
+    {
+        "name": "Meshy de pago a partir de la ilustración",
+        "input": {
+            "source": "Meshy",
+            "license": {
+                "slug": "meshy-paid",
+                "short_name": "Meshy (pago)",
+                "is_proprietary": true,
+                "attribution_template": "Modelo 3D creado con Meshy{basis}"
+            },
+            "based_on_asset": "artwork"
+        },
+        "expected": "Modelo 3D creado con Meshy a partir de la ilustración de la tarjeta"
+    },
+    {
+        "name": "Plantilla sin marcador a partir de la ilustración",
+        "input": {
+            "license": {
+                "slug": "x",
+                "short_name": "X",
+                "is_proprietary": false,
+                "attribution_template": "Modelo de X"
+            },
+            "based_on_asset": "artwork"
+        },
+        "expected": "Modelo de X (a partir de la ilustración de la tarjeta)"
+    },
+    {
+        "name": "Modelo propio a partir de la ilustración, sin título",
+        "input": {
+            "license": {
+                "slug": "proprietary",
+                "short_name": "Propia",
+                "is_proprietary": true,
+                "attribution_template": null
+            },
+            "based_on_asset": "artwork"
+        },
+        "expected": "A partir de la ilustración de la tarjeta – obra propia"
+    },
+    {
+        "name": "Modelo CC BY de otro sitio a partir de la ilustración",
+        "input": {
+            "title": "Jaguar low poly",
+            "author_name": "ana3d",
+            "modified": true,
+            "modification_note": "Escalado para RA",
+            "license": {
+                "slug": "cc-by-4.0",
+                "short_name": "CC BY 4.0",
+                "is_proprietary": false,
+                "attribution_template": null
+            },
+            "based_on_asset": "artwork"
+        },
+        "expected": "“Jaguar low poly” de ana3d, a partir de la ilustración de la tarjeta, CC BY 4.0, con cambios: Escalado para RA"
+    },
+    {
+        "name": "Autor en minúsculas no se capitaliza",
+        "input": {
+            "author_name": "ana3d",
+            "source": "Pexels",
+            "license": {
+                "slug": "pexels-license",
+                "short_name": "Licencia de Pexels",
+                "is_proprietary": false,
+                "attribution_template": null
+            }
+        },
+        "expected": "ana3d, vía Pexels, Licencia de Pexels"
+    },
+    {
+        "name": "Pexels sin título ni cambios",
+        "input": {
+            "title": null,
+            "author_name": "Ana López",
+            "source": "Pexels",
+            "modified": false,
+            "modification_note": "Recortada/adaptada para la tarjeta",
+            "license": {
+                "slug": "pexels-license",
+                "short_name": "Licencia de Pexels",
+                "is_proprietary": false,
+                "attribution_template": null
+            }
+        },
+        "expected": "Ana López, vía Pexels, Licencia de Pexels"
+    },
+    {
+        "name": "Obra propia con título",
+        "input": {
+            "title": "Jaguar del Norte",
+            "author_name": null,
+            "source": null,
+            "modified": true,
+            "modification_note": "Recortada/adaptada para la tarjeta",
+            "license": {
+                "slug": "proprietary",
+                "short_name": "Propia",
+                "is_proprietary": true,
+                "attribution_template": null
+            }
+        },
+        "expected": "“Jaguar del Norte” – obra propia"
+    },
+    {
+        "name": "Obra propia sin datos",
+        "input": {
+            "license": {
+                "slug": "proprietary",
+                "short_name": "Propia",
+                "is_proprietary": true,
+                "attribution_template": null
+            }
+        },
+        "expected": "Obra propia"
+    },
+    {
+        "name": "Obra por encargo con autor",
+        "input": {
+            "author_name": "Juan Pérez",
+            "license": {
+                "slug": "proprietary-commissioned",
+                "short_name": "Por encargo",
+                "is_proprietary": true,
+                "attribution_template": null
+            }
+        },
+        "expected": "Juan Pérez – obra por encargo"
+    },
+    {
+        "name": "Faltan los datos opcionales (CC0 sin título ni autor)",
+        "input": {
+            "title": "  ",
+            "author_name": "",
+            "source": null,
+            "modified": false,
+            "modification_note": null,
+            "license": {
+                "slug": "cc0-1.0",
+                "short_name": "CC0 1.0",
+                "is_proprietary": false,
+                "attribution_template": null
+            }
+        },
+        "expected": "CC0 1.0"
+    },
+    {
+        "name": "Cambios sin nota y sin origen",
+        "input": {
+            "title": null,
+            "author_name": "Jane Doe",
+            "source": null,
+            "modified": true,
+            "modification_note": " ",
+            "license": {
+                "slug": "cc-by-sa-4.0",
+                "short_name": "CC BY-SA 4.0",
+                "is_proprietary": false,
+                "attribution_template": null
+            }
+        },
+        "expected": "Jane Doe, CC BY-SA 4.0, con cambios"
+    },
+    {
+        "name": "El texto personalizado siempre gana",
+        "input": {
+            "title": "Jaguar resting",
+            "author_name": "Jane Doe",
+            "source": "Wikimedia Commons",
+            "modified": true,
+            "modification_note": "Recortada",
+            "attribution_override": "  Foto: Jane Doe / Wikimedia Commons (CC BY 4.0)  ",
+            "license": {
+                "slug": "meshy-free",
+                "short_name": "CC BY 4.0",
+                "is_proprietary": false,
+                "attribution_template": "Modelo 3D creado con Meshy{basis} – CC BY 4.0"
+            }
+        },
+        "expected": "Foto: Jane Doe / Wikimedia Commons (CC BY 4.0)"
+    },
+    {
+        "name": "Modelo de Sketchfab CC BY",
+        "input": {
+            "title": "Jaguar low poly",
+            "author_name": "ana3d",
+            "source": "Sketchfab",
+            "modified": true,
+            "modification_note": "Escalado para RA",
+            "license": {
+                "slug": "cc-by-4.0",
+                "short_name": "CC BY 4.0",
+                "is_proprietary": false,
+                "attribution_template": null
+            }
+        },
+        "expected": "“Jaguar low poly” de ana3d, vía Sketchfab, CC BY 4.0, con cambios: Escalado para RA"
+    },
+    {
+        "name": "Imagen generada con IA",
+        "input": {
+            "source": null,
+            "title": "Jaguar en la selva",
+            "modified": true,
+            "modification_note": "Retocada a mano",
+            "license": {
+                "slug": "ai-adobe-firefly",
+                "short_name": "IA (Adobe Firefly)",
+                "is_proprietary": false,
+                "attribution_template": "Imagen generada con IA (Adobe Firefly){basis}"
+            }
+        },
+        "expected": "Imagen generada con IA (Adobe Firefly)"
+    },
+    {
+        "name": "Render propio del modelo de la tarjeta",
+        "input": {
+            "title": "Jaguar en la selva",
+            "based_on_asset": "model",
+            "license": {
+                "slug": "proprietary",
+                "short_name": "Propia",
+                "is_proprietary": true,
+                "attribution_template": null
+            }
+        },
+        "expected": "“Jaguar en la selva”, a partir del modelo 3D de la tarjeta – obra propia"
+    },
+    {
+        "name": "Render sin título del modelo de la tarjeta",
+        "input": {
+            "based_on_asset": "model",
+            "license": {
+                "slug": "proprietary",
+                "short_name": "Propia",
+                "is_proprietary": true,
+                "attribution_template": null
+            }
+        },
+        "expected": "A partir del modelo 3D de la tarjeta – obra propia"
+    },
+    {
+        "name": "Basado en: modelo de Sketchfab renderizado",
+        "input": {
+            "role": "based_on",
+            "title": "Jaguar low poly",
+            "author_name": "ana3d",
+            "source": "Sketchfab",
+            "license": {
+                "slug": "cc-by-4.0",
+                "short_name": "CC BY 4.0",
+                "is_proprietary": false,
+                "attribution_template": null
+            }
+        },
+        "expected": "Basado en: “Jaguar low poly” de ana3d, vía Sketchfab, CC BY 4.0"
+    },
+    {
+        "name": "Incluye: HDRI de Poly Haven",
+        "input": {
+            "role": "component",
+            "title": "Forest HDRI",
+            "source": "Poly Haven",
+            "license": {
+                "slug": "cc0-1.0",
+                "short_name": "CC0 1.0",
+                "is_proprietary": false,
+                "attribution_template": null
+            }
+        },
+        "expected": "Incluye: “Forest HDRI”, vía Poly Haven, CC0 1.0"
+    },
+    {
+        "name": "Basado en con plantilla de Meshy",
+        "input": {
+            "role": "based_on",
+            "license": {
+                "slug": "meshy-free",
+                "short_name": "CC BY 4.0",
+                "is_proprietary": false,
+                "attribution_template": "Modelo 3D creado con Meshy{basis} – CC BY 4.0"
+            }
+        },
+        "expected": "Basado en: Modelo 3D creado con Meshy – CC BY 4.0"
+    },
+    {
+        "name": "El texto personalizado no lleva prefijo",
+        "input": {
+            "role": "component",
+            "attribution_override": "Texturas de ambientCG (CC0)",
+            "license": {
+                "slug": "cc0-1.0",
+                "short_name": "CC0 1.0",
+                "is_proprietary": false,
+                "attribution_template": null
+            }
+        },
+        "expected": "Texturas de ambientCG (CC0)"
+    }
+]

@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import {
@@ -12,56 +11,239 @@ import {
     Save,
     Tag,
     Upload,
+    Zap,
 } from 'lucide-vue-next';
+import { computed, ref, useTemplateRef, watch } from 'vue';
 
+import { useCardModelSize } from '@/composables/useCardModelSize';
+import type { ModelFormFields } from '@/composables/useCardModelSize';
+import { useObjectUrl } from '@/composables/useObjectUrl';
+import { usePreviewTab } from '@/composables/usePreviewTab';
+import type { GlbSizeConfig } from '@/lib/glb/modelSize';
+import { rarityOptions } from '@/lib/cardRarity';
+import { DEFAULT_FADE_COLOR } from '@/lib/cardColors';
+import type { AccentColor } from '@/lib/cardColors';
+import { DEFAULT_TITLE_FONT } from '@/lib/cardFonts';
+import type { CardFontId, TitleSize } from '@/lib/cardFonts';
+import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
 import admin from '@/routes/admin';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import CardDesignFields from '@/components/admin/cards/CardDesignFields.vue';
+import CardImageField from '@/components/admin/cards/CardImageField.vue';
+import CardMessagesFields from '@/components/admin/cards/CardMessagesFields.vue';
+import CardPreview from '@/components/admin/cards/CardPreview.vue';
+import CardPreviewPanel from '@/components/admin/cards/CardPreviewPanel.vue';
+import CardStatField from '@/components/admin/cards/CardStatField.vue';
+import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
+import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
+import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
+import { cardStat } from '@/lib/cardStats';
+import type { DuelMessages } from '@/lib/duelMessages';
 
 interface Species {
     id: number;
+    species_category_id?: number;
+    category?: { id: number; name: string };
     common_name: string;
     scientific_name: string;
 }
 
 const props = defineProps<{
     species: Species[];
+    raritySettings: CardRaritySetting[];
+    duelMessageDefaults: DuelMessages;
+    glbConfig: GlbSizeConfig;
 }>();
 
 const form = useForm({
     species_id: '',
     name: '',
     rarity: 'comun',
-    edition: '',
-    description: '',
-    card_image: null as File | null,
-    model_name: '',
-    model_file: null as File | null,
-    model_url: '',
-    model_format: '',
-    model_description: '',
+    thumbnail_image: null as File | null,
+    artwork_image: null as File | null,
+    generated_image: null as File | null,
+    fade_color: DEFAULT_FADE_COLOR,
+    accent_color: null as AccentColor | null,
+    title_font_family: DEFAULT_TITLE_FONT.family as CardFontId,
+    title_font_weight: DEFAULT_TITLE_FONT.weight,
+    title_font_size: DEFAULT_TITLE_FONT.size as TitleSize,
     is_active: true,
     sort_order: 0,
+    astucia: 50,
+    rapidez: 50,
+    fuerza: 50,
+    duel_settings_source: 'rarity' as DuelSettingsSource,
+    questions_per_duel: null as number | null,
+    retries: null as number | null,
+    cooldown_minutes: null as number | null,
+    messages_source: 'default' as 'default' | 'card',
+    win_message: null as string | null,
+    retry_message: null as string | null,
+    locked_message: null as string | null,
 });
 
-const submit = () => {
-    form.post(admin.cards.store().url, {
+/*
+ * Vista previa de la tarjeta generada a partir de la plantilla.
+ */
+const preview = useTemplateRef<InstanceType<typeof CardPreview>>('preview');
+
+const selectedSpecies = computed(() =>
+    props.species.find((item) => String(item.id) === form.species_id),
+);
+
+const artworkPreviewUrl = useObjectUrl(() => form.artwork_image);
+
+const generatingImage = ref(false);
+
+const SAVING_TEXT = 'Guardando...';
+
+const submit = async () => {
+    /*
+     * El modelo 3D se escala en el navegador antes de enviarlo.
+     */
+    const modelFields = await processModel();
+
+    if (!modelFields) {
+        return;
+    }
+
+    /*
+     * La imagen final se genera al guardar para que coincida
+     * con los datos enviados.
+     */
+    generatingImage.value = true;
+
+    try {
+        form.generated_image = (await preview.value?.generatePngFile()) ?? null;
+    } catch {
+        form.generated_image = null;
+    } finally {
+        generatingImage.value = false;
+    }
+
+    form.transform((data) => ({
+        ...data,
+        ...modelFields,
+    })).post(admin.cards.store().url, {
         forceFormData: true,
     });
 };
 
-const handleCardImage = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    form.card_image = target.files?.[0] ?? null;
-};
+/*
+ * Archivo 3D elegido (original). Se envía junto con el archivo escalado.
+ */
+const modelFile = ref<File | null>(null);
+
+/*
+ * Con archivos nuevos la tarjeta se crea inactiva: sus créditos se registran
+ * después, en la sección Créditos, y entonces se activa.
+ */
+const hasUploads = computed(() =>
+    Boolean(form.artwork_image || form.thumbnail_image || modelFile.value),
+);
+
+watch(hasUploads, (uploads) => {
+    if (uploads) {
+        form.is_active = false;
+    }
+});
+
 
 const handleModelFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
-    form.model_file = target.files?.[0] ?? null;
+    modelFile.value = target.files?.[0] ?? null;
 };
+
+const modelSize = useCardModelSize(props.glbConfig, modelFile);
+
+/*
+ * Vista previa lateral (Tarjeta | Modelo 3D): cambia sola según la sección
+ * que se edita. Al elegir un modelo se muestra su vista previa.
+ */
+const {
+    tab: previewTab,
+    isWide,
+    onFormInteraction,
+} = usePreviewTab();
+
+watch(modelFile, (file) => {
+    if (file) {
+        previewTab.value = 'model';
+    }
+});
+
+/*
+ * Alto del visor en la barra lateral: cabe en la pantalla junto con el
+ * encabezado y la lista de animaciones.
+ */
+const SIDEBAR_VIEWER_HEIGHT = 'min(520px, calc(100dvh - 16rem))';
+
+/*
+ * Vista previa del archivo seleccionado.
+ */
+const modelFilePreviewUrl = useObjectUrl(() => modelFile.value);
+
+const modelPreviewSource = computed(() => modelFilePreviewUrl.value);
+
+/*
+ * Alto que muestra la vista previa (null = tamaño del archivo).
+ */
+const previewHeight = computed(() =>
+    modelSize.heightError === null ? modelSize.height : null,
+);
+
+const modelErrors = computed(
+    () => form.errors as Partial<Record<keyof ModelFormFields, string>>,
+);
+
+const processingModel = ref(false);
+
+/*
+ * Devuelve los campos del modelo a enviar, o null si no se pudo procesar
+ * (el error se muestra en el panel de tamaño).
+ */
+const processModel = async (): Promise<ModelFormFields | null> => {
+    processingModel.value = true;
+
+    try {
+        return await modelSize.process();
+    } catch {
+        previewTab.value = 'model';
+
+        document
+            .getElementById('model_target_height')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        return null;
+    } finally {
+        processingModel.value = false;
+    }
+};
+
+const uploadPercentage = computed(() =>
+    Math.round(form.progress?.percentage ?? 0),
+);
+
+const saving = computed(
+    () => processingModel.value || generatingImage.value || form.processing,
+);
+
+const savingText = computed(() => {
+    if (processingModel.value) {
+        return 'Procesando modelo…';
+    }
+
+    if (form.processing && form.progress) {
+        return `Subiendo ${uploadPercentage.value}%`;
+    }
+
+    return SAVING_TEXT;
+});
+
 
 defineOptions({
     layout: {
@@ -72,7 +254,7 @@ defineOptions({
             },
             {
                 title: 'Tarjetas',
-                href: admin.cards.index,
+                href: admin.cards.index(),
             },
             {
                 title: 'Agregar tarjeta',
@@ -87,7 +269,7 @@ defineOptions({
     <Head title="Nueva tarjeta" />
 
     <div
-        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
+        class="flex h-full min-w-0 flex-1 flex-col gap-5 bg-[#F2F7F4] p-4 sm:p-5"
     >
         <!-- Encabezado -->
         <PageHeader
@@ -102,60 +284,126 @@ defineOptions({
 
         <form
             id="card-form"
-            class="space-y-5"
+            class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_34rem] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_38rem]"
             @submit.prevent="submit"
         >
-            <!-- Información general -->
-            <AdminCard
-                title="Información general"
-                description="Datos principales e identificación de la tarjeta."
-                :icon="Info"
+            <!--
+                Vista previa: fija a la derecha en pantallas anchas, con
+                pestañas Tarjeta | Modelo 3D; en pantallas pequeñas aparece
+                antes del formulario (el modelo se ve en su sección).
+            -->
+            <div class="min-w-0 xl:sticky xl:top-5 xl:order-2">
+                <CardPreviewPanel
+                    v-if="isWide"
+                    v-model:tab="previewTab"
+                    :has-model="Boolean(modelPreviewSource)"
+                >
+                    <template #card>
+                        <CardPreview
+                            ref="preview"
+                            embedded
+                            :title="form.name"
+                            :scientific-name="selectedSpecies?.scientific_name ?? ''"
+                            :astucia="form.astucia"
+                            :rapidez="form.rapidez"
+                            :fuerza="form.fuerza"
+                            :artwork-url="artworkPreviewUrl"
+                            :fade-color="form.fade_color"
+                            :accent-color="form.accent_color"
+                            :title-font-family="form.title_font_family"
+                            :title-font-weight="form.title_font_weight"
+                            :title-font-size="form.title_font_size"
+                        />
+                    </template>
+
+                    <template #model>
+                        <ModelViewer
+                            :source="modelPreviewSource"
+                            extension="glb"
+                            :height="SIDEBAR_VIEWER_HEIGHT"
+                            :size-preview="modelSize.hasModel"
+                            :target-height="previewHeight"
+                            :paused="previewTab !== 'model'"
+                        />
+                    </template>
+                </CardPreviewPanel>
+
+                <CardPreview
+                    v-else
+                    ref="preview"
+                    :title="form.name"
+                    :scientific-name="selectedSpecies?.scientific_name ?? ''"
+                    :astucia="form.astucia"
+                    :rapidez="form.rapidez"
+                    :fuerza="form.fuerza"
+                    :artwork-url="artworkPreviewUrl"
+                    :fade-color="form.fade_color"
+                    :accent-color="form.accent_color"
+                    :title-font-family="form.title_font_family"
+                    :title-font-weight="form.title_font_weight"
+                    :title-font-size="form.title_font_size"
+                />
+            </div>
+
+            <div
+                class="min-w-0 space-y-5 xl:order-1"
+                @focusin="onFormInteraction"
+                @pointerdown="onFormInteraction"
             >
-                <div class="space-y-5">
-                    <!-- Especie -->
-                    <div class="form-field">
-                        <label for="species_id" class="form-label">
-                            Especie
-                            <span class="text-red-500">*</span>
-                        </label>
+                <!-- Contenido de la tarjeta -->
+                <AdminCard
+                    data-preview="card"
+                    title="Contenido de la tarjeta"
+                    description="Especie y nombre que aparecen en la tarjeta."
+                    :icon="Info"
+                >
+                    <div class="form-grid">
+                        <!-- Especie -->
+                        <div class="form-field">
+                            <label for="species_id" class="form-label">
+                                Especie
+                                <span class="text-red-500">*</span>
+                            </label>
 
-                        <div class="form-select-wrapper">
-                            <select
-                                id="species_id"
-                                v-model="form.species_id"
-                                class="form-select appearance-none"
-                                :class="{
-                                    'form-input-error': form.errors.species_id,
-                                }"
-                            >
-                                <option value="">
-                                    Selecciona una especie
-                                </option>
-
-                                <option
-                                    v-for="item in props.species"
-                                    :key="item.id"
-                                    :value="String(item.id)"
+                            <div class="form-select-wrapper">
+                                <select
+                                    id="species_id"
+                                    v-model="form.species_id"
+                                    class="form-select appearance-none"
+                                    :class="{
+                                        'form-input-error': form.errors.species_id,
+                                    }"
                                 >
-                                    {{ item.common_name }} — {{ item.scientific_name }}
-                                </option>
-                            </select>
+                                    <option value="">
+                                        Selecciona una especie
+                                    </option>
 
-                            <ChevronDown
-                                :size="16"
-                                class="form-select-icon"
-                            />
+                                    <option
+                                        v-for="item in props.species"
+                                        :key="item.id"
+                                        :value="String(item.id)"
+                                    >
+                                        {{ item.common_name }} — {{ item.scientific_name }}
+                                        <template v-if="item.category">
+                                            ({{ item.category.name }})
+                                        </template>
+                                    </option>
+                                </select>
+
+                                <ChevronDown
+                                    :size="16"
+                                    class="form-select-icon"
+                                />
+                            </div>
+
+                            <p
+                                v-if="form.errors.species_id"
+                                class="form-error"
+                            >
+                                {{ form.errors.species_id }}
+                            </p>
                         </div>
 
-                        <p
-                            v-if="form.errors.species_id"
-                            class="form-error"
-                        >
-                            {{ form.errors.species_id }}
-                        </p>
-                    </div>
-
-                    <div class="form-grid">
                         <!-- Nombre -->
                         <div class="form-field">
                             <label for="name" class="form-label">
@@ -178,385 +426,367 @@ defineOptions({
                                 {{ form.errors.name }}
                             </p>
                         </div>
-
-                        <!-- Rareza -->
-                        <div class="form-field">
-                            <label for="rarity" class="form-label">
-                                Rareza
-                                <span class="text-red-500">*</span>
-                            </label>
-
-                            <div class="form-select-wrapper">
-                                <select
-                                    id="rarity"
-                                    v-model="form.rarity"
-                                    class="form-select appearance-none"
-                                    :class="{
-                                        'form-input-error': form.errors.rarity,
-                                    }"
-                                >
-                                    <option value="comun">Común</option>
-                                    <option value="rara">Rara</option>
-                                    <option value="epica">Épica</option>
-                                    <option value="edicion_especial">
-                                        Edición especial
-                                    </option>
-                                </select>
-
-                                <ChevronDown
-                                    :size="16"
-                                    class="form-select-icon"
-                                />
-                            </div>
-
-                            <p v-if="form.errors.rarity" class="form-error">
-                                {{ form.errors.rarity }}
-                            </p>
-                        </div>
-
-                        <!-- Edición -->
-                        <div class="form-field">
-                            <label for="edition" class="form-label">
-                                Edición
-                            </label>
-
-                            <input
-                                id="edition"
-                                v-model="form.edition"
-                                type="text"
-                                placeholder="Ej. Colección Sahuatoba 2026"
-                                class="form-input"
-                                :class="{
-                                    'form-input-error': form.errors.edition,
-                                }"
-                            />
-
-                            <p class="form-help">
-                                Opcional. Identifica la colección a la que pertenece.
-                            </p>
-
-                            <p v-if="form.errors.edition" class="form-error">
-                                {{ form.errors.edition }}
-                            </p>
-                        </div>
-
-                        <!-- Orden -->
-                        <div class="form-field">
-                            <label for="sort_order" class="form-label">
-                                Orden de aparición
-                            </label>
-
-                            <input
-                                id="sort_order"
-                                v-model.number="form.sort_order"
-                                type="number"
-                                min="0"
-                                placeholder="0"
-                                class="form-input"
-                                :class="{
-                                    'form-input-error': form.errors.sort_order,
-                                }"
-                            />
-
-                            <p class="form-help">
-                                Un número menor aparece primero.
-                            </p>
-
-                            <p
-                                v-if="form.errors.sort_order"
-                                class="form-error"
-                            >
-                                {{ form.errors.sort_order }}
-                            </p>
-                        </div>
                     </div>
+                </AdminCard>
 
-                    <!-- Descripción -->
-                    <div class="form-field">
-                        <label for="description" class="form-label">
-                            Descripción
-                        </label>
-
-                        <textarea
-                            id="description"
-                            v-model="form.description"
-                            rows="4"
-                            placeholder="Describe las características de esta tarjeta..."
-                            class="form-textarea"
-                            :class="{
-                                'form-textarea-error': form.errors.description,
-                            }"
+                <!-- Estadísticas de la tarjeta (Astucia, Rapidez, Fuerza: 1-100) -->
+                <AdminCard
+                    data-preview="card"
+                    title="Estadísticas de la tarjeta"
+                    description="Asigna un valor de 1 a 100 para cada atributo de la tarjeta."
+                    :icon="Zap"
+                >
+                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                        <CardStatField
+                            id="astucia"
+                            v-model="form.astucia"
+                            :icon="cardStat('astucia').icon"
+                            label="Astucia"
+                            help="Nivel de ingenio y astucia."
+                            :error="form.errors.astucia"
                         />
 
-                        <p
-                            v-if="form.errors.description"
-                            class="form-error"
-                        >
-                            {{ form.errors.description }}
-                        </p>
-                    </div>
-                </div>
-            </AdminCard>
-
-            <!-- Imagen de la tarjeta -->
-            <AdminCard
-                title="Imagen de la tarjeta"
-                description="Sube la imagen que se mostrará en la colección."
-                :icon="FileImage"
-            >
-                <div>
-                    <label for="card_image" class="form-upload">
-                        <div class="form-upload-icon">
-                            <Upload :size="24" />
-                        </div>
-
-                        <span class="form-upload-title">
-                            {{ form.card_image?.name || 'Selecciona una imagen' }}
-                        </span>
-
-                        <span class="form-upload-description">
-                            Haz clic para buscar un archivo en tu dispositivo.
-                        </span>
-
-                        <span class="form-upload-description">
-                            JPG, JPEG, PNG o WEBP · Máximo 5 MB
-                        </span>
-
-                        <input
-                            id="card_image"
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                            class="form-upload-input"
-                            @change="handleCardImage"
+                        <CardStatField
+                            id="rapidez"
+                            v-model="form.rapidez"
+                            :icon="cardStat('rapidez').icon"
+                            label="Rapidez"
+                            help="Velocidad y agilidad."
+                            :error="form.errors.rapidez"
                         />
-                    </label>
 
-                    <p
-                        v-if="form.errors.card_image"
-                        class="form-error mt-3"
-                    >
-                        {{ form.errors.card_image }}
+                        <CardStatField
+                            id="fuerza"
+                            v-model="form.fuerza"
+                            :icon="cardStat('fuerza').icon"
+                            label="Fuerza"
+                            help="Potencia y resistencia física."
+                            :error="form.errors.fuerza"
+                        />
+                    </div>
+                </AdminCard>
+
+                <!-- Imagen de la tarjeta -->
+                <AdminCard
+                    data-preview="card"
+                    title="Imagen de la tarjeta"
+                    description="Fondo de la plantilla de la tarjeta."
+                    :icon="FileImage"
+                >
+                    <CardImageField
+                        id="artwork_image"
+                        v-model:file="form.artwork_image"
+                        label="Imagen de la tarjeta"
+                        help="Fondo de la plantilla de la tarjeta."
+                        :error="form.errors.artwork_image"
+                    />
+
+                    <p v-if="form.errors.generated_image" class="form-error mt-3">
+                        {{ form.errors.generated_image }}
                     </p>
-                </div>
-            </AdminCard>
+                </AdminCard>
 
-            <!-- Modelo 3D -->
-            <AdminCard
-                title="Modelo 3D"
-                description="Añade un modelo interactivo asociado a la tarjeta."
-                :icon="Box"
-            >
-                <div class="space-y-5">
-                    <div class="form-grid">
-                        <!-- Nombre del modelo -->
-                        <div class="form-field">
-                            <label for="model_name" class="form-label">
-                                Nombre del modelo
-                            </label>
-
-                            <input
-                                id="model_name"
-                                v-model="form.model_name"
-                                type="text"
-                                placeholder="Ej. Jaguar 3D"
-                                class="form-input"
-                                :class="{
-                                    'form-input-error': form.errors.model_name,
-                                }"
-                            />
-
-                            <p
-                                v-if="form.errors.model_name"
-                                class="form-error"
-                            >
-                                {{ form.errors.model_name }}
-                            </p>
-                        </div>
-
-                        <!-- Formato -->
-                        <div class="form-field">
-                            <label for="model_format" class="form-label">
-                                Formato del modelo
-                            </label>
-
-                            <div class="form-select-wrapper">
-                                <select
-                                    id="model_format"
-                                    v-model="form.model_format"
-                                    class="form-select appearance-none"
-                                    :class="{
-                                        'form-input-error': form.errors.model_format,
-                                    }"
-                                >
-                                    <option value="">
-                                        Seleccionar formato
-                                    </option>
-                                    <option value="glb">GLB</option>
-                                    <option value="gltf">GLTF</option>
-                                </select>
-
-                                <ChevronDown
-                                    :size="16"
-                                    class="form-select-icon"
-                                />
-                            </div>
-
-                            <p
-                                v-if="form.errors.model_format"
-                                class="form-error"
-                            >
-                                {{ form.errors.model_format }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Archivo del modelo -->
-                    <div class="form-field">
-                        <label for="model_file" class="form-label">
-                            Archivo del modelo
-                        </label>
-
-                        <label
-                            for="model_file"
-                            class="form-upload sm:flex-row sm:text-left"
-                        >
-                            <div class="form-upload-icon">
-                                <FileBox :size="22" />
-                            </div>
-
-                            <div class="min-w-0 flex-1">
-                                <p class="break-words text-sm font-medium text-[#244334]">
-                                    {{ form.model_file?.name || 'Seleccionar archivo 3D' }}
-                                </p>
-
-                                <p class="form-upload-description mt-1">
-                                    Formatos GLB o GLTF · Máximo 50 MB
-                                </p>
-                            </div>
-
-                            <span
-                                class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-[#C8DCCF] bg-white px-4 py-2.5 text-sm font-medium text-[#435D4C] transition hover:bg-[#F2F7F4]"
-                            >
-                                <Upload :size="16" />
-                                Examinar
-                            </span>
-
-                            <input
-                                id="model_file"
-                                type="file"
-                                accept=".glb,.gltf"
-                                class="form-upload-input"
-                                @change="handleModelFile"
-                            />
-                        </label>
-
-                        <p
-                            v-if="form.errors.model_file"
-                            class="form-error"
-                        >
-                            {{ form.errors.model_file }}
-                        </p>
-                    </div>
-
-                    <!-- URL del modelo -->
-                    <div class="form-field">
-                        <label for="model_url" class="form-label">
-                            URL del modelo 3D
-                        </label>
-
-                        <input
-                            id="model_url"
-                            v-model="form.model_url"
-                            type="url"
-                            placeholder="https://ejemplo.com/modelo.glb"
-                            class="form-input"
-                            :class="{
-                                'form-input-error': form.errors.model_url,
-                            }"
-                        />
-
-                        <p class="form-help">
-                            Opcional. Utiliza este campo si el modelo está alojado externamente.
-                        </p>
-
-                        <p
-                            v-if="form.errors.model_url"
-                            class="form-error"
-                        >
-                            {{ form.errors.model_url }}
-                        </p>
-                    </div>
-
-                    <!-- Descripción del modelo -->
-                    <div class="form-field">
-                        <label for="model_description" class="form-label">
-                            Descripción del modelo
-                        </label>
-
-                        <textarea
-                            id="model_description"
-                            v-model="form.model_description"
-                            rows="3"
-                            placeholder="Información adicional sobre el modelo 3D..."
-                            class="form-textarea"
-                            :class="{
-                                'form-textarea-error': form.errors.model_description,
-                            }"
-                        />
-
-                        <p
-                            v-if="form.errors.model_description"
-                            class="form-error"
-                        >
-                            {{ form.errors.model_description }}
-                        </p>
-                    </div>
-                </div>
-            </AdminCard>
-
-            <!-- Configuración -->
-            <AdminCard
-                title="Configuración"
-                description="Define la disponibilidad y el orden de la tarjeta."
-                :icon="Layers3"
-            >
-                <ActiveSwitch
-                    id="is_active"
-                    v-model="form.is_active"
-                    label="Tarjeta activa"
-                    description="La tarjeta estará disponible para mostrarse y utilizarse en el sistema."
-                    :error="form.errors.is_active"
+                <!-- Diseño de la tarjeta -->
+                <CardDesignFields
+                    data-preview="card"
+                    v-model:fade-color="form.fade_color"
+                    v-model:accent-color="form.accent_color"
+                    v-model:title-font-family="form.title_font_family"
+                    v-model:title-font-weight="form.title_font_weight"
+                    v-model:title-font-size="form.title_font_size"
+                    :errors="form.errors"
                 />
-            </AdminCard>
 
-            <!-- Acciones: pie opcional -->
-            <AdminCard :padding="false">
-                <template #default>
-                    <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
-                        <p class="form-help sm:mr-auto">
-                            <span class="text-red-500">*</span>
-                            Campos obligatorios según la validación del formulario.
+                <!-- Colección y duelos -->
+                <h2
+                    class="px-1 pt-3 text-xs font-semibold tracking-wider text-[#718477] uppercase"
+                >
+                    Colección y duelos
+                </h2>
+
+                <!-- Colección -->
+                <AdminCard
+                    title="Colección"
+                    description="Rareza, orden de aparición y miniatura de la tarjeta."
+                    :icon="Layers3"
+                >
+                    <div class="space-y-5">
+                        <div class="form-grid">
+                            <!-- Rareza -->
+                            <div class="form-field">
+                                <label for="rarity" class="form-label">
+                                    Rareza
+                                    <span class="text-red-500">*</span>
+                                </label>
+
+                                <div class="form-select-wrapper">
+                                    <select
+                                        id="rarity"
+                                        v-model="form.rarity"
+                                        class="form-select appearance-none"
+                                        :class="{
+                                            'form-input-error': form.errors.rarity,
+                                        }"
+                                    >
+                                        <option
+                                            v-for="option in rarityOptions"
+                                            :key="option.value"
+                                            :value="option.value"
+                                        >
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+
+                                    <ChevronDown
+                                        :size="16"
+                                        class="form-select-icon"
+                                    />
+                                </div>
+
+                                <p v-if="form.errors.rarity" class="form-error">
+                                    {{ form.errors.rarity }}
+                                </p>
+                            </div>
+
+                            <!-- Orden -->
+                            <div class="form-field">
+                                <label for="sort_order" class="form-label">
+                                    Orden de aparición
+                                </label>
+
+                                <input
+                                    id="sort_order"
+                                    v-model.number="form.sort_order"
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    class="form-input"
+                                    :class="{
+                                        'form-input-error': form.errors.sort_order,
+                                    }"
+                                />
+
+                                <p class="form-help">
+                                    Un número menor aparece primero.
+                                </p>
+
+                                <p
+                                    v-if="form.errors.sort_order"
+                                    class="form-error"
+                                >
+                                    {{ form.errors.sort_order }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <CardImageField
+                            id="thumbnail_image"
+                            v-model:file="form.thumbnail_image"
+                            label="Miniatura"
+                            help="Se muestra en los listados de la colección."
+                            :error="form.errors.thumbnail_image"
+                        />
+                    </div>
+                </AdminCard>
+
+                <!-- Configuración de duelos y reintentos -->
+                <DuelSettingsFields
+                    v-model:source="form.duel_settings_source"
+                    v-model:questions-per-duel="form.questions_per_duel"
+                    v-model:retries="form.retries"
+                    v-model:cooldown-minutes="form.cooldown_minutes"
+                    :rarity="form.rarity"
+                    :rarity-settings="raritySettings"
+                    :errors="form.errors"
+                />
+
+                <!-- Mensajes del duelo -->
+                <CardMessagesFields
+                    v-model:source="form.messages_source"
+                    v-model:win-message="form.win_message"
+                    v-model:retry-message="form.retry_message"
+                    v-model:locked-message="form.locked_message"
+                    :rarity="form.rarity"
+                    :rarity-settings="raritySettings"
+                    :defaults="duelMessageDefaults"
+                    :card-name="form.name"
+                    :duel-settings-source="form.duel_settings_source"
+                    :retries="form.retries"
+                    :cooldown-minutes="form.cooldown_minutes"
+                    :errors="form.errors"
+                />
+
+                <!-- Modelo 3D -->
+                <AdminCard
+                    data-preview="model"
+                    title="Modelo 3D"
+                    description="Añade un modelo interactivo asociado a la tarjeta."
+                    :icon="Box"
+                >
+                    <div class="space-y-5">
+                        <!-- Archivo del modelo -->
+                        <div class="form-field">
+                            <label for="model_file" class="form-label">
+                                Archivo del modelo
+                            </label>
+
+                            <label
+                                for="model_file"
+                                class="form-upload sm:flex-row sm:text-left"
+                            >
+                                <div class="form-upload-icon">
+                                    <FileBox :size="22" />
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <p class="break-words text-sm font-medium text-[#244334]">
+                                        {{ modelFile?.name || 'Seleccionar archivo 3D' }}
+                                    </p>
+
+                                    <p class="form-upload-description mt-1">
+                                        Formato GLB · Máximo 50 MB
+                                    </p>
+                                </div>
+
+                                <span
+                                    class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-[#C8DCCF] bg-white px-4 py-2.5 text-sm font-medium text-[#435D4C] transition hover:bg-[#F2F7F4]"
+                                >
+                                    <Upload :size="16" />
+                                    Examinar
+                                </span>
+
+                                <input
+                                    id="model_file"
+                                    type="file"
+                                    accept=".glb"
+                                    class="form-upload-input"
+                                    @change="handleModelFile"
+                                />
+                            </label>
+
+                            <p
+
+                                v-if="modelErrors.model_file || modelErrors.model_original_file"
+
+                                class="form-error"
+
+                            >
+
+                                {{ modelErrors.model_file ?? modelErrors.model_original_file }}
+
+                            </p>
+
+                        </div>
+
+
+                        <!-- Tamaño real -->
+
+                        <ModelSizeField
+
+                            v-if="modelSize.hasModel"
+
+                            :model="modelSize"
+
+                            :errors="modelErrors"
+
+                        />
+
+                        <!--
+                            Vista previa del modelo: en pantallas anchas está
+                            en la barra lateral (pestaña "Modelo 3D").
+                        -->
+                        <p
+                            v-if="isWide && modelSize.hasModel"
+                            class="flex items-center gap-2 text-xs text-[#718477]"
+                        >
+                            <Info :size="14" class="shrink-0 text-[#187744]" />
+                            La vista previa a escala está en el panel derecho,
+                            pestaña "Modelo 3D".
                         </p>
 
-                        <CancelButton
-                            :href="admin.cards.index().url"
-                            :icon="ArrowLeft"
-                        >
-                            Cancelar
-                        </CancelButton>
+                        <div v-if="!isWide" class="form-field">
+                            <span class="form-label">Vista previa</span>
 
-                        <AdminButton
-                            type="submit"
-                            :disabled="form.processing"
-                            :loading="form.processing"
-                            :icon="Save"
-                            loading-text="Guardando..."
-                        >
-                            Guardar tarjeta
-                        </AdminButton>
+                            <ModelViewer
+                                :source="modelPreviewSource"
+                                extension="glb"
+                                height-class="h-[540px]"
+                                :size-preview="modelSize.hasModel"
+                                :target-height="previewHeight"
+                            />
+                        </div>
                     </div>
-                </template>
-            </AdminCard>
+                </AdminCard>
+
+                <!-- Configuración -->
+                <AdminCard
+                    title="Configuración"
+                    description="Define la disponibilidad de la tarjeta en el sistema."
+                    :icon="Layers3"
+                >
+                    <ActiveSwitch
+                        id="is_active"
+                        v-model="form.is_active"
+                        label="Tarjeta activa"
+                        description="La tarjeta estará disponible para mostrarse y utilizarse en el sistema."
+                        :error="form.errors.is_active"
+                        :disabled="hasUploads"
+                    />
+
+                    <p v-if="hasUploads" class="form-help mt-3">
+                        La tarjeta se creará inactiva. Al guardar se abrirá su
+                        sección Créditos para indicar de dónde salió cada imagen
+                        y el modelo 3D; después podrás activarla.
+                    </p>
+                </AdminCard>
+
+                <!-- Acciones: pie -->
+                <AdminCard
+                    :padding="false"
+                    class="sticky bottom-0 z-10 border-t-2 border-t-[#DCE7DF]"
+                >
+                    <template #default>
+                        <!-- Progreso de la subida -->
+                        <div
+                            v-if="form.processing && form.progress"
+                            class="absolute inset-x-0 top-0 h-1 overflow-hidden rounded-t-2xl bg-[#E4EEE7]"
+                            role="progressbar"
+                            :aria-valuenow="uploadPercentage"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                        >
+                            <div
+                                class="h-full bg-[#187744] transition-[width] duration-200"
+                                :style="{ width: `${uploadPercentage}%` }"
+                            />
+                        </div>
+
+                        <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+                            <p class="form-help sm:mr-auto">
+                                <span class="text-red-500">*</span>
+                                Campos obligatorios según la validación del formulario.
+                            </p>
+
+                            <CancelButton
+                                :href="admin.cards.index().url"
+                                :icon="ArrowLeft"
+                            >
+                                Cancelar
+                            </CancelButton>
+
+                            <AdminButton
+                                type="submit"
+                                :disabled="saving || modelSize.inspecting"
+                                :loading="saving"
+                                :icon="Save"
+                                :loading-text="savingText"
+                            >
+                                Guardar tarjeta
+                            </AdminButton>
+                        </div>
+                    </template>
+                </AdminCard>
+            </div>
         </form>
     </div>
 </template>

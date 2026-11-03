@@ -1,0 +1,670 @@
+<script setup lang="ts">
+import type { HTML3DElement } from '@babylonjs/viewer';
+import { useDebounceFn, useEventListener, useLocalStorage } from '@vueuse/core';
+import {
+    Box,
+    CircleOff,
+    Eye,
+    EyeOff,
+    LoaderCircle,
+    PersonStanding,
+    RotateCcw,
+    Ruler,
+    Scan,
+    TriangleAlert,
+    ZoomIn,
+    ZoomOut,
+} from 'lucide-vue-next';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+
+import { formatMeters } from '@/lib/glb/modelSize';
+import type { SizeReference, SizeStage } from '@/lib/glb/sizeStage';
+import type { ModelExtension } from '@/lib/modelPreview';
+
+const props = withDefaults(
+    defineProps<{
+        source: string | null;
+        extension?: ModelExtension | null;
+        heightClass?: string;
+        /*
+         * Alto exacto (p. ej. para igualar otra vista previa); tiene prioridad sobre heightClass.
+         */
+        height?: string | null;
+        /*
+         * Acercamiento predeterminado y botones de zoom (Completo / Normal / Cerca).
+         */
+        zoomControls?: boolean;
+        /*
+         * Motor de render; por defecto el visor elige (WebGPU en Chromium).
+         */
+        engine?: 'WebGL' | 'WebGPU' | null;
+        emptyText?: string;
+        /*
+         * Tamaño real: cuadrícula de 1 m, objeto de referencia y el modelo
+         * escalado a targetHeight (null = tamaño del archivo).
+         */
+        sizePreview?: boolean;
+        targetHeight?: number | null;
+        /*
+         * Clave en localStorage para el botón "Ocultar controles". Cada clave
+         * guarda su propia preferencia (p. ej. la vista previa de la tarjeta
+         * es independiente de los visores del modelo). Sin clave, los visores
+         * con zoom o referencia de tamaño usan la compartida; los demás no
+         * tienen el botón.
+         */
+        controlsKey?: string | null;
+        /*
+         * Detiene el dibujo (p. ej. en una pestaña oculta) sin descargar el modelo.
+         */
+        paused?: boolean;
+    }>(),
+    {
+        extension: null,
+        heightClass: 'h-[420px]',
+        height: null,
+        engine: null,
+        sizePreview: false,
+        targetHeight: null,
+        controlsKey: null,
+        paused: false,
+        zoomControls: true,
+        emptyText: 'Selecciona un archivo GLB para previsualizar el modelo.',
+    },
+);
+
+const emit = defineEmits<{
+    /*
+     * Acceso a la escena de Babylon una vez cargado el modelo.
+     */
+    loaded: [details: NonNullable<HTML3DElement['viewerDetails']>];
+}>();
+
+const viewer = ref<HTML3DElement | null>(null);
+
+const isReady = ref(false);
+const isLoading = ref(false);
+const hasError = ref(false);
+
+/*
+ * Zoom relativo al encuadre automático del visor, para que se vea
+ * igual en cualquier modelo sin importar su tamaño.
+ */
+const ZOOM_PRESETS = [
+    { id: 'full', label: 'Completo', factor: 1, icon: ZoomOut },
+    { id: 'normal', label: 'Normal', factor: 0.8, icon: Scan },
+    { id: 'close', label: 'Cerca', factor: 0.55, icon: ZoomIn },
+] as const;
+
+type ZoomPreset = (typeof ZOOM_PRESETS)[number];
+
+const DEFAULT_ZOOM = ZOOM_PRESETS[1];
+
+let framedRadius: number | null = null;
+
+const activeZoom = ref<ZoomPreset['id'] | null>(DEFAULT_ZOOM.id);
+
+const applyZoom = (preset: ZoomPreset) => {
+    const details = viewer.value?.viewerDetails;
+
+    if (!details || !framedRadius) {
+        return;
+    }
+
+    // Solo cambia la distancia; el ángulo y el centro se conservan.
+    details.viewer.updateCamera({ radius: framedRadius * preset.factor });
+    activeZoom.value = preset.id;
+};
+
+const resetView = () => {
+    if (sizeStage) {
+        framedRadius = sizeStage.fitCamera();
+    } else {
+        viewer.value?.viewerDetails?.viewer.resetCamera(true);
+    }
+
+    applyZoom(DEFAULT_ZOOM);
+};
+
+/*
+ * Referencia de tamaño (solo con sizePreview).
+ */
+const SIZE_REFERENCES: {
+    id: SizeReference;
+    label: string;
+    icon: typeof Box;
+}[] = [
+    { id: 'person', label: 'Persona 1.70 m', icon: PersonStanding },
+    { id: 'cube', label: 'Cubo 1 m', icon: Box },
+    { id: 'none', label: 'Ninguna', icon: CircleOff },
+];
+
+const sizeReference = ref<SizeReference>('person');
+const displayedHeight = ref<number | null>(null);
+
+let sizeStage: SizeStage | null = null;
+
+const disposeSizeStage = () => {
+    sizeStage?.dispose();
+    sizeStage = null;
+    displayedHeight.value = null;
+};
+
+const applySize = (reframe: boolean) => {
+    if (!sizeStage) {
+        return;
+    }
+
+    displayedHeight.value = sizeStage.update(
+        props.targetHeight,
+        sizeReference.value,
+    );
+
+    if (reframe) {
+        framedRadius = sizeStage.fitCamera();
+        applyZoom(
+            ZOOM_PRESETS.find((preset) => preset.id === activeZoom.value) ??
+                DEFAULT_ZOOM,
+        );
+    }
+};
+
+const setupSizeStage = async (
+    details: NonNullable<HTML3DElement['viewerDetails']>,
+) => {
+    disposeSizeStage();
+
+    const { createSizeStage } = await import('@/lib/glb/sizeStage');
+    const stage = await createSizeStage(details);
+
+    // El modelo pudo cambiar mientras se cargaba.
+    if (viewer.value?.viewerDetails?.model !== details.model) {
+        stage?.dispose();
+
+        return;
+    }
+
+    sizeStage = stage;
+    activeZoom.value = DEFAULT_ZOOM.id;
+    applySize(true);
+};
+
+/*
+ * Mientras se escribe el alto se espera un momento antes de volver a medir
+ * el modelo y encuadrar la cámara; el cambio de referencia es inmediato.
+ */
+const applySizeDebounced = useDebounceFn(() => applySize(true), 150);
+
+watch(() => props.targetHeight, applySizeDebounced);
+watch(sizeReference, () => applySize(true));
+
+onBeforeUnmount(disposeSizeStage);
+
+// Al acercar o girar a mano ya no aplica ningún preajuste.
+const clearActiveZoom = () => {
+    activeZoom.value = null;
+};
+
+const animations = ref<string[]>([]);
+const selectedAnimation = ref<number | null>(null);
+
+/*
+ * La barra del visor siempre incluye un botón para restablecer la cámara,
+ * sin opción para quitarlo. Se oculta con estilos dentro de su shadow DOM
+ * (se usa "Restablecer vista" de los controles de zoom), junto con el
+ * separador anterior y la barra completa si ya no le queda ningún control.
+ * Sin controles de zoom (vista previa de la tarjeta) se conserva el botón.
+ */
+const TOOLBAR_STYLES = `
+    button[aria-label="Reset Camera Pose"],
+    .divider:has(+ button[aria-label="Reset Camera Pose"]) {
+        display: none;
+    }
+
+    .tool-bar:not(:has(.animation-timeline, select)) {
+        display: none;
+    }
+`;
+
+/*
+ * La barra del visor (animaciones) sigue a los controles propios: se vuelve
+ * más transparente al girar o animar y se oculta con "Ocultar controles".
+ * Los atributos los pone este componente en <babylon-viewer>.
+ */
+const CONTROLS_STYLES = `
+    .tool-bar {
+        transition: opacity 0.3s ease;
+    }
+
+    :host([data-controls-dimmed]) .tool-bar:not(:hover) {
+        opacity: 0.4;
+    }
+
+    :host([data-controls-hidden]) .tool-bar {
+        display: none !important;
+    }
+`;
+
+let toolbarSheet: CSSStyleSheet | null = null;
+let controlsSheet: CSSStyleSheet | null = null;
+
+const createSheet = (styles: string) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(styles);
+
+    return sheet;
+};
+
+watch(viewer, (element) => {
+    const root = element?.shadowRoot;
+
+    if (!root) {
+        return;
+    }
+
+    controlsSheet ??= createSheet(CONTROLS_STYLES);
+
+    const sheets = [controlsSheet];
+
+    if (props.zoomControls) {
+        toolbarSheet ??= createSheet(TOOLBAR_STYLES);
+        sheets.push(toolbarSheet);
+    }
+
+    root.adoptedStyleSheets = [
+        ...root.adoptedStyleSheets.filter((sheet) => !sheets.includes(sheet)),
+        ...sheets,
+    ];
+});
+
+/*
+ * Controles sobre el visor: más transparentes mientras se gira la vista o
+ * se reproduce una animación (vuelven a verse al pasar el cursor), y
+ * opción para ocultarlos. La preferencia se recuerda en este navegador.
+ */
+const MODEL_CONTROLS_KEY = 'admin.model-viewer.controls-hidden';
+
+const controlsKey =
+    props.controlsKey ??
+    (props.zoomControls || props.sizePreview ? MODEL_CONTROLS_KEY : null);
+
+const canHideControls = controlsKey !== null;
+
+const controlsHidden = canHideControls
+    ? useLocalStorage(controlsKey, false)
+    : ref(false);
+
+/*
+ * Arrastrar y usar la rueda se siguen por separado: el temporizador de la
+ * rueda no debe quitar el estado de un arrastre que empezó después.
+ */
+const isDragging = ref(false);
+const isWheeling = ref(false);
+const isAnimationPlaying = ref(false);
+
+let wheelTimer: ReturnType<typeof setTimeout> | undefined;
+
+const startDrag = () => {
+    clearActiveZoom();
+    isDragging.value = true;
+};
+
+const stopDrag = () => {
+    isDragging.value = false;
+};
+
+const onWheel = () => {
+    clearActiveZoom();
+    isWheeling.value = true;
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(() => {
+        isWheeling.value = false;
+    }, 600);
+};
+
+/*
+ * El cursor puede soltarse fuera del visor. Se escucha en fase de captura
+ * por si la cámara del visor detiene la propagación del evento.
+ */
+useEventListener('pointerup', stopDrag, { capture: true });
+useEventListener('pointercancel', stopDrag, { capture: true });
+
+onBeforeUnmount(() => clearTimeout(wheelTimer));
+
+const syncAnimationPlaying = () => {
+    isAnimationPlaying.value = viewer.value?.isAnimationPlaying ?? false;
+};
+
+const controlsDimmed = computed(
+    () => isDragging.value || isWheeling.value || isAnimationPlaying.value,
+);
+
+/*
+ * Clases de cada control sobre el visor.
+ */
+const overlayClass = computed(() => [
+    'transition-opacity duration-300',
+    controlsDimmed.value
+        ? 'opacity-40 hover:opacity-100 focus-within:opacity-100'
+        : 'opacity-100',
+]);
+
+/*
+ * Babylon.js es pesado: se carga solo cuando se usa el visor.
+ */
+onMounted(async () => {
+    await import('@babylonjs/viewer');
+    isReady.value = true;
+});
+
+watch(
+    () => props.source,
+    (source) => {
+        hasError.value = false;
+        isLoading.value = Boolean(source);
+        animations.value = [];
+        selectedAnimation.value = null;
+        isAnimationPlaying.value = false;
+        framedRadius = null;
+        activeZoom.value = DEFAULT_ZOOM.id;
+        disposeSizeStage();
+    },
+    { immediate: true },
+);
+
+const hideControls = computed(() => canHideControls && controlsHidden.value);
+
+/*
+ * Pausa del dibujo mientras el visor no se ve.
+ */
+let renderSuspension: { dispose: () => void } | null = null;
+
+const syncPaused = () => {
+    const details = viewer.value?.viewerDetails;
+
+    if (props.paused && details && !renderSuspension) {
+        renderSuspension = details.suspendRendering();
+    } else if (!props.paused && renderSuspension) {
+        renderSuspension.dispose();
+        renderSuspension = null;
+        details?.markSceneMutated();
+    }
+};
+
+watch(() => props.paused, syncPaused);
+
+onBeforeUnmount(() => {
+    renderSuspension?.dispose();
+    renderSuspension = null;
+});
+
+const syncAnimationState = () => {
+    selectedAnimation.value = viewer.value?.selectedAnimation ?? null;
+};
+
+const onModelChange = () => {
+    isLoading.value = false;
+    hasError.value = false;
+    animations.value = [...(viewer.value?.animations ?? [])];
+    syncAnimationState();
+    syncAnimationPlaying();
+
+    const details = viewer.value?.viewerDetails;
+
+    if (!details) {
+        return;
+    }
+
+    /*
+     * Al cargar, el visor encuadra el modelo con una animación, así que el
+     * radio final aún no está aplicado. El límite máximo de zoom sí: el visor
+     * lo fija en 5 veces el radio de encuadre.
+     */
+    framedRadius = (details.camera.upperRadiusLimit ?? 0) / 5 || null;
+
+    if (props.zoomControls) {
+        applyZoom(DEFAULT_ZOOM);
+    }
+
+    if (props.sizePreview) {
+        void setupSizeStage(details);
+    }
+
+    syncPaused();
+
+    emit('loaded', details);
+};
+
+const onModelError = () => {
+    isLoading.value = false;
+    hasError.value = true;
+    animations.value = [];
+};
+
+const selectAnimation = (index: number) => {
+    if (!viewer.value) {
+        return;
+    }
+
+    viewer.value.selectedAnimation = index;
+
+    if (!viewer.value.isAnimationPlaying) {
+        viewer.value.toggleAnimation();
+    }
+};
+</script>
+
+<template>
+    <div class="space-y-3">
+        <!-- Sin modelo -->
+        <div
+            v-if="!source"
+            class="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#DCE7DF] bg-[#F8FAF8] px-4 py-8 text-center"
+            :class="height ? null : heightClass"
+            :style="height ? { height } : undefined"
+        >
+            <div
+                class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E2F3E8] text-[#187744]"
+            >
+                <Box :size="24" />
+            </div>
+
+            <p class="max-w-xs text-sm text-[#718477]">
+                {{ emptyText }}
+            </p>
+        </div>
+
+        <!-- Visor -->
+        <div
+            v-else
+            class="relative overflow-hidden rounded-xl border border-[#DCE7DF] bg-[#F6F9F6]"
+            :class="height ? null : heightClass"
+            :style="height ? { height } : undefined"
+        >
+            <!--
+                source/extension se enlazan como atributos (.attr):
+                el visor lee el atributo "source" al inicializarse.
+            -->
+            <babylon-viewer
+                v-if="isReady"
+                ref="viewer"
+                :source.attr="source"
+                :extension.attr="extension ? `.${extension}` : null"
+                :engine.attr="engine"
+                clear-color="#F6F9F6"
+                class="model-viewer block h-full w-full"
+                @modelchange="onModelChange"
+                @modelerror="onModelError"
+                :data-controls-dimmed.attr="controlsDimmed ? '' : null"
+                :data-controls-hidden.attr="hideControls ? '' : null"
+                @selectedanimationchange="syncAnimationState"
+                @animationplayingchange="syncAnimationPlaying"
+                @pointerdown.capture="startDrag"
+                @wheel.capture.passive="onWheel"
+            />
+
+            <!-- Zoom -->
+            <div
+                v-if="zoomControls && isReady && !isLoading && !hasError && !hideControls"
+                class="absolute top-4 left-4 flex items-center gap-1 rounded-xl border border-[#DCE7DF] bg-white/95 p-1"
+                :class="overlayClass"
+            >
+                <button
+                    v-for="preset in ZOOM_PRESETS"
+                    :key="preset.id"
+                    type="button"
+                    :aria-pressed="activeZoom === preset.id"
+                    class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors"
+                    :class="
+                        activeZoom === preset.id
+                            ? 'bg-[#EAF5EE] text-[#187744]'
+                            : 'text-[#435D4C] hover:bg-[#F2F7F4]'
+                    "
+                    @click="applyZoom(preset)"
+                >
+                    <component :is="preset.icon" :size="15" />
+                    {{ preset.label }}
+                </button>
+
+                <span class="mx-0.5 h-6 w-px bg-[#DCE7DF]" />
+
+                <button
+                    type="button"
+                    title="Restablecer vista"
+                    aria-label="Restablecer vista"
+                    class="inline-flex items-center rounded-lg p-2 text-[#435D4C] transition-colors hover:bg-[#F2F7F4]"
+                    @click="resetView"
+                >
+                    <RotateCcw :size="15" />
+                </button>
+            </div>
+
+            <!-- Referencia de tamaño -->
+            <div
+                v-if="sizePreview && isReady && !isLoading && !hasError && !hideControls"
+                class="absolute left-4 flex items-center gap-1 rounded-xl border border-[#DCE7DF] bg-white/95 p-1"
+                :class="[zoomControls ? 'top-[4.25rem]' : 'top-4', overlayClass]"
+                role="radiogroup"
+                aria-label="Referencia de tamaño"
+            >
+                <span
+                    class="hidden items-center gap-1 px-2 text-[11px] font-semibold tracking-wider text-[#718477] uppercase sm:inline-flex"
+                >
+                    <Ruler :size="13" />
+                    Referencia
+                </span>
+
+                <button
+                    v-for="reference in SIZE_REFERENCES"
+                    :key="reference.id"
+                    type="button"
+                    role="radio"
+                    :aria-checked="sizeReference === reference.id"
+                    :title="reference.label"
+                    class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors"
+                    :class="
+                        sizeReference === reference.id
+                            ? 'bg-[#EAF5EE] text-[#187744]'
+                            : 'text-[#435D4C] hover:bg-[#F2F7F4]'
+                    "
+                    @click="sizeReference = reference.id"
+                >
+                    <component :is="reference.icon" :size="15" />
+                    <span class="hidden sm:inline">{{ reference.label }}</span>
+                </button>
+            </div>
+
+            <!--
+                Arriba a la derecha: alto final y botón para ocultar los
+                controles (abajo están los controles de animación del visor).
+                Sin backdrop-blur: sobre un canvas animado obliga a recalcular
+                el desenfoque en cada cuadro.
+            -->
+            <div
+                v-if="canHideControls && isReady && !isLoading && !hasError"
+                class="absolute top-4 right-4 flex items-center gap-2"
+                :class="overlayClass"
+            >
+                <div
+                    v-if="sizePreview && displayedHeight !== null && !hideControls"
+                    class="pointer-events-none rounded-full border border-[#C8DCCF] bg-white/95 px-3 py-1 text-[13px] font-semibold text-[#187744]"
+                >
+                    {{ formatMeters(displayedHeight) }} de alto
+                </div>
+
+                <button
+                    type="button"
+                    class="inline-flex items-center rounded-xl border border-[#DCE7DF] bg-white/95 p-2 text-[#435D4C] transition-colors hover:bg-[#F2F7F4]"
+                    :class="{ 'opacity-60 hover:opacity-100': controlsHidden }"
+                    :title="controlsHidden ? 'Mostrar controles' : 'Ocultar controles'"
+                    :aria-label="controlsHidden ? 'Mostrar controles' : 'Ocultar controles'"
+                    :aria-pressed="controlsHidden"
+                    @click="controlsHidden = !controlsHidden"
+                >
+                    <component :is="controlsHidden ? Eye : EyeOff" :size="15" />
+                </button>
+            </div>
+
+            <!-- Cargando -->
+            <div
+                v-if="!isReady || (isLoading && !hasError)"
+                class="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 text-sm text-[#718477]"
+            >
+                <LoaderCircle :size="18" class="animate-spin text-[#187744]" />
+                Cargando modelo...
+            </div>
+
+            <!-- Error -->
+            <div
+                v-if="hasError"
+                class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#F8FAF8] px-4 text-center"
+            >
+                <TriangleAlert :size="22" class="text-red-500" />
+
+                <p class="form-error max-w-sm">
+                    No se pudo cargar el modelo. Verifica que el archivo GLB sea
+                    válido.
+                </p>
+            </div>
+        </div>
+
+        <!-- Animaciones -->
+        <div
+            v-if="source && !hasError && animations.length"
+            class="rounded-xl border border-[#DCE7DF] bg-[#FCFEFC] p-3.5"
+        >
+            <p
+                class="mb-3 text-xs font-semibold tracking-wider text-[#435D4C] uppercase"
+            >
+                Animaciones ({{ animations.length }})
+            </p>
+
+            <div class="flex flex-wrap gap-2">
+                <button
+                    v-for="(name, index) in animations"
+                    :key="`${index}-${name}`"
+                    type="button"
+                    class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
+                    :class="
+                        selectedAnimation === index
+                            ? 'border-[#187744] bg-[#E4F2E8] text-[#187744]'
+                            : 'border-[#DCE7DF] bg-white text-[#435D4C] hover:bg-[#F2F7F4]'
+                    "
+                    @click="selectAnimation(index)"
+                >
+                    {{ name || `Animación ${index + 1}` }}
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+/* Barra de herramientas del visor con los colores de la app. */
+.model-viewer {
+    --ui-foreground-color: #ffffff;
+    --ui-background-hue: 147;
+    --ui-background-saturation: 66%;
+    --ui-background-lightness: 28%;
+    --ui-background-opacity: 0.85;
+}
+</style>
