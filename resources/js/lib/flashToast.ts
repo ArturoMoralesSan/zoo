@@ -7,10 +7,20 @@ export function initializeFlashToast(): void {
         const flash = (event as CustomEvent).detail?.flash;
         const data = flash?.toast as FlashToast | undefined;
 
-        if (!data) {
-            return;
+        if (data) {
+            toast[data.type](data.message);
         }
 
-        toast[data.type](data.message);
+        /*
+         * Advertencias del modelo 3D al guardar una tarjeta (no impiden guardar).
+         */
+        const modelWarnings = flash?.model_warnings as string[] | undefined;
+
+        if (modelWarnings?.length) {
+            toast.warning('Modelo 3D guardado con advertencias', {
+                description: modelWarnings.join(' '),
+                duration: 10000,
+            });
+        }
     });
 }

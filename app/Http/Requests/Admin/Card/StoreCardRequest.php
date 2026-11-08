@@ -2,11 +2,22 @@
 
 namespace App\Http\Requests\Admin\Card;
 
+use App\Concerns\AssetCreditValidationRules;
+use App\Concerns\CardDesignValidationRules;
+use App\Concerns\CardMessagesValidationRules;
+use App\Concerns\CardModelValidationRules;
+use App\Enums\CardRarity;
+use App\Models\Card;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreCardRequest extends FormRequest
 {
+    use AssetCreditValidationRules;
+    use CardDesignValidationRules;
+    use CardMessagesValidationRules;
+    use CardModelValidationRules;
+
     public function authorize(): bool
     {
         return true;
@@ -15,6 +26,10 @@ class StoreCardRequest extends FormRequest
     public function rules(): array
     {
         return [
+            ...$this->cardDesignRules(),
+
+            ...$this->cardMessagesRules(),
+
             'species_id' => [
                 'required',
                 'integer',
@@ -30,61 +45,35 @@ class StoreCardRequest extends FormRequest
             'rarity' => [
                 'required',
                 'string',
-                Rule::in([
-                    'comun',
-                    'rara',
-                    'epica',
-                    'edicion_especial',
-                ]),
+                Rule::enum(CardRarity::class),
             ],
 
-            'edition' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'description' => [
-                'nullable',
-                'string',
-            ],
-
-            'card_image' => [
+            'thumbnail_image' => [
                 'nullable',
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
             ],
 
-            'model_name' => [
+            'artwork_image' => [
                 'nullable',
-                'string',
-                'max:255',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
             ],
 
-            'model_file' => [
+            /*
+             * Imagen final generada en el navegador a partir de la plantilla.
+             */
+            'generated_image' => [
                 'nullable',
-                'file',
-                'mimes:glb,gltf',
-                'max:51200',
+                'image',
+                'mimes:png',
+                'max:15360',
             ],
 
-            'model_url' => [
-                'nullable',
-                'url',
-                'max:2048',
-            ],
+            ...$this->cardModelRules(),
 
-            'model_format' => [
-                'nullable',
-                'string',
-                'max:50',
-            ],
-
-            'model_description' => [
-                'nullable',
-                'string',
-            ],
 
             'is_active' => [
                 'boolean',
@@ -95,6 +84,72 @@ class StoreCardRequest extends FormRequest
                 'integer',
                 'min:0',
             ],
+
+            'astucia' => [
+                'required',
+                'integer',
+                'between:1,100',
+            ],
+
+            'rapidez' => [
+                'required',
+                'integer',
+                'between:1,100',
+            ],
+
+            'fuerza' => [
+                'required',
+                'integer',
+                'between:1,100',
+            ],
+
+            'duel_settings_source' => [
+                'required',
+                'string',
+                Rule::in([
+                    Card::DUEL_SETTINGS_RARITY,
+                    Card::DUEL_SETTINGS_CARD,
+                ]),
+            ],
+
+            'questions_per_duel' => [
+                'nullable',
+                'required_if:duel_settings_source,'.Card::DUEL_SETTINGS_CARD,
+                'integer',
+                'min:1',
+                'max:50',
+            ],
+
+            'retries' => [
+                'nullable',
+                'required_if:duel_settings_source,'.Card::DUEL_SETTINGS_CARD,
+                'integer',
+                'min:1',
+                'max:100',
+            ],
+
+            'cooldown_minutes' => [
+                'nullable',
+                'required_if:duel_settings_source,'.Card::DUEL_SETTINGS_CARD,
+                'integer',
+                'min:1',
+                'max:43200',
+            ],
         ];
+    }
+
+    /**
+     * Activación de la tarjeta según sus créditos.
+     */
+    public function after(): array
+    {
+        return [
+            $this->assetCreditsCheck(),
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return $this->cardModelAttributes();
     }
 }

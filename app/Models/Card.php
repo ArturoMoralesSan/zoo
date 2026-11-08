@@ -2,11 +2,19 @@
 
 namespace App\Models;
 
+use App\Enums\CreditAsset;
+use App\Enums\CreditRole;
+use App\Observers\CreditsCacheObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
+#[ObservedBy(CreditsCacheObserver::class)]
 class Card extends Model
 {
     use HasFactory;
@@ -15,27 +23,135 @@ class Card extends Model
         'species_id',
         'name',
         'rarity',
-        'edition',
-        'description',
-        'card_image',
-        'model_name',
+        'thumbnail_image',
+        'artwork_image',
+        'generated_image',
+        'fade_color',
+        'accent_color',
+        'title_font_family',
+        'title_font_weight',
+        'title_font_size',
         'model_file',
-        'model_url',
-        'model_format',
-        'model_description',
+        'model_original_file',
+        'model_target_height',
+        'model_original_height',
+        'model_final_height',
+        'model_final_width',
+        'model_final_depth',
         'is_active',
         'sort_order',
+        'astucia',
+        'rapidez',
+        'fuerza',
+        'duel_settings_source',
+        'questions_per_duel',
+        'retries',
+        'cooldown_minutes',
+        'messages_source',
+        'win_message',
+        'retry_message',
+        'locked_message',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'astucia' => 'integer',
+        'rapidez' => 'integer',
+        'fuerza' => 'integer',
+        'title_font_weight' => 'integer',
+        'questions_per_duel' => 'integer',
+        'retries' => 'integer',
+        'cooldown_minutes' => 'integer',
+
+        // Medidas del modelo 3D, en metros.
+        'model_target_height' => 'float',
+        'model_original_height' => 'float',
+        'model_final_height' => 'float',
+        'model_final_width' => 'float',
+        'model_final_depth' => 'float',
     ];
+
+    /**
+     * Orígenes posibles de la configuración de duelos.
+     */
+    public const DUEL_SETTINGS_RARITY = 'rarity';
+
+    public const DUEL_SETTINGS_CARD = 'card';
+
+    /**
+     * Indica si la tarjeta usa la configuración de su rareza.
+     */
+    public function usesRarityDuelSettings(): bool
+    {
+        return $this->duel_settings_source !== self::DUEL_SETTINGS_CARD;
+    }
+
+    /**
+     * Origen de los mensajes del resultado del duelo:
+     * los predeterminados del panel o los propios de la tarjeta.
+     */
+    public const MESSAGES_DEFAULT = 'default';
+
+    public const MESSAGES_CARD = 'card';
+
+    /**
+     * Indica si la tarjeta usa los mensajes predeterminados.
+     */
+    public function usesDefaultMessages(): bool
+    {
+        return $this->messages_source !== self::MESSAGES_CARD;
+    }
+
+    /**
+     * Preguntas por duelo según la tarjeta o su rareza.
+     */
+    protected function effectiveQuestionsPerDuel(): Attribute
+    {
+        return Attribute::get(fn (): int => (int) (
+            $this->usesRarityDuelSettings()
+                ? $this->raritySetting?->questions_per_duel
+                : $this->questions_per_duel
+        ) ?: CardRaritySetting::DEFAULT_QUESTIONS_PER_DUEL);
+    }
+
+    /**
+     * Reintentos según la tarjeta o su rareza.
+     */
+    protected function effectiveRetries(): Attribute
+    {
+        return Attribute::get(fn (): int => (int) (
+            $this->usesRarityDuelSettings()
+                ? $this->raritySetting?->retries
+                : $this->retries
+        ) ?: CardRaritySetting::DEFAULT_RETRIES);
+    }
+
+    /**
+     * Minutos de espera tras agotar los reintentos, según la tarjeta o su rareza.
+     */
+    protected function effectiveCooldownMinutes(): Attribute
+    {
+        return Attribute::get(fn (): int => (int) (
+            $this->usesRarityDuelSettings()
+                ? $this->raritySetting?->cooldown_minutes
+                : $this->cooldown_minutes
+        ) ?: CardRaritySetting::DEFAULT_COOLDOWN_MINUTES);
+    }
 
     public function species(): BelongsTo
     {
         return $this->belongsTo(
             Species::class
+        );
+    }
+
+    public function raritySetting(): BelongsTo
+    {
+        return $this->belongsTo(
+            CardRaritySetting::class,
+            'rarity',
+            'rarity'
         );
     }
 
@@ -46,8 +162,90 @@ class Card extends Model
         );
     }
 
-    public function quizQuestions(): HasMany 
-    { 
-        return $this->hasMany(QuizQuestion::class) ->orderBy('sort_order') ->orderBy('id'); 
+    public function qrCodes(): HasMany
+    {
+        return $this->hasMany(CardQrCode::class);
+    }
+
+    public function quizAttempts(): HasMany
+    {
+        return $this->hasMany(QuizAttempt::class);
+    }
+
+    public function quizQuestions(): HasMany
+    {
+        return $this->hasMany(QuizQuestion::class)->orderBy('id');
+    }
+
+    /**
+     * Créditos de los recursos de la tarjeta (ilustración, miniatura, modelo).
+     */
+    public function credits(): MorphMany
+    {
+        return $this->morphMany(Credit::class, 'creditable');
+    }
+
+    /**
+     * Crédito de origen de un recurso, si lo tiene.
+     */
+    public function credit(CreditAsset|string $asset): ?Credit
+    {
+        return $this->creditsFor($asset)->first(
+            fn (Credit $credit) => $credit->role === CreditRole::Origin
+        );
+    }
+
+    /**
+     * Todos los créditos de un recurso, en orden.
+     *
+     * @return Collection<int, Credit>
+     */
+    public function creditsFor(CreditAsset|string $asset): Collection
+    {
+        $asset = CreditAsset::from($asset instanceof CreditAsset ? $asset->value : $asset);
+
+        return $this->credits
+            ->filter(fn (Credit $credit) => $credit->asset === $asset)
+            ->sortBy(fn (Credit $credit) => $credit->sortKey())
+            ->values();
+    }
+
+    public function hasAsset(CreditAsset $asset): bool
+    {
+        return filled($this->{$asset->column()});
+    }
+
+    /**
+     * El recurso tiene su crédito de origen y, si se hizo a partir de otro
+     * recurso de la tarjeta (render del modelo…), ese también lo tiene.
+     */
+    public function hasCompleteCredits(CreditAsset $asset, array $visited = []): bool
+    {
+        $origin = $this->credit($asset);
+
+        if (! $origin) {
+            return false;
+        }
+
+        $basis = $origin->based_on_asset;
+
+        if (! $basis || in_array($basis, $visited, true) || $basis === $asset) {
+            return true;
+        }
+
+        return $this->hasAsset($basis) && $this->hasCompleteCredits($basis, [...$visited, $asset]);
+    }
+
+    /**
+     * Recursos subidos sin licencia completa.
+     *
+     * @return array<int, CreditAsset>
+     */
+    public function missingCredits(): array
+    {
+        return array_values(array_filter(
+            CreditAsset::cases(),
+            fn (CreditAsset $asset) => $this->hasAsset($asset) && ! $this->hasCompleteCredits($asset)
+        ));
     }
 }

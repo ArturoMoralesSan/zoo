@@ -1,8 +1,15 @@
 <?php
 
 use App\Http\Controllers\Admin\CardController;
+use App\Http\Controllers\Admin\CardCreditController;
+use App\Http\Controllers\Admin\CardQrCodeController;
+use App\Http\Controllers\Admin\CardRaritySettingController;
+use App\Http\Controllers\Admin\CreditController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DonationController;
+use App\Http\Controllers\Admin\CardCaptureController;
+use App\Http\Controllers\Admin\CardQuizStateController;
+use App\Http\Controllers\Admin\DuelMessageSettingController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\MapMarkerController;
@@ -11,6 +18,7 @@ use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\PointMovementController;
 use App\Http\Controllers\Admin\PointRuleController;
+use App\Http\Controllers\Admin\QuizQuestionController;
 use App\Http\Controllers\Admin\RewardController;
 use App\Http\Controllers\Admin\RewardRedemptionController;
 use App\Http\Controllers\Admin\RoleController;
@@ -21,7 +29,6 @@ use App\Http\Controllers\Admin\TicketOrderController;
 use App\Http\Controllers\Admin\TicketTypeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZooZoneController;
-use App\Http\Controllers\Admin\QuizQuestionController;
 use App\Http\Controllers\MapController;
 use Illuminate\Support\Facades\Route;
 
@@ -302,20 +309,45 @@ Route::middleware(['auth', 'verified'])
                 'destroy' => 'permission:map_paths.delete',
             ]);
 
-        Route::resource('cards', CardController::class)
-            ->middleware([
-                'index' => 'permission:cards.view',
-                'create' => 'permission:cards.create',
-                'store' => 'permission:cards.create',
-                'edit' => 'permission:cards.edit',
-                'update' => 'permission:cards.edit',
-                'destroy' => 'permission:cards.delete',
-            ]);
+        Route::put(
+            'cards/rarity-settings',
+            [CardRaritySettingController::class, 'update']
+        )->middleware('permission:cards.edit')
+            ->name('cards.rarity-settings.update');
+
+        Route::put(
+            'cards/duel-messages',
+            [DuelMessageSettingController::class, 'update']
+        )->middleware('permission:cards.edit')
+            ->name('cards.duel-messages.update');
 
         Route::delete(
-            'cards/{card}/image',
-            [CardController::class, 'destroyImage']
+            'cards/captures/{capture}',
+            [CardCaptureController::class, 'destroy']
+        )->middleware('permission:cards.delete')
+            ->name('cards.captures.destroy');
+
+        Route::delete(
+            'cards/quiz-states/{state}',
+            [CardQuizStateController::class, 'destroy']
         )->middleware('permission:cards.edit')
+            ->name('cards.quiz-states.destroy');
+
+        /*
+         * middlewareFor asigna el permiso por acción; ->middleware([...])
+         * ignora las llaves y exigiría todos los permisos en cada ruta.
+         */
+        Route::resource('cards', CardController::class)
+            ->middlewareFor(['index', 'show'], 'permission:cards.view')
+            ->middlewareFor(['create', 'store'], 'permission:cards.create')
+            ->middlewareFor(['edit', 'update'], 'permission:cards.edit')
+            ->middlewareFor('destroy', 'permission:cards.delete');
+
+        Route::delete(
+            'cards/{card}/image/{image}',
+            [CardController::class, 'destroyImage']
+        )->whereIn('image', array_keys(CardController::IMAGE_FIELDS))
+            ->middleware('permission:cards.edit')
             ->name('cards.image.destroy');
 
         Route::delete(
@@ -323,7 +355,33 @@ Route::middleware(['auth', 'verified'])
             [CardController::class, 'destroyModel']
         )->middleware('permission:cards.edit')
             ->name('cards.model.destroy');
-        
+
+        /*
+         * Modelo 3D original (disco privado) para volver a escalarlo.
+         */
+        Route::get(
+            'cards/{card}/model/original',
+            [CardController::class, 'originalModel']
+        )->middleware('permission:cards.edit')
+            ->name('cards.model.original');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Créditos y licencias de los recursos de las tarjetas
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('credits', [CreditController::class, 'index'])
+            ->middleware('permission:cards.view')
+            ->name('credits.index');
+
+        /*
+         * Autocompletar desde Wikimedia Commons (no guarda nada).
+         */
+        Route::post('credits/commons-lookup', [CreditController::class, 'commonsLookup'])
+            ->middleware(['permission:cards.edit', 'throttle:20,1'])
+            ->name('credits.commons-lookup');
+
         /*
         |--------------------------------------------------------------------------
         | Quiz de Cards
@@ -337,22 +395,56 @@ Route::middleware(['auth', 'verified'])
         Route::prefix('cards/{card}')
             ->name('cards.')
             ->group(function () {
+                /*
+                 * Importar preguntas en lote (JSON). Antes del resource para
+                 * que "import" no se tome como {quizQuestion}.
+                 */
+                Route::get('quiz/import', [QuizQuestionController::class, 'import'])
+                    ->middleware('permission:cards.edit')
+                    ->name('quiz.import');
+
+                Route::post('quiz/import', [QuizQuestionController::class, 'storeImport'])
+                    ->middleware('permission:cards.edit')
+                    ->name('quiz.import.store');
+
                 Route::resource('quiz', QuizQuestionController::class)
                     ->parameters([
                         'quiz' => 'quizQuestion',
                     ])
-                    ->middleware([
-                        'index' => 'permission:cards.view',
-                        'create' => 'permission:cards.edit',
-                        'store' => 'permission:cards.edit',
-                        'show' => 'permission:cards.view',
-                        'edit' => 'permission:cards.edit',
-                        'update' => 'permission:cards.edit',
-                        'destroy' => 'permission:cards.delete',
-                    ]);
+                    ->middlewareFor(['index', 'show'], 'permission:cards.view')
+                    ->middlewareFor(['create', 'store', 'edit', 'update'], 'permission:cards.edit')
+                    ->middlewareFor('destroy', 'permission:cards.delete');
+
+                /*
+                 * Códigos QR para iniciar duelos.
+                 * scopeBindings: el QR debe pertenecer a la tarjeta de la URL.
+                 */
+                Route::scopeBindings()->group(function () {
+                    Route::resource('qr-codes', CardQrCodeController::class)
+                        ->except('show')
+                        ->parameters([
+                            'qr-codes' => 'qrCode',
+                        ])
+                        ->middlewareFor('index', 'permission:cards.view')
+                        ->middlewareFor(['create', 'store', 'edit', 'update'], 'permission:cards.edit')
+                        ->middlewareFor('destroy', 'permission:cards.delete');
+
+                    /*
+                     * Créditos de los recursos (ilustración, miniatura, modelo).
+                     */
+                    Route::resource('credits', CardCreditController::class)
+                        ->except('show')
+                        ->middlewareFor('index', 'permission:cards.view')
+                        ->middlewareFor(['create', 'store', 'edit', 'update'], 'permission:cards.edit')
+                        ->middlewareFor('destroy', 'permission:cards.delete');
+
+                    Route::post(
+                        'qr-codes/{qrCode}/regenerate',
+                        [CardQrCodeController::class, 'regenerate']
+                    )->middleware('permission:cards.edit')
+                        ->name('qr-codes.regenerate');
+                });
             });
     });
-
-
 
 require __DIR__.'/settings.php';

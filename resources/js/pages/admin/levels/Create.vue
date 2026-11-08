@@ -24,7 +24,7 @@ defineOptions({
             },
             {
                 title: 'Niveles',
-                href: admin.levels.index,
+                href: admin.levels.index(),
             },
             {
                 title: 'Nuevo nivel',

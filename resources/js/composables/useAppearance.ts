@@ -10,24 +10,18 @@ export type UseAppearanceReturn = {
     updateAppearance: (value: Appearance) => void;
 };
 
-export function updateTheme(value: Appearance): void {
+/*
+ * La aplicación solo usa el tema claro: el panel está diseñado con colores
+ * claros fijos y en modo oscuro se mezclaban ambos temas. Se ignoran el tema
+ * del sistema y cualquier preferencia guardada.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function updateTheme(_value: Appearance): void {
     if (typeof window === 'undefined') {
         return;
     }
 
-    if (value === 'system') {
-        const mediaQueryList = window.matchMedia(
-            '(prefers-color-scheme: dark)',
-        );
-        const systemTheme = mediaQueryList.matches ? 'dark' : 'light';
-
-        document.documentElement.classList.toggle(
-            'dark',
-            systemTheme === 'dark',
-        );
-    } else {
-        document.documentElement.classList.toggle('dark', value === 'dark');
-    }
+    document.documentElement.classList.remove('dark');
 }
 
 const setCookie = (name: string, value: string, days = 365) => {
@@ -54,14 +48,6 @@ const getStoredAppearance = () => {
     }
 
     return localStorage.getItem('appearance') as Appearance | null;
-};
-
-const prefersDark = (): boolean => {
-    if (typeof window === 'undefined') {
-        return false;
-    }
-
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
 const handleSystemThemeChange = () => {
@@ -96,13 +82,8 @@ export function useAppearance(): UseAppearanceReturn {
         }
     });
 
-    const resolvedAppearance = computed<ResolvedAppearance>(() => {
-        if (appearance.value === 'system') {
-            return prefersDark() ? 'dark' : 'light';
-        }
-
-        return appearance.value;
-    });
+    // Siempre claro (ver updateTheme).
+    const resolvedAppearance = computed<ResolvedAppearance>(() => 'light');
 
     function updateAppearance(value: Appearance) {
         appearance.value = value;
