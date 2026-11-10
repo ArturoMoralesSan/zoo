@@ -7,6 +7,7 @@ use App\Models\MapMarker;
 use App\Models\MapPath;
 use App\Models\Species;
 use App\Models\SpeciesImage;
+use App\Models\Card;
 use App\Models\SpeciesLocation;
 use App\Models\ZooZone;
 use Illuminate\Http\JsonResponse;
@@ -357,148 +358,296 @@ class MapController extends Controller
     }
 
     
+    
+    
+    
+    /**
+     * Obtener toda la información necesaria
+     * para mostrar el mapa de ZooApp con especies
+     * que tengan códigos QR disponibles para duelos.
+     */
     public function species(): JsonResponse
     {
-        $userId = auth()->id();
+        /*
+        |--------------------------------------------------------------------------
+        | Zonas
+        |--------------------------------------------------------------------------
+        */
 
-        $species = Species::query()
+        $zones = ZooZone::query()
             ->where('is_active', true)
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'description',
+                'type',
+                'geometry',
+                'map_image',
+                'map_image_bounds',
+            ]);
 
-            // Especies con ubicaciones activas en zonas activas.
-            ->whereHas('locations', function ($query) {
-                $query->where('is_active', true)
-                    ->whereHas('zone', function ($zoneQuery) {
-                        $zoneQuery->where('is_active', true);
-                    });
-            })
+        $zoneIds = $zones->pluck('id');
 
-            // Especies con tarjetas activas y QR utilizables.
-            ->whereHas('cards', function ($cardQuery) {
-                $cardQuery
-                    ->where('is_active', true)
-                    ->whereHas('qrCodes', function ($qrQuery) {
-                        $qrQuery->usable();
-                    });
-            })
+        /*
+        |--------------------------------------------------------------------------
+        | Ubicaciones de especies
+        |--------------------------------------------------------------------------
+        */
 
+        $speciesLocations = SpeciesLocation::query()
             ->with([
-                // Ubicaciones físicas.
-                'locations' => function ($query) {
+                'species:id,common_name,scientific_name,description',
+            ])
+            ->whereIn('zone_id', $zoneIds)
+            ->where('is_active', true)
+            ->get([
+                'id',
+                'species_id',
+                'zone_id',
+                'name',
+                'latitude',
+                'longitude',
+                'description',
+                'is_active',
+            ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | IDs de especies
+        |--------------------------------------------------------------------------
+        */
+
+        $speciesIds = $speciesLocations
+            ->pluck('species_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Thumbnails de especies
+        |--------------------------------------------------------------------------
+        */
+
+        $speciesImages = SpeciesImage::query()
+            ->whereIn('species_id', $speciesIds)
+            ->where('type', 'thumbnail')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get([
+                'id',
+                'species_id',
+                'type',
+                'path',
+                'alt_text',
+                'sort_order',
+            ])
+            ->groupBy('species_id');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Agregar thumbnails a cada especie
+        |--------------------------------------------------------------------------
+        */
+
+        $speciesLocations->each(function ($location) use ($speciesImages) {
+            $images = $speciesImages->get(
+                $location->species_id,
+                collect()
+            );
+
+            if ($location->species) {
+                $location->species->setRelation(
+                    'images',
+                    $images->values()
+                );
+            }
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Tarjetas de especies con QR utilizables
+        |--------------------------------------------------------------------------
+        */
+
+        $cards = Card::query()
+            ->whereIn('species_id', $speciesIds)
+            ->where('is_active', true)
+            ->with([
+                'qrCodes' => function ($query) {
                     $query
-                        ->where('is_active', true)
-                        ->whereHas('zone', function ($zoneQuery) {
-                            $zoneQuery->where('is_active', true);
-                        })
-                        ->with('zone:id,name');
-                },
-
-                // Tarjetas y códigos QR.
-                'cards' => function ($cardQuery) use ($userId) {
-                    $cardQuery
-                        ->where('is_active', true)
-                        ->whereHas('qrCodes', function ($qrQuery) {
-                            $qrQuery->usable();
-                        })
-
-                        ->with([
-                            'qrCodes' => function ($qrQuery) {
-                                $qrQuery
-                                    ->usable()
-                                    ->select([
-                                        'id',
-                                        'card_id',
-                                        'label',
-                                        'is_active',
-                                        'expires_at',
-                                        'scans_count',
-                                        'last_scanned_at',
-                                    ]);
-                            },
-                        ])
-
-                        // Indicar si el visitante ya capturó la tarjeta.
-                        ->withExists([
-                            'captures as is_captured' => function ($captureQuery) use ($userId) {
-                                if ($userId !== null) {
-                                    $captureQuery->where('user_id', $userId);
-                                } else {
-                                    $captureQuery->whereRaw('1 = 0');
-                                }
-                            },
+                        ->usable()
+                        ->select([
+                            'id',
+                            'card_id',
+                            'label',
+                            'is_active',
+                            'expires_at',
+                            'scans_count',
+                            'last_scanned_at',
                         ]);
                 },
-
-                // Imágenes de las especies.
-                'images',
             ])
+            ->orderBy('name')
+            ->get([
+                'id',
+                'species_id',
+                'name',
+                'rarity',
+                'thumbnail_image',
+            ])
+            ->groupBy('species_id');
 
-            ->get()
+        /*
+        |--------------------------------------------------------------------------
+        | Agregar tarjetas y QR a cada especie
+        |--------------------------------------------------------------------------
+        */
 
-            ->map(function ($species) {
-                return [
-                    'id' => $species->id,
-                    'name' => $species->common_name,
-                    'scientific_name' => $species->scientific_name,
-                    'description' => $species->description,
+        $speciesLocations->each(function ($location) use ($cards) {
+            if (!$location->species) {
+                return;
+            }
 
-                    // Imagen principal.
-                    'image' => $species->images->first()?->image_path,
+            $speciesCards = $cards
+                ->get($location->species_id, collect())
+                ->filter(function ($card) {
+                    return $card->qrCodes->isNotEmpty();
+                })
+                ->values();
 
-                    // Ubicaciones.
-                    'locations' => $species->locations
-                        ->map(function ($location) {
-                            return [
-                                'id' => $location->id,
-                                'name' => $location->name,
-                                'description' => $location->description,
-                                'latitude' => $location->latitude,
-                                'longitude' => $location->longitude,
+            $location->species->setRelation(
+                'cards',
+                $speciesCards
+            );
+        });
 
-                                'zone' => $location->zone
-                                    ? [
-                                        'id' => $location->zone->id,
-                                        'name' => $location->zone->name,
-                                    ]
-                                    : null,
-                            ];
-                        })
-                        ->values(),
+        /*
+        |--------------------------------------------------------------------------
+        | Conservar solamente especies que tengan QR
+        |--------------------------------------------------------------------------
+        */
 
-                    // Tarjetas y QR.
-                    'cards' => $species->cards
-                        ->map(function ($card) {
-                            return [
-                                'id' => $card->id,
-                                'name' => $card->name,
-                                'rarity' => $card->rarity,
-                                'thumbnail_image' => $card->thumbnail_image,
-
-                                // Estado de captura.
-                                'is_captured' => (bool) $card->is_captured,
-
-                                // QR disponibles. Nunca devolver el token.
-                                'qr_codes' => $card->qrCodes
-                                    ->map(function ($qr) {
-                                        return [
-                                            'id' => $qr->id,
-                                            'label' => $qr->label,
-                                            'scans_count' => $qr->scans_count,
-                                            'last_scanned_at' => $qr->last_scanned_at,
-                                        ];
-                                    })
-                                    ->values(),
-                            ];
-                        })
-                        ->values(),
-                ];
+        $speciesLocations = $speciesLocations
+            ->filter(function ($location) {
+                return $location->species
+                    && $location->species->cards->isNotEmpty();
             })
             ->values();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Caminos
+        |--------------------------------------------------------------------------
+        */
+
+        $paths = MapPath::query()
+            ->whereIn('zone_id', $zoneIds)
+            ->where('is_active', true)
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get([
+                'id',
+                'zone_id',
+                'name',
+                'description',
+                'coordinates',
+                'distance',
+                'estimated_time',
+                'is_active',
+                'order',
+            ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Organizar información por zona
+        |--------------------------------------------------------------------------
+        */
+
+        $zones = $zones->map(function (ZooZone $zone) use (
+            $speciesLocations,
+            $paths
+        ) {
+            return [
+                'id' => $zone->id,
+                'name' => $zone->name,
+                'description' => $zone->description,
+                'type' => $zone->type,
+                'geometry' => $zone->geometry,
+                'map_image' => $zone->map_image,
+                'map_image_bounds' => $zone->map_image_bounds,
+
+                'species' => $speciesLocations
+                    ->where('zone_id', $zone->id)
+                    ->map(function ($location) {
+                        return [
+                            'id' => $location->id,
+                            'name' => $location->name,
+                            'description' => $location->description,
+                            'latitude' => $location->latitude,
+                            'longitude' => $location->longitude,
+
+                            'species' => [
+                                'id' => $location->species->id,
+                                'common_name' => $location->species->common_name,
+                                'scientific_name' => $location->species->scientific_name,
+                                'description' => $location->species->description,
+
+                                'image' => $location->species->images
+                                    ->first()?->path,
+
+                                'cards' => $location->species->cards
+                                    ->map(function ($card) {
+                                        return [
+                                            'id' => $card->id,
+                                            'name' => $card->name,
+                                            'rarity' => $card->rarity,
+                                            'thumbnail_image' => $card->thumbnail_image,
+
+                                            'qr_codes' => $card->qrCodes
+                                                ->map(function ($qr) {
+                                                    return [
+                                                        'id' => $qr->id,
+                                                        'label' => $qr->label,
+                                                        'expires_at' => $qr->expires_at,
+                                                        'scans_count' => $qr->scans_count,
+                                                        'last_scanned_at' => $qr->last_scanned_at,
+                                                    ];
+                                                })
+                                                ->values(),
+                                        ];
+                                    })
+                                    ->values(),
+                            ],
+                        ];
+                    })
+                    ->values(),
+
+                'paths' => $paths
+                    ->where('zone_id', $zone->id)
+                    ->values(),
+            ];
+        })->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Respuesta
+        |--------------------------------------------------------------------------
+        */
+
         return response()->json([
             'success' => true,
-            'data' => $species,
+
+            'data' => [
+                'zones' => $zones,
+            ],
         ]);
     }
+
+
+    
+
 
 }
 
