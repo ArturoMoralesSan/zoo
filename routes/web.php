@@ -32,7 +32,14 @@ use App\Http\Controllers\Admin\ZooZoneController;
 use App\Http\Controllers\MapController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'Welcome')->name('home');
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return redirect()->route('login');
+})->name('home');
+
 
 Route::get('/map', [MapController::class, 'index'])
     ->name('map.index');
