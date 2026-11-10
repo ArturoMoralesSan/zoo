@@ -4,6 +4,7 @@ import {
     EXAMPLE_IMPORT,
     buildQuizPrompt,
     checkQuizRow,
+    isValidQuestionCount,
     normalizeQuestionText,
     parseQuizImport,
 } from '@/lib/quizImport';
@@ -167,6 +168,29 @@ describe('buildQuizPrompt', () => {
         expect(prompt).toContain('Sin bloque de código');
         expect(prompt).toContain(
             '{"questions":[{"question":"Texto de la pregunta","correct_answer":"Respuesta correcta","wrong_answers":["Respuesta incorrecta 1","Respuesta incorrecta 2"]}]}',
+        );
+    });
+});
+
+describe('isValidQuestionCount', () => {
+    it('acepta enteros del 1 al límite', () => {
+        expect(isValidQuestionCount(1, 100)).toBe(true);
+        expect(isValidQuestionCount(100, 100)).toBe(true);
+    });
+
+    it('rechaza lo que queda fuera del límite o no es entero', () => {
+        expect(isValidQuestionCount(0, 100)).toBe(false);
+        expect(isValidQuestionCount(51, 50)).toBe(false);
+        expect(isValidQuestionCount(2.5, 100)).toBe(false);
+        expect(isValidQuestionCount(Number.NaN, 100)).toBe(false);
+        expect(isValidQuestionCount(1, 0)).toBe(false);
+    });
+});
+
+describe('buildQuizPrompt: tema de las preguntas', () => {
+    it('pide datos generales del animal, no del zoológico', () => {
+        expect(buildQuizPrompt({ name: 'Avestruz' }, 5, [])).toContain(
+            'no menciones el zoológico',
         );
     });
 });

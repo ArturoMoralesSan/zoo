@@ -188,8 +188,11 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 - **Duel settings** come from the card or its rarity (`duel_settings_source`). Always
   read `effective_questions_per_duel`, `effective_retries` and
   `effective_cooldown_minutes` on `Card`.
-- **"AI" question generation** has no LLM integration. `lib/quizImport.ts` builds a
-  prompt that the admin pastes into an external LLM, then the JSON is imported.
+- **AI question generation** uses Gemini (`QuizGeneratorService`, `GEMINI_API_KEY` in
+  `.env`, settings in `config/services.php`). It never saves: an admin reviews the
+  questions and they are stored through the JSON import endpoint. The manual route
+  remains as the advanced option: `lib/quizImport.ts` builds a prompt for an external
+  LLM, then the JSON is imported.
 - **3D models:** the browser resizes the GLB and the server re-verifies it, and 1 unit
   equals 1 metre. Never rescale an already scaled file. See `docs/glb-resizing.md`.
 - **Credits:** licences and attribution are legally relevant, and restricted licences
@@ -204,6 +207,7 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 | --- | --- | --- |
 | `Licensing/AttributionBuilder` | `lib/credits/attribution.ts` | `tests/Fixtures/credits/attribution-cases.json` |
 | `QuizQuestion::normalizeText` | `quizImport.ts` `normalizeQuestionText` | none |
+| `QuizGeneratorService` prompt rules | `quizImport.ts` `buildQuizPrompt` | none |
 | `Enums/CardRarity` | `lib/cardRarity.ts` | none |
 | `GlbInspector`, `config/glb.php` | `lib/glb/resizeGlb.ts` | `tests/Fixtures/glb` |
 

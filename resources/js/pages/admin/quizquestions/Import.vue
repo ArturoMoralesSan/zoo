@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     ArrowLeft,
@@ -12,16 +12,13 @@ import {
     ListChecks,
     Sparkles,
     Upload,
-    X,
 } from 'lucide-vue-next';
-import Swal from 'sweetalert2';
 import { computed, ref } from 'vue';
 
-import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
-import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
-import CancelButton from '@/components/admin/CancelButton.vue';
 import CardContextInfo from '@/components/admin/cards/CardContextInfo.vue';
+import QuizCountPicker from '@/components/admin/cards/QuizCountPicker.vue';
+import QuizReviewList from '@/components/admin/cards/QuizReviewList.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -32,11 +29,8 @@ import {
 import {
     EXAMPLE_IMPORT,
     buildQuizPrompt,
-    checkQuizRow,
-    normalizeQuestionText,
     parseQuizImport,
 } from '@/lib/quizImport';
-import type { QuizImportRow, QuizRowCheck } from '@/lib/quizImport';
 import admin from '@/routes/admin';
 
 const props = defineProps<{
@@ -63,7 +57,10 @@ const prompt = computed(() =>
             commonName: props.card.species?.common_name,
             scientificName: props.card.species?.scientific_name,
         },
-        Math.min(Math.max(Number(questionCount.value) || 10, 1), 50),
+        Math.min(
+            Math.max(Number(questionCount.value) || 10, 1),
+            props.maxQuestions,
+        ),
         props.existingQuestions,
     ),
 );
@@ -115,138 +112,9 @@ const readFile = (event: Event) => {
 };
 
 /*
- * 3. Vista previa.
+ * 3. Vista previa y guardado (QuizReviewList).
  */
 const parsed = computed(() => parseQuizImport(text.value));
-
-const existingKeys = computed(
-    () => new Set(props.existingQuestions.map(normalizeQuestionText)),
-);
-
-const rows = computed<(QuizImportRow & QuizRowCheck)[]>(() => {
-    const seen = new Set<string>();
-
-    return parsed.value.rows.map((row) => ({
-        ...row,
-        ...checkQuizRow(row, existingKeys.value, seen),
-    }));
-});
-
-// Preguntas que el administrador quitó de la importación.
-const excluded = ref(new Set<number>());
-
-const isIncluded = (index: number) =>
-    rows.value[index].status === 'ready' && !excluded.value.has(index);
-
-const toggle = (index: number) => {
-    const next = new Set(excluded.value);
-
-    if (next.has(index)) {
-        next.delete(index);
-    } else {
-        next.add(index);
-    }
-
-    excluded.value = next;
-};
-
-const counts = computed(() => ({
-    ready: rows.value.filter((row) => row.status === 'ready').length,
-    error: rows.value.filter((row) => row.status === 'error').length,
-    duplicate: rows.value.filter((row) => row.status === 'duplicate').length,
-}));
-
-const selected = computed(() =>
-    rows.value
-        .map((row, index) => ({ row, index }))
-        .filter(({ index }) => isIncluded(index)),
-);
-
-const tooMany = computed(() => selected.value.length > props.maxQuestions);
-
-/*
- * 4. Importar.
- */
-const form = useForm({
-    questions: [] as QuizImportRow[],
-    is_active: true,
-});
-
-// Índice de la fila de la vista previa para cada pregunta enviada.
-const sentIndexes = ref<number[]>([]);
-
-const serverErrors = computed(() => {
-    const byRow = new Map<number, string[]>();
-
-    Object.entries(form.errors as Record<string, string>).forEach(
-        ([key, message]) => {
-            const match = key.match(/^questions\.(\d+)\./);
-
-            if (!match) {
-                return;
-            }
-
-            const row = sentIndexes.value[Number(match[1])];
-            byRow.set(row, [...(byRow.get(row) ?? []), message]);
-        },
-    );
-
-    return byRow;
-});
-
-const generalError = computed(
-    () => (form.errors as Record<string, string>).questions ?? null,
-);
-
-const submit = async () => {
-    const total = selected.value.length;
-
-    const result = await Swal.fire({
-        title: `¿Importar ${total} ${total === 1 ? 'pregunta' : 'preguntas'}?`,
-        text: form.is_active
-            ? 'Se usarán en los duelos de esta tarjeta desde ahora.'
-            : 'Se importarán inactivas; podrás activarlas después.',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, importar',
-        cancelButtonText: 'Cancelar',
-        reverseButtons: true,
-        confirmButtonColor: '#187744',
-        cancelButtonColor: '#84958a',
-    });
-
-    if (!result.isConfirmed) {
-        return;
-    }
-
-    sentIndexes.value = selected.value.map(({ index }) => index);
-
-    form.transform((data) => ({
-        ...data,
-        questions: selected.value.map(({ row }) => ({
-            question: row.question,
-            correct_answer: row.correct_answer,
-            wrong_answers: row.wrong_answers,
-        })),
-    })).post(admin.cards.quiz.import.store(props.card.id).url, {
-        preserveScroll: true,
-    });
-};
-
-const STATUS = {
-    ready: {
-        label: 'Lista',
-        class: 'border-[#C8DCCF] bg-[#EAF5EE] text-[#187744]',
-    },
-    error: {
-        label: 'Con errores',
-        class: 'border-red-200 bg-red-50 text-red-700',
-    },
-    duplicate: {
-        label: 'Repetida',
-        class: 'border-amber-200 bg-amber-50 text-amber-800',
-    },
-};
 
 defineOptions({
     layout: {
@@ -292,6 +160,17 @@ defineOptions({
             :card="card"
             message="Las preguntas importadas se agregarán a esta tarjeta."
         />
+
+        <p class="form-help">
+            Esta opción es para usuarios avanzados. Para crear preguntas con un
+            clic, usa
+            <Link
+                :href="admin.cards.quiz.generate(card.id).url"
+                class="font-semibold text-[#187744] underline"
+            >
+                Generar con IA</Link
+            >.
+        </p>
 
         <!-- 1. Generar con IA -->
         <Collapsible v-model:open="promptOpen">
@@ -342,30 +221,22 @@ defineOptions({
                     <div
                         class="space-y-4 border-t border-[#E5ECE7] px-5 py-5 sm:px-6"
                     >
-                        <div class="flex flex-wrap items-end gap-4">
-                            <div class="form-field w-40">
-                                <label for="question_count" class="form-label">
-                                    Cantidad de preguntas
-                                </label>
-                                <input
-                                    id="question_count"
-                                    v-model.number="questionCount"
-                                    type="number"
-                                    min="1"
-                                    max="50"
-                                    class="form-input"
-                                />
-                            </div>
+                        <QuizCountPicker
+                            v-model="questionCount"
+                            input-id="question_count"
+                            :limit="maxQuestions"
+                            :max="maxQuestions"
+                            :saved="existingQuestions.length"
+                        />
 
-                            <p class="form-help mb-2 flex-1">
-                                El texto ya incluye
-                                {{
-                                    existingQuestions.length
-                                        ? `las ${existingQuestions.length} preguntas actuales para que no las repita`
-                                        : 'la especie y las reglas del juego'
-                                }}.
-                            </p>
-                        </div>
+                        <p class="form-help">
+                            El texto ya incluye
+                            {{
+                                existingQuestions.length
+                                    ? `las ${existingQuestions.length} preguntas actuales para que no las repita`
+                                    : 'la especie y las reglas del juego'
+                            }}.
+                        </p>
 
                         <textarea
                             :value="prompt"
@@ -505,162 +376,11 @@ defineOptions({
             </div>
         </AdminCard>
 
-        <!-- 3. Vista previa -->
-        <AdminCard
-            v-if="rows.length"
-            title="3. Revisa las preguntas"
-            description="Solo se importan las preguntas marcadas. Las repetidas y las que tienen errores no se importan."
-            :icon="ListChecks"
-        >
-            <div class="space-y-4">
-                <div class="flex flex-wrap gap-2 text-xs font-semibold">
-                    <span
-                        class="rounded-lg border px-2.5 py-1"
-                        :class="STATUS.ready.class"
-                    >
-                        {{ counts.ready }}
-                        {{ counts.ready === 1 ? 'lista' : 'listas' }}
-                    </span>
-                    <span
-                        v-if="counts.error"
-                        class="rounded-lg border px-2.5 py-1"
-                        :class="STATUS.error.class"
-                    >
-                        {{ counts.error }} con errores
-                    </span>
-                    <span
-                        v-if="counts.duplicate"
-                        class="rounded-lg border px-2.5 py-1"
-                        :class="STATUS.duplicate.class"
-                    >
-                        {{ counts.duplicate }}
-                        {{ counts.duplicate === 1 ? 'repetida' : 'repetidas' }}
-                    </span>
-                </div>
-
-                <Alert
-                    v-if="generalError || tooMany"
-                    class="border-red-200 bg-red-50 text-red-800"
-                >
-                    <AlertTriangle />
-                    <AlertDescription class="text-red-700">
-                        {{
-                            generalError ??
-                            `Importa como máximo ${maxQuestions} preguntas a la vez.`
-                        }}
-                    </AlertDescription>
-                </Alert>
-
-                <ol class="space-y-2">
-                    <li
-                        v-for="(row, index) in rows"
-                        :key="index"
-                        class="flex gap-3 rounded-xl border p-3.5"
-                        :class="
-                            row.status === 'ready'
-                                ? isIncluded(index)
-                                    ? 'border-[#C8DCCF] bg-white'
-                                    : 'border-[#DCE7DF] bg-[#F7FAF8] opacity-70'
-                                : row.status === 'error'
-                                  ? 'border-red-200 bg-red-50/40'
-                                  : 'border-amber-200 bg-amber-50/40'
-                        "
-                    >
-                        <input
-                            type="checkbox"
-                            class="mt-1 accent-[#187744]"
-                            :checked="isIncluded(index)"
-                            :disabled="row.status !== 'ready'"
-                            :aria-label="`Importar la pregunta ${index + 1}`"
-                            @change="toggle(index)"
-                        />
-
-                        <div class="min-w-0 flex-1 space-y-2">
-                            <div class="flex flex-wrap items-start gap-2">
-                                <p
-                                    class="min-w-0 flex-1 text-sm font-semibold text-[#244334]"
-                                >
-                                    {{ index + 1 }}.
-                                    {{ row.question || '(sin pregunta)' }}
-                                </p>
-
-                                <span
-                                    class="shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
-                                    :class="STATUS[row.status].class"
-                                >
-                                    {{ STATUS[row.status].label }}
-                                </span>
-                            </div>
-
-                            <ul class="grid gap-1 text-sm sm:grid-cols-3">
-                                <li
-                                    class="flex items-start gap-1.5 text-[#187744]"
-                                >
-                                    <Check :size="14" class="mt-0.5 shrink-0" />
-                                    {{ row.correct_answer || '—' }}
-                                </li>
-                                <li
-                                    v-for="(
-                                        answer, answerIndex
-                                    ) in row.wrong_answers"
-                                    :key="answerIndex"
-                                    class="flex items-start gap-1.5 text-[#718477]"
-                                >
-                                    <X :size="14" class="mt-0.5 shrink-0" />
-                                    {{ answer || '—' }}
-                                </li>
-                            </ul>
-
-                            <p
-                                v-for="message in [
-                                    ...row.messages,
-                                    ...(serverErrors.get(index) ?? []),
-                                ]"
-                                :key="message"
-                                class="text-xs"
-                                :class="
-                                    row.status === 'duplicate'
-                                        ? 'text-amber-800'
-                                        : 'text-red-700'
-                                "
-                            >
-                                {{ message }}
-                            </p>
-                        </div>
-                    </li>
-                </ol>
-
-                <ActiveSwitch
-                    id="is_active"
-                    v-model="form.is_active"
-                    label="Importar como activas"
-                    description="Las preguntas activas se usan en los duelos de esta tarjeta."
-                />
-            </div>
-        </AdminCard>
-
-        <!-- Acciones -->
-        <div
-            class="flex flex-col-reverse gap-3 border-t border-[#DCE7DF] pt-5 sm:flex-row sm:justify-end"
-        >
-            <CancelButton
-                :href="admin.cards.quiz.index(card.id).url"
-                :icon="ArrowLeft"
-                label="Cancelar"
-            />
-
-            <AdminButton
-                type="button"
-                variant="primary"
-                :icon="Upload"
-                :disabled="!selected.length || tooMany"
-                :loading="form.processing"
-                loading-text="Importando..."
-                @click="submit"
-            >
-                Importar {{ selected.length }}
-                {{ selected.length === 1 ? 'pregunta' : 'preguntas' }}
-            </AdminButton>
-        </div>
+        <QuizReviewList
+            :card-id="card.id"
+            :items="parsed.rows"
+            :existing-questions="existingQuestions"
+            :max-questions="maxQuestions"
+        />
     </div>
 </template>

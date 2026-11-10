@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Card\GenerateQuizQuestionsRequest;
 use App\Http\Requests\Admin\Card\ImportQuizQuestionsRequest;
 use App\Models\Card;
 use App\Models\QuizQuestion;
+use App\Services\QuizGeneratorService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -156,6 +159,49 @@ class QuizQuestionController extends Controller
         ]);
 
         return redirect()->route('admin.cards.quiz.index', $card);
+    }
+
+    /**
+     * Generar preguntas con IA: se revisan en pantalla y se guardan con
+     * storeImport().
+     */
+    public function generate(Card $card, QuizGeneratorService $generator): Response
+    {
+        return Inertia::render(
+            'admin/quizquestions/Generate',
+            [
+                'card' => $card->load('species'),
+                'existingQuestions' => $card->quizQuestions()->pluck('question'),
+                'maxQuestions' => ImportQuizQuestionsRequest::MAX_QUESTIONS,
+                'aiEnabled' => $generator->isConfigured(),
+                'topics' => collect(QuizGeneratorService::TOPICS)
+                    ->map(fn (array $topic, string $value) => ['value' => $value, 'label' => $topic['label']])
+                    ->values(),
+            ]
+        );
+    }
+
+    /**
+     * Pedir preguntas a la IA. No guarda nada.
+     */
+    public function storeGenerate(
+        GenerateQuizQuestionsRequest $request,
+        Card $card,
+        QuizGeneratorService $generator
+    ): JsonResponse {
+        $validated = $request->validated();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'questions' => $generator->generate(
+                    $card,
+                    (int) $validated['count'],
+                    $validated['topic'],
+                    $validated['exclude'] ?? []
+                ),
+            ],
+        ]);
     }
 
     /**

@@ -8,6 +8,7 @@ import {
     FilterX,
     HelpCircle,
     Plus,
+    Sparkles,
     Upload,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
@@ -191,8 +192,14 @@ defineOptions({
         >
             <template #actions>
                 <PageHeaderLink
+                    :href="admin.cards.quiz.generate(card.id).url"
+                    label="Generar con IA"
+                    :icon="Sparkles"
+                />
+
+                <PageHeaderLink
                     :href="admin.cards.quiz.import(card.id).url"
-                    label="Importar preguntas"
+                    label="Importar JSON (avanzado)"
                     :icon="Upload"
                 />
 

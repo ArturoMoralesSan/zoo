@@ -31,6 +31,12 @@ export interface QuizParseResult {
 export const MAX_QUESTION_LENGTH = 5000;
 export const MAX_ANSWER_LENGTH = 1000;
 
+export const QUESTION_PRESETS = [5, 10, 20, 50, 100];
+
+export function isValidQuestionCount(count: number, limit: number): boolean {
+    return Number.isInteger(count) && count >= 1 && count <= limit;
+}
+
 export const EXAMPLE_IMPORT = {
     questions: [
         {
@@ -86,6 +92,7 @@ export function buildQuizPrompt(
         'Reglas:',
         '- Público: visitantes del zoológico, niños y adultos. Español neutro y sencillo.',
         '- Usa solo datos verificables sobre la especie (hábitat, alimentación, comportamiento, características, conservación).',
+        '- Pregunta solo datos generales del animal: no menciones el zoológico, sus visitantes ni lo que ocurre en él.',
         '- Cada pregunta tiene exactamente 3 opciones: 1 correcta y 2 incorrectas pero creíbles.',
         '- No uses "todas las anteriores" ni "ninguna de las anteriores".',
         '- Respuestas cortas y de longitud parecida.',

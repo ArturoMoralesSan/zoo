@@ -414,6 +414,14 @@ Route::middleware(['auth', 'verified'])
                     ->middleware('permission:cards.edit')
                     ->name('quiz.import.store');
 
+                Route::get('quiz/generate', [QuizQuestionController::class, 'generate'])
+                    ->middleware('permission:cards.edit')
+                    ->name('quiz.generate');
+
+                Route::post('quiz/generate', [QuizQuestionController::class, 'storeGenerate'])
+                    ->middleware(['permission:cards.edit', 'throttle:10,1'])
+                    ->name('quiz.generate.store');
+
                 Route::resource('quiz', QuizQuestionController::class)
                     ->parameters([
                         'quiz' => 'quizQuestion',
