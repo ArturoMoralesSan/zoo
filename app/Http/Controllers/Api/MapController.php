@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\MapMarker;
 use App\Models\MapPath;
+use App\Models\Species;
 use App\Models\SpeciesImage;
 use App\Models\SpeciesLocation;
 use App\Models\ZooZone;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class MapController extends Controller
 {
@@ -353,4 +355,150 @@ class MapController extends Controller
             ],
         ]);
     }
+
+    
+    public function species(): JsonResponse
+    {
+        $userId = auth()->id();
+
+        $species = Species::query()
+            ->where('is_active', true)
+
+            // Especies con ubicaciones activas en zonas activas.
+            ->whereHas('locations', function ($query) {
+                $query->where('is_active', true)
+                    ->whereHas('zone', function ($zoneQuery) {
+                        $zoneQuery->where('is_active', true);
+                    });
+            })
+
+            // Especies con tarjetas activas y QR utilizables.
+            ->whereHas('cards', function ($cardQuery) {
+                $cardQuery
+                    ->where('is_active', true)
+                    ->whereHas('qrCodes', function ($qrQuery) {
+                        $qrQuery->usable();
+                    });
+            })
+
+            ->with([
+                // Ubicaciones físicas.
+                'locations' => function ($query) {
+                    $query
+                        ->where('is_active', true)
+                        ->whereHas('zone', function ($zoneQuery) {
+                            $zoneQuery->where('is_active', true);
+                        })
+                        ->with('zone:id,name');
+                },
+
+                // Tarjetas y códigos QR.
+                'cards' => function ($cardQuery) use ($userId) {
+                    $cardQuery
+                        ->where('is_active', true)
+                        ->whereHas('qrCodes', function ($qrQuery) {
+                            $qrQuery->usable();
+                        })
+
+                        ->with([
+                            'qrCodes' => function ($qrQuery) {
+                                $qrQuery
+                                    ->usable()
+                                    ->select([
+                                        'id',
+                                        'card_id',
+                                        'label',
+                                        'is_active',
+                                        'expires_at',
+                                        'scans_count',
+                                        'last_scanned_at',
+                                    ]);
+                            },
+                        ])
+
+                        // Indicar si el visitante ya capturó la tarjeta.
+                        ->withExists([
+                            'captures as is_captured' => function ($captureQuery) use ($userId) {
+                                if ($userId !== null) {
+                                    $captureQuery->where('user_id', $userId);
+                                } else {
+                                    $captureQuery->whereRaw('1 = 0');
+                                }
+                            },
+                        ]);
+                },
+
+                // Imágenes de las especies.
+                'images',
+            ])
+
+            ->get()
+
+            ->map(function ($species) {
+                return [
+                    'id' => $species->id,
+                    'name' => $species->common_name,
+                    'scientific_name' => $species->scientific_name,
+                    'description' => $species->description,
+
+                    // Imagen principal.
+                    'image' => $species->images->first()?->image_path,
+
+                    // Ubicaciones.
+                    'locations' => $species->locations
+                        ->map(function ($location) {
+                            return [
+                                'id' => $location->id,
+                                'name' => $location->name,
+                                'description' => $location->description,
+                                'latitude' => $location->latitude,
+                                'longitude' => $location->longitude,
+
+                                'zone' => $location->zone
+                                    ? [
+                                        'id' => $location->zone->id,
+                                        'name' => $location->zone->name,
+                                    ]
+                                    : null,
+                            ];
+                        })
+                        ->values(),
+
+                    // Tarjetas y QR.
+                    'cards' => $species->cards
+                        ->map(function ($card) {
+                            return [
+                                'id' => $card->id,
+                                'name' => $card->name,
+                                'rarity' => $card->rarity,
+                                'thumbnail_image' => $card->thumbnail_image,
+
+                                // Estado de captura.
+                                'is_captured' => (bool) $card->is_captured,
+
+                                // QR disponibles. Nunca devolver el token.
+                                'qr_codes' => $card->qrCodes
+                                    ->map(function ($qr) {
+                                        return [
+                                            'id' => $qr->id,
+                                            'label' => $qr->label,
+                                            'scans_count' => $qr->scans_count,
+                                            'last_scanned_at' => $qr->last_scanned_at,
+                                        ];
+                                    })
+                                    ->values(),
+                            ];
+                        })
+                        ->values(),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $species,
+        ]);
+    }
+
 }
+

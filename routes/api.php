@@ -41,6 +41,11 @@ Route::prefix('v1')->group(function () {
         ->name('api.v1.credits.index');
 });
 
+Route::get('/map/species', [
+        MapController::class,
+        'species',
+    ])->name('api.map.species');
+    
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user', [
@@ -91,6 +96,12 @@ Route::middleware('auth:sanctum')->group(function () {
         'index',
     ]);
 
+    /*
+    |--------------------------------------------------------------------------
+    | Mapa
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/map', [
         MapController::class,
         'index',
@@ -101,6 +112,13 @@ Route::middleware('auth:sanctum')->group(function () {
         'zone',
     ])->name('api.map.zone');
 
+    
+
+    /*
+    |--------------------------------------------------------------------------
+    | Especies
+    |--------------------------------------------------------------------------
+    */
     Route::get('/species', [
         SpeciesController::class,
         'index',
