@@ -8,8 +8,9 @@ use App\Models\MapPath;
 use App\Models\Species;
 use App\Models\SpeciesImage;
 use App\Models\Card;
-use App\Models\SpeciesLocation;
 use App\Models\ZooZone;
+use App\Models\Ticket;
+use App\Models\SpeciesLocation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -646,7 +647,207 @@ class MapController extends Controller
     }
 
 
-    
+    /**
+     * Validar si un usuario puede realizar capturas.
+     *
+     * Comprueba:
+     * - Que el usuario autenticado corresponda al ID recibido.
+     * - Que sus coordenadas estén dentro del zoológico.
+     * - Que tenga un boleto pagado y validado durante el día actual.
+     */
+    public function validateCapture(
+        int $user,
+        float $latitude,
+        float $longitude
+    ): JsonResponse {
+        /*
+        |--------------------------------------------------------------------------
+        | Validar coordenadas
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $latitude < -90 ||
+            $latitude > 90 ||
+            $longitude < -180 ||
+            $longitude > 180
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Las coordenadas proporcionadas no son válidas.',
+            ], 422);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validar usuario autenticado
+        |--------------------------------------------------------------------------
+        */
+
+        $authenticatedUser = request()->user();
+
+        if (!$authenticatedUser || (int) $authenticatedUser->id !== $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes autorización para consultar este usuario.',
+            ], 403);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validar si está dentro del zoológico
+        |--------------------------------------------------------------------------
+        */
+
+        $zones = ZooZone::query()
+            ->where('is_active', true)
+            ->get([
+                'id',
+                'geometry',
+            ]);
+
+        $insideZone = $zones->contains(function (ZooZone $zone) use (
+            $latitude,
+            $longitude
+        ) {
+            $geometry = $zone->geometry;
+
+            if (is_string($geometry)) {
+                $geometry = json_decode($geometry, true);
+            }
+
+            if (!is_array($geometry)) {
+                return false;
+            }
+
+            $type = $geometry['type'] ?? null;
+            $coordinates = $geometry['coordinates'] ?? [];
+
+            /*
+            |--------------------------------------------------------------------------
+            | Polygon y MultiPolygon
+            |--------------------------------------------------------------------------
+            */
+
+            if ($type === 'Polygon') {
+                $polygons = [$coordinates];
+            } elseif ($type === 'MultiPolygon') {
+                $polygons = $coordinates;
+            } else {
+                return false;
+            }
+
+            foreach ($polygons as $polygon) {
+                $outerRing = $polygon[0] ?? [];
+
+                if (!$this->pointInPolygon(
+                    $longitude,
+                    $latitude,
+                    $outerRing
+                )) {
+                    continue;
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Comprobar huecos del polígono
+                |--------------------------------------------------------------------------
+                */
+
+                $insideHole = false;
+
+                foreach (array_slice($polygon, 1) as $hole) {
+                    if ($this->pointInPolygon(
+                        $longitude,
+                        $latitude,
+                        $hole
+                    )) {
+                        $insideHole = true;
+                        break;
+                    }
+                }
+
+                if (!$insideHole) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validar boleto del usuario
+        |--------------------------------------------------------------------------
+        */
+
+        $hasValidTicket = Ticket::query()
+            ->whereHas('order', function ($query) use ($user) {
+                $query
+                    ->where('user_id', $user)
+                    ->whereNotNull('paid_at');
+            })
+            ->whereDate('used_at', today())
+            ->exists();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Respuesta
+        |--------------------------------------------------------------------------
+        */
+
+        return response()->json([
+            'success' => true,
+
+            'data' => [
+                'zones' => $insideZone,
+                'ticket' => $hasValidTicket,
+            ],
+        ]);
+    }
+
+    /**
+     * Determinar si un punto está dentro de un polígono.
+     *
+     * GeoJSON utiliza coordenadas [longitud, latitud].
+     */
+    private function pointInPolygon(
+        float $longitude,
+        float $latitude,
+        array $polygon
+    ): bool {
+        $inside = false;
+        $count = count($polygon);
+
+        if ($count < 3) {
+            return false;
+        }
+
+        for ($i = 0, $j = $count - 1; $i < $count; $j = $i++) {
+            $xi = (float) $polygon[$i][0];
+            $yi = (float) $polygon[$i][1];
+
+            $xj = (float) $polygon[$j][0];
+            $yj = (float) $polygon[$j][1];
+
+            $intersects = (
+                ($yi > $latitude) !== ($yj > $latitude)
+            ) && (
+                $longitude < (
+                    ($xj - $xi) *
+                    ($latitude - $yi) /
+                    (($yj - $yi) ?: 0.000000000001)
+                    + $xi
+                )
+            );
+
+            if ($intersects) {
+                $inside = !$inside;
+            }
+        }
+
+        return $inside;
+    }
 
 
 }

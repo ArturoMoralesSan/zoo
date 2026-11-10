@@ -114,6 +114,11 @@ Route::middleware('auth:sanctum')->group(function () {
         'species',
     ])->name('api.map.species');
 
+    Route::get(
+        '/map/validate-capture/{user}/{latitude}/{longitude}',
+        [MapController::class, 'validateCapture']
+    )->name('api.map.validate-capture');
+
     /*
     |--------------------------------------------------------------------------
     | Especies
