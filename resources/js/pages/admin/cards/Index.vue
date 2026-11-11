@@ -23,6 +23,7 @@ import Swal from 'sweetalert2';
 import { onMounted, ref, watch } from 'vue';
 
 import DuelMessagesSettings from '@/components/admin/cards/DuelMessagesSettings.vue';
+import OptimizeImagesPanel from '@/components/admin/cards/OptimizeImagesPanel.vue';
 import RaritySettingsTable from '@/components/admin/cards/RaritySettingsTable.vue';
 import DataTable from '@/components/admin/DataTable.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
@@ -419,6 +420,8 @@ defineOptions({
                 :built-in="duelMessagesBuiltIn"
                 always-open
             />
+
+            <OptimizeImagesPanel />
         </div>
 
         <!-- Tarjetas obtenidas -->

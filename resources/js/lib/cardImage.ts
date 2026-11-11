@@ -2,11 +2,12 @@ import { toCanvas, toSvg } from 'html-to-image';
 
 import { cardFontFileUrl } from '@/lib/cardFonts';
 import type { CardFontStyle } from '@/lib/cardFonts';
+import { CARD_IMAGE_PROFILES, encodeWebp } from '@/lib/imageOptimize';
 
 /**
  * Calidad de las imágenes generadas a partir de la plantilla (572 × 1016 px).
- * - Descarga y servidor: 3× (1716 × 3048 px).
- * - Textura del visor 3D: 2× (1144 × 2032 px).
+ * - Descarga: 3× (1716 × 3048 px).
+ * - Servidor y textura del visor 3D: 2× (1144 × 2032 px).
  */
 export const CARD_EXPORT_PIXEL_RATIO = 3;
 export const CARD_TEXTURE_PIXEL_RATIO = 2;
@@ -142,6 +143,43 @@ export const renderCardPng = async (
                 ? resolve(blob)
                 : reject(new Error('No se pudo crear el PNG.')),
         );
+    });
+};
+
+/**
+ * Imagen de la tarjeta que se guarda en el servidor: WebP a 2× (la misma
+ * resolución que la textura del visor 3D). Si el navegador no puede
+ * producir WebP, PNG a 2×; el servidor lo convierte si puede.
+ */
+export const renderCardFile = async (
+    node: HTMLElement,
+    filename: string,
+): Promise<File> => {
+    const canvas = await toCanvas(node, {
+        ...(await renderOptions(node)),
+        pixelRatio: CARD_TEXTURE_PIXEL_RATIO,
+    });
+
+    const webp = await encodeWebp(
+        canvas,
+        CARD_IMAGE_PROFILES.generated,
+        filename,
+    );
+
+    if (webp) {
+        return webp;
+    }
+
+    const png = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) =>
+            blob
+                ? resolve(blob)
+                : reject(new Error('No se pudo crear la imagen.')),
+        );
+    });
+
+    return new File([png], filename.replace(/\.[^./]+$/, '') + '.png', {
+        type: 'image/png',
     });
 };
 

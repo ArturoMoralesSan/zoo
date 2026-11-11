@@ -407,7 +407,7 @@ class CardAdminTest extends TestCase
         @rmdir(dirname($paths[1]));
     }
 
-    public function test_generated_card_image_must_be_png(): void
+    public function test_generated_card_image_must_be_webp_or_png(): void
     {
         $this->actingAs($this->admin)
             ->post(route('admin.cards.store'), $this->cardPayload([

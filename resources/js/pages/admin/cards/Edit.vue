@@ -49,6 +49,7 @@ import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue'
 import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import { cardStat } from '@/lib/cardStats';
+import { optimizeUpload } from '@/lib/imageOptimize';
 import type { CreditAsset, CreditSummaryItem } from '@/lib/credits/types';
 import type { DuelMessages } from '@/lib/duelMessages';
 
@@ -170,16 +171,28 @@ const submit = async () => {
     generatingImage.value = true;
 
     try {
-        form.generated_image = (await preview.value?.generatePngFile()) ?? null;
+        form.generated_image = (await preview.value?.generateCardFile()) ?? null;
     } catch {
         form.generated_image = null;
-    } finally {
-        generatingImage.value = false;
     }
+
+    /*
+     * Las imágenes subidas se envían en WebP si así pesan menos; el
+     * formulario conserva los originales por si hay que reenviarlo.
+     */
+    const [thumbnail, artwork] = await Promise.all([
+        form.thumbnail_image &&
+            optimizeUpload(form.thumbnail_image, 'thumbnail'),
+        form.artwork_image && optimizeUpload(form.artwork_image, 'artwork'),
+    ]);
+
+    generatingImage.value = false;
 
     form.transform((data) => ({
         ...data,
         ...modelFields,
+        thumbnail_image: thumbnail,
+        artwork_image: artwork,
         _method: 'PUT',
     })).post(admin.cards.update(props.card.id).url, {
         forceFormData: true,

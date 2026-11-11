@@ -3,6 +3,10 @@
 namespace App\Providers;
 
 use App\Models\Card;
+use App\Services\ImageEncoding\GdWebpEncoder;
+use App\Services\ImageEncoding\ImagickWebpEncoder;
+use App\Services\ImageEncoding\NullWebpEncoder;
+use App\Services\ImageEncoding\WebpEncoder;
 use App\View\Composers\MenuComposer;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -23,7 +27,26 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        /*
+         * Codificador WebP según lo que tenga el hosting (config/images.php).
+         * Sin ninguno, el navegador comprime antes de subir.
+         */
+        $this->app->singleton(WebpEncoder::class, function (): WebpEncoder {
+            $candidates = match (config('images.driver')) {
+                'imagick' => [new ImagickWebpEncoder],
+                'gd' => [new GdWebpEncoder],
+                'none' => [],
+                default => [new ImagickWebpEncoder, new GdWebpEncoder],
+            };
+
+            foreach ($candidates as $encoder) {
+                if ($encoder->isAvailable()) {
+                    return $encoder;
+                }
+            }
+
+            return new NullWebpEncoder;
+        });
     }
 
     /**

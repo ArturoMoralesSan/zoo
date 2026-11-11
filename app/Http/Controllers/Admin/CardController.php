@@ -13,6 +13,7 @@ use App\Models\CardQuizState;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
 use App\Models\Species;
+use App\Services\CardImageOptimizer;
 use App\Services\GlbInspection;
 use App\Services\GlbInspector;
 use Illuminate\Database\Eloquent\Collection;
@@ -51,6 +52,8 @@ class CardController extends Controller
         'model_final_width' => null,
         'model_final_depth' => null,
     ];
+
+    public function __construct(private CardImageOptimizer $imageOptimizer) {}
 
     /**
      * Lista de tarjetas.
@@ -647,13 +650,9 @@ class CardController extends Controller
         FormRequest $request,
         Card $card
     ): void {
-        $directories = [
-            'thumbnail_image' => 'cards/'.$card->id,
-            'artwork_image' => 'cards/'.$card->id,
-            'generated_image' => 'cards/'.$card->id,
-        ];
+        $directory = 'cards/'.$card->id;
 
-        foreach ($directories as $field => $directory) {
+        foreach (CardImageOptimizer::FIELDS as $image => $field) {
             if (
                 ! $request->hasFile($field) ||
                 ! $request->file($field)->isValid()
@@ -663,11 +662,14 @@ class CardController extends Controller
 
             $this->deletePublicFile($card->{$field});
 
+            // Si el navegador no pudo comprimirla, lo intenta el servidor.
+            $file = $this->imageOptimizer->prepareUpload(
+                $request->file($field),
+                $image
+            );
+
             $card->update([
-                $field => $this->moveUploadedFile(
-                    $request->file($field),
-                    $directory
-                ),
+                $field => $this->moveUploadedFile($file, $directory),
             ]);
         }
     }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CardController;
+use App\Http\Controllers\Admin\CardImageOptimizationController;
 use App\Http\Controllers\Admin\CardCreditController;
 use App\Http\Controllers\Admin\CardQrCodeController;
 use App\Http\Controllers\Admin\CardRaritySettingController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\Admin\TicketTypeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZooZoneController;
 use App\Http\Controllers\MapController;
+use App\Services\CardImageOptimizer;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -339,6 +341,19 @@ Route::middleware(['auth', 'verified'])
             [CardQuizStateController::class, 'destroy']
         )->middleware('permission:cards.edit')
             ->name('cards.quiz-states.destroy');
+
+        Route::get(
+            'cards/images/pending',
+            [CardImageOptimizationController::class, 'pending']
+        )->middleware('permission:cards.edit')
+            ->name('cards.images.pending');
+
+        Route::post(
+            'cards/{card}/images/{image}/optimize',
+            [CardImageOptimizationController::class, 'store']
+        )->whereIn('image', array_keys(CardImageOptimizer::FIELDS))
+            ->middleware(['permission:cards.edit', 'throttle:60,1'])
+            ->name('cards.images.optimize');
 
         /*
          * middlewareFor asigna el permiso por acción; ->middleware([...])
