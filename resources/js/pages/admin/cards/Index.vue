@@ -18,6 +18,7 @@ import {
     TriangleAlert,
     Trophy,
     Undo2,
+    Wrench,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { onMounted, ref, watch } from 'vue';
@@ -114,6 +115,8 @@ const props = defineProps<{
     >;
     captures: Capture[];
     quizStates: QuizState[];
+    // Pestañas de desarrollo activas (APP_ZOODECK_DEV=1).
+    devTools: boolean;
 }>();
 
 const search = ref(props.filters?.search ?? '');
@@ -290,8 +293,8 @@ onMounted(() => {
 
         if (
             saved === 'settings' ||
-            saved === 'captures' ||
-            saved === 'attempts'
+            (props.devTools &&
+                (saved === 'captures' || saved === 'attempts'))
         ) {
             tab.value = saved;
         }
@@ -322,6 +325,10 @@ const tabs: {
         shortLabel: 'Configuración',
         icon: Settings2,
     },
+];
+
+// Pestañas de desarrollo: solo con APP_ZOODECK_DEV=1.
+const devTabs: typeof tabs = [
     {
         value: 'captures',
         label: 'Tarjetas obtenidas',
@@ -409,6 +416,56 @@ defineOptions({
                     {{ tabCount(item.value) }}
                 </span>
             </button>
+
+            <!-- Pestañas de desarrollo, separadas y marcadas como tales -->
+            <template v-if="devTools">
+                <div
+                    aria-hidden="true"
+                    class="mx-1 w-px self-stretch bg-[#d7e2da]"
+                />
+
+                <div
+                    class="flex flex-[2] items-center gap-1 rounded-lg border border-dashed border-amber-300 bg-amber-50/60 p-0.5 sm:flex-none"
+                >
+                    <span
+                        class="hidden items-center gap-1 px-2 text-[10px] font-bold tracking-wider text-amber-700 uppercase sm:inline-flex"
+                        title="Herramientas de desarrollo (APP_ZOODECK_DEV)"
+                    >
+                        <Wrench :size="12" />
+                        Dev
+                    </span>
+
+                    <button
+                        v-for="item in devTabs"
+                        :key="item.value"
+                        type="button"
+                        role="tab"
+                        :aria-selected="tab === item.value"
+                        :title="`${item.label} (solo desarrollo)`"
+                        class="inline-flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors sm:flex-none"
+                        :class="
+                            tab === item.value
+                                ? 'bg-amber-600 text-white'
+                                : 'text-amber-800 hover:bg-amber-100'
+                        "
+                        @click="tab = item.value"
+                    >
+                        <component :is="item.icon" :size="16" />
+                        <span class="sm:hidden">{{ item.shortLabel }}</span>
+                        <span class="hidden sm:inline">{{ item.label }}</span>
+                        <span
+                            class="rounded-full px-2 py-0.5 text-xs"
+                            :class="
+                                tab === item.value
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-amber-100 text-amber-800'
+                            "
+                        >
+                            {{ tabCount(item.value) }}
+                        </span>
+                    </button>
+                </div>
+            </template>
         </div>
 
         <!-- Configuración de duelos -->
@@ -426,7 +483,7 @@ defineOptions({
 
         <!-- Tarjetas obtenidas -->
         <div
-            v-else-if="tab === 'captures'"
+            v-else-if="devTools && tab === 'captures'"
             class="overflow-x-auto rounded-xl border border-[#d7e2da] bg-white"
         >
             <table class="w-full text-sm">
@@ -501,7 +558,7 @@ defineOptions({
 
         <!-- Intentos y bloqueos -->
         <div
-            v-else-if="tab === 'attempts'"
+            v-else-if="devTools && tab === 'attempts'"
             class="overflow-x-auto rounded-xl border border-[#d7e2da] bg-white"
         >
             <table class="w-full text-sm">

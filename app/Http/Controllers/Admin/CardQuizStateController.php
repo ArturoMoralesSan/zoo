@@ -18,6 +18,9 @@ class CardQuizStateController extends Controller
      */
     public function destroy(CardQuizState $state): RedirectResponse
     {
+        // Herramienta de desarrollo: no existe fuera de APP_ZOODECK_DEV.
+        abort_unless(config('app.zoodeck_dev'), 404);
+
         DB::transaction(function () use ($state) {
             QuizAttempt::query()
                 ->where('user_id', $state->user_id)

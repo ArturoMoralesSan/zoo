@@ -27,6 +27,8 @@ class CardCaptureAdminTest extends TestCase
     {
         parent::setUp();
 
+        config(['app.zoodeck_dev' => true]);
+
         foreach (['cards.view', 'cards.create', 'cards.edit', 'cards.delete'] as $permission) {
             Permission::findOrCreate($permission);
         }
@@ -216,6 +218,38 @@ class CardCaptureAdminTest extends TestCase
             ->delete(route('admin.cards.quiz-states.destroy', $state))
             ->assertForbidden();
 
+        $this->assertModelExists($state);
+    }
+
+    public function test_dev_tools_are_hidden_when_disabled(): void
+    {
+        config(['app.zoodeck_dev' => false]);
+
+        $capture = $this->win($this->player, $this->card);
+        $state = CardQuizState::create([
+            'user_id' => User::factory()->create()->id,
+            'card_id' => $this->card->id,
+            'failed_attempts' => 1,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cards.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('devTools', false)
+                ->has('captures', 0)
+                ->has('quizStates', 0)
+            );
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.captures.destroy', $capture))
+            ->assertNotFound();
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.quiz-states.destroy', $state))
+            ->assertNotFound();
+
+        $this->assertModelExists($capture);
         $this->assertModelExists($state);
     }
 }

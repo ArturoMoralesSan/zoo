@@ -20,6 +20,9 @@ class CardCaptureController extends Controller
      */
     public function destroy(CardCapture $capture): RedirectResponse
     {
+        // Herramienta de desarrollo: no existe fuera de APP_ZOODECK_DEV.
+        abort_unless(config('app.zoodeck_dev'), 404);
+
         DB::transaction(function () use ($capture) {
             $where = [
                 'user_id' => $capture->user_id,

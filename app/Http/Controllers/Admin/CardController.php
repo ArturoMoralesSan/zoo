@@ -125,10 +125,15 @@ class CardController extends Controller
             $card->unsetRelation('credits');
         });
 
+        $devTools = (bool) config('app.zoodeck_dev');
+
         return Inertia::render(
             'admin/cards/Index',
             [
                 'cards' => $cards,
+
+                // Pestañas de desarrollo (APP_ZOODECK_DEV).
+                'devTools' => $devTools,
 
                 'raritySettings' => $this->raritySettings(),
 
@@ -143,8 +148,9 @@ class CardController extends Controller
 
                 /*
                  * Tarjetas obtenidas por los usuarios, para poder revocarlas.
+                 * Solo con las herramientas de desarrollo activas.
                  */
-                'captures' => CardCapture::query()
+                'captures' => ! $devTools ? [] : CardCapture::query()
                     ->with([
                         'user:id,name,email',
                         'card:id,name,rarity',
@@ -155,9 +161,10 @@ class CardController extends Controller
 
                 /*
                  * Intentos de duelo de los usuarios con tarjetas que aún no tienen,
-                 * para poder reiniciarlos.
+                 * para poder reiniciarlos. Solo con las herramientas de desarrollo
+                 * activas.
                  */
-                'quizStates' => CardQuizState::query()
+                'quizStates' => ! $devTools ? [] : CardQuizState::query()
                     ->with([
                         'user:id,name,email',
                         'card:id,name,rarity,duel_settings_source,retries',

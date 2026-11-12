@@ -186,6 +186,9 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   a QR token, never from a card id sent by the app. The correct answer is never sent
   to the client. A card is captured only if every answer is right. Duels have no time
   limit. Using up the retries locks the card for a cooldown (HTTP 423).
+- **ZooDeck dev tools:** the "Tarjetas obtenidas" and "Intentos y bloqueos" tabs on
+  the cards index, and their revoke and reset endpoints, exist only when
+  `APP_ZOODECK_DEV=1` (`config('app.zoodeck_dev')`). Otherwise the endpoints return 404.
 - **Duel settings** come from the card or its rarity (`duel_settings_source`). Always
   read `effective_questions_per_duel`, `effective_retries` and
   `effective_cooldown_minutes` on `Card`.

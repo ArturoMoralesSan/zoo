@@ -122,4 +122,17 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Herramientas de desarrollo de ZooDeck
+    |--------------------------------------------------------------------------
+    |
+    | Activa en el panel las pestañas "Tarjetas obtenidas" e "Intentos y
+    | bloqueos", que permiten revocar capturas y reiniciar intentos para
+    | probar los duelos. Debe quedar apagado en producción.
+    |
+    */
+
+    'zoodeck_dev' => (bool) env('APP_ZOODECK_DEV', false),
+
 ];
