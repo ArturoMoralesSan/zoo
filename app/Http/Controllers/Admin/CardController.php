@@ -272,6 +272,7 @@ class CardController extends Controller
          * El modelo escalado se valida antes de escribir cualquier archivo.
          */
         $inspection = $this->inspectModel($request);
+        $sizeNote = $this->modelSizeNote($request, $inspection);
 
         $written = [];
         $card = null;
@@ -303,12 +304,12 @@ class CardController extends Controller
          * la tarjeta no se puede activar).
          */
         if ($card->missingCredits()) {
-            $this->flashSaved('Tarjeta creada. Registra los créditos de sus archivos para poder activarla.', $inspection);
+            $this->flashSaved('Tarjeta creada. Registra los créditos de sus archivos para poder activarla.', $inspection, $sizeNote);
 
             return redirect()->route('admin.cards.credits.index', $card);
         }
 
-        $this->flashSaved('Tarjeta creada correctamente.', $inspection);
+        $this->flashSaved('Tarjeta creada correctamente.', $inspection, $sizeNote);
 
         return redirect()->route('admin.cards.index');
     }
@@ -367,6 +368,7 @@ class CardController extends Controller
         $validated = $request->validated();
 
         $inspection = $this->inspectModel($request);
+        $sizeNote = $this->modelSizeNote($request, $inspection);
 
         /*
          * Archivos nuevos en recursos que ya tienen créditos: los créditos se
@@ -413,7 +415,8 @@ class CardController extends Controller
             'Tarjeta actualizada correctamente.'.($replaced
                 ? ' El archivo cambió: revisa los créditos de '.implode(', ', array_map(fn (CreditAsset $asset) => mb_strtolower($asset->label()), $replaced)).'.'
                 : ''),
-            $inspection
+            $inspection,
+            $sizeNote
         );
 
         return redirect()->route('admin.cards.index');
@@ -931,11 +934,12 @@ class CardController extends Controller
      */
     private function flashSaved(
         string $message,
-        ?GlbInspection $inspection
+        ?GlbInspection $inspection,
+        string $sizeNote
     ): void {
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => $message.($inspection ? $this->modelSizeNote() : ''),
+            'message' => $message.$sizeNote,
         ]);
 
         if ($inspection?->warnings) {
@@ -945,13 +949,19 @@ class CardController extends Controller
 
     /**
      * Peso del modelo guardado (el navegador ya optimizó sus texturas).
+     *
+     * Se mide antes de guardar: storeCardFiles() mueve las imágenes fuera de
+     * /tmp, y después pedir archivos a request() (otra instancia que el
+     * FormRequest) vuelve a leer todas las subidas y falla con la que ya no está.
      */
-    private function modelSizeNote(): string
-    {
-        $resized = request()->file('model_file');
-        $original = request()->file('model_original_file');
+    private function modelSizeNote(
+        FormRequest $request,
+        ?GlbInspection $inspection
+    ): string {
+        $resized = $request->file('model_file');
+        $original = $request->file('model_original_file');
 
-        if (! $resized instanceof UploadedFile) {
+        if (! $inspection || ! $resized instanceof UploadedFile) {
             return '';
         }
 

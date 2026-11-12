@@ -823,6 +823,37 @@ class CardAdminTest extends TestCase
         Storage::disk('local')->assertExists($card->model_original_file);
     }
 
+    /**
+     * El editor siempre sube la imagen generada junto con el modelo. En una
+     * petición real la imagen ya se movió fuera de /tmp cuando se arma el aviso
+     * del peso; las subidas falsas de las pruebas no fallan por eso, así que
+     * aquí solo se cubre el resultado.
+     */
+    public function test_saving_a_model_with_a_new_card_image_shows_the_model_size(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel();
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->updatePayload($card, $this->modelPayload([
+                'generated_image' => $this->fakeImage('card.png'),
+            ])))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('admin.cards.index'));
+
+        $this->assertStringContainsString(
+            'Modelo 3D:',
+            session(SessionKey::FLASH_DATA)['toast']['message'] ?? ''
+        );
+
+        // moveUploadedFile() escribe directo en storage/, fuera del disco falso.
+        $image = storage_path('app/public/'.$card->fresh()->generated_image);
+        $this->assertFileExists($image);
+        File::delete($image);
+    }
+
     public function test_update_without_model_fields_does_not_touch_files(): void
     {
         Storage::fake('public');
