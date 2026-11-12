@@ -2,10 +2,19 @@
  * Utilidades del campo de tamaño del modelo 3D (siempre en metros).
  */
 
+/**
+ * Texturas del modelo escalado (config('glb.textures')).
+ */
+export interface GlbTextureProfile {
+    maxSize: number;
+    quality: number;
+}
+
 export interface GlbSizeConfig {
     minHeight: number;
     maxHeight: number;
     supportedExtensions: string[];
+    textures: GlbTextureProfile;
 }
 
 /*
@@ -69,6 +78,13 @@ export const formatMeters = (value: number | null | undefined): string =>
     value === null || value === undefined || !Number.isFinite(value)
         ? '—'
         : `${value.toFixed(2)} m`;
+
+export const formatBytes = (bytes: number | null | undefined): string =>
+    bytes === null || bytes === undefined || !Number.isFinite(bytes)
+        ? '—'
+        : bytes >= 1048576
+          ? `${(bytes / 1048576).toFixed(2)} MB`
+          : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
 export const formatFactor = (factor: number | null): string => {
     if (factor === null || !Number.isFinite(factor)) {

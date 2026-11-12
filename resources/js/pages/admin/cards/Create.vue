@@ -42,6 +42,7 @@ import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue'
 import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import { cardStat } from '@/lib/cardStats';
+import { optimizeUpload } from '@/lib/imageOptimize';
 import type { DuelMessages } from '@/lib/duelMessages';
 
 interface Species {
@@ -117,17 +118,47 @@ const submit = async () => {
      */
     generatingImage.value = true;
 
+    // Peso de cada imagen antes de comprimirla, para mostrar el ahorro.
+    const originalBytes: Record<string, number> = {};
+
     try {
-        form.generated_image = (await preview.value?.generatePngFile()) ?? null;
+        const generated = await preview.value?.generateCardFile();
+
+        form.generated_image = generated?.file ?? null;
+
+        if (generated) {
+            originalBytes.generated = generated.originalBytes;
+        }
     } catch {
         form.generated_image = null;
-    } finally {
-        generatingImage.value = false;
     }
+
+    if (form.thumbnail_image) {
+        originalBytes.thumbnail = form.thumbnail_image.size;
+    }
+
+    if (form.artwork_image) {
+        originalBytes.artwork = form.artwork_image.size;
+    }
+
+    /*
+     * Las imágenes subidas se envían en WebP si así pesan menos; el
+     * formulario conserva los originales por si hay que reenviarlo.
+     */
+    const [thumbnail, artwork] = await Promise.all([
+        form.thumbnail_image &&
+            optimizeUpload(form.thumbnail_image, 'thumbnail'),
+        form.artwork_image && optimizeUpload(form.artwork_image, 'artwork'),
+    ]);
+
+    generatingImage.value = false;
 
     form.transform((data) => ({
         ...data,
         ...modelFields,
+        thumbnail_image: thumbnail,
+        artwork_image: artwork,
+        image_original_bytes: originalBytes,
     })).post(admin.cards.store().url, {
         forceFormData: true,
     });
@@ -475,6 +506,7 @@ defineOptions({
                 >
                     <CardImageField
                         id="artwork_image"
+                        kind="artwork"
                         v-model:file="form.artwork_image"
                         label="Imagen de la tarjeta"
                         help="Fondo de la plantilla de la tarjeta."
@@ -581,6 +613,7 @@ defineOptions({
 
                         <CardImageField
                             id="thumbnail_image"
+                            kind="thumbnail"
                             v-model:file="form.thumbnail_image"
                             label="Miniatura"
                             help="Se muestra en los listados de la colección."

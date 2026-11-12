@@ -58,14 +58,15 @@ npx vue-tsc --noEmit 2>&1 | grep 'pages/admin/foo'   # no per-file mode, so filt
 php artisan wayfinder:generate --with-form     # after route changes, if Vite is not running
 php artisan route:list --name=admin.events -v  # routes with their middleware
 php artisan route:list --path=api --json
+php artisan cards:images:report                # read-only: card images still to convert
 ```
 
 **Baseline on 2026-11-10.** Do not chase these failures unless asked; just add none.
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 250 tests, 9 stale failures: 8 use removed `route('dashboard')`, `ExampleTest` expects 200 at `/` |
-| `npx vitest run` | 81 passing |
+| `php artisan test` | 290 tests, 9 stale failures: 8 use removed `route('dashboard')`, `ExampleTest` expects 200 at `/` |
+| `npx vitest run` | 102 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 33 errors |
 
@@ -83,10 +84,10 @@ app/Http/Controllers/Admin/      Inertia controllers, one per resource
 app/Http/Controllers/Api/        JSON controllers for the mobile app
 app/Http/Requests/{Admin,Api}/   Form requests (Admin/<Resource>/{Store,Update}…Request)
 app/Http/Resources/              API resources (CardResource, Duel/*, Credits/*)
-app/Services/                    CardDuelService, PointService, GlbInspector, Licensing/*
+app/Services/                    CardDuelService, PointService, GlbInspector, CardImageOptimizer, ImageEncoding/*, Licensing/*
 app/Concerns/                    Validation rule traits shared by form requests
 app/Enums/ app/Rules/ app/Observers/ app/Policies/ app/Exceptions/
-config/glb.php config/licensing.php   Project-specific settings
+config/glb.php config/licensing.php config/images.php   Project-specific settings
 database/seeders/                Roles and permissions, menu, catalogs
 resources/js/pages/admin/<resource>/{Index,Create,Edit,Show}.vue
 resources/js/components/admin/   Shared admin UI; admin/cards/ for the card editor
@@ -94,7 +95,7 @@ resources/js/components/ui/      shadcn-style primitives
 resources/js/lib/                Card, GLB, credits and quiz logic (pure TS, tested)
 resources/js/composables/  resources/js/types/  resources/css/
 tests/Feature/{Admin,Api,Auth,Licensing,Settings}  tests/Unit  tests/js  tests/Fixtures
-docs/api-credits.md  docs/glb-resizing.md     Read only when working on those features
+docs/api-credits.md  docs/glb-resizing.md  docs/image-optimization.md   Read only when working on those features
 ```
 
 Page folders match the route resource, except `quizquestions`, `card-qr-codes` and
@@ -194,10 +195,18 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   remains as the advanced option: `lib/quizImport.ts` builds a prompt for an external
   LLM, then the JSON is imported.
 - **3D models:** the browser resizes the GLB and the server re-verifies it, and 1 unit
-  equals 1 metre. Never rescale an already scaled file. See `docs/glb-resizing.md`.
+  equals 1 metre. Never rescale an already scaled file. On every resize the browser also
+  shrinks textures to 1024 px JPEG q85 (`lib/glb/glbTextures.ts`, `config('glb.textures')`),
+  because Viro reads only core glTF JPEG/PNG: no KTX2, WebP or mesh compression. See
+  `docs/glb-resizing.md`.
 - **Credits:** licences and attribution are legally relevant, and restricted licences
   are off by default. `CreditsCacheObserver` invalidates the public `/api/v1/credits`
   cache. See `docs/api-credits.md`.
+- **Card images** are stored as WebP. The browser encodes them (`lib/imageOptimize.ts`,
+  libwebp in WASM) and the server re-encodes non-WebP uploads only if it has Imagick or
+  GD (`IMAGE_ENCODER`). `generated_image` is 2× (1144×2032), not the 3× download. Older
+  images are converted from the "Configuración" tab or with `cards:images:optimize`, which
+  **deletes each original**. See `docs/image-optimization.md`.
 - **Points:** `PointService::add()` applies a `PointRule` by type. Levels never go down.
   Only the ticket flows call it today.
 
@@ -211,7 +220,8 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 | `Enums/CardRarity` | `lib/cardRarity.ts` | none |
 | `GlbInspector`, `config/glb.php` | `lib/glb/resizeGlb.ts` | `tests/Fixtures/glb` |
 
-Card fonts are shared through `resources/data/card-fonts.json`.
+Card fonts are shared through `resources/data/card-fonts.json`, and card image profiles
+(size and quality) through `resources/data/card-image-profiles.json`.
 
 ## Gotchas
 

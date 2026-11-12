@@ -51,6 +51,7 @@ class Card extends Model
         'win_message',
         'retry_message',
         'locked_message',
+        'image_original_bytes',
     ];
 
     protected $casts = [
@@ -70,6 +71,9 @@ class Card extends Model
         'model_final_height' => 'float',
         'model_final_width' => 'float',
         'model_final_depth' => 'float',
+
+        // Peso de cada imagen antes de comprimirla: { generated, thumbnail, artwork }.
+        'image_original_bytes' => 'array',
     ];
 
     /**

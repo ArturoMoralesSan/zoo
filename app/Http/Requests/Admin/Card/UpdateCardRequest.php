@@ -64,12 +64,31 @@ class UpdateCardRequest extends FormRequest
 
             /*
              * Imagen final generada en el navegador a partir de la plantilla.
+             * WebP a 2× (lib/imageOptimize.ts); PNG solo si el navegador no
+             * pudo codificar WebP. Nunca mayor que el render a 3×.
              */
             'generated_image' => [
                 'nullable',
                 'image',
-                'mimes:png',
+                'mimes:webp,png',
                 'max:15360',
+                'dimensions:max_width=1716,max_height=3048',
+            ],
+
+            /*
+             * Peso de cada imagen antes de que el navegador la comprimiera,
+             * para mostrar el ahorro en el panel.
+             */
+            'image_original_bytes' => [
+                'nullable',
+                'array:generated,thumbnail,artwork',
+            ],
+
+            'image_original_bytes.*' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:104857600',
             ],
 
             ...$this->cardModelRules($this->route('card')),

@@ -29,6 +29,11 @@ export interface StoredModel {
      * modelos anteriores al escalado).
      */
     originalUrl: string | null;
+    /*
+     * Peso en bytes del archivo que descarga la app y del original subido.
+     */
+    fileBytes?: number | null;
+    originalBytes?: number | null;
 }
 
 /**
@@ -76,6 +81,13 @@ export function useCardModelSize(
 
     const inspecting = ref(false);
     const error = ref<string | null>(null);
+
+    /*
+     * Peso estimado del archivo optimizado (texturas incluidas) del modelo
+     * elegido: se calcula en segundo plano tras medirlo.
+     */
+    const estimatedBytes = ref<number | null>(null);
+    const estimating = ref(false);
     const touched = ref(false);
 
     const hasModel = computed(() => Boolean(file.value || stored?.modelFile));
@@ -197,6 +209,8 @@ export function useCardModelSize(
             inspected.value = null;
             error.value = null;
             touched.value = false;
+            estimatedBytes.value = null;
+            estimating.value = false;
 
             if (!value) {
                 inspecting.value = false;
@@ -210,13 +224,15 @@ export function useCardModelSize(
             inspecting.value = true;
 
             try {
+                const buffer = await value.arrayBuffer();
                 const { inspectGlb } = await import('@/lib/glb/resizeGlb');
-                const result = await inspectGlb(await value.arrayBuffer(), {
+                const result = await inspectGlb(buffer, {
                     supportedExtensions: config.supportedExtensions,
                 });
 
                 if (token === inspectToken) {
                     inspected.value = result;
+                    void estimate(buffer, result.height, token);
                 }
             } catch (exception) {
                 if (token === inspectToken) {
@@ -228,6 +244,50 @@ export function useCardModelSize(
                 }
             }
         },
+    );
+
+    /*
+     * Mismo proceso que al guardar, con el alto del archivo (escala 1): el
+     * alto no cambia el peso, así que el resultado es el peso final.
+     */
+    async function estimate(buffer: ArrayBuffer, sourceHeight: number, token: number) {
+        estimating.value = true;
+
+        try {
+            const { resizeGlb } = await import('@/lib/glb/resizeGlb');
+            const result = await resizeGlb(buffer, sourceHeight, {
+                supportedExtensions: config.supportedExtensions,
+                textures: config.textures,
+            });
+
+            if (token === inspectToken) {
+                estimatedBytes.value = result.glb.byteLength;
+            }
+        } catch {
+            // Sin estimación: si el archivo tiene un problema, se muestra al guardar.
+        } finally {
+            if (token === inspectToken) {
+                estimating.value = false;
+            }
+        }
+    }
+
+    /*
+     * Peso del modelo: original → archivo de la app. Con un archivo nuevo,
+     * `previous` es el que la app tiene hoy (Edit).
+     */
+    const fileSizes = computed(() =>
+        file.value
+            ? {
+                  original: file.value.size,
+                  optimized: estimatedBytes.value,
+                  previous: stored?.fileBytes ?? null,
+              }
+            : {
+                  original: stored?.originalBytes ?? null,
+                  optimized: stored?.fileBytes ?? null,
+                  previous: null,
+              },
     );
 
     /*
@@ -330,6 +390,7 @@ export function useCardModelSize(
             const { resizeGlb } = await import('@/lib/glb/resizeGlb');
             const result = await resizeGlb(buffer, height.value, {
                 supportedExtensions: config.supportedExtensions,
+                textures: config.textures,
             });
 
             const name = (file.value?.name ?? 'modelo.glb').replace(/\.glb$/i, '');
@@ -369,6 +430,8 @@ export function useCardModelSize(
         sizeChanged,
         needsProcessing,
         isNewFile: computed(() => Boolean(file.value)),
+        estimating,
+        fileSizes,
         setHeight,
         setHeightInput,
         touch,

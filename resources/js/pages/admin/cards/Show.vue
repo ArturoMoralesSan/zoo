@@ -9,6 +9,7 @@ import {
     Copyright,
     ExternalLink,
     FileImage,
+    HardDrive,
     HelpCircle,
     ImageOff,
     Info,
@@ -30,6 +31,7 @@ import CardPreviewPanel from '@/components/admin/cards/CardPreviewPanel.vue';
 import CreditStatusChips from '@/components/admin/cards/CreditStatusChips.vue';
 import ModelSizeSummary from '@/components/admin/cards/ModelSizeSummary.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
+import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import { usePreviewTab } from '@/composables/usePreviewTab';
 import { autoAccent } from '@/lib/cardColors';
@@ -107,6 +109,11 @@ const props = defineProps<{
     duelMessageDefaults: DuelMessages;
     // Estado de los créditos de cada recurso (se gestionan en su sección).
     creditSummary: CreditSummaryItem[];
+    // Peso de cada archivo: el que descarga la app y el original (bytes).
+    fileSizes: Record<
+        'generated' | 'thumbnail' | 'artwork' | 'model',
+        { current: number | null; original: number | null }
+    >;
 }>();
 
 const creditStatus = computed(
@@ -145,6 +152,55 @@ const duelMessages = computed(() => {
         };
     });
 });
+
+/*
+ * Peso de cada archivo que descarga la app, en una sola sección para
+ * revisar que todo esté optimizado.
+ */
+const sizeRows = computed(() => {
+    const rows = [
+        {
+            key: 'generated',
+            label: 'Tarjeta generada',
+            path: props.card.generated_image,
+        },
+        {
+            key: 'thumbnail',
+            label: 'Miniatura',
+            path: props.card.thumbnail_image,
+        },
+        {
+            key: 'artwork',
+            label: 'Imagen de la tarjeta',
+            path: props.card.artwork_image,
+        },
+        { key: 'model', label: 'Modelo 3D', path: props.card.model_file },
+    ] as const;
+
+    return rows.map((row) => ({
+        ...row,
+        ...props.fileSizes[row.key],
+        missing: row.path
+            ? 'No se encontró el archivo guardado.'
+            : 'Sin archivo.',
+    }));
+});
+
+/*
+ * Total: sin peso original conocido, cuenta el actual (no suma ahorro).
+ */
+const sizeTotal = computed(() =>
+    sizeRows.value.reduce(
+        (total, row) =>
+            row.current === null
+                ? total
+                : {
+                      original: total.original + (row.original ?? row.current),
+                      current: total.current + row.current,
+                  },
+        { original: 0, current: 0 },
+    ),
+);
 
 const modelPreviewSource = computed(() => storageUrl(props.card.model_file));
 
@@ -813,6 +869,46 @@ defineOptions({
                                 Agregar modelo
                             </Link>
                         </div>
+                    </div>
+                </AdminCard>
+
+                <!-- Peso de los archivos que descarga la app -->
+                <AdminCard
+                    title="Peso de los archivos"
+                    description="Lo que descarga la app por esta tarjeta, comparado con lo que se subió."
+                    :icon="HardDrive"
+                >
+                    <ul class="divide-y divide-[#E5ECE7]">
+                        <li
+                            v-for="item in sizeRows"
+                            :key="item.key"
+                            class="flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <span class="text-sm font-medium text-[#244334]">
+                                {{ item.label }}
+                            </span>
+
+                            <SizeSavings
+                                v-if="item.current !== null"
+                                label="Peso"
+                                :original="item.original"
+                                :optimized="item.current"
+                            />
+
+                            <span v-else class="text-xs text-[#718477]">
+                                {{ item.missing }}
+                            </span>
+                        </li>
+                    </ul>
+
+                    <div
+                        class="mt-4 rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-3.5"
+                    >
+                        <SizeSavings
+                            label="Total en la app"
+                            :original="sizeTotal.original"
+                            :optimized="sizeTotal.current"
+                        />
                     </div>
                 </AdminCard>
             </div>

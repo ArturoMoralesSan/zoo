@@ -133,6 +133,40 @@ describe('resizeGlb', () => {
         expect(document.getRoot().listSkins()).toHaveLength(1);
     });
 
+    it('alinea la malla con piel con su nodo sin cambiar su tamaño', async () => {
+        // El nodo de la malla tiene escala ×10 que la piel no usa: ViroReact
+        // la dibujaba 10 veces más grande hasta animarla.
+        const result = await resizeGlb(fixture('skinned.glb'), 1.5);
+        const document = await io.readBinary(result.glb);
+        const node = document
+            .getRoot()
+            .listNodes()
+            .find((item) => item.getSkin())!;
+        const skin = node.getSkin()!;
+        const inverseBind = skin.getInverseBindMatrices()!;
+
+        skin.listJoints().forEach((joint, index) => {
+            const ibm = inverseBind.getElement(index, []);
+            const jointWorld = joint.getWorldMatrix();
+            const bind = Array.from({ length: 16 }, (_, cell) => {
+                const [column, row] = [Math.floor(cell / 4), cell % 4];
+
+                return [0, 1, 2, 3].reduce(
+                    (sum, k) =>
+                        sum + jointWorld[k * 4 + row] * ibm[column * 4 + k],
+                    0,
+                );
+            });
+
+            node.getWorldMatrix().forEach((value, cell) =>
+                expect(bind[cell]).toBeCloseTo(value, 4),
+            );
+        });
+
+        expect(result.originalHeight).toBeCloseTo(2, 4);
+        expect(result.finalHeight).toBeCloseTo(1.5, 3);
+    });
+
     it('avisa de extensiones no compatibles sin bloquear', async () => {
         const result = await resizeGlb(fixture('unsupported-extension.glb'), 1, {
             supportedExtensions: SUPPORTED,

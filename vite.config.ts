@@ -35,6 +35,10 @@ export default defineConfig({
             formVariants: true,
         }),
     ],
+    optimizeDeps: {
+        // El codificador WebP (WASM) busca su .wasm junto a su módulo.
+        exclude: ['@jsquash/webp'],
+    },
     server: {
         watch: {
             ignored: [

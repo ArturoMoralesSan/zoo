@@ -10,6 +10,7 @@ import {
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
+import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import type { CardModelSize } from '@/composables/useCardModelSize';
 import {
     QUICK_HEIGHTS,
@@ -24,6 +25,8 @@ const props = defineProps<{
 }>();
 
 const minHeight = computed(() => props.model.config.minHeight);
+
+const sizes = computed(() => props.model.fileSizes);
 
 const tiles = computed(() => [
     {
@@ -248,6 +251,26 @@ const heightError = computed(
                         {{ formatFactor(model.factor ?? 1) }}
                     </span>
                     respecto al archivo original.
+                </p>
+            </div>
+
+            <!-- Peso: original → archivo que descarga la app -->
+            <div
+                v-if="model.hasModel"
+                class="rounded-xl border border-[#DCE7DF] bg-white p-3.5"
+            >
+                <SizeSavings
+                    :original="sizes.original"
+                    :optimized="sizes.optimized"
+                    :estimating="model.estimating"
+                    :previous="sizes.previous"
+                />
+
+                <p
+                    v-if="model.sizeChanged"
+                    class="mt-1 text-xs text-[#718477]"
+                >
+                    Las texturas se vuelven a optimizar al guardar.
                 </p>
             </div>
 

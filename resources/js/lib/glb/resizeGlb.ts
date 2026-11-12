@@ -10,15 +10,21 @@
  */
 import { WebIO } from '@gltf-transform/core';
 import type {
+    Accessor,
     Document,
     mat4,
     Node,
     PlatformIO,
+    Property,
     Scene,
     vec3,
 } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { dequantize, getBounds, unpartition } from '@gltf-transform/functions';
+
+import { optimizeTextures } from '@/lib/glb/glbTextures';
+import type { TextureBytes } from '@/lib/glb/glbTextures';
+import type { GlbTextureProfile } from '@/lib/glb/modelSize';
 
 /*
  * Extensiones de compresión: se eliminan al procesar y el servidor las rechaza.
@@ -37,6 +43,8 @@ export const SCALE_ROOT_NAME = 'ScaleRoot';
 const HEIGHT_TOLERANCE = 0.001;
 const ORIGIN_ABSOLUTE_TOLERANCE = 0.001;
 const ORIGIN_RELATIVE_TOLERANCE = 0.001;
+// Diferencia admitida entre la matriz del nodo y la de enlace de su piel.
+const SKIN_MATCH_TOLERANCE = 0.0001;
 
 export interface GlbDimensions {
     height: number;
@@ -58,6 +66,10 @@ export interface GlbResizeResult {
     depth: number;
     factor: number;
     warnings: string[];
+    /*
+     * Bytes de las imágenes antes y después de optimizarlas (null sin `textures`).
+     */
+    textureBytes: TextureBytes | null;
 }
 
 export interface GlbOptions {
@@ -65,6 +77,10 @@ export interface GlbOptions {
      * Extensiones que ViroReact muestra correctamente (config('glb.supported_extensions')).
      */
     supportedExtensions?: readonly string[];
+    /*
+     * Reducir y volver a codificar las texturas (config('glb.textures')).
+     */
+    textures?: GlbTextureProfile;
 }
 
 interface Bounds {
@@ -345,6 +361,215 @@ const listSceneNodes = (scene: Scene): Node[] => {
     return nodes;
 };
 
+/*
+ * Inversa de una matriz afín 4x4 (última fila 0 0 0 1), en orden de columnas.
+ */
+const invertAffine = (m: mat4): mat4 => {
+    const [a, b, c, , d, e, f, , g, h, i] = m;
+    const det = a * (e * i - f * h) - d * (b * i - c * h) + g * (b * f - c * e);
+
+    if (!det) {
+        throw new Error('La matriz del modelo no es invertible.');
+    }
+
+    const r = [
+        (e * i - h * f) / det,
+        (h * c - b * i) / det,
+        (b * f - e * c) / det,
+        (g * f - d * i) / det,
+        (a * i - g * c) / det,
+        (d * c - a * f) / det,
+        (d * h - g * e) / det,
+        (g * b - a * h) / det,
+        (a * e - d * b) / det,
+    ];
+    const [tx, ty, tz] = [m[12], m[13], m[14]];
+
+    return [
+        r[0],
+        r[1],
+        r[2],
+        0,
+        r[3],
+        r[4],
+        r[5],
+        0,
+        r[6],
+        r[7],
+        r[8],
+        0,
+        -(r[0] * tx + r[3] * ty + r[6] * tz),
+        -(r[1] * tx + r[4] * ty + r[7] * tz),
+        -(r[2] * tx + r[5] * ty + r[8] * tz),
+        1,
+    ] as unknown as mat4;
+};
+
+const transformVector = (m: mat4, [x, y, z]: number[]): vec3 => [
+    m[0] * x + m[4] * y + m[8] * z,
+    m[1] * x + m[5] * y + m[9] * z,
+    m[2] * x + m[6] * y + m[10] * z,
+];
+
+// Normales: la transpuesta de la inversa de la parte lineal.
+const transformNormal = (inverse: mat4, [x, y, z]: number[]): vec3 => [
+    inverse[0] * x + inverse[1] * y + inverse[2] * z,
+    inverse[4] * x + inverse[5] * y + inverse[6] * z,
+    inverse[8] * x + inverse[9] * y + inverse[10] * z,
+];
+
+const normalize = ([x, y, z]: vec3): vec3 => {
+    const length = Math.hypot(x, y, z) || 1;
+
+    return [x / length, y / length, z / length];
+};
+
+const matricesMatch = (a: mat4, b: mat4): boolean =>
+    a.every(
+        (value, index) =>
+            Math.abs(value - b[index]) <=
+            SKIN_MATCH_TOLERANCE * Math.max(1, Math.abs(value)),
+    );
+
+/*
+ * Accesor propio del dueño: si otro elemento lo comparte, se trabaja sobre
+ * una copia para no modificar al otro.
+ */
+const ownAccessor = (
+    document: Document,
+    accessor: Accessor,
+    owner: Property,
+): Accessor => {
+    const root = document.getRoot();
+    const shared = accessor
+        .listParents()
+        .some((parent) => parent !== root && parent !== owner);
+
+    return shared ? accessor.clone() : accessor;
+};
+
+const mapAccessor = (
+    accessor: Accessor,
+    map: (element: number[]) => number[],
+) => {
+    const element: number[] = [];
+
+    for (let i = 0; i < accessor.getCount(); i++) {
+        accessor.setElement(i, map(accessor.getElement(i, element)));
+    }
+};
+
+/*
+ * ViroReact dibuja una malla con piel quieta con la matriz mundial de su
+ * nodo, pero animada con las articulaciones (matriz mundial × inversa de
+ * enlace), como pide glTF. Si las dos no coinciden en la pose de enlace
+ * (p. ej. una escala sin aplicar en el Armature de Blender), el modelo
+ * cambia de tamaño al empezar la animación. Aquí se expresa la malla en el
+ * espacio de su nodo: se transforman sus vértices y se ajustan las matrices
+ * inversas de enlace para que ambas coincidan. El modelo según glTF (el que
+ * se mide) no cambia; la jerarquía y las animaciones tampoco.
+ */
+const alignSkinnedMeshes = (document: Document, scene: Scene) => {
+    for (const node of listSceneNodes(scene)) {
+        const skin = node.getSkin();
+        const mesh = node.getMesh();
+        const inverseBind = skin?.getInverseBindMatrices();
+
+        if (!skin || !mesh || !inverseBind || !skin.listJoints().length) {
+            continue;
+        }
+
+        // Una malla usada por varios nodos no se puede ajustar para uno solo.
+        const meshUsers = mesh
+            .listParents()
+            .filter((parent) => parent.propertyType === 'Node');
+
+        if (meshUsers.length > 1) {
+            continue;
+        }
+
+        const binds = skin
+            .listJoints()
+            .map((joint, index) =>
+                multiply(
+                    joint.getWorldMatrix(),
+                    inverseBind.getElement(
+                        index,
+                        new Array(16).fill(0),
+                    ) as mat4,
+                ),
+            );
+        const bind = binds[0];
+
+        // Sin una matriz de enlace común no hay a qué alinear el nodo.
+        if (binds.some((matrix) => !matricesMatch(matrix, bind))) {
+            continue;
+        }
+
+        const world = node.getWorldMatrix();
+
+        if (matricesMatch(world, bind)) {
+            continue;
+        }
+
+        // Vértices: de la pose de enlace al espacio del nodo (W⁻¹ × B).
+        const toNode = multiply(invertAffine(world), bind);
+        const toNodeInverse = invertAffine(toNode);
+
+        for (const primitive of mesh.listPrimitives()) {
+            const attributes: [string, (value: number[]) => number[]][] = [
+                ['POSITION', (value) => transformPoint(toNode, value)],
+                [
+                    'NORMAL',
+                    (value) => normalize(transformNormal(toNodeInverse, value)),
+                ],
+                [
+                    'TANGENT',
+                    (value) => [
+                        ...normalize(transformVector(toNode, value)),
+                        value[3],
+                    ],
+                ],
+            ];
+
+            for (const [semantic, map] of attributes) {
+                const accessor = primitive.getAttribute(semantic);
+
+                if (accessor) {
+                    const own = ownAccessor(document, accessor, primitive);
+
+                    mapAccessor(own, map);
+                    primitive.setAttribute(semantic, own);
+                }
+            }
+
+            // Los morph targets son desplazamientos: solo la parte lineal.
+            for (const target of primitive.listTargets()) {
+                for (const semantic of target.listSemantics()) {
+                    const accessor = target.getAttribute(semantic)!;
+                    const own = ownAccessor(document, accessor, target);
+
+                    mapAccessor(own, (value) =>
+                        semantic === 'NORMAL'
+                            ? transformNormal(toNodeInverse, value)
+                            : transformVector(toNode, value),
+                    );
+                    target.setAttribute(semantic, own);
+                }
+            }
+        }
+
+        // Inversas de enlace: IBM × B⁻¹ × W, así articulación × IBM = W.
+        const correction = multiply(invertAffine(bind), world);
+        const ownInverseBind = ownAccessor(document, inverseBind, skin);
+
+        mapAccessor(ownInverseBind, (value) =>
+            multiply(value as mat4, correction),
+        );
+        skin.setInverseBindMatrices(ownInverseBind);
+    }
+};
+
 const dimensionsOf = (bounds: Bounds): GlbDimensions => ({
     height: bounds.max[1] - bounds.min[1],
     width: bounds.max[0] - bounds.min[0],
@@ -435,6 +660,8 @@ export async function resizeGlb(
         .listExtensionsUsed()
         .map((extension) => extension.extensionName);
 
+    alignSkinnedMeshes(document, scene);
+
     const bounds = computeBounds(scene);
     const original = dimensionsOf(bounds);
 
@@ -477,6 +704,10 @@ export async function resizeGlb(
         }
     }
 
+    const textures = options.textures
+        ? await optimizeTextures(document, options.textures)
+        : null;
+
     const io = await getIO();
     const glb = await io.writeBinary(document);
 
@@ -493,7 +724,9 @@ export async function resizeGlb(
             ...extensionWarnings(extensionsUsed, options.supportedExtensions ?? []),
             ...(bounds.skinned ? [SKINNED_WARNING] : []),
             ...(bounds.approximate ? [APPROXIMATE_SKIN_WARNING] : []),
+            ...(textures?.warnings ?? []),
         ],
+        textureBytes: textures?.bytes ?? null,
     };
 }
 

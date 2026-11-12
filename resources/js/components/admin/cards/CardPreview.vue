@@ -28,6 +28,7 @@ import {
     CARD_TEXTURE_PIXEL_RATIO,
     cardFilename,
     downloadUrl,
+    renderCardFile,
     renderCardPng,
     renderCardSvg,
 } from '@/lib/cardImage';
@@ -306,21 +307,23 @@ const viewerHeight = computed(
 /**
  * PNG final de la tarjeta para guardarlo en el servidor.
  */
-const generatePngFile = async (): Promise<File | null> => {
+/**
+ * Imagen que se guarda en el servidor (WebP a 2×, ver renderCardFile).
+ */
+const generateCardFile = async (): Promise<{
+    file: File;
+    originalBytes: number;
+} | null> => {
     const node = await readyTemplateNode();
 
     if (!node) {
         return null;
     }
 
-    return new File(
-        [await renderCardPng(node, CARD_EXPORT_PIXEL_RATIO)],
-        cardFilename(props.title, 'png'),
-        { type: 'image/png' },
-    );
+    return renderCardFile(node, cardFilename(props.title, 'webp'));
 };
 
-defineExpose({ generatePngFile });
+defineExpose({ generateCardFile });
 </script>
 
 <template>
