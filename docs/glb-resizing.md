@@ -16,6 +16,7 @@ Navegador (panel)                                   Servidor (PHP)
 4. Al guardar: resizeGlb()      ─┘
    · agrega un nodo "ScaleRoot" con escala uniforme y desplazamiento
    · quita la compresión (Draco, Meshopt, cuantización)
+   · reduce las texturas a 1024 px y las codifica en JPEG q85 (PNG si hay transparencia)
    · vuelve a leer el resultado y verifica el contrato
 5. Envía original + escalado + medidas  ───────────▶ 6. Form Request: .glb, encabezado glTF 2, tamaño, alto
                                                       7. GlbInspector lee solo el encabezado y el JSON
@@ -123,6 +124,28 @@ por el navegador. Revisa el tamaño en la vista previa.
 Lo mismo ocurre si una pieza del modelo está rotada en un ángulo que no es
 múltiplo de 90°: la caja que el servidor calcula con los valores min/max sería
 mayor que la real, así que valida solo la estructura y avisa.
+
+## Texturas
+
+ViroReact solo lee texturas JPEG/PNG del glTF básico: no soporta KTX2/Basis
+(`KHR_texture_basisu`), `EXT_texture_webp` ni compresión de mallas. Como las
+texturas son el 85-90 % de cada modelo (las mallas pesan 0.2-0.7 MB), el ahorro
+viene de la resolución y la calidad.
+
+- Al escalar (crear, reemplazar o cambiar solo el alto), `resizeGlb` llama a
+  `optimizeTextures` (`resources/js/lib/glb/glbTextures.ts`) con
+  `config('glb.textures')`: lado mayor de **1024 px**, **JPEG q85**. El color base
+  o emisivo de un material no opaco (o un PNG usado como color) se guarda en PNG.
+- Siempre parte del original privado, nunca de un archivo ya optimizado.
+- Nunca agranda. Si una textura no se puede codificar o no pesa menos, se queda
+  como estaba y aparece una advertencia: guardar nunca falla por esto.
+- Medido el 2026-11-11 en los 4 modelos: 22.07 MB → 3.29 MB (−85 %). La memoria de
+  GPU baja de ~64 MB a ~16 MB por modelo (tres texturas de 2048² → 1024²).
+- El formulario muestra el peso: original → archivo de la app (estimado al elegir
+  un archivo, con el mismo proceso que al guardar) y, en Edit, el del modelo actual.
+  El aviso al guardar repite el resultado.
+- Ajustable con `GLB_TEXTURE_MAX_SIZE` y `GLB_TEXTURE_QUALITY`. El servidor no
+  vuelve a medir las texturas.
 
 ## Política de extensiones
 

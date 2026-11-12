@@ -52,6 +52,22 @@ php -r 'var_dump(in_array("WEBP", Imagick::queryFormats("WEBP")));'
 php artisan cards:images:report   # muestra el codificador detectado
 ```
 
+## Peso en el panel
+
+Las tarjetas guardan en `cards.image_original_bytes` (`{ generated, thumbnail,
+artwork }`, en bytes) el peso de cada imagen antes de comprimirla, porque los
+originales no se conservan. El navegador envía `image_original_bytes[...]` al
+guardar: el archivo elegido para la miniatura y la ilustración, y el mismo render
+en PNG para la tarjeta generada. Sin ese dato, el servidor usa el peso del archivo
+recibido. La herramienta de conversión registra el peso del original que reemplaza.
+Al eliminar una imagen se olvida su peso.
+
+`CardController::fileSizes()` entrega a Show y Edit `fileSizes.{generated,
+thumbnail, artwork, model}` con `{ current, original }`. El componente
+`SizeSavings.vue` muestra «original → en la app −N %». En los formularios, el peso
+de una imagen nueva se calcula al elegirla; `optimizeUpload` guarda el resultado
+para no codificarla dos veces al enviar.
+
 ## Convertir las imágenes ya guardadas
 
 **Cada original se borra** en cuanto su WebP queda guardado. No hay forma de deshacerlo,

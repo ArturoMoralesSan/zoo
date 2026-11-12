@@ -1034,6 +1034,94 @@ class CardAdminTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->where('glbConfig.minHeight', 0.01)
                 ->where('glbConfig.maxHeight', 100)
-                ->has('glbConfig.supportedExtensions'));
+                ->has('glbConfig.supportedExtensions')
+                ->where('glbConfig.textures.maxSize', 1024)
+                ->where('glbConfig.textures.quality', 85));
+    }
+
+    public function test_edit_and_show_receive_the_file_sizes(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $card = $this->cardWithModel();
+        Storage::disk('public')->put('cards/'.$card->id.'/miniatura.webp', 'webp');
+        $card->update([
+            'thumbnail_image' => 'cards/'.$card->id.'/miniatura.webp',
+            'image_original_bytes' => ['thumbnail' => 5000],
+        ]);
+
+        foreach (['admin.cards.edit', 'admin.cards.show'] as $route) {
+            $this->actingAs($this->admin)
+                ->get(route($route, $card))
+                ->assertInertia(fn ($page) => $page
+                    ->where('fileSizes.model.current', strlen('escalado'))
+                    ->where('fileSizes.model.original', strlen('original'))
+                    ->where('fileSizes.thumbnail.current', strlen('webp'))
+                    ->where('fileSizes.thumbnail.original', 5000)
+                    ->where('fileSizes.generated.current', null)
+                    ->where('fileSizes.generated.original', null));
+        }
+    }
+
+    public function test_uploaded_images_record_their_size_before_compression(): void
+    {
+        $payload = $this->cardPayload([
+            'is_active' => false,
+            'thumbnail_image' => $this->fakeImage('miniatura.png'),
+            'generated_image' => $this->fakeImage('card.png'),
+            // El navegador envía el peso antes de comprimir; la miniatura usa el recibido.
+            'image_original_bytes' => ['generated' => 6000000],
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors();
+
+        $card = Card::where('name', $payload['name'])->firstOrFail();
+
+        // CardController escribe en storage/app/public real: borrar solo estos archivos.
+        $files = [
+            storage_path('app/public/'.$card->thumbnail_image),
+            storage_path('app/public/'.$card->generated_image),
+        ];
+
+        $this->assertSame(
+            ['generated' => 6000000, 'thumbnail' => strlen(base64_decode(self::PNG))],
+            $card->image_original_bytes
+        );
+
+        // Al eliminar una imagen se olvida su peso original.
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.image.destroy', [$card, 'thumbnail']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['generated' => 6000000], $card->refresh()->image_original_bytes);
+
+        File::delete($files);
+        @rmdir(dirname($files[1]));
+    }
+
+    public function test_image_original_bytes_are_validated(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload([
+                'image_original_bytes' => ['otra' => 10, 'generated' => -1],
+            ]))
+            ->assertSessionHasErrors(['image_original_bytes', 'image_original_bytes.generated']);
+    }
+
+    public function test_saved_model_toast_shows_its_size(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload($this->modelPayload()))
+            ->assertSessionHasNoErrors();
+
+        $message = session()->get(SessionKey::FLASH_DATA)['toast']['message'];
+
+        $this->assertMatchesRegularExpression('/Modelo 3D: \d+\.\d{2} MB → \d+\.\d{2} MB\./', $message);
     }
 }

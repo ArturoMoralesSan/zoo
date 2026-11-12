@@ -221,6 +221,8 @@ class CardController extends Controller
                 'duelMessageDefaults' => $this->duelMessageDefaults(),
 
                 'creditSummary' => $this->creditSummary($card),
+
+                'fileSizes' => $this->fileSizes($card),
             ]
         );
     }
@@ -331,6 +333,8 @@ class CardController extends Controller
                 'modelOriginalUrl' => $card->model_file
                     ? route('admin.cards.model.original', $card)
                     : null,
+
+                'fileSizes' => $this->fileSizes($card),
 
                 'creditSummary' => $this->creditSummary($card),
 
@@ -482,8 +486,12 @@ class CardController extends Controller
         $this->deletePublicFile($card->{$field});
 
         DB::transaction(function () use ($card, $field, $image) {
+            $originals = $card->image_original_bytes ?? [];
+            unset($originals[$image]);
+
             $card->update([
                 $field => null,
+                'image_original_bytes' => $originals ?: null,
             ]);
 
             $this->deleteAssetCredits($card, CreditAsset::from($image));
@@ -662,6 +670,13 @@ class CardController extends Controller
 
             $this->deletePublicFile($card->{$field});
 
+            /*
+             * Peso antes de comprimir: el navegador lo envía porque sube la
+             * imagen ya comprimida; sin él, el del archivo recibido.
+             */
+            $originalBytes = (int) ($request->input('image_original_bytes.'.$image)
+                ?: $request->file($field)->getSize());
+
             // Si el navegador no pudo comprimirla, lo intenta el servidor.
             $file = $this->imageOptimizer->prepareUpload(
                 $request->file($field),
@@ -670,6 +685,10 @@ class CardController extends Controller
 
             $card->update([
                 $field => $this->moveUploadedFile($file, $directory),
+                'image_original_bytes' => [
+                    ...($card->image_original_bytes ?? []),
+                    $image => $originalBytes,
+                ],
             ]);
         }
     }
@@ -739,6 +758,10 @@ class CardController extends Controller
             'minHeight' => (float) config('glb.min_height'),
             'maxHeight' => (float) config('glb.max_height'),
             'supportedExtensions' => array_values(config('glb.supported_extensions', [])),
+            'textures' => [
+                'maxSize' => (int) config('glb.textures.max_size'),
+                'quality' => (int) config('glb.textures.quality'),
+            ],
         ];
     }
 
@@ -905,12 +928,31 @@ class CardController extends Controller
     ): void {
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => $message,
+            'message' => $message.($inspection ? $this->modelSizeNote() : ''),
         ]);
 
         if ($inspection?->warnings) {
             Inertia::flash('model_warnings', $inspection->warnings);
         }
+    }
+
+    /**
+     * Peso del modelo guardado (el navegador ya optimizó sus texturas).
+     */
+    private function modelSizeNote(): string
+    {
+        $resized = request()->file('model_file');
+        $original = request()->file('model_original_file');
+
+        if (! $resized instanceof UploadedFile) {
+            return '';
+        }
+
+        $megabytes = fn (int $bytes) => number_format($bytes / 1048576, 2).' MB';
+
+        return $original instanceof UploadedFile
+            ? ' Modelo 3D: '.$megabytes($original->getSize()).' → '.$megabytes($resized->getSize()).'.'
+            : ' Modelo 3D en la app: '.$megabytes($resized->getSize()).'.';
     }
 
     private function backWithToast(
@@ -923,6 +965,43 @@ class CardController extends Controller
         ]);
 
         return back();
+    }
+
+    /**
+     * Peso de cada archivo de la tarjeta: el que descarga la app (`current`)
+     * y el que se subió antes de optimizarlo (`original`), en bytes.
+     *
+     * @return array<string, array{current: int|null, original: int|null}>
+     */
+    private function fileSizes(Card $card): array
+    {
+        $sizes = [];
+
+        foreach (CardImageOptimizer::FIELDS as $image => $field) {
+            $sizes[$image] = [
+                'current' => $this->storedSize('public', $card->{$field}),
+                'original' => $card->{$field}
+                    ? ($card->image_original_bytes[$image] ?? null)
+                    : null,
+            ];
+        }
+
+        $sizes['model'] = [
+            'current' => $this->storedSize(config('glb.disks.resized'), $card->model_file),
+            'original' => $this->storedSize(config('glb.disks.original'), $card->model_original_file),
+        ];
+
+        return $sizes;
+    }
+
+    /**
+     * Peso en bytes de un archivo guardado, o null si no existe.
+     */
+    private function storedSize(string $disk, ?string $path): ?int
+    {
+        return $path && Storage::disk($disk)->exists($path)
+            ? Storage::disk($disk)->size($path)
+            : null;
     }
 
     /**

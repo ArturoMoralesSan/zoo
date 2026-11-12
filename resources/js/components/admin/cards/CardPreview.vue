@@ -310,7 +310,10 @@ const viewerHeight = computed(
 /**
  * Imagen que se guarda en el servidor (WebP a 2×, ver renderCardFile).
  */
-const generateCardFile = async (): Promise<File | null> => {
+const generateCardFile = async (): Promise<{
+    file: File;
+    originalBytes: number;
+} | null> => {
     const node = await readyTemplateNode();
 
     if (!node) {

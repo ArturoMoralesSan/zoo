@@ -22,6 +22,10 @@ import type {
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { dequantize, getBounds, unpartition } from '@gltf-transform/functions';
 
+import { optimizeTextures } from '@/lib/glb/glbTextures';
+import type { TextureBytes } from '@/lib/glb/glbTextures';
+import type { GlbTextureProfile } from '@/lib/glb/modelSize';
+
 /*
  * Extensiones de compresión: se eliminan al procesar y el servidor las rechaza.
  */
@@ -62,6 +66,10 @@ export interface GlbResizeResult {
     depth: number;
     factor: number;
     warnings: string[];
+    /*
+     * Bytes de las imágenes antes y después de optimizarlas (null sin `textures`).
+     */
+    textureBytes: TextureBytes | null;
 }
 
 export interface GlbOptions {
@@ -69,6 +77,10 @@ export interface GlbOptions {
      * Extensiones que ViroReact muestra correctamente (config('glb.supported_extensions')).
      */
     supportedExtensions?: readonly string[];
+    /*
+     * Reducir y volver a codificar las texturas (config('glb.textures')).
+     */
+    textures?: GlbTextureProfile;
 }
 
 interface Bounds {
@@ -692,6 +704,10 @@ export async function resizeGlb(
         }
     }
 
+    const textures = options.textures
+        ? await optimizeTextures(document, options.textures)
+        : null;
+
     const io = await getIO();
     const glb = await io.writeBinary(document);
 
@@ -708,7 +724,9 @@ export async function resizeGlb(
             ...extensionWarnings(extensionsUsed, options.supportedExtensions ?? []),
             ...(bounds.skinned ? [SKINNED_WARNING] : []),
             ...(bounds.approximate ? [APPROXIMATE_SKIN_WARNING] : []),
+            ...(textures?.warnings ?? []),
         ],
+        textureBytes: textures?.bytes ?? null,
     };
 }
 

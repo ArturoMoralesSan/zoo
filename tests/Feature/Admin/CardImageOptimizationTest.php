@@ -97,6 +97,11 @@ class CardImageOptimizationTest extends TestCase
 
         $this->assertStringEndsWith('.webp', $path);
         $this->assertSame($path, $response->json('data.path'));
+        // El peso del original queda registrado para mostrar el ahorro.
+        $this->assertSame(
+            ['generated' => filesize(base_path(self::PNG))],
+            $this->card->image_original_bytes
+        );
         Storage::disk('public')->assertExists($path);
         Storage::disk('public')->assertMissing($original);
     }

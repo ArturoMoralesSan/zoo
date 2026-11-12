@@ -202,7 +202,7 @@ class CardImageOptimizer
         }
 
         try {
-            DB::transaction(function () use ($card, $column, $expectedPath, $newPath) {
+            DB::transaction(function () use ($card, $column, $image, $expectedPath, $newPath, $originalBytes) {
                 $locked = Card::query()->lockForUpdate()->findOrFail($card->id);
 
                 // Otro guardado pudo reemplazarla mientras se codificaba.
@@ -210,7 +210,14 @@ class CardImageOptimizer
                     throw CardImageOptimizationException::changed();
                 }
 
-                $locked->update([$column => $newPath]);
+                // Se conserva el peso registrado al subirla, si lo hay.
+                $originals = $locked->image_original_bytes ?? [];
+                $originals[$image] ??= $originalBytes;
+
+                $locked->update([
+                    $column => $newPath,
+                    'image_original_bytes' => $originals,
+                ]);
             });
         } catch (Throwable $exception) {
             $disk->delete($newPath);
@@ -221,7 +228,7 @@ class CardImageOptimizer
         // Solo tras confirmar el cambio: si algo falla antes, la original sigue en uso.
         $disk->delete($expectedPath);
 
-        $card->setAttribute($column, $newPath);
+        $card->refresh();
 
         return [
             'path' => $newPath,

@@ -65,8 +65,8 @@ php artisan cards:images:report                # read-only: card images still to
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 286 tests, 9 stale failures: 8 use removed `route('dashboard')`, `ExampleTest` expects 200 at `/` |
-| `npx vitest run` | 93 passing |
+| `php artisan test` | 290 tests, 9 stale failures: 8 use removed `route('dashboard')`, `ExampleTest` expects 200 at `/` |
+| `npx vitest run` | 102 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 33 errors |
 
@@ -195,7 +195,10 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   remains as the advanced option: `lib/quizImport.ts` builds a prompt for an external
   LLM, then the JSON is imported.
 - **3D models:** the browser resizes the GLB and the server re-verifies it, and 1 unit
-  equals 1 metre. Never rescale an already scaled file. See `docs/glb-resizing.md`.
+  equals 1 metre. Never rescale an already scaled file. On every resize the browser also
+  shrinks textures to 1024 px JPEG q85 (`lib/glb/glbTextures.ts`, `config('glb.textures')`),
+  because Viro reads only core glTF JPEG/PNG: no KTX2, WebP or mesh compression. See
+  `docs/glb-resizing.md`.
 - **Credits:** licences and attribution are legally relevant, and restricted licences
   are off by default. `CreditsCacheObserver` invalidates the public `/api/v1/credits`
   cache. See `docs/api-credits.md`.

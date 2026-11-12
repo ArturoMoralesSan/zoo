@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { FileImage, Trash2, Upload } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
 
+import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import { useObjectUrl } from '@/composables/useObjectUrl';
+import { optimizeUpload } from '@/lib/imageOptimize';
+import type { CardImageKind } from '@/lib/imageOptimize';
 import { storageUrl } from '@/lib/modelPreview';
 
 /*
@@ -17,12 +21,19 @@ const props = withDefaults(
         alt?: string;
         error?: string;
         disabled?: boolean;
+        // Perfil de compresión de la imagen (lib/imageOptimize.ts).
+        kind: CardImageKind;
+        // Peso de la imagen guardada y el que tenía antes de comprimirla.
+        currentBytes?: number | null;
+        originalBytes?: number | null;
     }>(),
     {
         currentPath: null,
         alt: '',
         error: '',
         disabled: false,
+        currentBytes: null,
+        originalBytes: null,
     },
 );
 
@@ -33,6 +44,29 @@ const emit = defineEmits<{
 }>();
 
 const filePreviewUrl = useObjectUrl(() => file.value);
+
+/*
+ * Peso que tendrá la imagen elegida. optimizeUpload guarda el resultado,
+ * así que al enviar el formulario no se vuelve a codificar.
+ */
+const estimatedBytes = ref<number | null>(null);
+const estimating = ref(false);
+
+watch(file, async (value) => {
+    estimatedBytes.value = null;
+    estimating.value = Boolean(value);
+
+    if (!value) {
+        return;
+    }
+
+    const optimized = await optimizeUpload(value, props.kind);
+
+    if (file.value === value) {
+        estimatedBytes.value = optimized.size;
+        estimating.value = false;
+    }
+});
 
 const handleFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
@@ -65,6 +99,12 @@ const handleFile = (event: Event) => {
                     <p class="mt-2 text-xs break-all text-[#718477]">
                         {{ currentPath }}
                     </p>
+
+                    <SizeSavings
+                        class="mt-2"
+                        :original="originalBytes"
+                        :optimized="currentBytes"
+                    />
                 </div>
 
                 <button
@@ -117,6 +157,14 @@ const handleFile = (event: Event) => {
                     @change="handleFile"
                 />
             </label>
+
+            <SizeSavings
+                v-if="file"
+                :original="file.size"
+                :optimized="estimatedBytes"
+                :estimating="estimating"
+                :previous="currentPath ? currentBytes : null"
+            />
 
             <p v-if="error" class="form-error">
                 {{ error }}

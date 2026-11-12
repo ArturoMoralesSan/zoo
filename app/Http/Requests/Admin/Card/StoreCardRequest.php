@@ -75,6 +75,22 @@ class StoreCardRequest extends FormRequest
                 'dimensions:max_width=1716,max_height=3048',
             ],
 
+            /*
+             * Peso de cada imagen antes de que el navegador la comprimiera,
+             * para mostrar el ahorro en el panel.
+             */
+            'image_original_bytes' => [
+                'nullable',
+                'array:generated,thumbnail,artwork',
+            ],
+
+            'image_original_bytes.*' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:104857600',
+            ],
+
             ...$this->cardModelRules(),
 
 

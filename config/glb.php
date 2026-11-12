@@ -65,4 +65,16 @@ return [
         'KHR_materials_emissive_strength',
     ],
 
+    /*
+     * Texturas del modelo escalado: el navegador las reduce y las vuelve a
+     * codificar en JPEG (PNG si tienen transparencia) al guardar. ViroReact
+     * solo lee JPEG/PNG (sin KTX2 ni WebP), así que se ahorra con la
+     * resolución: 2048 → 1024 baja ~85 % el archivo y ~75 % la memoria de
+     * GPU. Ver docs/glb-resizing.md.
+     */
+    'textures' => [
+        'max_size' => (int) env('GLB_TEXTURE_MAX_SIZE', 1024),
+        'quality' => (int) env('GLB_TEXTURE_QUALITY', 85),
+    ],
+
 ];

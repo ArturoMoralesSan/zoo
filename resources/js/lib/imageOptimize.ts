@@ -56,7 +56,7 @@ export const fitsProfile = (
 export const webpFilename = (name: string): string =>
     `${name.replace(/\.[^./]+$/, '') || 'imagen'}.webp`;
 
-type Drawable = HTMLCanvasElement | ImageBitmap;
+export type Drawable = HTMLCanvasElement | ImageBitmap;
 
 const createCanvas = (width: number, height: number): HTMLCanvasElement => {
     const canvas = document.createElement('canvas');
@@ -71,7 +71,7 @@ const createCanvas = (width: number, height: number): HTMLCanvasElement => {
  * Reducir a la mitad hasta acercarse al tamaño final: un solo drawImage
  * con una reducción grande (p. ej. 4000 → 800 px) deja la imagen granulada.
  */
-const resize = (
+export const resize = (
     source: Drawable,
     width: number,
     height: number,
@@ -208,10 +208,35 @@ export const encodeWebp = async (
     }
 };
 
+/*
+ * Un resultado por archivo y tipo: el campo calcula el peso al elegir la
+ * imagen y el formulario reutiliza el mismo archivo al guardar.
+ */
+const uploads = new WeakMap<File, Map<CardImageKind, Promise<File>>>();
+
 /**
  * Para los campos de archivo: el WebP si es más ligero, si no el original.
  */
-export const optimizeUpload = async (
+export const optimizeUpload = (
+    file: File,
+    kind: CardImageKind,
+): Promise<File> => {
+    const byKind = uploads.get(file) ?? new Map<CardImageKind, Promise<File>>();
+    const cached = byKind.get(kind);
+
+    if (cached) {
+        return cached;
+    }
+
+    const result = optimizeUploadNow(file, kind);
+
+    byKind.set(kind, result);
+    uploads.set(file, byKind);
+
+    return result;
+};
+
+const optimizeUploadNow = async (
     file: File,
     kind: CardImageKind,
 ): Promise<File> => {

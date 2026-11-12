@@ -150,37 +150,38 @@ export const renderCardPng = async (
  * Imagen de la tarjeta que se guarda en el servidor: WebP a 2× (la misma
  * resolución que la textura del visor 3D). Si el navegador no puede
  * producir WebP, PNG a 2×; el servidor lo convierte si puede.
+ *
+ * `originalBytes` es el peso del mismo render en PNG (sin comprimir con
+ * pérdida), para mostrar el ahorro en el panel.
  */
 export const renderCardFile = async (
     node: HTMLElement,
     filename: string,
-): Promise<File> => {
+): Promise<{ file: File; originalBytes: number }> => {
     const canvas = await toCanvas(node, {
         ...(await renderOptions(node)),
         pixelRatio: CARD_TEXTURE_PIXEL_RATIO,
     });
 
-    const webp = await encodeWebp(
-        canvas,
-        CARD_IMAGE_PROFILES.generated,
-        filename,
-    );
+    const [webp, png] = await Promise.all([
+        encodeWebp(canvas, CARD_IMAGE_PROFILES.generated, filename),
+        new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((blob) =>
+                blob
+                    ? resolve(blob)
+                    : reject(new Error('No se pudo crear la imagen.')),
+            );
+        }),
+    ]);
 
-    if (webp) {
-        return webp;
-    }
-
-    const png = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((blob) =>
-            blob
-                ? resolve(blob)
-                : reject(new Error('No se pudo crear la imagen.')),
-        );
-    });
-
-    return new File([png], filename.replace(/\.[^./]+$/, '') + '.png', {
-        type: 'image/png',
-    });
+    return {
+        file:
+            webp ??
+            new File([png], filename.replace(/\.[^./]+$/, '') + '.png', {
+                type: 'image/png',
+            }),
+        originalBytes: png.size,
+    };
 };
 
 /**
