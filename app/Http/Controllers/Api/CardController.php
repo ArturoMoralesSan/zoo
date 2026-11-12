@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\CardResource;
 use App\Models\Card;
 use App\Services\CardDuelService;
+use App\Services\CardPack\CardPackCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 /**
  * @tags Tarjetas
@@ -84,5 +86,45 @@ class CardController extends Controller
             'success' => true,
             'data' => $cards,
         ]);
+    }
+
+    /**
+     * Catálogo del paquete sin conexión
+     *
+     * Archivos cifrados (AES-256-GCM) de **todas** las tarjetas activas, para que la app
+     * los descargue en Wi-Fi antes de la visita: una entrada por archivo (`model`,
+     * `card_image`, `thumbnail`), cada una con su versión (`id`), `url`, `bytes` y `sha256`.
+     * Es igual para todos los usuarios y **nunca trae llaves**: la llave de cada archivo
+     * llega en `pack` de `GET /cards` (tarjetas obtenidas) y del inicio del duelo.
+     *
+     * Si cambia un archivo en el panel, su entrada cambia de `id` y la app baja solo ese
+     * archivo. Solo aparecen los archivos ya cifrados; los demás se piden por su URL.
+     *
+     * La respuesta lleva `ETag` y `Last-Modified`: con `If-None-Match` el servidor responde
+     * 304 si nada cambió. Ver docs/offline-packs-backend.md.
+     *
+     * @response array{success: true, data: array{generated_at: string, total_bytes: int, files: list<array{id: string, card_id: int, kind: 'model'|'card_image'|'thumbnail', url: string, bytes: int, sha256: string}>}}
+     */
+    public function pack(Request $request, CardPackCatalog $catalog): JsonResponse
+    {
+        $pack = $catalog->get();
+
+        $response = response()->json([
+            'success' => true,
+            'data' => [
+                'generated_at' => $pack['generated_at'],
+                'total_bytes' => $pack['total_bytes'],
+                'files' => $pack['files'],
+            ],
+        ]);
+
+        $response
+            ->setEtag($pack['etag'])
+            ->setLastModified(Carbon::parse($pack['generated_at']))
+            ->setPrivate();
+
+        $response->isNotModified($request);
+
+        return $response;
     }
 }

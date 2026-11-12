@@ -2,8 +2,10 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\CardPackKind;
 use App\Http\Resources\Duel\DuelAttemptsResource;
 use App\Models\Card;
+use App\Services\CardPack\CardPackBuilder;
 use App\Services\Duel\DuelAttempts;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -73,6 +75,16 @@ class CardResource extends JsonResource
                  * Modelo 3D (GLB) ya escalado a su tamaño real (1 unidad = 1 m). `null` si no tiene.
                  */
                 'model_url' => self::publicUrl($this->model_file),
+
+                /**
+                 * Llaves del paquete sin conexión: `id` (versión) y `key` (AES-256, base64)
+                 * de cada archivo, para descifrar el `.bin` de `GET /cards/pack` sin
+                 * descargarlo otra vez. `null` si la tarjeta no tiene ese archivo.
+                 * Ver docs/offline-packs-backend.md.
+                 *
+                 * @var array{model: array{id: string, key: string}|null, card_image: array{id: string, key: string}|null, thumbnail: array{id: string, key: string}|null}
+                 */
+                'pack' => app(CardPackBuilder::class)->refs($this->resource, CardPackKind::cases()),
             ]),
 
             $this->mergeWhen(! $this->owned, fn () => [

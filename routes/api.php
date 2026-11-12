@@ -151,6 +151,16 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('api.cards.index');
 
     /*
+    | Paquete sin conexión: archivos cifrados de todas las tarjetas activas,
+    | sin llaves. Ver docs/offline-packs-backend.md.
+    */
+    Route::get('/cards/pack', [
+        CardController::class,
+        'pack',
+    ])->middleware('throttle:60,1')
+        ->name('api.cards.pack');
+
+    /*
     |--------------------------------------------------------------------------
     | Duelos
     |--------------------------------------------------------------------------

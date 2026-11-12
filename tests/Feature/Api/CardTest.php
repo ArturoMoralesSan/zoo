@@ -111,7 +111,7 @@ class CardTest extends TestCase
 
         $this->assertSame([
             'id', 'encountered', 'name', 'rarity', 'category_name', 'thumbnail_image',
-            'card_image_url', 'stats', 'model_url',
+            'card_image_url', 'stats', 'model_url', 'pack',
         ], array_keys($data));
 
         $this->assertTrue($data['encountered']);

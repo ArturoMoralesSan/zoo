@@ -59,13 +59,14 @@ php artisan wayfinder:generate --with-form     # after route changes, if Vite is
 php artisan route:list --name=admin.events -v  # routes with their middleware
 php artisan route:list --path=api --json
 php artisan cards:images:report                # read-only: card images still to convert
+php artisan cards:packs:build                  # encrypted offline-pack copies (idempotent; --force re-encrypts)
 ```
 
 **Baseline on 2026-11-10.** Do not chase these failures unless asked; just add none.
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 290 tests, 9 stale failures: 8 use removed `route('dashboard')`, `ExampleTest` expects 200 at `/` |
+| `php artisan test` | 302 tests, 1 stale failure: `ExampleTest` expects 200 at `/` (checked 2026-11-12) |
 | `npx vitest run` | 102 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 33 errors |
@@ -84,10 +85,10 @@ app/Http/Controllers/Admin/      Inertia controllers, one per resource
 app/Http/Controllers/Api/        JSON controllers for the mobile app
 app/Http/Requests/{Admin,Api}/   Form requests (Admin/<Resource>/{Store,Update}…Request)
 app/Http/Resources/              API resources (CardResource, Duel/*, Credits/*)
-app/Services/                    CardDuelService, PointService, GlbInspector, CardImageOptimizer, ImageEncoding/*, Licensing/*
+app/Services/                    CardDuelService, PointService, GlbInspector, CardImageOptimizer, ImageEncoding/*, Licensing/*, CardPack/*
 app/Concerns/                    Validation rule traits shared by form requests
 app/Enums/ app/Rules/ app/Observers/ app/Policies/ app/Exceptions/
-config/glb.php config/licensing.php config/images.php   Project-specific settings
+config/glb.php config/licensing.php config/images.php config/cards.php   Project-specific settings
 database/seeders/                Roles and permissions, menu, catalogs
 resources/js/pages/admin/<resource>/{Index,Create,Edit,Show}.vue
 resources/js/components/admin/   Shared admin UI; admin/cards/ for the card editor
@@ -96,6 +97,7 @@ resources/js/lib/                Card, GLB, credits and quiz logic (pure TS, tes
 resources/js/composables/  resources/js/types/  resources/css/
 tests/Feature/{Admin,Api,Auth,Licensing,Settings}  tests/Unit  tests/js  tests/Fixtures
 docs/api-credits.md  docs/glb-resizing.md  docs/image-optimization.md   Read only when working on those features
+docs/offline-packs-{backend,app}.md   Offline card packs: server done, mobile app pending
 ```
 
 Page folders match the route resource, except `quizquestions`, `card-qr-codes` and
@@ -202,6 +204,12 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   shrinks textures to 1024 px JPEG q85 (`lib/glb/glbTextures.ts`, `config('glb.textures')`),
   because Viro reads only core glTF JPEG/PNG: no KTX2, WebP or mesh compression. See
   `docs/glb-resizing.md`.
+- **Offline packs** (`CardPack/*`, `GET /api/cards/pack`): `CardPackObserver` encrypts
+  each card file (AES-256-GCM, key derived from its path) into `storage/app/public/packs/`
+  right after commit. Keys go out in `pack` only where the plain URL already does
+  (owned cards, duel start). `phpunit.xml` sets `CARD_PACKS_ENABLED=false`, so tests
+  never write to real `storage/`; enable it only together with `Storage::fake('public')`.
+  See `docs/offline-packs-backend.md`.
 - **Credits:** licences and attribution are legally relevant, and restricted licences
   are off by default. `CreditsCacheObserver` invalidates the public `/api/v1/credits`
   cache. See `docs/api-credits.md`.

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CreditAsset;
 use App\Enums\CreditRole;
+use App\Observers\CardPackObserver;
 use App\Observers\CreditsCacheObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[ObservedBy(CreditsCacheObserver::class)]
+#[ObservedBy([CreditsCacheObserver::class, CardPackObserver::class])]
 class Card extends Model
 {
     use HasFactory;
