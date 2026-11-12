@@ -2,7 +2,9 @@
 
 namespace App\Http\Resources\Duel;
 
+use App\Enums\CardPackKind;
 use App\Http\Resources\CardResource;
+use App\Services\CardPack\CardPackBuilder;
 use App\Services\Duel\DuelStart;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -53,6 +55,18 @@ class DuelStartResource extends JsonResource
                  * real (1 unidad = 1 m). `null` si la tarjeta no tiene modelo.
                  */
                 'model_url' => CardResource::publicUrl($this->card->model_file),
+
+                /**
+                 * Llaves del paquete sin conexión del modelo y la miniatura (las mismas
+                 * que ya se revelan aquí), para colocar el animal sin descargar el GLB.
+                 * La imagen final solo llega al ganar. Ver docs/offline-packs-backend.md.
+                 *
+                 * @var array{model: array{id: string, key: string}|null, thumbnail: array{id: string, key: string}|null}
+                 */
+                'pack' => app(CardPackBuilder::class)->refs($this->card, [
+                    CardPackKind::Model,
+                    CardPackKind::Thumbnail,
+                ]),
             ],
 
             /**
