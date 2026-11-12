@@ -158,6 +158,8 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 - **Language:** UI text, validation messages, comments and commit messages are in
   **Spanish**; identifiers are in English. Commits are short and imperative, for
   example `Añade…`, `Arregla…`, `Mejora…`. Work on a branch and merge to `master` by PR.
+- **No AI attribution** in commits, PRs, code or docs: no `Co-Authored-By` trailers,
+  "Generated with" lines or similar mentions of an agent or model.
 - **Comments** explain why, not what. Match the surrounding style.
 - **Web routes** are named `admin.<resource>.<action>`. Always guard admin routes with
   `permission:` middleware; `SuperAdmin` bypasses every check through `Gate::before`.
