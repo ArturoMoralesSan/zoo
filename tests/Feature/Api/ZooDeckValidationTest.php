@@ -603,4 +603,61 @@ class ZooDeckValidationTest extends TestCase
             'accuracy' => -5,
         ])->assertUnprocessable()->assertJsonValidationErrors('accuracy');
     }
+
+    public function test_una_zona_con_geometria_mal_formada_no_rompe_el_margen(): void
+    {
+        // Un anillo de números en vez de puntos [lng, lat], y un MultiPolygon sin anidar.
+        ZooZone::create([
+            'name' => 'Mal anidada',
+            'is_active' => true,
+            'geometry' => ['type' => 'Polygon', 'coordinates' => [[-99.2, 19.4, -99.1, 19.4, -99.1]]],
+        ]);
+        ZooZone::create([
+            'name' => 'Plana',
+            'is_active' => true,
+            'geometry' => ['type' => 'MultiPolygon', 'coordinates' => [-99.2, 19.4]],
+        ]);
+
+        $this->enforce();
+        $this->buyTicket();
+
+        $this->scan(coordinates: self::INSIDE)->assertOk();
+        $this->assertTrue($this->zooDeckMap([...self::NEAR_EDGE, 'accuracy' => 25])->json('data.visit.inside_zoo'));
+        $this->assertSame('outside_zoo', $this->zooDeckMap([...self::FAR_FROM_EDGE, 'accuracy' => 25])->json('data.visit.reason'));
+        $this->scan(coordinates: [...self::FAR_FROM_EDGE, 'accuracy' => 25])->assertForbidden();
+    }
+
+    public function test_el_margen_cuenta_el_borde_de_cierre_de_un_anillo_abierto(): void
+    {
+        // Sin repetir el primer vértice: falta el borde oeste (último → primero).
+        $this->zone->update(['geometry' => [
+            'type' => 'Polygon',
+            'coordinates' => [[
+                [-99.20, 19.40],
+                [-99.10, 19.40],
+                [-99.10, 19.50],
+                [-99.20, 19.50],
+            ]],
+        ]]);
+
+        $this->enforce();
+        $this->buyTicket();
+
+        // ≈ 20 m al oeste del borde de cierre.
+        $nearClosingEdge = ['latitude' => 19.45, 'longitude' => -99.200191];
+
+        $this->scan(coordinates: self::INSIDE)->assertOk();
+        $this->assertSame('outside_zoo', $this->zooDeckMap([...$nearClosingEdge, 'accuracy' => 15])->json('data.visit.reason'));
+        $this->assertTrue($this->zooDeckMap([...$nearClosingEdge, 'accuracy' => 25])->json('data.visit.inside_zoo'));
+    }
+
+    public function test_validate_capture_valida_la_precision(): void
+    {
+        $url = "/api/map/validate-capture/{$this->user->id}/19.39982/-99.15";
+
+        $this->getJson("{$url}?accuracy=abc")->assertUnprocessable()->assertJsonValidationErrors('accuracy');
+        $this->getJson("{$url}?accuracy=-5")->assertUnprocessable()->assertJsonValidationErrors('accuracy');
+        $this->getJson("{$url}?accuracy=0")->assertOk()->assertJsonPath('data.zones', false);
+        $this->getJson("{$url}?accuracy=25")->assertOk()->assertJsonPath('data.zones', true);
+    }
 }

@@ -185,7 +185,7 @@ class VisitValidator
             default => [],
         };
 
-        foreach ($polygons as $polygon) {
+        foreach ($this->polygons($polygons) as $polygon) {
             if (! $this->pointInRing($longitude, $latitude, $polygon[0] ?? [])) {
                 continue;
             }
@@ -231,7 +231,7 @@ class VisitValidator
 
         $nearest = INF;
 
-        foreach ($polygons as $polygon) {
+        foreach ($this->polygons($polygons) as $polygon) {
             foreach ($polygon as $ring) {
                 $nearest = min($nearest, $this->distanceToRing($latitude, $longitude, $ring));
             }
@@ -244,16 +244,27 @@ class VisitValidator
      * Proyección equirectangular centrada en el punto: a la escala de un zoológico el
      * error es de centímetros y evita trigonometría esférica por segmento.
      *
-     * @param  array<int, array<int, float|int|string>>  $ring
+     * Un anillo sin cerrar se cierra, como en pointInRing(): si no, faltaría el borde
+     * del último vértice al primero.
      */
-    private function distanceToRing(float $latitude, float $longitude, array $ring): float
+    private function distanceToRing(float $latitude, float $longitude, mixed $ring): float
     {
+        $ring = $this->ringPoints($ring);
+
+        if ($ring === []) {
+            return INF;
+        }
+
+        if ($ring[0] !== $ring[count($ring) - 1]) {
+            $ring[] = $ring[0];
+        }
+
         $metersPerDegree = M_PI * 6371000 / 180;
         $metersPerLongitude = $metersPerDegree * cos(deg2rad($latitude));
 
         $points = array_map(fn (array $point) => [
-            ((float) $point[0] - $longitude) * $metersPerLongitude,
-            ((float) $point[1] - $latitude) * $metersPerDegree,
+            ($point[0] - $longitude) * $metersPerLongitude,
+            ($point[1] - $latitude) * $metersPerDegree,
         ], $ring);
 
         $nearest = INF;
@@ -278,12 +289,12 @@ class VisitValidator
     }
 
     /**
-     * Ray casting sobre un anillo de GeoJSON.
-     *
-     * @param  array<int, array<int, float|int|string>>  $ring
+     * Ray casting sobre un anillo de GeoJSON (cerrado o no: el último vértice
+     * se une con el primero).
      */
-    private function pointInRing(float $longitude, float $latitude, array $ring): bool
+    private function pointInRing(float $longitude, float $latitude, mixed $ring): bool
     {
+        $ring = $this->ringPoints($ring);
         $inside = false;
         $count = count($ring);
 
@@ -292,10 +303,8 @@ class VisitValidator
         }
 
         for ($i = 0, $j = $count - 1; $i < $count; $j = $i++) {
-            $xi = (float) $ring[$i][0];
-            $yi = (float) $ring[$i][1];
-            $xj = (float) $ring[$j][0];
-            $yj = (float) $ring[$j][1];
+            [$xi, $yi] = $ring[$i];
+            [$xj, $yj] = $ring[$j];
 
             $intersects = (($yi > $latitude) !== ($yj > $latitude))
                 && ($longitude < ($xj - $xi) * ($latitude - $yi) / (($yj - $yi) ?: 0.000000000001) + $xi);
@@ -306,5 +315,38 @@ class VisitValidator
         }
 
         return $inside;
+    }
+
+    /**
+     * Solo los polígonos que son arreglos; una geometría mal anidada no debe romper
+     * la petición (500), solo dejar de contar.
+     *
+     * @return array<int, array<int, mixed>>
+     */
+    private function polygons(mixed $polygons): array
+    {
+        return is_array($polygons) ? array_values(array_filter($polygons, 'is_array')) : [];
+    }
+
+    /**
+     * Los puntos [longitud, latitud] válidos de un anillo; se ignoran los demás.
+     *
+     * @return list<array{0: float, 1: float}>
+     */
+    private function ringPoints(mixed $ring): array
+    {
+        if (! is_array($ring)) {
+            return [];
+        }
+
+        $points = [];
+
+        foreach ($ring as $point) {
+            if (is_array($point) && is_numeric($point[0] ?? null) && is_numeric($point[1] ?? null)) {
+                $points[] = [(float) $point[0], (float) $point[1]];
+            }
+        }
+
+        return $points;
     }
 }

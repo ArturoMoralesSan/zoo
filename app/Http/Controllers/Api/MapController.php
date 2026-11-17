@@ -20,6 +20,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * @tags Mapa
@@ -535,8 +536,11 @@ class MapController extends Controller
             ], 403);
         }
 
-        $accuracy = request()->query('accuracy');
-        $accuracy = is_numeric($accuracy) ? (float) $accuracy : null;
+        // Las mismas reglas que `accuracy` en POST /duels y GET /map/species (422 si no cumple).
+        $accuracy = Validator::make(request()->query(), [
+            'accuracy' => ['nullable', 'numeric', 'min:0'],
+        ])->validate()['accuracy'] ?? null;
+        $accuracy = $accuracy === null ? null : (float) $accuracy;
 
         return response()->json([
             'success' => true,
