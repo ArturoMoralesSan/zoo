@@ -52,6 +52,11 @@ class DuelController extends Controller
      * **Bloqueo:** al agotar los intentos la tarjeta queda bloqueada hasta
      * `attempts.locked_until` (423). Al terminar la espera, los intentos vuelven a `max`.
      *
+     * **Validaciones de visita:** con `APP_ZOODECK_ENFORCE_VALIDATIONS=1`, `latitude` y
+     * `longitude` son obligatorias, deben caer dentro de una zona activa del zoológico y el
+     * usuario necesita un boleto de una orden pagada hoy. Apagadas, las coordenadas son
+     * opcionales y no se revisa nada. `GET /map/species` muestra lo mismo por adelantado.
+     *
      * **Errores** (todos con el formato `{ success: false, message, data? }`):
      *
      * | Estado | Cuándo | `data` |
@@ -61,12 +66,16 @@ class DuelController extends Controller
      * | 410 | El código QR venció | — |
      * | 422 | La tarjeta aún no tiene preguntas | — |
      * | 423 | Agotó sus intentos; la tarjeta está bloqueada | `attempts` (con `locked_until`) |
+     * | 403 | Fuera del zoológico, o sin boleto pagado hoy (validaciones activas) | `reason`: `outside_zoo` o `no_ticket` |
+     * | 422 | Faltan `latitude`/`longitude` (validaciones activas) | `reason`: `location_required` |
      */
     public function store(StartDuelRequest $request): JsonResponse
     {
         $duel = $this->duelService->startFromQr(
             $request->user(),
-            $request->validated('code')
+            $request->validated('code'),
+            $this->coordinate($request->validated('latitude')),
+            $this->coordinate($request->validated('longitude'))
         );
 
         return response()->json([
@@ -106,6 +115,11 @@ class DuelController extends Controller
      * Para reintentar se vuelve a llamar a `POST /duels` con el mismo código (traerá
      * preguntas nuevas).
      *
+     * **Validaciones de visita:** con `APP_ZOODECK_ENFORCE_VALIDATIONS=1`, `latitude` y
+     * `longitude` son obligatorias, deben caer dentro de una zona activa del zoológico y el
+     * usuario necesita un boleto de una orden pagada hoy. Apagadas, las coordenadas son
+     * opcionales y no se revisa nada. Se vuelven a revisar al responder.
+     *
      * **Errores** (todos con el formato `{ success: false, message, data? }`):
      *
      * | Estado | Cuándo | `data` |
@@ -114,6 +128,8 @@ class DuelController extends Controller
      * | 404 | El duelo no existe, o la tarjeta ya no está disponible | — |
      * | 409 | El duelo ya fue respondido | — |
      * | 422 | Las respuestas no corresponden a las preguntas del duelo | — |
+     * | 403 | Fuera del zoológico, o sin boleto pagado hoy (validaciones activas) | `reason`: `outside_zoo` o `no_ticket` |
+     * | 422 | Faltan `latitude`/`longitude` (validaciones activas) | `reason`: `location_required` |
      *
      * @response array{success: true, message: string, data: DuelResultResource}
      */
@@ -125,8 +141,8 @@ class DuelController extends Controller
             $request->user(),
             $attempt,
             $request->validated('answers'),
-            $request->validated('latitude'),
-            $request->validated('longitude')
+            $this->coordinate($request->validated('latitude')),
+            $this->coordinate($request->validated('longitude'))
         );
 
         return response()->json([
@@ -137,5 +153,13 @@ class DuelController extends Controller
             'message' => $result->message,
             'data' => new DuelResultResource($result),
         ], $result->passed() ? 201 : 200);
+    }
+
+    /**
+     * Las coordenadas llegan como número o texto numérico.
+     */
+    private function coordinate(mixed $value): ?float
+    {
+        return is_numeric($value) ? (float) $value : null;
     }
 }

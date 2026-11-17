@@ -135,4 +135,17 @@ return [
 
     'zoodeck_dev' => (bool) env('APP_ZOODECK_DEV', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Validaciones de visita de ZooDeck
+    |--------------------------------------------------------------------------
+    |
+    | Exige que el visitante esté dentro del zoológico y tenga un boleto
+    | pagado hoy para iniciar y responder duelos. Se apaga para probar
+    | ZooDeck fuera del zoológico.
+    |
+    */
+
+    'zoodeck_enforce_validations' => (bool) env('APP_ZOODECK_ENFORCE_VALIDATIONS', false),
+
 ];

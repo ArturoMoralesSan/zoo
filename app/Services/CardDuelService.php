@@ -17,6 +17,7 @@ use App\Services\Duel\DuelQuestionResult;
 use App\Services\Duel\DuelResult;
 use App\Services\Duel\DuelReviewItem;
 use App\Services\Duel\DuelStart;
+use App\Services\ZooDeck\VisitValidator;
 use Carbon\CarbonInterval;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
@@ -35,14 +36,22 @@ use Illuminate\Support\Facades\DB;
  */
 class CardDuelService
 {
+    public function __construct(
+        private VisitValidator $visits
+    ) {}
+
     /**
      * Iniciar (o reanudar) un duelo a partir del token de un código QR.
      *
      * Es la única forma de iniciar un duelo: la tarjeta se obtiene
      * del QR, nunca de un id enviado por la app.
      */
-    public function startFromQr(User $user, string $token): DuelStart
-    {
+    public function startFromQr(
+        User $user,
+        string $token,
+        ?float $latitude = null,
+        ?float $longitude = null
+    ): DuelStart {
         $qrCode = CardQrCode::query()
             ->with('card')
             ->where('token', $token)
@@ -55,6 +64,10 @@ class CardDuelService
         if ($qrCode->isExpired()) {
             throw DuelException::expiredQr();
         }
+
+        // Después del QR, para que un código inválido siga dando 404/410,
+        // y antes de contar el escaneo.
+        $this->visits->ensureCanDuel($user, $latitude, $longitude);
 
         $qrCode->increment('scans_count', 1, [
             'last_scanned_at' => now(),
@@ -174,6 +187,8 @@ class CardDuelService
         ?float $latitude = null,
         ?float $longitude = null
     ): DuelResult {
+        $this->visits->ensureCanDuel($user, $latitude, $longitude);
+
         $card = $attempt->card;
 
         $this->ensureCardIsAvailable($card);

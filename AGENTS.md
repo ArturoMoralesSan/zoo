@@ -66,7 +66,7 @@ php artisan cards:packs:build                  # encrypted offline-pack copies (
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 302 tests, 1 stale failure: `ExampleTest` expects 200 at `/` (checked 2026-11-12) |
+| `php artisan test` | 323 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-17) |
 | `npx vitest run` | 102 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 33 errors |
@@ -191,6 +191,14 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 - **ZooDeck dev tools:** the "Tarjetas obtenidas" and "Intentos y bloqueos" tabs on
   the cards index, and their revoke and reset endpoints, exist only when
   `APP_ZOODECK_DEV=1` (`config('app.zoodeck_dev')`). Otherwise the endpoints return 404.
+- **Visit validations:** with `APP_ZOODECK_ENFORCE_VALIDATIONS=1`, `POST /api/duels` and
+  `/submit` require `latitude`/`longitude` inside an active zone and an active ticket from
+  an order paid today (there is no visit date and no gate check-in, `used_at` is never set).
+  Refusals are `DuelException` with `data.reason` (`location_required` 422, `outside_zoo`
+  and `no_ticket` 403). `Services/ZooDeck/VisitValidator` is the only place these rules live;
+  `validate-capture` and the ZooDeck map (`GET /api/map/species`, same zone shape as
+  `GET /api/map` plus per-card `status`, `attempts`, `can_duel`, `reason`) use it too.
+  Keep the map's `reason` order equal to the order `POST /duels` refuses in.
 - **Duel settings** come from the card or its rarity (`duel_settings_source`). Always
   read `effective_questions_per_duel`, `effective_retries` and
   `effective_cooldown_minutes` on `Card`.

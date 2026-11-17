@@ -73,6 +73,27 @@ class DuelException extends Exception
         );
     }
 
+    public static function locationRequired(): self
+    {
+        return new self('Activa tu ubicación para retar a los animales.', 422, [
+            'reason' => 'location_required',
+        ]);
+    }
+
+    public static function outsideZoo(): self
+    {
+        return new self('Debes estar dentro del zoológico para retar a los animales.', 403, [
+            'reason' => 'outside_zoo',
+        ]);
+    }
+
+    public static function noTicketToday(): self
+    {
+        return new self('Necesitas un boleto pagado para hoy para retar a los animales.', 403, [
+            'reason' => 'no_ticket',
+        ]);
+    }
+
     public function render(): JsonResponse
     {
         $body = [
