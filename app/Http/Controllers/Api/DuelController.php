@@ -54,7 +54,9 @@ class DuelController extends Controller
      *
      * **Validaciones de visita:** con `APP_ZOODECK_ENFORCE_VALIDATIONS=1`, `latitude` y
      * `longitude` son obligatorias, deben caer dentro de una zona activa del zoológico y el
-     * usuario necesita un boleto de una orden pagada hoy. Apagadas, las coordenadas son
+     * usuario necesita un boleto de una orden pagada hoy. Si se envía `accuracy` (metros,
+     * la precisión que reporta el GPS), un punto a esa distancia del borde cuenta como dentro,
+     * hasta un tope de 30 m (`APP_ZOODECK_LOCATION_TOLERANCE`). Apagadas, las coordenadas son
      * opcionales y no se revisa nada. `GET /map/species` muestra lo mismo por adelantado.
      *
      * **Errores** (todos con el formato `{ success: false, message, data? }`):
@@ -75,7 +77,8 @@ class DuelController extends Controller
             $request->user(),
             $request->validated('code'),
             $this->coordinate($request->validated('latitude')),
-            $this->coordinate($request->validated('longitude'))
+            $this->coordinate($request->validated('longitude')),
+            $this->coordinate($request->validated('accuracy'))
         );
 
         return response()->json([
@@ -117,7 +120,9 @@ class DuelController extends Controller
      *
      * **Validaciones de visita:** con `APP_ZOODECK_ENFORCE_VALIDATIONS=1`, `latitude` y
      * `longitude` son obligatorias, deben caer dentro de una zona activa del zoológico y el
-     * usuario necesita un boleto de una orden pagada hoy. Apagadas, las coordenadas son
+     * usuario necesita un boleto de una orden pagada hoy. Si se envía `accuracy` (metros,
+     * la precisión que reporta el GPS), un punto a esa distancia del borde cuenta como dentro,
+     * hasta un tope de 30 m (`APP_ZOODECK_LOCATION_TOLERANCE`). Apagadas, las coordenadas son
      * opcionales y no se revisa nada. Se vuelven a revisar al responder.
      *
      * **Errores** (todos con el formato `{ success: false, message, data? }`):
@@ -142,7 +147,8 @@ class DuelController extends Controller
             $attempt,
             $request->validated('answers'),
             $this->coordinate($request->validated('latitude')),
-            $this->coordinate($request->validated('longitude'))
+            $this->coordinate($request->validated('longitude')),
+            $this->coordinate($request->validated('accuracy'))
         );
 
         return response()->json([

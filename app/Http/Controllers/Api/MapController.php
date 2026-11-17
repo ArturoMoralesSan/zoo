@@ -338,7 +338,8 @@ class MapController extends Controller
      * una pregunta activa. Es el mapa de las pantallas A-16 ZooDeck y A-17 Duelos.
      *
      * Envía `latitude` y `longitude` (opcionales) con la posición del usuario para saber si
-     * está dentro del zoológico.
+     * está dentro del zoológico, y `accuracy` (metros) para dar margen junto al borde, igual
+     * que en `POST /duels`.
      *
      * **`visit`**: si el usuario puede retar ahora, con las mismas reglas que `POST /duels`.
      * Con `APP_ZOODECK_ENFORCE_VALIDATIONS` apagado, `can_duel` es `true` aunque `ticket` o
@@ -362,7 +363,8 @@ class MapController extends Controller
         $visit = $this->visits->status(
             $user,
             $request->coordinate('latitude'),
-            $request->coordinate('longitude')
+            $request->coordinate('longitude'),
+            $request->coordinate('accuracy')
         );
 
         $zones = $this->mapZones(function (EloquentCollection $locations) use ($user, $visit) {
@@ -501,7 +503,8 @@ class MapController extends Controller
      *
      * Comprueba que el usuario autenticado sea el de la URL, si las coordenadas están dentro
      * de una zona activa del zoológico (`zones`) y si tiene un boleto de una orden pagada hoy
-     * (`ticket`). `enforced` indica si `POST /duels` exige ambas cosas
+     * (`ticket`). Acepta `?accuracy=` (metros) con el mismo margen que los duelos.
+     * `enforced` indica si `POST /duels` exige ambas cosas
      * (`APP_ZOODECK_ENFORCE_VALIDATIONS`). Son las mismas reglas que usan los duelos y el
      * mapa de ZooDeck.
      */
@@ -532,11 +535,14 @@ class MapController extends Controller
             ], 403);
         }
 
+        $accuracy = request()->query('accuracy');
+        $accuracy = is_numeric($accuracy) ? (float) $accuracy : null;
+
         return response()->json([
             'success' => true,
 
             'data' => [
-                'zones' => $this->visits->isInsideZoo($latitude, $longitude),
+                'zones' => $this->visits->isInsideZoo($latitude, $longitude, $accuracy),
                 'ticket' => $this->visits->hasTicketForToday($authenticatedUser),
                 'enforced' => $this->visits->enforced(),
             ],

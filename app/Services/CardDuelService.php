@@ -50,7 +50,8 @@ class CardDuelService
         User $user,
         string $token,
         ?float $latitude = null,
-        ?float $longitude = null
+        ?float $longitude = null,
+        ?float $accuracy = null
     ): DuelStart {
         $qrCode = CardQrCode::query()
             ->with('card')
@@ -67,7 +68,7 @@ class CardDuelService
 
         // Después del QR, para que un código inválido siga dando 404/410,
         // y antes de contar el escaneo.
-        $this->visits->ensureCanDuel($user, $latitude, $longitude);
+        $this->visits->ensureCanDuel($user, $latitude, $longitude, $accuracy);
 
         $qrCode->increment('scans_count', 1, [
             'last_scanned_at' => now(),
@@ -185,9 +186,10 @@ class CardDuelService
         QuizAttempt $attempt,
         array $answers,
         ?float $latitude = null,
-        ?float $longitude = null
+        ?float $longitude = null,
+        ?float $accuracy = null
     ): DuelResult {
-        $this->visits->ensureCanDuel($user, $latitude, $longitude);
+        $this->visits->ensureCanDuel($user, $latitude, $longitude, $accuracy);
 
         $card = $attempt->card;
 

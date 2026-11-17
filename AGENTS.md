@@ -199,7 +199,9 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   `validate-capture` and the ZooDeck map (`GET /api/map/species`, same zone shape as
   `GET /api/map` plus per-card `status`, `attempts`, `can_duel`, `reason`; it lists only
   cards with a usable QR and at least one active question) use it too.
-  Keep the map's `reason` order equal to the order `POST /duels` refuses in.
+  Keep the map's `reason` order equal to the order `POST /duels` refuses in. All of them
+  take an optional `accuracy` (GPS metres): a point that close to a zone's edge counts as
+  inside, capped by `APP_ZOODECK_LOCATION_TOLERANCE` (30 m).
 - **Duel settings** come from the card or its rarity (`duel_settings_source`). Always
   read `effective_questions_per_duel`, `effective_retries` and
   `effective_cooldown_minutes` on `Card`.

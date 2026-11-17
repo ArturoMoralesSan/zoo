@@ -148,4 +148,11 @@ return [
 
     'zoodeck_enforce_validations' => (bool) env('APP_ZOODECK_ENFORCE_VALIDATIONS', false),
 
+    /*
+    | Metros que se aceptan fuera del borde de una zona cuando el teléfono reporta esa
+    | precisión de GPS. Es el tope: una precisión mayor se recorta a este valor.
+    */
+
+    'zoodeck_location_tolerance_meters' => (int) env('APP_ZOODECK_LOCATION_TOLERANCE', 30),
+
 ];

@@ -42,6 +42,12 @@ class SubmitDuelRequest extends FormRequest
                 'numeric',
                 'between:-180,180',
             ],
+
+            'accuracy' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
         ];
     }
 }

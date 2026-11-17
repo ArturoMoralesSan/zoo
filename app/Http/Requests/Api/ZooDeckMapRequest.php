@@ -40,6 +40,18 @@ class ZooDeckMapRequest extends FormRequest
                 'between:-180,180',
                 'required_with:latitude',
             ],
+
+            /**
+             * Precisión del GPS en metros (`coords.accuracy`). Da margen junto al borde del
+             * zoológico, hasta el tope configurado.
+             *
+             * @example 12
+             */
+            'accuracy' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
         ];
     }
 

@@ -50,11 +50,39 @@ class VisitValidator
             ->exists();
     }
 
-    public function isInsideZoo(float $latitude, float $longitude): bool
+    /**
+     * Dentro de una zona activa, o a no más de la precisión del GPS de su borde.
+     *
+     * La precisión (`accuracy`, en metros, la que reporta el teléfono) se acota con
+     * `app.zoodeck_location_tolerance_meters`: una lectura mala junto a la cerca no
+     * debe dejar fuera a quien está en un recinto del borde, pero una precisión enorme
+     * tampoco puede aceptar a cualquiera.
+     */
+    public function isInsideZoo(float $latitude, float $longitude, ?float $accuracy = null): bool
     {
-        return $this->activeZones()->contains(
-            fn (ZooZone $zone) => $this->pointInGeometry($latitude, $longitude, $zone->geometry)
+        $zones = $this->activeZones();
+
+        if ($zones->contains(fn (ZooZone $zone) => $this->pointInGeometry($latitude, $longitude, $zone->geometry))) {
+            return true;
+        }
+
+        $tolerance = $this->tolerance($accuracy);
+
+        return $tolerance > 0 && $zones->contains(
+            fn (ZooZone $zone) => $this->distanceToGeometry($latitude, $longitude, $zone->geometry) <= $tolerance
         );
+    }
+
+    /**
+     * Metros de tolerancia para una precisión dada: nunca más que el tope configurado.
+     */
+    public function tolerance(?float $accuracy): float
+    {
+        if ($accuracy === null || $accuracy <= 0) {
+            return 0.0;
+        }
+
+        return min($accuracy, max(0, (float) config('app.zoodeck_location_tolerance_meters')));
     }
 
     /**
@@ -62,13 +90,13 @@ class VisitValidator
      *
      * Se evalúa aunque la validación esté apagada, para mostrarlo como aviso.
      */
-    public function reason(User $user, ?float $latitude, ?float $longitude): ?string
+    public function reason(User $user, ?float $latitude, ?float $longitude, ?float $accuracy = null): ?string
     {
         if ($latitude === null || $longitude === null) {
             return self::REASON_LOCATION_REQUIRED;
         }
 
-        if (! $this->isInsideZoo($latitude, $longitude)) {
+        if (! $this->isInsideZoo($latitude, $longitude, $accuracy)) {
             return self::REASON_OUTSIDE_ZOO;
         }
 
@@ -84,10 +112,10 @@ class VisitValidator
      *
      * @return array{enforced: bool, ticket: bool, inside_zoo: bool|null, can_duel: bool, reason: string|null}
      */
-    public function status(User $user, ?float $latitude, ?float $longitude): array
+    public function status(User $user, ?float $latitude, ?float $longitude, ?float $accuracy = null): array
     {
         $hasLocation = $latitude !== null && $longitude !== null;
-        $insideZoo = $hasLocation ? $this->isInsideZoo($latitude, $longitude) : null;
+        $insideZoo = $hasLocation ? $this->isInsideZoo($latitude, $longitude, $accuracy) : null;
         $ticket = $this->hasTicketForToday($user);
 
         $reason = match (true) {
@@ -111,13 +139,13 @@ class VisitValidator
     /**
      * Detener el duelo si la validación está activa y no se cumple.
      */
-    public function ensureCanDuel(User $user, ?float $latitude, ?float $longitude): void
+    public function ensureCanDuel(User $user, ?float $latitude, ?float $longitude, ?float $accuracy = null): void
     {
         if (! $this->enforced()) {
             return;
         }
 
-        match ($this->reason($user, $latitude, $longitude)) {
+        match ($this->reason($user, $latitude, $longitude, $accuracy)) {
             self::REASON_LOCATION_REQUIRED => throw DuelException::locationRequired(),
             self::REASON_OUTSIDE_ZOO => throw DuelException::outsideZoo(),
             self::REASON_NO_TICKET => throw DuelException::noTicketToday(),
@@ -177,6 +205,76 @@ class VisitValidator
         }
 
         return false;
+    }
+
+    /**
+     * Distancia en metros del punto al borde más cercano de la geometría (anillos
+     * exteriores y huecos). Para un punto fuera de la zona es su distancia a ella.
+     */
+    private function distanceToGeometry(float $latitude, float $longitude, mixed $geometry): float
+    {
+        if (is_string($geometry)) {
+            $geometry = json_decode($geometry, true);
+        }
+
+        if (! is_array($geometry)) {
+            return INF;
+        }
+
+        $coordinates = $geometry['coordinates'] ?? [];
+
+        $polygons = match ($geometry['type'] ?? null) {
+            'Polygon' => [$coordinates],
+            'MultiPolygon' => $coordinates,
+            default => [],
+        };
+
+        $nearest = INF;
+
+        foreach ($polygons as $polygon) {
+            foreach ($polygon as $ring) {
+                $nearest = min($nearest, $this->distanceToRing($latitude, $longitude, $ring));
+            }
+        }
+
+        return $nearest;
+    }
+
+    /**
+     * Proyección equirectangular centrada en el punto: a la escala de un zoológico el
+     * error es de centímetros y evita trigonometría esférica por segmento.
+     *
+     * @param  array<int, array<int, float|int|string>>  $ring
+     */
+    private function distanceToRing(float $latitude, float $longitude, array $ring): float
+    {
+        $metersPerDegree = M_PI * 6371000 / 180;
+        $metersPerLongitude = $metersPerDegree * cos(deg2rad($latitude));
+
+        $points = array_map(fn (array $point) => [
+            ((float) $point[0] - $longitude) * $metersPerLongitude,
+            ((float) $point[1] - $latitude) * $metersPerDegree,
+        ], $ring);
+
+        $nearest = INF;
+
+        for ($i = 1, $count = count($points); $i < $count; $i++) {
+            [$ax, $ay] = $points[$i - 1];
+            [$bx, $by] = $points[$i];
+
+            $dx = $bx - $ax;
+            $dy = $by - $ay;
+            $lengthSquared = $dx * $dx + $dy * $dy;
+
+            // Proyección del origen (el punto) sobre el segmento, acotada a sus extremos.
+            $t = $lengthSquared > 0
+                ? max(0, min(1, -($ax * $dx + $ay * $dy) / $lengthSquared))
+                : 0;
+
+            $nearest = min($nearest, hypot($ax + $t * $dx, $ay + $t * $dy));
+        }
+
+        return $nearest;
     }
 
     /**

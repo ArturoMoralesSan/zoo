@@ -31,6 +31,11 @@ class ZooDeckValidationTest extends TestCase
 
     private const OUTSIDE = ['latitude' => 25.0, 'longitude' => -99.15];
 
+    // A 0.00018° (≈ 20.0 m) y 0.0009° (≈ 100 m) al sur del borde inferior de la zona.
+    private const NEAR_EDGE = ['latitude' => 19.39982, 'longitude' => -99.15];
+
+    private const FAR_FROM_EDGE = ['latitude' => 19.3991, 'longitude' => -99.15];
+
     protected User $user;
 
     protected ZooZone $zone;
@@ -532,5 +537,70 @@ class ZooDeckValidationTest extends TestCase
             ->assertStatus(422)
             ->assertJsonPath('message', 'Esta tarjeta aún no tiene preguntas disponibles.')
             ->assertJsonMissingPath('data.reason');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Precisión del GPS junto al borde
+    |--------------------------------------------------------------------------
+    */
+
+    public function test_la_precision_del_gps_da_margen_junto_al_borde(): void
+    {
+        $this->enforce();
+        $this->buyTicket();
+
+        $this->scan(coordinates: self::NEAR_EDGE)->assertJsonPath('data.reason', 'outside_zoo');
+        $this->scan(coordinates: [...self::NEAR_EDGE, 'accuracy' => 19.5])->assertJsonPath('data.reason', 'outside_zoo');
+        $this->scan(coordinates: [...self::NEAR_EDGE, 'accuracy' => 20.5])->assertOk();
+    }
+
+    public function test_el_margen_no_pasa_del_tope_configurado(): void
+    {
+        $this->enforce();
+        $this->buyTicket();
+
+        // Una precisión enorme se recorta a 30 m: a 100 m sigue fuera.
+        $this->scan(coordinates: [...self::FAR_FROM_EDGE, 'accuracy' => 500])->assertJsonPath('data.reason', 'outside_zoo');
+
+        config(['app.zoodeck_location_tolerance_meters' => 0]);
+
+        $this->scan(coordinates: [...self::NEAR_EDGE, 'accuracy' => 25])->assertJsonPath('data.reason', 'outside_zoo');
+    }
+
+    public function test_responder_usa_el_mismo_margen(): void
+    {
+        $this->buyTicket();
+        $duel = $this->scan()->assertOk();
+
+        $this->enforce();
+
+        $this->submit($duel, self::NEAR_EDGE)->assertJsonPath('data.reason', 'outside_zoo');
+        $this->submit($duel, [...self::NEAR_EDGE, 'accuracy' => 25])->assertCreated();
+    }
+
+    public function test_el_mapa_y_validate_capture_usan_el_mismo_margen(): void
+    {
+        $this->enforce();
+        $this->buyTicket();
+
+        $this->assertSame('outside_zoo', $this->zooDeckMap(self::NEAR_EDGE)->json('data.visit.reason'));
+
+        $visit = $this->zooDeckMap([...self::NEAR_EDGE, 'accuracy' => 25])->json('data.visit');
+        $this->assertTrue($visit['inside_zoo']);
+        $this->assertTrue($visit['can_duel']);
+        $this->assertTrue($this->mapCard($this->zooDeckMap([...self::NEAR_EDGE, 'accuracy' => 25]), $this->card)['can_duel']);
+
+        $this->getJson("/api/map/validate-capture/{$this->user->id}/19.39982/-99.15")->assertJsonPath('data.zones', false);
+        $this->getJson("/api/map/validate-capture/{$this->user->id}/19.39982/-99.15?accuracy=25")->assertJsonPath('data.zones', true);
+    }
+
+    public function test_la_precision_debe_ser_un_numero_positivo(): void
+    {
+        $this->postJson(route('api.duels.store'), [
+            'code' => $this->card->qrCodes()->first()->token,
+            ...self::INSIDE,
+            'accuracy' => -5,
+        ])->assertUnprocessable()->assertJsonValidationErrors('accuracy');
     }
 }
