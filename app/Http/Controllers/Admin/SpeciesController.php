@@ -919,22 +919,26 @@ class SpeciesController extends Controller
             $species->images()->exists()
             || $species->models()->exists()
             || $species->locations()->exists()
-            || $species->captures()->exists()
+            // Las tarjetas se borran en cascada con la especie, y con ellas
+            // las capturas de los visitantes.
+            || $species->cards()->exists()
         ) {
-            return back()->with(
-                'error',
-                'No se puede eliminar esta especie porque tiene información relacionada.'
-            );
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => 'No se puede eliminar esta especie porque tiene información relacionada.',
+            ]);
+
+            return back();
         }
 
         $species->delete();
 
-        return redirect()
-            ->route('admin.species.index')
-            ->with(
-                'success',
-                'Especie eliminada correctamente.'
-            );
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Especie eliminada correctamente.',
+        ]);
+
+        return redirect()->route('admin.species.index');
     }
 
     /**
