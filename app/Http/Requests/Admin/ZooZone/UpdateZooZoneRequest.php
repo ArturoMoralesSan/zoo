@@ -12,7 +12,7 @@ class UpdateZooZoneRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('zoo-zones.update') ?? false;
+        return $this->user()?->can('zoo-zones.edit') ?? false;
     }
 
     /**

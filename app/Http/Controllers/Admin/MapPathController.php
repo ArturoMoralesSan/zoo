@@ -10,6 +10,7 @@ use App\Models\ZooZone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -254,14 +255,12 @@ class MapPathController extends Controller
             'order' => $validated['order'] ?? 0,
         ]);
 
-        return redirect()
-            ->route(
-                'admin.map-paths.index'
-            )
-            ->with(
-                'success',
-                'Camino creado correctamente.'
-            );
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Camino creado correctamente.',
+        ]);
+
+        return redirect()->route('admin.map-paths.index');
     }
 
     /**
@@ -364,14 +363,12 @@ class MapPathController extends Controller
             'order' => $validated['order'] ?? 0,
         ]);
 
-        return redirect()
-            ->route(
-                'admin.map-paths.index'
-            )
-            ->with(
-                'success',
-                'Camino actualizado correctamente.'
-            );
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Camino actualizado correctamente.',
+        ]);
+
+        return redirect()->route('admin.map-paths.index');
     }
 
     /**
@@ -382,14 +379,12 @@ class MapPathController extends Controller
     ): RedirectResponse {
         $mapPath->delete();
 
-        return redirect()
-            ->route(
-                'admin.map-paths.index'
-            )
-            ->with(
-                'success',
-                'Camino eliminado correctamente.'
-            );
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Camino eliminado correctamente.',
+        ]);
+
+        return redirect()->route('admin.map-paths.index');
     }
 
     /**
@@ -505,10 +500,9 @@ class MapPathController extends Controller
             count($nodeIds) !==
             count(array_unique($nodeIds))
         ) {
-            abort(
-                422,
-                'Existen nodos con IDs duplicados.'
-            );
+            throw ValidationException::withMessages([
+                'coordinates' => 'Existen nodos con IDs duplicados.',
+            ]);
         }
 
         $nodeIdLookup = array_fill_keys(
@@ -529,10 +523,9 @@ class MapPathController extends Controller
                     $nodeIdLookup[$from]
                 )
             ) {
-                abort(
-                    422,
-                    "La conexión #{$index} apunta al nodo origen {$from}, pero ese nodo no existe."
-                );
+                throw ValidationException::withMessages([
+                    'coordinates' => "La conexión #{$index} apunta al nodo origen {$from}, pero ese nodo no existe.",
+                ]);
             }
 
             if (
@@ -540,17 +533,15 @@ class MapPathController extends Controller
                     $nodeIdLookup[$to]
                 )
             ) {
-                abort(
-                    422,
-                    "La conexión #{$index} apunta al nodo destino {$to}, pero ese nodo no existe."
-                );
+                throw ValidationException::withMessages([
+                    'coordinates' => "La conexión #{$index} apunta al nodo destino {$to}, pero ese nodo no existe.",
+                ]);
             }
 
             if ($from === $to) {
-                abort(
-                    422,
-                    "La conexión #{$index} no puede conectar un nodo consigo mismo."
-                );
+                throw ValidationException::withMessages([
+                    'coordinates' => "La conexión #{$index} no puede conectar un nodo consigo mismo.",
+                ]);
             }
 
             $edgeKey =
@@ -563,10 +554,9 @@ class MapPathController extends Controller
                     $edgeKeys[$edgeKey]
                 )
             ) {
-                abort(
-                    422,
-                    "La conexión entre los nodos {$from} y {$to} está duplicada."
-                );
+                throw ValidationException::withMessages([
+                    'coordinates' => "La conexión entre los nodos {$from} y {$to} está duplicada.",
+                ]);
             }
 
             $edgeKeys[$edgeKey] = true;
@@ -603,10 +593,9 @@ class MapPathController extends Controller
             ! is_array($geometry) ||
             empty($geometry)
         ) {
-            abort(
-                422,
-                'La zona seleccionada no tiene una geometría válida.'
-            );
+            throw ValidationException::withMessages([
+                'coordinates' => 'La zona seleccionada no tiene una geometría válida.',
+            ]);
         }
 
         foreach ($nodes as $node) {
@@ -622,10 +611,9 @@ class MapPathController extends Controller
             ) {
                 $nodeId = (int) $node['id'];
 
-                abort(
-                    422,
-                    "El nodo {$nodeId} está fuera de la zona seleccionada."
-                );
+                throw ValidationException::withMessages([
+                    'coordinates' => "El nodo {$nodeId} está fuera de la zona seleccionada.",
+                ]);
             }
         }
     }

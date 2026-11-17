@@ -7,7 +7,7 @@ import {
     Clock3,
     GitBranch,
     Info,
-    Map,
+    Map as MapIcon,
     MapPin,
     Route,
     Ruler,
@@ -221,6 +221,29 @@ const calculatedEstimatedTime = computed(() =>
         ? Math.ceil(form.distance / WALKING_SPEED_METERS_PER_MINUTE)
         : 0,
 );
+
+// El botón se deshabilita sin explicar por qué; esta lista lo dice.
+const missingRequirements = computed(() => {
+    const missing: string[] = [];
+
+    if (form.zone_id === null) {
+        missing.push('Selecciona una zona.');
+    }
+
+    if (form.name.trim().length === 0) {
+        missing.push('Escribe un nombre para el camino.');
+    }
+
+    if (nodeCount.value < 2) {
+        missing.push(`Crea al menos 2 nodos (llevas ${nodeCount.value}).`);
+    }
+
+    if (connectionCount.value < 1) {
+        missing.push('Conecta al menos dos nodos.');
+    }
+
+    return missing;
+});
 
 const canSave = computed(
     () =>
@@ -635,7 +658,7 @@ function submit(): void {
                     <span
                         class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF3ED] text-[#187744]"
                     >
-                        <Map class="h-5 w-5" />
+                        <MapIcon class="h-5 w-5" />
                     </span>
 
                     <div class="min-w-0 flex-1">
@@ -918,6 +941,22 @@ function submit(): void {
                     :key="key"
                 >
                     {{ error }}
+                </li>
+            </ul>
+        </div>
+
+        <div
+            v-if="missingRequirements.length > 0"
+            class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"
+        >
+            <div class="flex items-center gap-2 font-semibold">
+                <Info class="h-4 w-4" />
+                Falta para poder guardar:
+            </div>
+
+            <ul class="mt-2 list-inside list-disc space-y-1">
+                <li v-for="item in missingRequirements" :key="item">
+                    {{ item }}
                 </li>
             </ul>
         </div>

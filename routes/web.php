@@ -194,15 +194,10 @@ Route::middleware(['auth', 'verified'])
             ]);
 
         Route::resource('zoo-zones', ZooZoneController::class)
-            ->middleware([
-                'index' => 'permission:zoo-zones.view',
-                'create' => 'permission:zoo-zones.create',
-                'store' => 'permission:zoo-zones.create',
-                'show' => 'permission:zoo-zones.view',
-                'edit' => 'permission:zoo-zones.edit',
-                'update' => 'permission:zoo-zones.edit',
-                'destroy' => 'permission:zoo-zones.delete',
-            ]);
+            ->middlewareFor(['index', 'show'], 'permission:zoo-zones.view')
+            ->middlewareFor(['create', 'store'], 'permission:zoo-zones.create')
+            ->middlewareFor(['edit', 'update'], 'permission:zoo-zones.edit')
+            ->middlewareFor('destroy', 'permission:zoo-zones.delete');
 
         Route::resource('map-markers', MapMarkerController::class)
             ->middleware([
@@ -308,15 +303,10 @@ Route::middleware(['auth', 'verified'])
                 'update',
                 'destroy',
             ])
-            ->middleware([
-                'index' => 'permission:map_paths.view',
-                'create' => 'permission:map_paths.create',
-                'store' => 'permission:map_paths.create',
-                'show' => 'permission:map_paths.view',
-                'edit' => 'permission:map_paths.edit',
-                'update' => 'permission:map_paths.edit',
-                'destroy' => 'permission:map_paths.delete',
-            ]);
+            ->middlewareFor(['index', 'show'], 'permission:map_paths.view')
+            ->middlewareFor(['create', 'store'], 'permission:map_paths.create')
+            ->middlewareFor(['edit', 'update'], 'permission:map_paths.edit')
+            ->middlewareFor('destroy', 'permission:map_paths.delete');
 
         Route::put(
             'cards/rarity-settings',
