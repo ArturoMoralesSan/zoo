@@ -197,7 +197,8 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   Refusals are `DuelException` with `data.reason` (`location_required` 422, `outside_zoo`
   and `no_ticket` 403). `Services/ZooDeck/VisitValidator` is the only place these rules live;
   `validate-capture` and the ZooDeck map (`GET /api/map/species`, same zone shape as
-  `GET /api/map` plus per-card `status`, `attempts`, `can_duel`, `reason`) use it too.
+  `GET /api/map` plus per-card `status`, `attempts`, `can_duel`, `reason`; it lists only
+  cards with a usable QR and at least one active question) use it too.
   Keep the map's `reason` order equal to the order `POST /duels` refuses in.
 - **Duel settings** come from the card or its rarity (`duel_settings_source`). Always
   read `effective_questions_per_duel`, `effective_retries` and

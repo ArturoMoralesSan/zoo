@@ -201,9 +201,9 @@ class ZooDeckValidationTest extends TestCase
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, mixed>|null
      */
-    private function mapCard(TestResponse $map, Card $card): array
+    private function mapCard(TestResponse $map, Card $card): ?array
     {
         return collect($map->json('data.zones.0.species_locations'))
             ->flatMap(fn (array $location) => $location['species']['cards'])
@@ -399,7 +399,6 @@ class ZooDeckValidationTest extends TestCase
     {
         $owned = $this->createCard('León');
         $locked = $this->createCard('Jaguar');
-        $empty = $this->createCard('Guacamaya', questions: 0);
 
         CardCapture::create([
             'user_id' => $this->user->id,
@@ -429,8 +428,6 @@ class ZooDeckValidationTest extends TestCase
         $this->assertSame(0, $lockedCard['attempts']['left']);
         $this->assertNotNull($lockedCard['attempts']['locked_until']);
         $this->assertFalse($lockedCard['can_duel']);
-
-        $this->assertSame('no_questions', $this->mapCard($map, $empty)['reason']);
     }
 
     public function test_un_bloqueo_terminado_se_muestra_disponible(): void
@@ -474,7 +471,6 @@ class ZooDeckValidationTest extends TestCase
     {
         $owned = $this->createCard('León');
         $locked = $this->createCard('Jaguar');
-        $empty = $this->createCard('Guacamaya', questions: 0);
 
         CardCapture::create(['user_id' => $this->user->id, 'card_id' => $owned->id, 'captured_at' => now()]);
         CardQuizState::create([
@@ -491,13 +487,12 @@ class ZooDeckValidationTest extends TestCase
             null => 200,
             'owned' => 409,
             'locked' => 423,
-            'no_questions' => 422,
         ];
 
         foreach ([self::INSIDE, self::OUTSIDE, []] as $coordinates) {
             $map = $this->zooDeckMap($coordinates);
 
-            foreach ([$this->card, $owned, $locked, $empty] as $card) {
+            foreach ([$this->card, $owned, $locked] as $card) {
                 $mapped = $this->mapCard($map, $card);
                 $response = $this->scan($card, $coordinates);
 
@@ -511,5 +506,31 @@ class ZooDeckValidationTest extends TestCase
                 $this->assertSame($mapped['can_duel'], $response->status() === 200, "{$card->name}: {$mapped['reason']}");
             }
         }
+    }
+
+    public function test_una_tarjeta_sin_preguntas_activas_no_aparece_en_el_mapa(): void
+    {
+        $hidden = $this->createCard('Guacamaya');
+        $hidden->quizQuestions()->update(['is_active' => false]);
+
+        $this->enforce();
+        $this->buyTicket();
+
+        // Fuera del zoológico el motivo de la visita ocultaría "no_questions"; aun así no se lista.
+        foreach ([self::OUTSIDE, self::INSIDE, []] as $coordinates) {
+            $map = $this->zooDeckMap($coordinates);
+
+            $names = collect($map->json('data.zones.0.species_locations'))->pluck('species.common_name');
+
+            $this->assertSame(['Mapache'], $names->all());
+            $this->assertNull($this->mapCard($map, $hidden));
+            $this->assertSame(1, $map->json('data.zones.0.species_count'));
+        }
+
+        // POST /duels conserva su propia revisión: con QR válido y visita correcta, 422.
+        $this->scan($hidden, self::INSIDE)
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Esta tarjeta aún no tiene preguntas disponibles.')
+            ->assertJsonMissingPath('data.reason');
     }
 }

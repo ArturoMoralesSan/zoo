@@ -334,8 +334,8 @@ class MapController extends Controller
      * Mapa de ZooDeck
      *
      * El mismo mapa que `GET /map` (zonas, marcadores, `species_locations` y caminos), pero
-     * solo con las especies que tienen una tarjeta activa con un código QR utilizable. Es el
-     * mapa de las pantallas A-16 ZooDeck y A-17 Duelos.
+     * solo con las especies que tienen una tarjeta activa con un código QR utilizable y al menos
+     * una pregunta activa. Es el mapa de las pantallas A-16 ZooDeck y A-17 Duelos.
      *
      * Envía `latitude` y `longitude` (opcionales) con la posición del usuario para saber si
      * está dentro del zoológico.
@@ -348,7 +348,7 @@ class MapController extends Controller
      * usuario (`owned`, `locked`, `available`), sus `attempts` (como en el 423 de
      * `POST /duels`) y `can_duel`/`reason` para habilitar o deshabilitar el botón de retar.
      * `reason` sigue el orden en que `POST /duels` rechaza: primero el motivo de `visit`, luego
-     * `owned`, `locked` y `no_questions`. `status` indica la propiedad y el bloqueo aunque la
+     * `owned` y `locked`. `status` indica la propiedad y el bloqueo aunque la
      * visita no permita retar. Estos datos solo guían la interfaz: `POST /duels` vuelve a
      * revisar todo.
      *
@@ -401,7 +401,11 @@ class MapController extends Controller
     }
 
     /**
-     * Tarjetas activas con QR utilizable, agrupadas por especie, con el estado del usuario.
+     * Tarjetas activas con QR utilizable y preguntas activas, agrupadas por especie,
+     * con el estado del usuario.
+     *
+     * Una tarjeta sin preguntas activas se excluye como la que no tiene QR: si solo se
+     * marcara, el motivo de la visita lo ocultaría y la app no podría detectarlo.
      *
      * @param  Collection<int, int>  $speciesIds
      * @param  array{can_duel: bool, reason: string|null}  $visit
@@ -413,6 +417,7 @@ class MapController extends Controller
             ->whereIn('species_id', $speciesIds)
             ->where('is_active', true)
             ->whereHas('qrCodes', fn ($query) => $query->usable())
+            ->whereHas('quizQuestions', fn ($query) => $query->where('is_active', true))
             ->with([
                 'raritySetting',
                 'qrCodes' => fn ($query) => $query
@@ -425,9 +430,6 @@ class MapController extends Controller
                         'scans_count',
                         'last_scanned_at',
                     ]),
-            ])
-            ->withCount([
-                'quizQuestions as active_questions_count' => fn ($query) => $query->where('is_active', true),
             ])
             ->orderBy('name')
             ->get();
@@ -464,7 +466,6 @@ class MapController extends Controller
                 $reason = match (true) {
                     ! $visit['can_duel'] => $visit['reason'],
                     $status !== 'available' => $status,
-                    (int) $card->getAttribute('active_questions_count') === 0 => 'no_questions',
                     default => null,
                 };
 
