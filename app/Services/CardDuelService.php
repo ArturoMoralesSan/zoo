@@ -17,6 +17,7 @@ use App\Models\QuizQuestion;
 use App\Models\User;
 use App\Services\Duel\DuelAttempts;
 use App\Services\Duel\DuelPoints;
+use App\Services\Duel\DuelPointsSeason;
 use App\Services\Duel\DuelQuestionResult;
 use App\Services\Duel\DuelResult;
 use App\Services\Duel\DuelReviewItem;
@@ -316,11 +317,23 @@ class CardDuelService
 
         $user->refresh();
 
+        $season = $this->points->visibleSeason();
+        $baseRule = $rule ?? $this->capturePointRule($card);
+
         return new DuelPoints(
             awarded: $movement->points ?? 0,
             total: (int) $user->points,
             level: $user->level_id ? Level::find($user->level_id) : null,
             levelUp: $user->level_id !== null && $user->level_id !== $previousLevelId,
+            season: $season
+                ? new DuelPointsSeason(
+                    title: $season->title,
+                    message: $season->message,
+                    icon: $season->icon,
+                    color: $season->color,
+                    basePoints: $baseRule?->is_active ? (int) $baseRule->points : null,
+                )
+                : null,
         );
     }
 

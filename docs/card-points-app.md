@@ -1,7 +1,13 @@
 # Puntos por capturar tarjetas: guía para la app móvil
 
-> **Estado:** el servidor ya está implementado (2026-11-17); la parte de la app todavía no.
+> **Estado:** los puntos por captura (`data.points`) ya están en el servidor y en la app.
+> `data.points.season` (temporadas) está en el servidor; en la app, el chip de victoria está
+> en la rama `feat/point-seasons` y falta el aviso que explica el cambio de puntos.
 > Instrucciones para implementar el cliente en `../zooApp` (ZooDeck, Expo + ViroReact).
+>
+> Esta guía cubre solo las tarjetas. Cómo funcionan los puntos en general, las temporadas,
+> `GET /api/points/season` y el catálogo de íconos y colores están en
+> [points-app.md](points-app.md).
 >
 > Para quien implemente esto en `zooApp`: sigue el `AGENTS.md` de ese repositorio
 > (estilo, componentes, dónde van los hooks de datos, commits). Ahí manda ese archivo
@@ -28,6 +34,10 @@ rareza". Al instalarse, cada rareza usa su propia regla:
   elegir otra regla para una rareza, o dejarla en "Sin puntos" ("Configuración por rareza").
   **La app nunca debe calcular ni guardar en código cuántos puntos vale una rareza**:
   siempre usa lo que devuelve el servidor.
+- Los puntos pueden cambiar por **temporada o evento**: el panel puede activar un "modo de
+  puntos" que cambia lo que da cada regla (por ejemplo, la mitad durante una temporada
+  difícil). `points.awarded` ya trae el valor del modo activo. Si el modo es visible, la
+  app puede explicarlo con `points.season` (abajo).
 - Los puntos se otorgan **una sola vez por tarjeta** (solo en la captura). Perder un duelo
   no da ni quita puntos.
 - Si la regla de la rareza está desactivada o la rareza está en "Sin puntos", la tarjeta
@@ -56,7 +66,8 @@ respuesta; ningún otro endpoint cambió.
       "awarded": 50,          // puntos otorgados por esta captura (0 si la rareza no otorga puntos)
       "total": 320,           // total acumulado del usuario DESPUÉS de esta captura
       "level": { "id": 2, "name": "Plata" },  // nivel después de la captura; null si no hay niveles
-      "level_up": true        // true si esta captura lo subió de nivel
+      "level_up": true,       // true si esta captura lo subió de nivel
+      "season": null          // nuevo y opcional; ver "Temporada al ganar"
     }
   }
 }
@@ -100,6 +111,66 @@ export type DuelPoints = {
    mismo submit devuelve 409 ("ya fue respondido") sin `points`. En ese caso revalida
    `GET /api/profile` (puntos y nivel) y la colección en lugar de mostrar el modal de puntos.
 
+## Temporada al ganar: `data.points.season`
+
+Campo opcional: las versiones de la app que no lo conocen lo ignoran sin fallar.
+
+```jsonc
+"points": {
+  "awarded": 30,
+  "total": 350,
+  "level": { "id": 2, "name": "Plata" },
+  "level_up": false,
+  "season": {                          // null si no hay modo activo o si está oculto
+    "title": "Temporada difícil",
+    "message": "Las capturas dan menos puntos.",   // texto del aviso de victoria; puede ser null
+    "base_points": 50,                 // puntos de esta rareza sin temporada; null si la rareza no da puntos
+    "icon": "snowflake",               // clave del catálogo; null = predeterminado
+    "color": {                         // null = colores predeterminados
+      "accent": "#1F5F8B",
+      "on_accent": "#FFFFFF",
+      "soft": "#E2EDF5",
+      "text": "#123B57"
+    }
+  }
+}
+```
+
+Cómo leer `awarded` contra `base_points` (todos los casos tienen prueba en
+`tests/Feature/Api/DuelTest.php`):
+
+| Caso | `awarded` | `base_points` | Qué mostrar |
+| --- | --- | --- | --- |
+| La temporada baja los puntos de la rareza | `30` | `50` | Aviso: "Por la temporada {title}, esta carta da 30 puntos en lugar de 50" |
+| La temporada los sube | `120` | `50` | El mismo aviso: "… da 120 puntos en lugar de 50" |
+| La temporada pone la rareza en 0 | `0` | `50` | El aviso: "… da 0 puntos en lugar de 50" (la carta se captura igual; no muestres "+0") |
+| La temporada no cambia esta rareza | `50` | `50` | Solo el chip de temporada, sin comparación |
+| La rareza está en "Sin puntos" o su regla está desactivada | `0` | `null` | Solo el chip, sin comparación ni "+0" |
+| Modo oculto o sin modo | puntos del modo, o los normales | — (`season: null`) | Nada de temporada |
+
+- El aviso explica el cambio con `season.title`, `awarded` y `base_points`, seguido de
+  `season.message` (si no es `null`): es el texto que el zoológico escribió para la temporada.
+- Un modo oculto igual cambia los puntos: `awarded` siempre trae lo que se ganó de verdad.
+- `icon` y `color` son los mismos que en `GET /api/points/season`. Tradúcelos con el mapa y
+  las reglas de tonos de [points-app.md](points-app.md#ícono-y-color) (con `SparklesIcon` y
+  los colores de la marca como predeterminados).
+- No calcules nada más: `base_points` ya es el valor normal de la regla de esa rareza.
+
+### Implementación en la app (checklist)
+
+1. **Tipos** (`src/types/cards.ts`): agrega a `DuelPoints`
+   `season?: DuelPointsSeason | null`, con
+   `DuelPointsSeason = { title: string; message: string | null; base_points: number | null; icon: string | null; color: SeasonColor | null }`
+   (`SeasonColor = { accent; on_accent; soft; text }`, en la guía general; sin `key`).
+2. **Victoria** (`src/components/duel/DuelPoints.tsx`): si `points.season` existe, muestra
+   bajo el contador un chip con el ícono de la temporada (círculo `accent`/`on_accent`) y
+   `season.title`.
+3. **Aviso de victoria:** si `base_points !== null && base_points !== awarded`, muestra
+   "Por la temporada {title}, esta carta da {awarded} puntos en lugar de {base_points}" y,
+   debajo, `season.message` si no es `null`. Fondo `soft`, texto `text`. Con `awarded === 0`
+   (caso de 0 puntos) el aviso explica por qué no ganó puntos.
+4. **Textos:** usa `title` y `message` tal cual vienen; los escribe el zoológico.
+
 ## Cómo probar
 
 - Gana el duelo de una tarjeta de cada rareza y revisa que `awarded` coincida con la regla
@@ -110,6 +181,12 @@ export type DuelPoints = {
   nivel Plata en 500) y gana una tarjeta rara: debe salir el aviso de nivel nuevo.
 - Pierde un duelo: no aparece nada de puntos.
 - En el panel, "Movimientos de puntos" muestra cada captura como "Captura de tarjeta: {nombre}".
+- Temporada: en "Modos de puntos" crea un modo visible con la captura rara a 30, ícono
+  "Copo de nieve" y color "Azul invierno", y actívalo. Ganar una tarjeta rara da 30 con
+  `season.base_points: 50`, `icon: "snowflake"` y el color: sale el aviso "… 30 puntos en
+  lugar de 50" con el mensaje. Prueba también la rara a 120 (sube) y a 0 (no da puntos,
+  aviso "0 en lugar de 50"). Apaga "Mostrar a los visitantes": `season` llega en `null`,
+  pero la captura sigue dando los puntos del modo. Vuelve a los puntos base al terminar.
 
 Para reiniciar una tarjeta en desarrollo se pueden usar las herramientas de ZooDeck del
 panel (`APP_ZOODECK_DEV=1`). Revocar una captura **no** quita los puntos, y volver a ganarla

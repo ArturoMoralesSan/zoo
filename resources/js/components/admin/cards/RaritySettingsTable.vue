@@ -65,8 +65,14 @@ const form = useForm({
     })),
 });
 
-const pointRuleLabel = (rule: PointRuleOption) =>
-    `${rule.name} (${rule.points} pts)${rule.is_active ? '' : ' · inactiva'}`;
+const pointRuleLabel = (rule: PointRuleOption) => {
+    const points =
+        rule.mode_name && rule.effective_points !== rule.points
+            ? `${rule.effective_points} pts en ${rule.mode_name}`
+            : `${rule.points} pts`;
+
+    return `${rule.name} (${points})${rule.is_active ? '' : ' · inactiva'}`;
+};
 
 const fieldError = (
     index: number,

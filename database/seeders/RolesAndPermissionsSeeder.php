@@ -137,6 +137,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'point-rules.edit',
             'point-rules.delete',
 
+            // Modos de puntos (temporadas)
+            'point-modes.view',
+            'point-modes.create',
+            'point-modes.edit',
+            'point-modes.delete',
+
             // Historial de puntos
             'point-movements.view',
 
@@ -242,6 +248,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Gamificación
             'levels.view',
             'point-rules.view',
+            'point-modes.view',
             'point-movements.view',
 
             // Recompensas

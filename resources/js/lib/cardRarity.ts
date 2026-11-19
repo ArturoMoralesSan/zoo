@@ -20,6 +20,9 @@ export interface PointRuleOption {
     type: string;
     points: number;
     is_active: boolean;
+    // Puntos que da ahora: los del modo activo, o los base.
+    effective_points: number;
+    mode_name: string | null;
 }
 
 export const rarityOptions: { value: CardRarity; label: string }[] = [

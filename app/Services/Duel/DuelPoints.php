@@ -14,5 +14,6 @@ final readonly class DuelPoints
         public int $total,
         public ?Level $level,
         public bool $levelUp,
+        public ?DuelPointsSeason $season = null,
     ) {}
 }

@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             PaymentMethodSeeder::class,
             TicketTypeSeeder::class,
             PointRuleSeeder::class,
+            PointModeSeeder::class,
             RewardSeeder::class,
             LicenseSeeder::class,
         ]);

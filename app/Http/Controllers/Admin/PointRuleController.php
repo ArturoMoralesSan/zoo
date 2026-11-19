@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\PointMode;
 use App\Models\PointRule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,9 @@ class PointRuleController extends Controller
             'admin/point-rules/Index',
             [
                 'rules' => $rules,
+
+                // Con un modo activo, los puntos otorgados pueden ser otros.
+                'activeMode' => PointMode::active()?->only(['id', 'name']),
             ]
         );
     }

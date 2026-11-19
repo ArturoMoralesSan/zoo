@@ -66,8 +66,8 @@ php artisan cards:packs:build                  # encrypted offline-pack copies (
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 342 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-18) |
-| `npx vitest run` | 102 passing |
+| `php artisan test` | 381 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-19) |
+| `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
 
@@ -98,7 +98,8 @@ resources/js/composables/  resources/js/types/  resources/css/
 tests/Feature/{Admin,Api,Auth,Licensing,Settings}  tests/Unit  tests/js  tests/Fixtures
 docs/api-credits.md  docs/glb-resizing.md  docs/image-optimization.md   Read only when working on those features
 docs/offline-packs-{backend,app}.md   Offline card packs: server done, mobile app pending
-docs/card-points-app.md   Card capture points: server done, mobile app pending
+docs/points-app.md        Points for the app: rules, levels, seasons (GET /api/points/season), icon/color catalog
+docs/card-points-app.md   Card capture points (data.points on duel wins, incl. season); points done in the app
 ```
 
 Page folders match the route resource, except `quizquestions`, `card-qr-codes` and
@@ -116,7 +117,8 @@ Page folders match the route resource, except `quizquestions`, `card-qr-codes` a
 - **Map:** `ZooZone` → `MapMarker`, `SpeciesLocation`, `Event`; `MapPath`.
 - **Tickets:** `TicketOrder` → `TicketOrderItem` (→ `TicketType`), `TicketOrderPayment`
   (→ `PaymentMethod`), `Ticket`.
-- **Users:** `User` → `Profile`, `Level`, `PointMovement`; `PointRule`; `Reward` →
+- **Users:** `User` → `Profile`, `Level`, `PointMovement` (→ `PointMode`); `PointRule`;
+  `PointMode` ↔ `PointRule` (pivot `point_mode_rules.points`); `Reward` →
   `RewardRedemption`; `Donation`. Sidebar: `Menu` → `Link` → `Permission`.
 
 A model's `$fillable` and `$casts` show its columns; there is no need to read its migrations.
@@ -236,6 +238,16 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   the rule picked per rarity (`card_rarity_settings.point_rule_id`, null = no points; it
   starts as `card_capture_<rarity>`, see `CardRarity::pointRuleType()`) once per card and returns
   `data.points` (`awarded`, `total`, `level`, `level_up`). See `docs/card-points-app.md`.
+  **Point modes** (seasons/events, admin "Modos de puntos"): at most one `PointMode` is
+  active and overrides some rules' points; rules it doesn't override keep their base points.
+  `PointService::pointsFor()` resolves them, and every award goes through it. A mode can set a
+  rule to 0, which awards nothing and never throws (it must not block a purchase).
+  Movements store `point_mode_id`. A mode with `is_public` shows its `public_title`/`public_message`
+  (never its internal name) through `GET /api/points/season` and the additive
+  `data.points.season` on duel wins; hidden modes still change points but report `null`.
+  `PointService::visibleSeason()` is the only place that decides this. `PointModeSeeder` holds six
+  example seasons (all inactive, created only if missing by name). Seasons also carry
+  `icon`/`color` keys from the shared catalog (`PointSeasonStyles`); null or unknown = app default.
 
 **Logic duplicated across PHP and TS. Change both sides:**
 
@@ -247,8 +259,10 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 | `Enums/CardRarity` | `lib/cardRarity.ts` | none |
 | `GlbInspector`, `config/glb.php` | `lib/glb/resizeGlb.ts` | `tests/Fixtures/glb` |
 
-Card fonts are shared through `resources/data/card-fonts.json`, and card image profiles
-(size and quality) through `resources/data/card-image-profiles.json`.
+Card fonts are shared through `resources/data/card-fonts.json`, card image profiles
+(size and quality) through `resources/data/card-image-profiles.json`, and season icons and
+colors through `resources/data/point-season-styles.json` (keys never change; the app maps
+them, see `docs/points-app.md`).
 
 ## Gotchas
 

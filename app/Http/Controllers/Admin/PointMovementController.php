@@ -14,6 +14,7 @@ class PointMovementController extends Controller
         $movements = PointMovement::query()
             ->with([
                 'user:id,name,email',
+                'pointMode:id,name',
             ])
             ->latest()
             ->paginate(20)

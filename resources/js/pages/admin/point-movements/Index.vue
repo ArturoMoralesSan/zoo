@@ -32,6 +32,8 @@ interface PointMovement {
     reference_id: number | null;
     created_at: string;
     user: MovementUser | null;
+    // Modo de puntos activo al otorgarlos; null = puntos base.
+    point_mode: { id: number; name: string } | null;
 }
 
 interface PaginationLink {
@@ -90,7 +92,7 @@ defineOptions({
         <DataTable
             :pagination="movements"
             :is-empty="movements.data.length === 0"
-            :empty-colspan="6"
+            :empty-colspan="7"
             :show-search="false"
             :show-clear-filters="false"
         >
@@ -110,6 +112,10 @@ defineOptions({
 
                     <th class="whitespace-nowrap px-5 py-4 font-semibold sm:px-6">
                         Puntos
+                    </th>
+
+                    <th class="px-5 py-4 font-semibold sm:px-6">
+                        Modo
                     </th>
 
                     <th class="px-5 py-4 font-semibold sm:px-6">
@@ -184,6 +190,17 @@ defineOptions({
                             <CircleMinus class="h-3.5 w-3.5" />
                             {{ movement.points }}
                         </span>
+                    </td>
+
+                    <td class="px-5 py-4 sm:px-6">
+                        <span
+                            v-if="movement.point_mode"
+                            class="inline-flex rounded-full border border-[#BFE3CB] bg-[#E2F3E8] px-2.5 py-1 text-xs font-medium text-[#187744]"
+                        >
+                            {{ movement.point_mode.name }}
+                        </span>
+
+                        <span v-else class="text-xs text-[#84958A]">Base</span>
                     </td>
 
                     <td class="px-5 py-4 sm:px-6">

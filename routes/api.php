@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DuelController;
 use App\Http\Controllers\Api\DonationController;
 use App\Http\Controllers\Api\ExploreController;
 use App\Http\Controllers\Api\MapController;
+use App\Http\Controllers\Api\PointSeasonController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SpeciesController;
 use App\Http\Controllers\Api\TicketController;
@@ -159,6 +160,21 @@ Route::middleware('auth:sanctum')->group(function () {
         'pack',
     ])->middleware('throttle:60,1')
         ->name('api.cards.pack');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Temporada de puntos
+    |--------------------------------------------------------------------------
+    |
+    | Modo de puntos activo y visible para los visitantes (o null).
+    |
+    */
+
+    Route::get('/points/season', [
+        PointSeasonController::class,
+        'show',
+    ])->middleware('throttle:60,1')
+        ->name('api.points.season');
 
     /*
     |--------------------------------------------------------------------------
