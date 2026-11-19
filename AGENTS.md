@@ -66,10 +66,10 @@ php artisan cards:packs:build                  # encrypted offline-pack copies (
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 337 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-17) |
+| `php artisan test` | 342 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-18) |
 | `npx vitest run` | 102 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
-| phpstan (level 7) / vue-tsc | 551 errors / 33 errors |
+| phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
 
 `composer test` and `composer ci:check` stop at the lint step because of this, so
 use the targeted commands. CI runs on pull requests only: its push trigger says
@@ -233,7 +233,8 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 - **Points:** `PointService::add()` applies a `PointRule` by type (`addIfRuleActive()` skips
   a missing or inactive rule instead of throwing). Levels never go down, and redeeming a
   reward does not deduct points. Ticket flows award `ticket_purchase`; winning a duel awards
-  `card_capture_<rarity>` once per card (`CardRarity::pointRuleType()`) and returns
+  the rule picked per rarity (`card_rarity_settings.point_rule_id`, null = no points; it
+  starts as `card_capture_<rarity>`, see `CardRarity::pointRuleType()`) once per card and returns
   `data.points` (`awarded`, `total`, `level`, `level_up`). See `docs/card-points-app.md`.
 
 **Logic duplicated across PHP and TS. Change both sides:**

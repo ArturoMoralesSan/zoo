@@ -12,6 +12,7 @@ use App\Models\CardCapture;
 use App\Models\CardQuizState;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
+use App\Models\PointRule;
 use App\Models\Species;
 use App\Services\CardImageOptimizer;
 use App\Services\GlbInspection;
@@ -136,6 +137,11 @@ class CardController extends Controller
                 'devTools' => $devTools,
 
                 'raritySettings' => $this->raritySettings(),
+
+                // Opciones de "Regla de puntos" en la configuración por rareza.
+                'pointRules' => PointRule::query()
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'type', 'points', 'is_active']),
 
                 /*
                  * Mensajes predeterminados del duelo: los guardados (vacíos = texto
@@ -599,6 +605,7 @@ class CardController extends Controller
                 'retries',
                 'cooldown_minutes',
                 'reveal_answers_on_lockout',
+                'point_rule_id',
             ]);
     }
 

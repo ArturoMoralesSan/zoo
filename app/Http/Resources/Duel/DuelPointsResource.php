@@ -9,8 +9,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * Puntos obtenidos al capturar la tarjeta.
  *
- * Los puntos dependen de la rareza de la tarjeta y se configuran en
- * "Reglas de puntos" del panel; la app nunca debe calcularlos.
+ * Los puntos salen de la regla elegida para la rareza de la tarjeta en
+ * "Configuración por rareza" del panel; la app nunca debe calcularlos.
  *
  * @mixin DuelPoints
  */
@@ -23,7 +23,7 @@ class DuelPointsResource extends JsonResource
     {
         return [
             /**
-             * Puntos otorgados por esta captura. `0` si la regla de la rareza está desactivada.
+             * Puntos otorgados por esta captura. `0` si la rareza no otorga puntos o su regla está desactivada.
              *
              * @example 50
              */

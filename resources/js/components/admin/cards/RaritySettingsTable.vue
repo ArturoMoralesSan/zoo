@@ -11,11 +11,12 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { getRarityClasses, getRarityLabel } from '@/lib/cardRarity';
-import type { CardRaritySetting } from '@/lib/cardRarity';
+import type { CardRaritySetting, PointRuleOption } from '@/lib/cardRarity';
 import admin from '@/routes/admin';
 
 const props = defineProps<{
     settings: CardRaritySetting[];
+    pointRules: PointRuleOption[];
     // Siempre abierto (sin acordeón), p. ej. en su propia pestaña.
     alwaysOpen?: boolean;
 }>();
@@ -60,10 +61,18 @@ const form = useForm({
         retries: setting.retries,
         cooldown_minutes: setting.cooldown_minutes,
         reveal_answers_on_lockout: setting.reveal_answers_on_lockout,
+        point_rule_id: setting.point_rule_id,
     })),
 });
 
-const fieldError = (index: number, field: 'questions_per_duel' | 'retries' | 'cooldown_minutes') =>
+const pointRuleLabel = (rule: PointRuleOption) =>
+    `${rule.name} (${rule.points} pts)${rule.is_active ? '' : ' · inactiva'}`;
+
+const fieldError = (
+    index: number,
+    field:
+        'questions_per_duel' | 'retries' | 'cooldown_minutes' | 'point_rule_id',
+) =>
     (form.errors as Record<string, string | undefined>)[
         `settings.${index}.${field}`
     ];
@@ -98,7 +107,7 @@ const submit = () => {
                         </h2>
 
                         <p class="mt-1 text-sm leading-5 text-[#718477]">
-                            Define las preguntas por duelo, el límite de reintentos y el tiempo de espera que usarán por defecto las tarjetas de cada rareza.
+                            Define las preguntas por duelo, el límite de reintentos y el tiempo de espera que usarán por defecto las tarjetas de cada rareza, y la regla de puntos que otorga capturarlas.
                         </p>
                     </div>
 
@@ -142,6 +151,10 @@ const submit = () => {
 
                                     <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
                                         Mostrar respuestas al agotar intentos
+                                    </th>
+
+                                    <th class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6">
+                                        Regla de puntos al capturar
                                     </th>
                                 </tr>
                             </thead>
@@ -242,6 +255,35 @@ const submit = () => {
                                             {{ setting.reveal_answers_on_lockout ? 'Sí' : 'No' }}
                                         </label>
                                     </td>
+
+                                    <!-- Regla de puntos al capturar -->
+                                    <td class="px-5 py-4 sm:px-6">
+                                        <select
+                                            v-model="setting.point_rule_id"
+                                            :aria-label="`Regla de puntos al capturar (${getRarityLabel(setting.rarity)})`"
+                                            class="form-select min-w-55"
+                                            :class="{
+                                                'form-input-error': fieldError(index, 'point_rule_id'),
+                                            }"
+                                        >
+                                            <option :value="null">Sin puntos</option>
+
+                                            <option
+                                                v-for="rule in pointRules"
+                                                :key="rule.id"
+                                                :value="rule.id"
+                                            >
+                                                {{ pointRuleLabel(rule) }}
+                                            </option>
+                                        </select>
+
+                                        <p
+                                            v-if="fieldError(index, 'point_rule_id')"
+                                            class="form-error"
+                                        >
+                                            {{ fieldError(index, 'point_rule_id') }}
+                                        </p>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -252,6 +294,8 @@ const submit = () => {
                             Preguntas, reintentos y espera no afectan a las tarjetas con configuración
                             personalizada. Mostrar respuestas aplica a todas las tarjetas de la rareza:
                             al agotar los intentos, la app recibe un repaso con las respuestas correctas.
+                            La regla de puntos aplica a todas las tarjetas de la rareza; una regla
+                            inactiva no otorga puntos.
                         </p>
 
                         <AdminButton

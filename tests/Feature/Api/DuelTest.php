@@ -655,4 +655,48 @@ class DuelTest extends TestCase
             ->assertJsonPath('data.points.level.name', 'Plata')
             ->assertJsonPath('data.points.level_up', true);
     }
+
+    public function test_winning_uses_the_point_rule_chosen_for_the_rarity(): void
+    {
+        $bonus = PointRule::create([
+            'type' => 'bonus_test',
+            'name' => 'Bono',
+            'points' => 200,
+            'is_active' => true,
+        ]);
+
+        CardRaritySetting::where('rarity', 'rara')->update(['point_rule_id' => $bonus->id]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.awarded', 200)
+            ->assertJsonPath('data.points.total', 200);
+
+        $this->assertDatabaseHas('point_movements', [
+            'user_id' => $this->user->id,
+            'points' => 200,
+            'type' => 'bonus_test',
+        ]);
+    }
+
+    public function test_rarity_without_point_rule_captures_without_points(): void
+    {
+        CardRaritySetting::where('rarity', 'rara')->update(['point_rule_id' => null]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.outcome', 'won')
+            ->assertJsonPath('data.points.awarded', 0)
+            ->assertJsonPath('data.points.total', 0);
+
+        $this->assertDatabaseHas('card_captures', [
+            'user_id' => $this->user->id,
+            'card_id' => $this->card->id,
+        ]);
+        $this->assertDatabaseCount('point_movements', 0);
+    }
 }

@@ -47,22 +47,24 @@ class PointService
     /**
      * Como add(), pero no falla si la regla no existe, está inactiva
      * u otorga cero puntos: devuelve null y no otorga nada.
+     * Recibe el tipo de la regla o la regla misma.
      *
      * Para flujos donde los puntos son un extra y no deben impedir la
      * acción principal (por ejemplo, capturar una tarjeta).
      */
     public function addIfRuleActive(
         User $user,
-        string $type,
+        PointRule|string $rule,
         ?string $description = null,
         ?Model $reference = null
     ): ?PointMovement {
-        $rule = PointRule::query()
-            ->where('type', $type)
-            ->where('is_active', true)
-            ->first();
+        if (is_string($rule)) {
+            $rule = PointRule::query()
+                ->where('type', $rule)
+                ->first();
+        }
 
-        if (! $rule || $rule->points <= 0) {
+        if (! $rule || ! $rule->is_active || $rule->points <= 0) {
             return null;
         }
 

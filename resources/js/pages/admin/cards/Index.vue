@@ -34,7 +34,7 @@ import {
     getRarityLabel,
     rarityOptions,
 } from '@/lib/cardRarity';
-import type { CardRaritySetting } from '@/lib/cardRarity';
+import type { CardRaritySetting, PointRuleOption } from '@/lib/cardRarity';
 import { storageUrl } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
 
@@ -105,6 +105,7 @@ const props = defineProps<{
     };
     species: Species[];
     raritySettings: CardRaritySetting[];
+    pointRules: PointRuleOption[];
     duelMessages: Record<
         'win_message' | 'retry_message' | 'locked_message',
         string | null
@@ -470,7 +471,11 @@ defineOptions({
 
         <!-- Configuración de duelos -->
         <div v-if="tab === 'settings'" class="space-y-4">
-            <RaritySettingsTable :settings="raritySettings" always-open />
+            <RaritySettingsTable
+                :settings="raritySettings"
+                :point-rules="pointRules"
+                always-open
+            />
 
             <DuelMessagesSettings
                 :messages="duelMessages"
