@@ -97,7 +97,7 @@ class DuelController extends Controller
      *
      * | `outcome` | HTTP | Cuándo | Campos con valor |
      * |---|---|---|---|
-     * | `won` | 201 | Todas correctas; la tarjeta se agregó a la colección (A-22) | `results`, `card` |
+     * | `won` | 201 | Todas correctas; la tarjeta se agregó a la colección (A-22) | `results`, `card`, `points` |
      * | `retry` | 200 | Falló y le quedan intentos (A-23) | `results`, `attempts` |
      * | `locked` | 200 | Falló y ya no le quedan intentos; bloqueada hasta `attempts.locked_until` | `results`, `attempts`, `review`* |
      *
@@ -106,6 +106,10 @@ class DuelController extends Controller
      * **Mensaje:** `message` es el texto del resultado configurado en el panel: el de la
      * tarjeta (si usa mensajes personalizados) o el predeterminado. Los marcadores ya vienen
      * reemplazados; se muestra tal cual en el modal del resultado.
+     *
+     * **Puntos:** al ganar, `points.awarded` son los puntos de la rareza de la tarjeta
+     * (reglas `card_capture_*` del panel; `0` si la regla está desactivada) y
+     * `points.total` el total acumulado del usuario después de la captura.
      *
      * **Respuestas:** `results` solo indica si cada opción elegida fue correcta, para marcar
      * la equivocada; no revela cuál era la correcta.
