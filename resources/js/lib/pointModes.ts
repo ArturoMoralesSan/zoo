@@ -18,6 +18,10 @@ export interface PointMode {
     name: string;
     description: string | null;
     is_active: boolean;
+    // Aviso para los visitantes en la app; el nombre y la descripción son internos.
+    is_public: boolean;
+    public_title: string | null;
+    public_message: string | null;
     overrides: PointModeOverride[];
     updated_at: string | null;
 }

@@ -191,4 +191,33 @@ class PointModeTest extends TestCase
         $this->assertSame([$this->rare->id => 30], $copy->rules->pluck('pivot.points', 'id')->all());
         $this->assertTrue(PointMode::where('name', 'Copia de Halloween (2)')->exists());
     }
+
+    public function test_public_notice_is_saved_and_title_required_when_public(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.point-modes.store'), [
+                'name' => 'Halloween',
+                'is_public' => true,
+                'public_title' => '',
+                'rules' => [],
+            ])
+            ->assertSessionHasErrors('public_title');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.point-modes.store'), [
+                'name' => 'Halloween',
+                'is_public' => true,
+                'public_title' => '¡Halloween!',
+                'public_message' => 'Las épicas dan el doble.',
+                'rules' => [],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('point_modes', [
+            'name' => 'Halloween',
+            'is_public' => true,
+            'public_title' => '¡Halloween!',
+            'public_message' => 'Las épicas dan el doble.',
+        ]);
+    }
 }

@@ -66,7 +66,7 @@ php artisan cards:packs:build                  # encrypted offline-pack copies (
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 360 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-19) |
+| `php artisan test` | 370 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-19) |
 | `npx vitest run` | 113 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
@@ -98,7 +98,7 @@ resources/js/composables/  resources/js/types/  resources/css/
 tests/Feature/{Admin,Api,Auth,Licensing,Settings}  tests/Unit  tests/js  tests/Fixtures
 docs/api-credits.md  docs/glb-resizing.md  docs/image-optimization.md   Read only when working on those features
 docs/offline-packs-{backend,app}.md   Offline card packs: server done, mobile app pending
-docs/card-points-app.md   Card capture points: server done, mobile app pending
+docs/card-points-app.md   Card capture points and seasons: points done in the app, seasons pending
 ```
 
 Page folders match the route resource, except `quizquestions`, `card-qr-codes` and
@@ -241,7 +241,10 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   active and overrides some rules' points; rules it doesn't override keep their base points.
   `PointService::pointsFor()` resolves them, and every award goes through it. A mode can set a
   rule to 0, which awards nothing and never throws (it must not block a purchase).
-  Movements store `point_mode_id`. Modes are invisible to the API; no response changed.
+  Movements store `point_mode_id`. A mode with `is_public` shows its `public_title`/`public_message`
+  (never its internal name) through `GET /api/points/season` and the additive
+  `data.points.season` on duel wins; hidden modes still change points but report `null`.
+  `PointService::visibleSeason()` is the only place that decides this.
 
 **Logic duplicated across PHP and TS. Change both sides:**
 

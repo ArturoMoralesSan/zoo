@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import {
     CalendarRange,
+    Megaphone,
     Percent,
     RotateCcw,
     SlidersHorizontal,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
+import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import { percentChange, scalePoints } from '@/lib/pointModes';
@@ -20,6 +22,9 @@ const props = defineProps<{
 const name = defineModel<string>('name', { required: true });
 const description = defineModel<string>('description', { required: true });
 const items = defineModel<PointModeFormRule[]>('items', { required: true });
+const isPublic = defineModel<boolean>('isPublic', { required: true });
+const publicTitle = defineModel<string>('publicTitle', { required: true });
+const publicMessage = defineModel<string>('publicMessage', { required: true });
 
 const percent = ref(100);
 
@@ -136,6 +141,92 @@ const rowError = (index: number) =>
                     {{ errors.description }}
                 </p>
             </div>
+        </div>
+    </AdminCard>
+
+    <AdminCard
+        title="Aviso para los visitantes"
+        description="Mientras este modo esté activo, la app puede mostrar este aviso y qué puntos cambian. El nombre y la descripción de arriba nunca se muestran."
+        :icon="Megaphone"
+    >
+        <div class="form-grid">
+            <div class="form-field form-field-full">
+                <ActiveSwitch
+                    id="is_public"
+                    v-model="isPublic"
+                    label="Mostrar a los visitantes"
+                    description="Si está apagado, el modo cambia los puntos sin avisar en la app."
+                    :error="errors.is_public"
+                />
+            </div>
+
+            <template v-if="isPublic">
+                <div class="form-field form-field-full">
+                    <label for="public_title" class="form-label">
+                        Título <span class="form-required">*</span>
+                    </label>
+                    <input
+                        id="public_title"
+                        v-model="publicTitle"
+                        type="text"
+                        maxlength="80"
+                        placeholder="Ej. ¡Temporada de Halloween!"
+                        class="form-input"
+                        :class="{ 'form-input-error': errors.public_title }"
+                    />
+                    <p v-if="errors.public_title" class="form-error">
+                        {{ errors.public_title }}
+                    </p>
+                </div>
+
+                <div class="form-field form-field-full">
+                    <label for="public_message" class="form-label"
+                        >Mensaje</label
+                    >
+                    <textarea
+                        id="public_message"
+                        v-model="publicMessage"
+                        maxlength="300"
+                        rows="2"
+                        placeholder="Ej. Las cartas épicas dan el doble de puntos hasta el 2 de noviembre."
+                        class="form-textarea"
+                        :class="{
+                            'form-textarea-error': errors.public_message,
+                        }"
+                    />
+                    <p v-if="errors.public_message" class="form-error">
+                        {{ errors.public_message }}
+                    </p>
+                    <p v-else class="form-help">
+                        {{ publicMessage.length }}/300. Corto: se muestra en el
+                        celular.
+                    </p>
+                </div>
+
+                <!-- Vista previa -->
+                <div class="form-field form-field-full">
+                    <p class="form-label">Vista previa</p>
+                    <div
+                        class="flex items-start gap-3 rounded-2xl border border-[#BFE3CB] bg-[#E2F3E8] px-4 py-3"
+                    >
+                        <Megaphone
+                            class="mt-0.5 h-5 w-5 shrink-0 text-[#187744]"
+                            aria-hidden="true"
+                        />
+                        <div class="min-w-0">
+                            <p class="font-semibold break-words text-[#244334]">
+                                {{ publicTitle || 'Título de la temporada' }}
+                            </p>
+                            <p
+                                v-if="publicMessage"
+                                class="mt-0.5 text-sm break-words text-[#435D4C]"
+                            >
+                                {{ publicMessage }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
     </AdminCard>
 

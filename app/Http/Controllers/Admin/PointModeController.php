@@ -19,6 +19,8 @@ use Inertia\Response;
  */
 class PointModeController extends Controller
 {
+    private const FIELDS = ['name', 'description', 'is_public', 'public_title', 'public_message'];
+
     public function index(): Response
     {
         $modes = PointMode::query()
@@ -43,7 +45,7 @@ class PointModeController extends Controller
     public function store(StorePointModeRequest $request): RedirectResponse
     {
         DB::transaction(function () use ($request) {
-            $mode = PointMode::create($request->safe()->only(['name', 'description']));
+            $mode = PointMode::create($request->safe()->only(self::FIELDS));
             $mode->rules()->sync($request->overrides());
         });
 
@@ -63,7 +65,7 @@ class PointModeController extends Controller
     public function update(UpdatePointModeRequest $request, PointMode $pointMode): RedirectResponse
     {
         DB::transaction(function () use ($request, $pointMode) {
-            $pointMode->update($request->safe()->only(['name', 'description']));
+            $pointMode->update($request->safe()->only(self::FIELDS));
             $pointMode->rules()->sync($request->overrides());
         });
 
@@ -132,6 +134,9 @@ class PointModeController extends Controller
             $copy = PointMode::create([
                 'name' => $this->copyName($pointMode->name),
                 'description' => $pointMode->description,
+                'is_public' => $pointMode->is_public,
+                'public_title' => $pointMode->public_title,
+                'public_message' => $pointMode->public_message,
             ]);
 
             $copy->rules()->sync(
@@ -161,6 +166,9 @@ class PointModeController extends Controller
             'name' => $mode->name,
             'description' => $mode->description,
             'is_active' => $mode->is_active,
+            'is_public' => $mode->is_public,
+            'public_title' => $mode->public_title,
+            'public_message' => $mode->public_message,
             'overrides' => array_map(
                 fn (int $ruleId, int $points) => [
                     'point_rule_id' => $ruleId,

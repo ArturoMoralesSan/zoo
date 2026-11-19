@@ -15,12 +15,16 @@ class PointMode extends Model
         'name',
         'description',
         'is_active',
+        'is_public',
+        'public_title',
+        'public_message',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'is_public' => 'boolean',
         ];
     }
 

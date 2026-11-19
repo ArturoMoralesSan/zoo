@@ -733,4 +733,55 @@ class DuelTest extends TestCase
             'card_id' => $this->card->id,
         ]);
     }
+
+    public function test_visible_season_is_sent_with_the_won_points(): void
+    {
+        $rare = PointRule::where('type', 'card_capture_rara')->firstOrFail();
+        $mode = PointMode::create([
+            'name' => 'Interno',
+            'is_active' => true,
+            'is_public' => true,
+            'public_title' => 'Temporada difícil',
+            'public_message' => 'Las capturas dan menos puntos.',
+        ]);
+        $mode->rules()->attach($rare->id, ['points' => 30]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.awarded', 30)
+            ->assertJsonPath('data.points.season', [
+                'title' => 'Temporada difícil',
+                'message' => 'Las capturas dan menos puntos.',
+                'base_points' => 50,
+            ]);
+    }
+
+    public function test_hidden_season_or_no_mode_sends_null_season(): void
+    {
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.awarded', 50)
+            ->assertJsonPath('data.points.season', null);
+
+        $rare = PointRule::where('type', 'card_capture_rara')->firstOrFail();
+        $mode = PointMode::create(['name' => 'Oculto', 'is_active' => true, 'is_public' => false]);
+        $mode->rules()->attach($rare->id, ['points' => 10]);
+
+        $card = $this->createCard([
+            'duel_settings_source' => 'card',
+            'questions_per_duel' => 2,
+            'retries' => 2,
+            'cooldown_minutes' => 60,
+        ]);
+        $duel = $this->startDuel($card);
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.awarded', 10)
+            ->assertJsonPath('data.points.season', null);
+    }
 }

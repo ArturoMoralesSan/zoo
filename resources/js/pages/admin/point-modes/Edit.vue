@@ -18,6 +18,9 @@ const props = defineProps<{
 const form = useForm({
     name: props.mode.name,
     description: props.mode.description ?? '',
+    is_public: props.mode.is_public,
+    public_title: props.mode.public_title ?? '',
+    public_message: props.mode.public_message ?? '',
     rules: formRules(props.rules, props.mode.overrides),
 });
 
@@ -72,6 +75,9 @@ defineOptions({
             <PointModeForm
                 v-model:name="form.name"
                 v-model:description="form.description"
+                v-model:is-public="form.is_public"
+                v-model:public-title="form.public_title"
+                v-model:public-message="form.public_message"
                 v-model:items="form.rules"
                 :rules="rules"
                 :errors="form.errors"

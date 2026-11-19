@@ -6,6 +6,8 @@ import {
     CalendarRange,
     CircleOff,
     Copy,
+    EyeOff,
+    Megaphone,
     Pencil,
     Plus,
     Power,
@@ -268,6 +270,32 @@ defineOptions({
                             Activo
                         </span>
                     </div>
+
+                    <span
+                        class="inline-flex w-fit items-center gap-1.5 rounded-lg border px-2 py-0.5 text-xs font-medium"
+                        :class="
+                            mode.is_public
+                                ? 'border-[#BFE3CB] bg-[#E2F3E8] text-[#187744]'
+                                : 'border-[#DCE7DF] bg-[#F2F7F4] text-[#718477]'
+                        "
+                        :title="
+                            mode.is_public
+                                ? `La app muestra: ${mode.public_title}`
+                                : 'Cambia los puntos sin avisar en la app'
+                        "
+                    >
+                        <Megaphone
+                            v-if="mode.is_public"
+                            class="h-3 w-3"
+                            aria-hidden="true"
+                        />
+                        <EyeOff v-else class="h-3 w-3" aria-hidden="true" />
+                        {{
+                            mode.is_public
+                                ? 'Visible en la app'
+                                : 'Oculto en la app'
+                        }}
+                    </span>
 
                     <p
                         v-if="mode.description"

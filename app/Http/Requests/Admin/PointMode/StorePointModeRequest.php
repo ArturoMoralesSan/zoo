@@ -36,6 +36,24 @@ class StorePointModeRequest extends FormRequest
                 'max:1000',
             ],
 
+            // Aviso para los visitantes (app); el nombre y la descripción son internos.
+            'is_public' => [
+                'boolean',
+            ],
+
+            'public_title' => [
+                'nullable',
+                'required_if_accepted:is_public',
+                'string',
+                'max:80',
+            ],
+
+            'public_message' => [
+                'nullable',
+                'string',
+                'max:300',
+            ],
+
             'rules' => [
                 'present',
                 'array',
@@ -66,6 +84,9 @@ class StorePointModeRequest extends FormRequest
         return [
             'name' => 'nombre',
             'description' => 'descripción',
+            'is_public' => 'mostrar a los visitantes',
+            'public_title' => 'título para los visitantes',
+            'public_message' => 'mensaje para los visitantes',
             'rules' => 'reglas',
             'rules.*.point_rule_id' => 'regla',
             'rules.*.points' => 'puntos',

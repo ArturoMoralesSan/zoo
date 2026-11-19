@@ -54,6 +54,21 @@ class DuelPointsResource extends JsonResource
              * @example false
              */
             'level_up' => $this->levelUp,
+
+            /**
+             * Temporada (modo de puntos visible) activa al ganar, para explicar por qué los
+             * puntos son distintos; `null` si no hay temporada. Campo nuevo y opcional:
+             * las versiones de la app que no lo conocen lo ignoran.
+             *
+             * @var array{title: string, message: string|null, base_points: int|null}|null
+             */
+            'season' => $this->season
+                ? [
+                    'title' => $this->season->title,
+                    'message' => $this->season->message,
+                    'base_points' => $this->season->basePoints,
+                ]
+                : null,
         ];
     }
 }

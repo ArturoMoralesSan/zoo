@@ -2,11 +2,16 @@
 
 namespace App\Services;
 
+use App\Enums\CardRarity;
+use App\Models\CardRaritySetting;
 use App\Models\Level;
 use App\Models\PointMode;
 use App\Models\PointMovement;
 use App\Models\PointRule;
 use App\Models\User;
+use App\Services\Points\PointSeason;
+use App\Services\Points\PointSeasonCardChange;
+use App\Services\Points\PointSeasonRuleChange;
 use Illuminate\Database\Eloquent\Model;
 use RuntimeException;
 
@@ -74,6 +79,111 @@ class PointService
      * Puntos que otorga la regla: los del modo activo, o los base si no hay
      * modo activo o el modo no cambia esta regla.
      */
+    /**
+     * Temporada que ven los visitantes: el modo activo, solo si está marcado
+     * como visible. Separa lo que cambia en dos listas:
+     * - cards: una entrada por rareza cuya regla de captura ("Configuración
+     *   por rareza") cambia; así la app no tiene que cruzar reglas y rarezas.
+     * - other: las demás reglas activas que cambian (boletos, donaciones…).
+     * Una regla usada por alguna rareza solo aparece en cards.
+     */
+    public function visibleSeason(): ?PointSeason
+    {
+        $mode = PointMode::active();
+
+        if (! $mode || ! $mode->is_public) {
+            return null;
+        }
+
+        $overrides = $mode->overridePoints();
+
+        /** @var array<int, PointRule> $changed */
+        $changed = [];
+
+        $rules = PointRule::query()
+            ->whereKey(array_keys($overrides))
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        foreach ($rules as $rule) {
+            if ($overrides[$rule->id] !== (int) $rule->points) {
+                $changed[$rule->id] = $rule;
+            }
+        }
+
+        $cards = [];
+        $usedByRarity = [];
+
+        foreach ($this->captureRuleIds() as $rarityValue => $ruleId) {
+            if ($ruleId === null) {
+                continue;
+            }
+
+            $usedByRarity[$ruleId] = true;
+
+            if (! isset($changed[$ruleId])) {
+                continue;
+            }
+
+            $cards[] = new PointSeasonCardChange(
+                rarity: CardRarity::from($rarityValue),
+                basePoints: (int) $changed[$ruleId]->points,
+                points: $overrides[$ruleId],
+            );
+        }
+
+        $other = [];
+
+        foreach ($changed as $ruleId => $rule) {
+            if (isset($usedByRarity[$ruleId])) {
+                continue;
+            }
+
+            $other[] = new PointSeasonRuleChange(
+                type: (string) $rule->type,
+                name: (string) $rule->name,
+                basePoints: (int) $rule->points,
+                points: $overrides[$ruleId],
+            );
+        }
+
+        return new PointSeason(
+            title: $mode->public_title ?: $mode->name,
+            message: $mode->public_message,
+            cards: $cards,
+            other: $other,
+        );
+    }
+
+    /**
+     * Regla de captura de cada rareza, en el orden del enum. Igual que el
+     * duelo: la elegida en "Configuración por rareza" (null = sin puntos) o,
+     * si la rareza no tiene configuración, su regla card_capture_<rareza>.
+     *
+     * @return array<string, int|null>
+     */
+    private function captureRuleIds(): array
+    {
+        // Valores crudos: rarity es el valor del enum CardRarity.
+        $settings = CardRaritySetting::query()
+            ->toBase()
+            ->get(['rarity', 'point_rule_id'])
+            ->keyBy('rarity');
+
+        $ruleIds = [];
+
+        foreach (CardRarity::cases() as $rarity) {
+            $setting = $settings->get($rarity->value);
+
+            $ruleIds[$rarity->value] = $setting !== null
+                ? ($setting->point_rule_id === null ? null : (int) $setting->point_rule_id)
+                : PointRule::query()->where('type', $rarity->pointRuleType())->value('id');
+        }
+
+        return $ruleIds;
+    }
+
     public function pointsFor(PointRule $rule, ?PointMode $mode): int
     {
         return $mode ? $mode->pointsFor($rule) : (int) $rule->points;
