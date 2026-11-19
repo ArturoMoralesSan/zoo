@@ -63,6 +63,14 @@ class DuelResultResource extends JsonResource
             'card' => $this->card
                 ? new CardResource($this->card, owned: true)
                 : null,
+
+            /**
+             * Puntos ganados con la captura y total acumulado del usuario.
+             * Solo si ganó; si no, `null`.
+             */
+            'points' => $this->points
+                ? new DuelPointsResource($this->points)
+                : null,
         ];
     }
 }

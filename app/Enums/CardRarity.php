@@ -23,6 +23,29 @@ enum CardRarity: string
     }
 
     /**
+     * Tipo de la regla de puntos (`point_rules.type`) que se aplica al
+     * capturar una tarjeta de esta rareza.
+     */
+    public function pointRuleType(): string
+    {
+        return 'card_capture_'.$this->value;
+    }
+
+    /**
+     * Puntos iniciales de la regla de captura. Después se administran
+     * desde el panel ("Reglas de puntos").
+     */
+    public function defaultCapturePoints(): int
+    {
+        return match ($this) {
+            self::Comun => 25,
+            self::Rara => 50,
+            self::Epica => 75,
+            self::EdicionEspecial => 100,
+        };
+    }
+
+    /**
      * Configuración de duelos por defecto de la rareza. Se usa al crear la
      * configuración por rareza en una instalación nueva; después se
      * administra desde el panel (tabla "Configuración por rareza").

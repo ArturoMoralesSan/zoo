@@ -7,6 +7,8 @@ use App\Models\CardCapture;
 use App\Models\CardQrCode;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
+use App\Models\Level;
+use App\Models\PointRule;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
 use App\Models\Species;
@@ -35,15 +37,15 @@ class DuelTest extends TestCase
         $this->user = User::factory()->create();
 
         $category = SpeciesCategory::create([
-            'name' => 'Aves ' . uniqid(),
+            'name' => 'Aves '.uniqid(),
             'is_active' => true,
         ]);
 
         $this->species = Species::create([
             'species_category_id' => $category->id,
-            'common_name' => 'Quetzal ' . uniqid(),
-            'scientific_name' => 'Pharomachrus mocinno ' . uniqid(),
-            'slug' => 'quetzal-' . uniqid(),
+            'common_name' => 'Quetzal '.uniqid(),
+            'scientific_name' => 'Pharomachrus mocinno '.uniqid(),
+            'slug' => 'quetzal-'.uniqid(),
             'is_active' => true,
         ]);
 
@@ -234,7 +236,7 @@ class DuelTest extends TestCase
             ->assertJsonPath('data.card', null)
             ->assertJsonPath('message', 'Acertaste 1 de 2. Te quedan 1 de 2 intentos.');
 
-        $this->assertSame(['outcome', 'results', 'attempts', 'review', 'card'], array_keys($response->json('data')));
+        $this->assertSame(['outcome', 'results', 'attempts', 'review', 'card', 'points'], array_keys($response->json('data')));
 
         // Por pregunta: si la respuesta elegida fue correcta, en el orden servido.
         $this->assertSame([
@@ -551,5 +553,106 @@ class DuelTest extends TestCase
 
         $this->assertSame(64, strlen($first->token));
         $this->assertNotSame($first->token, $second->token);
+    }
+
+    public function test_winning_awards_the_points_of_the_card_rarity(): void
+    {
+        $this->user->update(['points' => 15]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.awarded', 50)
+            ->assertJsonPath('data.points.total', 65)
+            ->assertJsonPath('data.points.level', null)
+            ->assertJsonPath('data.points.level_up', false);
+
+        $capture = CardCapture::query()->where('user_id', $this->user->id)->firstOrFail();
+
+        $this->assertSame(65, $this->user->fresh()->points);
+        $this->assertDatabaseHas('point_movements', [
+            'user_id' => $this->user->id,
+            'points' => 50,
+            'type' => 'card_capture_rara',
+            'reference_type' => CardCapture::class,
+            'reference_id' => $capture->id,
+        ]);
+    }
+
+    public function test_each_rarity_awards_its_own_rule(): void
+    {
+        $expected = [
+            'comun' => 25,
+            'rara' => 50,
+            'epica' => 75,
+            'edicion_especial' => 100,
+        ];
+
+        foreach ($expected as $rarity => $points) {
+            $card = $this->createCard([
+                'rarity' => $rarity,
+                'duel_settings_source' => 'card',
+                'questions_per_duel' => 2,
+                'retries' => 2,
+                'cooldown_minutes' => 60,
+            ]);
+
+            $duel = $this->startDuel($card);
+
+            $this->submit($duel, $this->answersFor($duel))
+                ->assertCreated()
+                ->assertJsonPath('data.points.awarded', $points);
+        }
+
+        $this->assertSame(array_sum($expected), $this->user->fresh()->points);
+    }
+
+    public function test_losing_awards_no_points(): void
+    {
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel, wrong: 1))
+            ->assertOk()
+            ->assertJsonPath('data.points', null);
+
+        $this->assertSame(0, (int) $this->user->fresh()->points);
+        $this->assertDatabaseCount('point_movements', 0);
+    }
+
+    public function test_inactive_rule_still_captures_the_card_without_points(): void
+    {
+        PointRule::query()->where('type', 'card_capture_rara')->update(['is_active' => false]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.outcome', 'won')
+            ->assertJsonPath('data.points.awarded', 0)
+            ->assertJsonPath('data.points.total', 0);
+
+        $this->assertDatabaseHas('card_captures', [
+            'user_id' => $this->user->id,
+            'card_id' => $this->card->id,
+        ]);
+        $this->assertDatabaseCount('point_movements', 0);
+    }
+
+    public function test_capture_points_can_level_up_the_user(): void
+    {
+        Level::create(['name' => 'Bronce', 'min_points' => 0, 'max_points' => 499]);
+        $silver = Level::create(['name' => 'Plata', 'min_points' => 500, 'max_points' => null]);
+
+        $this->user->update(['points' => 480]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.total', 530)
+            ->assertJsonPath('data.points.level.id', $silver->id)
+            ->assertJsonPath('data.points.level.name', 'Plata')
+            ->assertJsonPath('data.points.level_up', true);
     }
 }

@@ -41,6 +41,40 @@ class PointService
             );
         }
 
+        return $this->apply($user, $rule, $description, $reference);
+    }
+
+    /**
+     * Como add(), pero no falla si la regla no existe, está inactiva
+     * u otorga cero puntos: devuelve null y no otorga nada.
+     *
+     * Para flujos donde los puntos son un extra y no deben impedir la
+     * acción principal (por ejemplo, capturar una tarjeta).
+     */
+    public function addIfRuleActive(
+        User $user,
+        string $type,
+        ?string $description = null,
+        ?Model $reference = null
+    ): ?PointMovement {
+        $rule = PointRule::query()
+            ->where('type', $type)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $rule || $rule->points <= 0) {
+            return null;
+        }
+
+        return $this->apply($user, $rule, $description, $reference);
+    }
+
+    private function apply(
+        User $user,
+        PointRule $rule,
+        ?string $description,
+        ?Model $reference
+    ): PointMovement {
         $points = $rule->points;
 
         // Acumular puntos

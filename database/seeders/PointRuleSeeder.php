@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\CardRarity;
 use App\Models\PointRule;
 use Illuminate\Database\Seeder;
 
@@ -19,35 +20,19 @@ class PointRuleSeeder extends Seeder
             ]
         );
 
-        PointRule::updateOrCreate(
-            ['type' => 'species_capture'],
-            [
-                'name' => 'Captura de especie',
-                'points' => 25,
-                'description' => 'Puntos obtenidos al capturar una especie dentro del zoológico.',
-                'is_active' => true,
-            ]
-        );
-
-        PointRule::updateOrCreate(
-            ['type' => 'rare_species_capture'],
-            [
-                'name' => 'Captura de especie rara',
-                'points' => 50,
-                'description' => 'Puntos adicionales obtenidos al capturar una especie de rareza especial.',
-                'is_active' => true,
-            ]
-        );
-
-        PointRule::updateOrCreate(
-            ['type' => 'special_species_capture'],
-            [
-                'name' => 'Captura de especie edición especial',
-                'points' => 100,
-                'description' => 'Puntos obtenidos al capturar una especie de edición especial.',
-                'is_active' => true,
-            ]
-        );
+        // Una regla por rareza; firstOrCreate para no pisar los puntos
+        // que se hayan ajustado en el panel.
+        foreach (CardRarity::cases() as $rarity) {
+            PointRule::firstOrCreate(
+                ['type' => $rarity->pointRuleType()],
+                [
+                    'name' => 'Captura de tarjeta '.mb_strtolower($rarity->label()),
+                    'points' => $rarity->defaultCapturePoints(),
+                    'description' => 'Puntos obtenidos al ganar el duelo de una tarjeta '.mb_strtolower($rarity->label()).'.',
+                    'is_active' => true,
+                ]
+            );
+        }
 
         PointRule::updateOrCreate(
             ['type' => 'donation'],

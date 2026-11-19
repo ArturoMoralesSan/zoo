@@ -36,6 +36,7 @@ final readonly class DuelResult
         public ?DuelAttempts $attempts,
         public ?array $review,
         public ?Card $card,
+        public ?DuelPoints $points = null,
     ) {}
 
     public function passed(): bool

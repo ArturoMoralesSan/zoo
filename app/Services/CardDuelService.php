@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CardRarity;
 use App\Exceptions\DuelException;
 use App\Http\Resources\CardResource;
 use App\Models\Card;
@@ -9,10 +10,12 @@ use App\Models\CardCapture;
 use App\Models\CardQrCode;
 use App\Models\CardQuizState;
 use App\Models\DuelMessageSetting;
+use App\Models\Level;
 use App\Models\QuizAttempt;
 use App\Models\QuizQuestion;
 use App\Models\User;
 use App\Services\Duel\DuelAttempts;
+use App\Services\Duel\DuelPoints;
 use App\Services\Duel\DuelQuestionResult;
 use App\Services\Duel\DuelResult;
 use App\Services\Duel\DuelReviewItem;
@@ -37,7 +40,8 @@ use Illuminate\Support\Facades\DB;
 class CardDuelService
 {
     public function __construct(
-        private VisitValidator $visits
+        private VisitValidator $visits,
+        private PointService $points,
     ) {}
 
     /**
@@ -236,7 +240,7 @@ class CardDuelService
             ]);
 
             if ($passed) {
-                CardCapture::firstOrCreate(
+                $capture = CardCapture::firstOrCreate(
                     [
                         'user_id' => $user->id,
                         'card_id' => $card->id,
@@ -257,6 +261,7 @@ class CardDuelService
                     attempts: null,
                     review: null,
                     card: $card,
+                    points: $this->awardCapturePoints($user, $card, $capture),
                 );
             }
 
@@ -285,6 +290,35 @@ class CardDuelService
         }
 
         return $result;
+    }
+
+    /**
+     * Otorga los puntos de la rareza de la tarjeta, solo la primera vez que
+     * se captura. Si la regla está desactivada la captura sigue siendo
+     * válida: solo se otorgan 0 puntos.
+     */
+    private function awardCapturePoints(User $user, Card $card, CardCapture $capture): DuelPoints
+    {
+        $previousLevelId = $user->level_id;
+        $rarity = CardRarity::tryFrom((string) $card->rarity);
+
+        $movement = $capture->wasRecentlyCreated && $rarity
+            ? $this->points->addIfRuleActive(
+                $user,
+                $rarity->pointRuleType(),
+                "Captura de tarjeta: {$card->name}",
+                $capture
+            )
+            : null;
+
+        $user->refresh();
+
+        return new DuelPoints(
+            awarded: $movement->points ?? 0,
+            total: (int) $user->points,
+            level: $user->level_id ? Level::find($user->level_id) : null,
+            levelUp: $user->level_id !== null && $user->level_id !== $previousLevelId,
+        );
     }
 
     private function ensureCardIsAvailable(Card $card): void

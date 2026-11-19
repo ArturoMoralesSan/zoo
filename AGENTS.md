@@ -66,7 +66,7 @@ php artisan cards:packs:build                  # encrypted offline-pack copies (
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 323 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-17) |
+| `php artisan test` | 337 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-17) |
 | `npx vitest run` | 102 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 33 errors |
@@ -98,6 +98,7 @@ resources/js/composables/  resources/js/types/  resources/css/
 tests/Feature/{Admin,Api,Auth,Licensing,Settings}  tests/Unit  tests/js  tests/Fixtures
 docs/api-credits.md  docs/glb-resizing.md  docs/image-optimization.md   Read only when working on those features
 docs/offline-packs-{backend,app}.md   Offline card packs: server done, mobile app pending
+docs/card-points-app.md   Card capture points: server done, mobile app pending
 ```
 
 Page folders match the route resource, except `quizquestions`, `card-qr-codes` and
@@ -229,8 +230,11 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   GD (`IMAGE_ENCODER`). `generated_image` is 2× (1144×2032), not the 3× download. Older
   images are converted from the "Configuración" tab or with `cards:images:optimize`, which
   **deletes each original**. See `docs/image-optimization.md`.
-- **Points:** `PointService::add()` applies a `PointRule` by type. Levels never go down.
-  Only the ticket flows call it today.
+- **Points:** `PointService::add()` applies a `PointRule` by type (`addIfRuleActive()` skips
+  a missing or inactive rule instead of throwing). Levels never go down, and redeeming a
+  reward does not deduct points. Ticket flows award `ticket_purchase`; winning a duel awards
+  `card_capture_<rarity>` once per card (`CardRarity::pointRuleType()`) and returns
+  `data.points` (`awarded`, `total`, `level`, `level_up`). See `docs/card-points-app.md`.
 
 **Logic duplicated across PHP and TS. Change both sides:**
 
