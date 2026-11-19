@@ -11,7 +11,7 @@ final readonly class PointSeason
     /**
      * @param  list<PointSeasonCardChange>  $cards  Una por rareza cuya captura cambia.
      * @param  list<PointSeasonRuleChange>  $other  Reglas cambiadas que ninguna rareza usa.
-     * @param  array{key: string, accent: string, on_accent: string, soft: string, text: string}|null  $color
+     * @param  array{accent: string, on_accent: string, soft: string, text: string}|null  $color
      */
     public function __construct(
         public string $title,

@@ -9,7 +9,7 @@ namespace App\Services\Duel;
 final readonly class DuelPointsSeason
 {
     /**
-     * @param  array{key: string, accent: string, on_accent: string, soft: string, text: string}|null  $color
+     * @param  array{accent: string, on_accent: string, soft: string, text: string}|null  $color
      */
     public function __construct(
         public string $title,

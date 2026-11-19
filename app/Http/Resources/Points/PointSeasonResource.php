@@ -48,13 +48,12 @@ class PointSeasonResource extends JsonResource
              * Color de la temporada, con cuatro tonos ya probados para que el texto se lea
              * bien (contraste de al menos 4.5:1). `null` = colores predeterminados de la app.
              *
-             * - `key`: nombre del color (por ejemplo `calabaza`), por si la app tiene el suyo.
              * - `soft` + `text`: fondo y texto del aviso.
              * - `accent` + `on_accent`: círculo del ícono (o botón) y el ícono encima.
              *
-             * @var array{key: string, accent: string, on_accent: string, soft: string, text: string}|null
+             * @var array{accent: string, on_accent: string, soft: string, text: string}|null
              *
-             * @example {"key": "calabaza", "accent": "#B24E0A", "on_accent": "#FFFFFF", "soft": "#FDEBDC", "text": "#6B2E05"}
+             * @example {"accent": "#B24E0A", "on_accent": "#FFFFFF", "soft": "#FDEBDC", "text": "#6B2E05"}
              */
             'color' => $this->color,
 

@@ -39,16 +39,16 @@ final class PointSeasonStyles
     }
 
     /**
-     * Color con sus tonos; null si no hay o ya no está en el catálogo.
+     * Tonos del color para la API; null si no hay o ya no está en el catálogo.
+     * Sin la clave: el panel la lee del modo, y la app solo usa los tonos.
      *
-     * @return array{key: string, accent: string, on_accent: string, soft: string, text: string}|null
+     * @return array{accent: string, on_accent: string, soft: string, text: string}|null
      */
     public static function color(?string $key): ?array
     {
         foreach (self::catalog()['colors'] as $color) {
             if ($color['key'] === $key) {
                 return [
-                    'key' => $color['key'],
                     'accent' => $color['accent'],
                     'on_accent' => $color['on_accent'],
                     'soft' => $color['soft'],

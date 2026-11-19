@@ -1,7 +1,8 @@
 # Puntos en la app: guía general
 
 > **Estado (2026-11-19):** el servidor está listo. En la app ya están los puntos por
-> capturar tarjetas; las **temporadas de puntos** (aviso, ícono y color) todavía no.
+> capturar tarjetas, y las **temporadas de puntos** (banner, detalle y chip de victoria)
+> están en la rama `feat/point-seasons`.
 > Instrucciones para implementar el cliente en `../zooApp` (ZooDeck, Expo + ViroReact).
 >
 > Para quien implemente esto en `zooApp`: sigue el `AGENTS.md` de ese repositorio
@@ -54,6 +55,11 @@ Todo es **aditivo**. Revisado en `zooApp` (`main`):
 Las versiones publicadas no llaman al endpoint nuevo e ignoran los campos nuevos. Las
 nuevas deben tratarlos como opcionales (`?? null`) por si hablan con un servidor anterior.
 
+**Cambio del 2026-11-19 (solo afecta a `feat/point-seasons`, no a versiones publicadas):** se
+quitaron `color.key` (aquí y en `data.points.season` del duelo) y `cards[].rarity_label`,
+que la app no usa. `other[].type` se queda porque `name` no es único y la app necesita una
+clave por fila.
+
 ## `GET /api/points/season`
 
 Requiere sesión (`auth:sanctum`), `throttle:60,1`. Documentado también en Scramble
@@ -71,7 +77,6 @@ Requiere sesión (`auth:sanctum`), `throttle:60,1`. Documentado también en Scra
     "message": "Las cartas épicas dan el doble de puntos.",  // puede ser null
     "icon": "pumpkin",               // clave del catálogo; null = ícono predeterminado
     "color": {                       // null = colores predeterminados
-      "key": "calabaza",
       "accent": "#B24E0A",           // círculo del ícono / acento fuerte
       "on_accent": "#FFFFFF",        // ícono o texto encima de accent
       "soft": "#FDEBDC",             // fondo del aviso
@@ -80,14 +85,13 @@ Requiere sesión (`auth:sanctum`), `throttle:60,1`. Documentado también en Scra
     "cards": [                       // capturas que cambian: una entrada por rareza, en orden de rareza
       {
         "rarity": "epica",           // igual que card.rarity
-        "rarity_label": "Épica",
         "base_points": 75,           // puntos normales por capturar esta rareza
         "points": 150                // puntos en la temporada; 0 = no da puntos (la tarjeta se captura igual)
       }
     ],
     "other": [                       // otras acciones que cambian (boletos, donaciones, eventos…), por nombre
       {
-        "type": "ticket_purchase",   // clave estable; no la uses para textos ni íconos
+        "type": "ticket_purchase",   // clave única de la fila (name puede repetirse); no la uses para textos ni íconos
         "name": "Compra de boleto",  // muéstralo tal cual
         "base_points": 10,
         "points": 20
@@ -201,7 +205,7 @@ servidor. Las claves **nunca cambian**; solo se agregan nuevas.
 
 ### Colores
 
-| Clave (`color.key`) | Nombre | `accent` | `on_accent` | `soft` | `text` |
+| Clave (en el panel) | Nombre | `accent` | `on_accent` | `soft` | `text` |
 | --- | --- | --- | --- | --- | --- |
 | `esmeralda` | Esmeralda | `#06733A` | `#FFFFFF` | `#D3EBDB` | `#053D1E` |
 | `bosque` | Bosque | `#053D1E` | `#FFFFFF` | `#EEF4F0` | `#053D1E` |
@@ -215,15 +219,14 @@ servidor. Las claves **nunca cambian**; solo se agregan nuevas.
 | `cempasuchil` | Cempasúchil | `#E8A317` | `#3A2400` | `#FFF1CC` | `#6B4300` |
 | `dorado` | Dorado | `#8C6A12` | `#FFFFFF` | `#F8EED3` | `#5A430A` |
 
-Si la app ya tiene un tono propio para alguna clave (por ejemplo `esmeralda`), puede
-usarlo; si no, usa los valores que llegan en `color`.
+La API no envía la clave del color, solo sus cuatro tonos: usa siempre los valores que
+llegan en `color` (la tabla es de referencia).
 
 ## Implementación en la app (checklist)
 
 1. **Tipos** (por ejemplo `src/types/points.ts`):
    ```ts
    export type SeasonColor = {
-     key: string
      accent: string
      on_accent: string
      soft: string
@@ -231,12 +234,11 @@ usarlo; si no, usa los valores que llegan en `color`.
    }
    export type PointSeasonCardChange = {
      rarity: 'comun' | 'rara' | 'epica' | 'edicion_especial'
-     rarity_label: string
      base_points: number
      points: number
    }
    export type PointSeasonRuleChange = {
-     type: string
+     type: string // clave única de la fila; name puede repetirse
      name: string
      base_points: number
      points: number
@@ -259,13 +261,14 @@ usarlo; si no, usa los valores que llegan en `color`.
    el ícono en un círculo `accent` con `on_accent`. Si `data` es `null`, no muestres nada.
    Permite cerrarlo, y vuelve a mostrarlo solo si cambia el `title`.
 5. **Detalle opcional:** desde el banner, una hoja con dos secciones, en este orden:
-   - **Cartas** (`cards`): "Cartas épicas: ~~75~~ 150 pts". Usa `rarity_label`, o los
-     nombres y colores de rareza que la app ya tenga, por `rarity`.
+   - **Cartas** (`cards`): "Cartas épicas: ~~75~~ 150 pts". Usa los nombres y colores de
+     rareza que la app ya tiene, por `rarity` (la API no envía el nombre de la rareza).
    - **Otras acciones** (`other`): "Compra de boleto: ~~10~~ 20 pts", con `name` tal cual.
-     No dependas de `type` para textos o íconos: el zoológico puede crear acciones nuevas.
+     Usa `type` como `key` de la fila (`name` puede repetirse), pero no para textos o
+     íconos: el zoológico puede crear acciones nuevas.
    Oculta la sección que venga vacía; con `points: 0` muestra "Sin puntos" en lugar de "0 pts".
-6. **Victoria del duelo:** ver [card-points-app.md](card-points-app.md) (`points.season`
-   trae el mismo `icon` y `color`).
+6. **Victoria del duelo:** ver [card-points-app.md](card-points-app.md). `points.season`
+   trae el mismo `icon` y `color`, y su `message` es el texto del aviso de victoria.
 7. **Textos:** usa `title`, `message` y `name` tal cual vienen; los escribe el zoológico.
 
 ## Cómo probar

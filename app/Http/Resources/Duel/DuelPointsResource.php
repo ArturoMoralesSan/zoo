@@ -56,14 +56,25 @@ class DuelPointsResource extends JsonResource
             'level_up' => $this->levelUp,
 
             /**
-             * Temporada (modo de puntos visible) activa al ganar, para explicar por qué los
-             * puntos son distintos; `null` si no hay temporada. Campo nuevo y opcional:
-             * las versiones de la app que no lo conocen lo ignoran.
+             * Temporada (modo de puntos visible) activa al ganar, para explicar en el aviso
+             * de victoria por qué los puntos son distintos. Por ejemplo:
+             * "Por la temporada `title`, esta carta da `awarded` puntos en lugar de `base_points`",
+             * seguido de `message`.
              *
-             * `icon` y `color` son los mismos que en `GET /points/season`: `null` = usa el
-             * ícono o color predeterminado de la app.
+             * `null` si no hay modo activo o si el modo está oculto a los visitantes. Un modo
+             * oculto igual cambia los puntos: `awarded` siempre trae los puntos reales.
              *
-             * @var array{title: string, message: string|null, base_points: int|null, icon: string|null, color: array{key: string, accent: string, on_accent: string, soft: string, text: string}|null}|null
+             * - `title`: nombre público de la temporada.
+             * - `message`: texto del zoológico para el aviso de victoria; `null` si no escribió uno.
+             * - `base_points`: puntos normales (sin temporada) de la regla de esta rareza.
+             *   Compáralo con `awarded`: menor = la temporada los bajó, mayor = los subió, igual =
+             *   la temporada no cambia esta rareza (no expliques nada). Si la temporada pone la
+             *   rareza en 0, `awarded` es `0` y `base_points` trae el valor normal. `null` si la
+             *   rareza no da puntos ("Sin puntos" o regla desactivada).
+             * - `icon` y `color`: los mismos que en `GET /points/season`; `null` = usa el ícono o
+             *   color predeterminado de la app.
+             *
+             * @var array{title: string, message: string|null, base_points: int|null, icon: string|null, color: array{accent: string, on_accent: string, soft: string, text: string}|null}|null
              */
             'season' => $this->season
                 ? [

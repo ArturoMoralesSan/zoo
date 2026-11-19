@@ -29,15 +29,16 @@ class PointSeasonController extends Controller
      *
      * | Lista | Qué contiene | Cómo mostrarla |
      * |---|---|---|
-     * | `cards` | Una entrada por **rareza** cuyos puntos de captura cambian, en orden de rareza. | "Cartas épicas: ~~75~~ 150 pts". Usa `rarity_label` o tus propios nombres por `rarity`. |
+     * | `cards` | Una entrada por **rareza** cuyos puntos de captura cambian, en orden de rareza. | "Cartas épicas: ~~75~~ 150 pts". Nombra la rareza con los textos de la app según `rarity`. |
      * | `other` | Las demás **acciones** que cambian: boletos, donaciones, eventos… | "Compra de boleto: ~~10~~ 20 pts". Usa `name` tal cual. |
      *
      * - Lo que no aparece en ninguna lista da sus puntos normales.
      * - `points: 0` significa que esa acción no da puntos durante la temporada (la tarjeta
      *   se captura igual).
      * - Ambas listas pueden venir vacías aunque haya temporada (solo un aviso).
-     * - No uses `other[].type` para elegir textos o íconos: el zoológico puede crear acciones
-     *   nuevas en cualquier momento. Muestra `name`.
+     * - Muestra `name` tal cual y usa `type` como clave de cada fila (es único; `name` no).
+     *   No uses `type` para elegir textos o íconos: el zoológico puede crear acciones nuevas
+     *   en cualquier momento.
      * - Las acciones de `cards` no se repiten en `other`. Si el zoológico usa la misma regla
      *   para una rareza y para otra acción, aparece solo en `cards`.
      *

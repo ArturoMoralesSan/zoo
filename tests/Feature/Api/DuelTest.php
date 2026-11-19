@@ -759,7 +759,6 @@ class DuelTest extends TestCase
                 'base_points' => 50,
                 'icon' => 'snowflake',
                 'color' => [
-                    'key' => 'azul-invierno',
                     'accent' => '#1F5F8B',
                     'on_accent' => '#FFFFFF',
                     'soft' => '#E2EDF5',
@@ -793,5 +792,100 @@ class DuelTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.points.awarded', 10)
             ->assertJsonPath('data.points.season', null);
+    }
+
+    public function test_visible_season_that_raises_the_rarity_awards_more_than_base_points(): void
+    {
+        $this->visibleSeason(['card_capture_rara' => 120]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.awarded', 120)
+            ->assertJsonPath('data.points.total', 120)
+            ->assertJsonPath('data.points.season.base_points', 50);
+    }
+
+    public function test_visible_season_that_sets_the_rarity_to_zero_keeps_its_base_points(): void
+    {
+        $this->visibleSeason(['card_capture_rara' => 0]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.outcome', 'won')
+            ->assertJsonPath('data.points.awarded', 0)
+            ->assertJsonPath('data.points.total', 0)
+            ->assertJsonPath('data.points.season.title', 'Temporada de prueba')
+            ->assertJsonPath('data.points.season.base_points', 50);
+
+        $this->assertDatabaseCount('point_movements', 0);
+    }
+
+    public function test_visible_season_sends_null_base_points_when_the_rarity_has_no_points(): void
+    {
+        $this->visibleSeason(['card_capture_epica' => 150]);
+        CardRaritySetting::where('rarity', 'rara')->update(['point_rule_id' => null]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.awarded', 0)
+            ->assertJsonPath('data.points.season.title', 'Temporada de prueba')
+            ->assertJsonPath('data.points.season.base_points', null);
+    }
+
+    public function test_visible_season_sends_null_base_points_when_the_rarity_rule_is_inactive(): void
+    {
+        $this->visibleSeason(['card_capture_rara' => 80]);
+        PointRule::where('type', 'card_capture_rara')->update(['is_active' => false]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.awarded', 0)
+            ->assertJsonPath('data.points.season.base_points', null);
+
+        $this->assertDatabaseCount('point_movements', 0);
+    }
+
+    public function test_visible_season_that_does_not_change_the_rarity_sends_equal_base_points(): void
+    {
+        $this->visibleSeason(['card_capture_epica' => 150]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.awarded', 50)
+            ->assertJsonPath('data.points.season.base_points', 50);
+    }
+
+    /**
+     * Activa un modo visible con puntos por tipo de regla.
+     *
+     * @param  array<string, int>  $points
+     */
+    private function visibleSeason(array $points): PointMode
+    {
+        $mode = PointMode::create([
+            'name' => 'Interno',
+            'is_active' => true,
+            'is_public' => true,
+            'public_title' => 'Temporada de prueba',
+        ]);
+
+        foreach ($points as $type => $value) {
+            $mode->rules()->attach(
+                PointRule::where('type', $type)->firstOrFail()->id,
+                ['points' => $value]
+            );
+        }
+
+        return $mode;
     }
 }

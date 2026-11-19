@@ -32,13 +32,6 @@ class PointSeasonCardChangeResource extends JsonResource
             'rarity' => $this->rarity->value,
 
             /**
-             * Nombre de la rareza para mostrar.
-             *
-             * @example Épica
-             */
-            'rarity_label' => $this->rarity->label(),
-
-            /**
              * Puntos normales por capturar una tarjeta de esta rareza (sin temporada).
              *
              * @example 75

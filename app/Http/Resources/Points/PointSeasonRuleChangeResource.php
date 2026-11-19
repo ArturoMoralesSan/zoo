@@ -21,9 +21,9 @@ class PointSeasonRuleChangeResource extends JsonResource
     {
         return [
             /**
-             * Identificador de la regla de puntos. Sirve como clave estable (por ejemplo,
-             * para `key` en una lista), pero no para decidir textos o íconos: el zoológico
-             * puede crear reglas nuevas en cualquier momento.
+             * Identificador único de la regla de puntos: úsalo como clave de cada fila (por
+             * ejemplo, `key` en una lista), porque `name` puede repetirse. No lo uses para
+             * decidir textos o íconos: el zoológico puede crear reglas nuevas en cualquier momento.
              *
              * @example ticket_purchase
              */

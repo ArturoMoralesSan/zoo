@@ -97,7 +97,6 @@ class PointSeasonTest extends TestCase
                     'cards' => [
                         [
                             'rarity' => 'epica',
-                            'rarity_label' => 'Épica',
                             'base_points' => 75,
                             'points' => 150,
                         ],
@@ -187,7 +186,6 @@ class PointSeasonTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.icon', 'pumpkin')
             ->assertJsonPath('data.color', [
-                'key' => 'calabaza',
                 'accent' => '#B24E0A',
                 'on_accent' => '#FFFFFF',
                 'soft' => '#FDEBDC',
