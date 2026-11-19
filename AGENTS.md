@@ -66,7 +66,7 @@ php artisan cards:packs:build                  # encrypted offline-pack copies (
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 373 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-19) |
+| `php artisan test` | 381 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-19) |
 | `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
@@ -245,7 +245,8 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   Movements store `point_mode_id`. A mode with `is_public` shows its `public_title`/`public_message`
   (never its internal name) through `GET /api/points/season` and the additive
   `data.points.season` on duel wins; hidden modes still change points but report `null`.
-  `PointService::visibleSeason()` is the only place that decides this. Seasons also carry
+  `PointService::visibleSeason()` is the only place that decides this. `PointModeSeeder` holds six
+  example seasons (all inactive, created only if missing by name). Seasons also carry
   `icon`/`color` keys from the shared catalog (`PointSeasonStyles`); null or unknown = app default.
 
 **Logic duplicated across PHP and TS. Change both sides:**
