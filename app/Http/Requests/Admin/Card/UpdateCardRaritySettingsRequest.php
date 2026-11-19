@@ -55,6 +55,14 @@ class UpdateCardRaritySettingsRequest extends FormRequest
                 'sometimes',
                 'boolean',
             ],
+
+            // Null = la rareza no otorga puntos.
+            'settings.*.point_rule_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('point_rules', 'id'),
+            ],
         ];
     }
 
@@ -65,6 +73,7 @@ class UpdateCardRaritySettingsRequest extends FormRequest
             'settings.*.retries' => 'reintentos',
             'settings.*.cooldown_minutes' => 'tiempo de espera',
             'settings.*.reveal_answers_on_lockout' => 'mostrar respuestas',
+            'settings.*.point_rule_id' => 'regla de puntos',
         ];
     }
 }

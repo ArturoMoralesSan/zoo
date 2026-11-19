@@ -10,23 +10,28 @@
 ## Qué hace el servidor
 
 Al **ganar un duelo** (`POST /api/duels/{attempt}/submit` con `outcome: "won"`), el
-servidor captura la tarjeta y le suma al usuario los puntos de la **rareza** de esa
-tarjeta. Todo pasa en la misma transacción que la captura.
+servidor captura la tarjeta y le suma al usuario los puntos de la **regla de puntos que
+el panel tiene elegida para la rareza** de esa tarjeta. Todo pasa en la misma transacción
+que la captura.
 
-| Rareza (`card.rarity`) | Regla (`point_rules.type`) | Puntos iniciales |
+Cada rareza apunta a una regla de puntos (o a ninguna) en "Tarjetas → Configuración por
+rareza". Al instalarse, cada rareza usa su propia regla:
+
+| Rareza (`card.rarity`) | Regla inicial (`point_rules.type`) | Puntos iniciales |
 | --- | --- | --- |
 | `comun` | `card_capture_comun` | 25 |
 | `rara` | `card_capture_rara` | 50 |
 | `epica` | `card_capture_epica` | 75 |
 | `edicion_especial` | `card_capture_edicion_especial` | 100 |
 
-- Los administradores pueden cambiar estos valores o desactivar una regla en el panel
-  ("Reglas de puntos"). **La app nunca debe calcular ni guardar en código cuántos puntos
-  vale una rareza**: siempre usa lo que devuelve el servidor.
+- Los administradores pueden cambiar los puntos o desactivar una regla ("Reglas de puntos"),
+  elegir otra regla para una rareza, o dejarla en "Sin puntos" ("Configuración por rareza").
+  **La app nunca debe calcular ni guardar en código cuántos puntos vale una rareza**:
+  siempre usa lo que devuelve el servidor.
 - Los puntos se otorgan **una sola vez por tarjeta** (solo en la captura). Perder un duelo
   no da ni quita puntos.
-- Si la regla de la rareza está desactivada, la tarjeta se captura igual y
-  `points.awarded` llega en `0`.
+- Si la regla de la rareza está desactivada o la rareza está en "Sin puntos", la tarjeta
+  se captura igual y `points.awarded` llega en `0`.
 - Los puntos son acumulativos y el nivel nunca baja. Canjear una recompensa en el zoológico
   no descuenta puntos.
 - Todo es autoritativo del servidor: no hay endpoint para sumar puntos desde la app.
@@ -48,7 +53,7 @@ respuesta; ningún otro endpoint cambió.
     "review": null,
     "card": { /* CardResource, igual que antes */ },
     "points": {
-      "awarded": 50,          // puntos otorgados por esta captura (0 si la regla está desactivada)
+      "awarded": 50,          // puntos otorgados por esta captura (0 si la rareza no otorga puntos)
       "total": 320,           // total acumulado del usuario DESPUÉS de esta captura
       "level": { "id": 2, "name": "Plata" },  // nivel después de la captura; null si no hay niveles
       "level_up": true        // true si esta captura lo subió de nivel
@@ -97,10 +102,10 @@ export type DuelPoints = {
 
 ## Cómo probar
 
-- Gana el duelo de una tarjeta de cada rareza y revisa que `awarded` coincida con la tabla
-  (o con lo que haya en "Reglas de puntos" del panel).
-- Desactiva la regla de una rareza en el panel, gana una tarjeta de esa rareza: se captura
-  y no aparece "+0".
+- Gana el duelo de una tarjeta de cada rareza y revisa que `awarded` coincida con la regla
+  elegida para esa rareza en "Configuración por rareza".
+- Pon una rareza en "Sin puntos" (o desactiva su regla), gana una tarjeta de esa rareza:
+  se captura y no aparece "+0".
 - Pon a un usuario cerca del mínimo del siguiente nivel (por ejemplo, 480 puntos con el
   nivel Plata en 500) y gana una tarjeta rara: debe salir el aviso de nivel nuevo.
 - Pierde un duelo: no aparece nada de puntos.

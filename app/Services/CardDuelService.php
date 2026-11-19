@@ -11,6 +11,7 @@ use App\Models\CardQrCode;
 use App\Models\CardQuizState;
 use App\Models\DuelMessageSetting;
 use App\Models\Level;
+use App\Models\PointRule;
 use App\Models\QuizAttempt;
 use App\Models\QuizQuestion;
 use App\Models\User;
@@ -300,12 +301,14 @@ class CardDuelService
     private function awardCapturePoints(User $user, Card $card, CardCapture $capture): DuelPoints
     {
         $previousLevelId = $user->level_id;
-        $rarity = CardRarity::tryFrom((string) $card->rarity);
+        $rule = $capture->wasRecentlyCreated
+            ? $this->capturePointRule($card)
+            : null;
 
-        $movement = $capture->wasRecentlyCreated && $rarity
+        $movement = $rule
             ? $this->points->addIfRuleActive(
                 $user,
-                $rarity->pointRuleType(),
+                $rule,
                 "Captura de tarjeta: {$card->name}",
                 $capture
             )
@@ -319,6 +322,24 @@ class CardDuelService
             level: $user->level_id ? Level::find($user->level_id) : null,
             levelUp: $user->level_id !== null && $user->level_id !== $previousLevelId,
         );
+    }
+
+    /**
+     * Regla de puntos elegida para la rareza de la tarjeta ("Configuración
+     * por rareza"); null si la rareza no otorga puntos. Si la rareza no
+     * tiene configuración, se usa su regla card_capture_<rareza>.
+     */
+    private function capturePointRule(Card $card): ?PointRule
+    {
+        if ($card->raritySetting !== null) {
+            return $card->raritySetting->pointRule;
+        }
+
+        $rarity = CardRarity::tryFrom((string) $card->rarity);
+
+        return $rarity
+            ? PointRule::query()->where('type', $rarity->pointRuleType())->first()
+            : null;
     }
 
     private function ensureCardIsAvailable(Card $card): void

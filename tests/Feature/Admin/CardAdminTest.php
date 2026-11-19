@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Card;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
+use App\Models\PointRule;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\User;
@@ -263,6 +264,57 @@ class CardAdminTest extends TestCase
                 'win_message' => str_repeat('a', 256),
             ])
             ->assertSessionHasErrors('win_message');
+    }
+
+    public function test_rarity_settings_start_with_their_card_capture_rule(): void
+    {
+        foreach (CardRaritySetting::with('pointRule')->get() as $setting) {
+            $this->assertSame(
+                'card_capture_'.$setting->rarity->value,
+                $setting->pointRule?->type
+            );
+        }
+    }
+
+    public function test_admin_can_choose_the_point_rule_of_each_rarity(): void
+    {
+        $bonus = PointRule::create([
+            'type' => 'bonus_test',
+            'name' => 'Bono',
+            'points' => 200,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->from(route('admin.cards.index'))
+            ->put(route('admin.cards.rarity-settings.update'), [
+                'settings' => [
+                    ['rarity' => 'comun', 'point_rule_id' => $bonus->id],
+                    ['rarity' => 'epica', 'point_rule_id' => null],
+                ],
+            ])
+            ->assertRedirect(route('admin.cards.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('card_rarity_settings', ['rarity' => 'comun', 'point_rule_id' => $bonus->id]);
+        $this->assertDatabaseHas('card_rarity_settings', ['rarity' => 'epica', 'point_rule_id' => null]);
+
+        // Las rarezas no enviadas conservan su regla.
+        $this->assertSame(
+            'card_capture_rara',
+            CardRaritySetting::where('rarity', 'rara')->firstOrFail()->pointRule?->type
+        );
+    }
+
+    public function test_rarity_point_rule_must_exist(): void
+    {
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.rarity-settings.update'), [
+                'settings' => [
+                    ['rarity' => 'comun', 'point_rule_id' => 999999],
+                ],
+            ])
+            ->assertSessionHasErrors('settings.0.point_rule_id');
     }
 
     public function test_rarity_settings_update_validates_input(): void

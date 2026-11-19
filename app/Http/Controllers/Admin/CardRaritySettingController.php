@@ -25,6 +25,7 @@ class CardRaritySettingController extends Controller
                     'retries',
                     'cooldown_minutes',
                     'reveal_answers_on_lockout',
+                    'point_rule_id',
                 ]);
 
                 CardRaritySetting::updateOrCreate(

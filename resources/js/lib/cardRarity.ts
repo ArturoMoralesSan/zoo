@@ -9,6 +9,17 @@ export interface CardRaritySetting {
     retries: number;
     cooldown_minutes: number;
     reveal_answers_on_lockout: boolean;
+    // Regla de puntos al capturar; null = la rareza no otorga puntos.
+    point_rule_id: number | null;
+}
+
+// Opción del selector "Regla de puntos" de la configuración por rareza.
+export interface PointRuleOption {
+    id: number;
+    name: string;
+    type: string;
+    points: number;
+    is_active: boolean;
 }
 
 export const rarityOptions: { value: CardRarity; label: string }[] = [

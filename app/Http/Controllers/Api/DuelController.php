@@ -107,8 +107,9 @@ class DuelController extends Controller
      * tarjeta (si usa mensajes personalizados) o el predeterminado. Los marcadores ya vienen
      * reemplazados; se muestra tal cual en el modal del resultado.
      *
-     * **Puntos:** al ganar, `points.awarded` son los puntos de la rareza de la tarjeta
-     * (reglas `card_capture_*` del panel; `0` si la regla está desactivada) y
+     * **Puntos:** al ganar, `points.awarded` son los puntos de la regla elegida para la
+     * rareza de la tarjeta en el panel (`0` si la rareza no otorga puntos o su regla está
+     * desactivada) y
      * `points.total` el total acumulado del usuario después de la captura.
      *
      * **Respuestas:** `results` solo indica si cada opción elegida fue correcta, para marcar

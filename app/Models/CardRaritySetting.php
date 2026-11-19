@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CardRarity;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CardRaritySetting extends Model
@@ -23,6 +24,7 @@ class CardRaritySetting extends Model
         'retries',
         'cooldown_minutes',
         'reveal_answers_on_lockout',
+        'point_rule_id',
     ];
 
     protected function casts(): array
@@ -33,7 +35,18 @@ class CardRaritySetting extends Model
             'retries' => 'integer',
             'cooldown_minutes' => 'integer',
             'reveal_answers_on_lockout' => 'boolean',
+            'point_rule_id' => 'integer',
         ];
+    }
+
+    /**
+     * Regla de puntos al capturar una tarjeta de esta rareza; null = sin puntos.
+     *
+     * @return BelongsTo<PointRule, $this>
+     */
+    public function pointRule(): BelongsTo
+    {
+        return $this->belongsTo(PointRule::class);
     }
 
     public function cards(): HasMany
