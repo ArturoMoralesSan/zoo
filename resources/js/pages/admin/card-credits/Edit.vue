@@ -96,6 +96,7 @@ defineOptions({
             <CardCreditForm
                 v-model="form"
                 v-model:then="form.then"
+                compact
                 :assets="assets"
                 :licenses="licenses"
                 :sources="assetSources"

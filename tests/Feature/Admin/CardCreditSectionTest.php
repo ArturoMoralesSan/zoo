@@ -553,7 +553,15 @@ class CardCreditSectionTest extends TestCase
         $card = $this->createCard();
 
         $this->store($card, $this->own(['asset' => 'thumbnail', 'then' => 'add_based_on_model']))
-            ->assertRedirect(route('admin.cards.credits.create', [$card, 'asset' => 'thumbnail', 'role' => 'based_on']));
+            ->assertRedirect(route('admin.cards.credits.create', [$card, 'asset' => 'thumbnail', 'role' => 'based_on', 'chain' => 'render_model']));
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cards.credits.create', [$card, 'asset' => 'thumbnail', 'role' => 'based_on', 'chain' => 'render_model']))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('preset.chain', 'render_model'));
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cards.credits.create', [$card, 'chain' => 'otra']))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('preset.chain', null));
     }
 
     // ---------------------------------------------------------------------

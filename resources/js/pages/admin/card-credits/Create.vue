@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, Copyright, Save } from 'lucide-vue-next';
+import { ArrowLeft, Check, Copyright, Save } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 import AdminButton from '@/components/admin/AdminButton.vue';
@@ -31,12 +31,20 @@ const props = defineProps<{
         asset: CreditAsset | null;
         role: CreditRole | null;
         source: AssetSourceValue | null;
+        // Paso 2 de "render de un modelo de otro sitio".
+        chain: 'render_model' | null;
     };
 }>();
 
 const presetAsset = props.assets.find(
     (item) => item.value === props.preset.asset && item.has_file,
 );
+
+// Desde la lista ya vienen el archivo y el tipo: no se vuelven a preguntar.
+const compact =
+    presetAsset !== undefined &&
+    props.preset.role !== null &&
+    !(props.preset.role === 'origin' && presetAsset.has_origin);
 
 const form = useForm({
     ...emptyCredit(presetAsset?.value ?? null, props.preset.role),
@@ -86,7 +94,7 @@ defineOptions({
     >
         <PageHeader
             title="Nuevo crédito"
-            :description="`Registra de dónde salió un recurso de la tarjeta ${card.name} y con qué licencia.`"
+            :description="`Quién hizo el archivo de ${card.name} y con qué licencia.`"
             section="Créditos de tarjeta"
             :icon="Copyright"
             :action-icon="ArrowLeft"
@@ -99,10 +107,37 @@ defineOptions({
             message="El crédito se asociará a esta tarjeta."
         />
 
+        <!-- Paso 2 del render de un modelo de otro sitio -->
+        <div
+            v-if="preset.chain === 'render_model' && presetAsset"
+            class="flex flex-col gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 sm:flex-row sm:items-center"
+        >
+            <ol class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                <li
+                    class="inline-flex items-center gap-1.5 rounded-full border border-[#C8DCCF] bg-white px-3 py-1 text-[#187744]"
+                >
+                    <Check :size="12" />
+                    1. {{ presetAsset.label }}
+                </li>
+                <li class="text-[#A0B2A6]">→</li>
+                <li
+                    class="inline-flex items-center rounded-full bg-[#187744] px-3 py-1 text-white"
+                >
+                    2. Modelo 3D de otro sitio
+                </li>
+            </ol>
+            <p class="text-sm text-sky-900">
+                Ahora registra el modelo 3D que renderizaste para
+                {{ presetAsset.label.toLowerCase() }}: su autor, el sitio y su
+                licencia.
+            </p>
+        </div>
+
         <form class="form-container" @submit.prevent="submit">
             <CardCreditForm
                 v-model="form"
                 v-model:then="form.then"
+                :compact="compact"
                 :assets="assets"
                 :licenses="licenses"
                 :sources="assetSources"
