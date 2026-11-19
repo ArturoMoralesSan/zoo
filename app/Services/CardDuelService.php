@@ -329,6 +329,8 @@ class CardDuelService
                 ? new DuelPointsSeason(
                     title: $season->title,
                     message: $season->message,
+                    icon: $season->icon,
+                    color: $season->color,
                     basePoints: $baseRule?->is_active ? (int) $baseRule->points : null,
                 )
                 : null,

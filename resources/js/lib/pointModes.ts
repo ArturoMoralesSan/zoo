@@ -22,6 +22,9 @@ export interface PointMode {
     is_public: boolean;
     public_title: string | null;
     public_message: string | null;
+    // Claves de resources/data/point-season-styles.json; null = predeterminado de la app.
+    icon: string | null;
+    color: string | null;
     overrides: PointModeOverride[];
     updated_at: string | null;
 }

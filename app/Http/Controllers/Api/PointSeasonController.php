@@ -41,6 +41,11 @@ class PointSeasonController extends Controller
      * - Las acciones de `cards` no se repiten en `other`. Si el zoológico usa la misma regla
      *   para una rareza y para otra acción, aparece solo en `cards`.
      *
+     * **Estilo:** `icon` es una clave del catálogo de íconos (la app la traduce a su ícono) y
+     * `color` trae los tonos listos para usar en el aviso. Cualquiera de los dos puede ser
+     * `null`: entonces la app usa su ícono o color predeterminado. Una clave de ícono que
+     * la app no conozca también debe mostrarse con el predeterminado.
+     *
      * **No calcules puntos con esto.** Es para avisar y explicar; los puntos que se ganan
      * siempre los decide el servidor en la respuesta de la acción.
      *

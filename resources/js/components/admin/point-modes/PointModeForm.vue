@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { HugeiconsIcon } from '@hugeicons/vue';
 import {
     CalendarRange,
     Megaphone,
@@ -11,8 +12,11 @@ import { computed, ref } from 'vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
+import SeasonColorPicker from '@/components/admin/point-modes/SeasonColorPicker.vue';
+import SeasonIconPicker from '@/components/admin/point-modes/SeasonIconPicker.vue';
 import { percentChange, scalePoints } from '@/lib/pointModes';
 import type { PointModeFormRule, PointRuleRow } from '@/lib/pointModes';
+import { resolveSeasonColor, seasonHugeIcon } from '@/lib/pointSeasonStyles';
 
 const props = defineProps<{
     rules: PointRuleRow[];
@@ -25,6 +29,10 @@ const items = defineModel<PointModeFormRule[]>('items', { required: true });
 const isPublic = defineModel<boolean>('isPublic', { required: true });
 const publicTitle = defineModel<string>('publicTitle', { required: true });
 const publicMessage = defineModel<string>('publicMessage', { required: true });
+const icon = defineModel<string | null>('icon', { required: true });
+const color = defineModel<string | null>('color', { required: true });
+
+const previewColor = computed(() => resolveSeasonColor(color.value));
 
 const percent = ref(100);
 
@@ -203,28 +211,65 @@ const rowError = (index: number) =>
                     </p>
                 </div>
 
-                <!-- Vista previa -->
+                <div class="form-field form-field-full">
+                    <p class="form-label">Ícono</p>
+                    <SeasonIconPicker
+                        v-model="icon"
+                        :color="previewColor"
+                        :error="errors.icon"
+                    />
+                </div>
+
+                <div class="form-field form-field-full">
+                    <p class="form-label">Color</p>
+                    <SeasonColorPicker v-model="color" :error="errors.color" />
+                </div>
+
+                <!-- Vista previa: así se ve en la app (los predeterminados los decide la app) -->
                 <div class="form-field form-field-full">
                     <p class="form-label">Vista previa</p>
                     <div
-                        class="flex items-start gap-3 rounded-2xl border border-[#BFE3CB] bg-[#E2F3E8] px-4 py-3"
+                        class="flex items-start gap-3 rounded-2xl px-4 py-3"
+                        :style="{
+                            backgroundColor: previewColor.soft,
+                            color: previewColor.text,
+                        }"
                     >
-                        <Megaphone
-                            class="mt-0.5 h-5 w-5 shrink-0 text-[#187744]"
-                            aria-hidden="true"
-                        />
+                        <span
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                            :style="{
+                                backgroundColor: previewColor.accent,
+                                color: previewColor.on_accent,
+                            }"
+                        >
+                            <HugeiconsIcon
+                                :icon="seasonHugeIcon(icon)"
+                                :size="22"
+                                :stroke-width="1.8"
+                            />
+                        </span>
                         <div class="min-w-0">
-                            <p class="font-semibold break-words text-[#244334]">
+                            <p class="font-semibold break-words">
                                 {{ publicTitle || 'Título de la temporada' }}
                             </p>
                             <p
                                 v-if="publicMessage"
-                                class="mt-0.5 text-sm break-words text-[#435D4C]"
+                                class="mt-0.5 text-sm break-words opacity-90"
                             >
                                 {{ publicMessage }}
                             </p>
                         </div>
                     </div>
+                    <p v-if="icon === null || color === null" class="form-help">
+                        Con "Predeterminado", la app usa su propio
+                        {{
+                            icon === null && color === null
+                                ? 'ícono y color'
+                                : icon === null
+                                  ? 'ícono'
+                                  : 'color'
+                        }}; aquí se muestra el que usa normalmente.
+                    </p>
                 </div>
             </template>
         </div>

@@ -21,6 +21,8 @@ const form = useForm({
     is_public: props.mode.is_public,
     public_title: props.mode.public_title ?? '',
     public_message: props.mode.public_message ?? '',
+    icon: props.mode.icon,
+    color: props.mode.color,
     rules: formRules(props.rules, props.mode.overrides),
 });
 
@@ -78,6 +80,8 @@ defineOptions({
                 v-model:is-public="form.is_public"
                 v-model:public-title="form.public_title"
                 v-model:public-message="form.public_message"
+                v-model:icon="form.icon"
+                v-model:color="form.color"
                 v-model:items="form.rules"
                 :rules="rules"
                 :errors="form.errors"

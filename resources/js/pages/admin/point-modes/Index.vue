@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { HugeiconsIcon } from '@hugeicons/vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowDown,
@@ -7,7 +8,6 @@ import {
     CircleOff,
     Copy,
     EyeOff,
-    Megaphone,
     Pencil,
     Plus,
     Power,
@@ -26,6 +26,7 @@ import type {
     PointModeChange,
     PointRuleRow,
 } from '@/lib/pointModes';
+import { resolveSeasonColor, seasonHugeIcon } from '@/lib/pointSeasonStyles';
 import admin from '@/routes/admin';
 
 const props = defineProps<{
@@ -271,30 +272,50 @@ defineOptions({
                         </span>
                     </div>
 
-                    <span
-                        class="inline-flex w-fit items-center gap-1.5 rounded-lg border px-2 py-0.5 text-xs font-medium"
-                        :class="
-                            mode.is_public
-                                ? 'border-[#BFE3CB] bg-[#E2F3E8] text-[#187744]'
-                                : 'border-[#DCE7DF] bg-[#F2F7F4] text-[#718477]'
-                        "
-                        :title="
-                            mode.is_public
-                                ? `La app muestra: ${mode.public_title}`
-                                : 'Cambia los puntos sin avisar en la app'
-                        "
+                    <!-- Aviso en la app: con su ícono y color, o "oculto" -->
+                    <div
+                        v-if="mode.is_public"
+                        class="flex items-center gap-2.5 rounded-xl px-3 py-2"
+                        :style="{
+                            backgroundColor: resolveSeasonColor(mode.color)
+                                .soft,
+                            color: resolveSeasonColor(mode.color).text,
+                        }"
+                        :title="`La app muestra: ${mode.public_title}`"
                     >
-                        <Megaphone
-                            v-if="mode.is_public"
-                            class="h-3 w-3"
-                            aria-hidden="true"
-                        />
-                        <EyeOff v-else class="h-3 w-3" aria-hidden="true" />
-                        {{
-                            mode.is_public
-                                ? 'Visible en la app'
-                                : 'Oculto en la app'
-                        }}
+                        <span
+                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                            :style="{
+                                backgroundColor: resolveSeasonColor(mode.color)
+                                    .accent,
+                                color: resolveSeasonColor(mode.color).on_accent,
+                            }"
+                        >
+                            <HugeiconsIcon
+                                :icon="seasonHugeIcon(mode.icon)"
+                                :size="16"
+                                :stroke-width="1.8"
+                            />
+                        </span>
+                        <span class="min-w-0">
+                            <span
+                                class="block text-[11px] font-semibold tracking-wide uppercase opacity-80"
+                            >
+                                Visible en la app
+                            </span>
+                            <span class="block truncate text-sm font-semibold">
+                                {{ mode.public_title }}
+                            </span>
+                        </span>
+                    </div>
+
+                    <span
+                        v-else
+                        class="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[#DCE7DF] bg-[#F2F7F4] px-2 py-0.5 text-xs font-medium text-[#718477]"
+                        title="Cambia los puntos sin avisar en la app"
+                    >
+                        <EyeOff class="h-3 w-3" aria-hidden="true" />
+                        Oculto en la app
                     </span>
 
                     <p

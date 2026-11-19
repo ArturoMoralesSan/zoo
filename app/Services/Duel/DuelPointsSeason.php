@@ -8,9 +8,14 @@ namespace App\Services\Duel;
  */
 final readonly class DuelPointsSeason
 {
+    /**
+     * @param  array{key: string, accent: string, on_accent: string, soft: string, text: string}|null  $color
+     */
     public function __construct(
         public string $title,
         public ?string $message,
+        public ?string $icon,
+        public ?array $color,
         // Puntos que la tarjeta daría sin temporada; null si su rareza no otorga puntos.
         public ?int $basePoints,
     ) {}

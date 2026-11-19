@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Points\PointSeason;
 use App\Services\Points\PointSeasonCardChange;
 use App\Services\Points\PointSeasonRuleChange;
+use App\Services\Points\PointSeasonStyles;
 use Illuminate\Database\Eloquent\Model;
 use RuntimeException;
 
@@ -151,6 +152,9 @@ class PointService
         return new PointSeason(
             title: $mode->public_title ?: $mode->name,
             message: $mode->public_message,
+            // Una clave que ya no está en el catálogo cuenta como predeterminado.
+            icon: PointSeasonStyles::icon($mode->icon),
+            color: PointSeasonStyles::color($mode->color),
             cards: $cards,
             other: $other,
         );

@@ -60,13 +60,18 @@ class DuelPointsResource extends JsonResource
              * puntos son distintos; `null` si no hay temporada. Campo nuevo y opcional:
              * las versiones de la app que no lo conocen lo ignoran.
              *
-             * @var array{title: string, message: string|null, base_points: int|null}|null
+             * `icon` y `color` son los mismos que en `GET /points/season`: `null` = usa el
+             * ícono o color predeterminado de la app.
+             *
+             * @var array{title: string, message: string|null, base_points: int|null, icon: string|null, color: array{key: string, accent: string, on_accent: string, soft: string, text: string}|null}|null
              */
             'season' => $this->season
                 ? [
                     'title' => $this->season->title,
                     'message' => $this->season->message,
                     'base_points' => $this->season->basePoints,
+                    'icon' => $this->season->icon,
+                    'color' => $this->season->color,
                 ]
                 : null,
         ];

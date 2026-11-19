@@ -92,6 +92,8 @@ class PointSeasonTest extends TestCase
                 'data' => [
                     'title' => '¡Halloween!',
                     'message' => 'Las épicas dan el doble.',
+                    'icon' => null,
+                    'color' => null,
                     'cards' => [
                         [
                             'rarity' => 'epica',
@@ -168,5 +170,45 @@ class PointSeasonTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.cards', [])
             ->assertJsonPath('data.other.*.type', ['card_capture_rara']);
+    }
+
+    public function test_season_style_comes_from_the_catalog(): void
+    {
+        $this->mode([
+            'is_public' => true,
+            'public_title' => '¡Halloween!',
+            'icon' => 'pumpkin',
+            'color' => 'calabaza',
+        ]);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson(route('api.points.season'))
+            ->assertOk()
+            ->assertJsonPath('data.icon', 'pumpkin')
+            ->assertJsonPath('data.color', [
+                'key' => 'calabaza',
+                'accent' => '#B24E0A',
+                'on_accent' => '#FFFFFF',
+                'soft' => '#FDEBDC',
+                'text' => '#6B2E05',
+            ]);
+    }
+
+    public function test_style_keys_no_longer_in_the_catalog_fall_back_to_default(): void
+    {
+        $this->mode([
+            'is_public' => true,
+            'public_title' => 'Evento',
+            'icon' => 'icono-retirado',
+            'color' => 'color-retirado',
+        ]);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson(route('api.points.season'))
+            ->assertOk()
+            ->assertJsonPath('data.icon', null)
+            ->assertJsonPath('data.color', null);
     }
 }

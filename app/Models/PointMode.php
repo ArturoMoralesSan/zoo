@@ -18,6 +18,8 @@ class PointMode extends Model
         'is_public',
         'public_title',
         'public_message',
+        'icon',
+        'color',
     ];
 
     protected function casts(): array

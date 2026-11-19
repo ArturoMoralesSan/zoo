@@ -66,8 +66,8 @@ php artisan cards:packs:build                  # encrypted offline-pack copies (
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 370 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-19) |
-| `npx vitest run` | 113 passing |
+| `php artisan test` | 373 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-19) |
+| `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
 
@@ -98,7 +98,8 @@ resources/js/composables/  resources/js/types/  resources/css/
 tests/Feature/{Admin,Api,Auth,Licensing,Settings}  tests/Unit  tests/js  tests/Fixtures
 docs/api-credits.md  docs/glb-resizing.md  docs/image-optimization.md   Read only when working on those features
 docs/offline-packs-{backend,app}.md   Offline card packs: server done, mobile app pending
-docs/card-points-app.md   Card capture points and seasons: points done in the app, seasons pending
+docs/points-app.md        Points for the app: rules, levels, seasons (GET /api/points/season), icon/color catalog
+docs/card-points-app.md   Card capture points (data.points on duel wins, incl. season); points done in the app
 ```
 
 Page folders match the route resource, except `quizquestions`, `card-qr-codes` and
@@ -244,7 +245,8 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   Movements store `point_mode_id`. A mode with `is_public` shows its `public_title`/`public_message`
   (never its internal name) through `GET /api/points/season` and the additive
   `data.points.season` on duel wins; hidden modes still change points but report `null`.
-  `PointService::visibleSeason()` is the only place that decides this.
+  `PointService::visibleSeason()` is the only place that decides this. Seasons also carry
+  `icon`/`color` keys from the shared catalog (`PointSeasonStyles`); null or unknown = app default.
 
 **Logic duplicated across PHP and TS. Change both sides:**
 
@@ -256,8 +258,10 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 | `Enums/CardRarity` | `lib/cardRarity.ts` | none |
 | `GlbInspector`, `config/glb.php` | `lib/glb/resizeGlb.ts` | `tests/Fixtures/glb` |
 
-Card fonts are shared through `resources/data/card-fonts.json`, and card image profiles
-(size and quality) through `resources/data/card-image-profiles.json`.
+Card fonts are shared through `resources/data/card-fonts.json`, card image profiles
+(size and quality) through `resources/data/card-image-profiles.json`, and season icons and
+colors through `resources/data/point-season-styles.json` (keys never change; the app maps
+them, see `docs/points-app.md`).
 
 ## Gotchas
 

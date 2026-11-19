@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin\PointMode;
 
 use App\Models\PointMode;
+use App\Services\Points\PointSeasonStyles;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -54,6 +55,19 @@ class StorePointModeRequest extends FormRequest
                 'max:300',
             ],
 
+            // Claves del catálogo compartido; null = predeterminado de la app.
+            'icon' => [
+                'nullable',
+                'string',
+                Rule::in(PointSeasonStyles::iconKeys()),
+            ],
+
+            'color' => [
+                'nullable',
+                'string',
+                Rule::in(PointSeasonStyles::colorKeys()),
+            ],
+
             'rules' => [
                 'present',
                 'array',
@@ -87,6 +101,8 @@ class StorePointModeRequest extends FormRequest
             'is_public' => 'mostrar a los visitantes',
             'public_title' => 'título para los visitantes',
             'public_message' => 'mensaje para los visitantes',
+            'icon' => 'ícono',
+            'color' => 'color',
             'rules' => 'reglas',
             'rules.*.point_rule_id' => 'regla',
             'rules.*.points' => 'puntos',

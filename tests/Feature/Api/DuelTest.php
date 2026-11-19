@@ -743,6 +743,8 @@ class DuelTest extends TestCase
             'is_public' => true,
             'public_title' => 'Temporada difícil',
             'public_message' => 'Las capturas dan menos puntos.',
+            'icon' => 'snowflake',
+            'color' => 'azul-invierno',
         ]);
         $mode->rules()->attach($rare->id, ['points' => 30]);
 
@@ -755,6 +757,14 @@ class DuelTest extends TestCase
                 'title' => 'Temporada difícil',
                 'message' => 'Las capturas dan menos puntos.',
                 'base_points' => 50,
+                'icon' => 'snowflake',
+                'color' => [
+                    'key' => 'azul-invierno',
+                    'accent' => '#1F5F8B',
+                    'on_accent' => '#FFFFFF',
+                    'soft' => '#E2EDF5',
+                    'text' => '#123B57',
+                ],
             ]);
     }
 

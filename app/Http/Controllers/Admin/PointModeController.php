@@ -19,7 +19,7 @@ use Inertia\Response;
  */
 class PointModeController extends Controller
 {
-    private const FIELDS = ['name', 'description', 'is_public', 'public_title', 'public_message'];
+    private const FIELDS = ['name', 'description', 'is_public', 'public_title', 'public_message', 'icon', 'color'];
 
     public function index(): Response
     {
@@ -137,6 +137,8 @@ class PointModeController extends Controller
                 'is_public' => $pointMode->is_public,
                 'public_title' => $pointMode->public_title,
                 'public_message' => $pointMode->public_message,
+                'icon' => $pointMode->icon,
+                'color' => $pointMode->color,
             ]);
 
             $copy->rules()->sync(
@@ -169,6 +171,8 @@ class PointModeController extends Controller
             'is_public' => $mode->is_public,
             'public_title' => $mode->public_title,
             'public_message' => $mode->public_message,
+            'icon' => $mode->icon,
+            'color' => $mode->color,
             'overrides' => array_map(
                 fn (int $ruleId, int $points) => [
                     'point_rule_id' => $ruleId,

@@ -220,4 +220,37 @@ class PointModeTest extends TestCase
             'public_message' => 'Las épicas dan el doble.',
         ]);
     }
+
+    public function test_style_must_come_from_the_catalog_and_can_be_default(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.point-modes.store'), [
+                'name' => 'Navidad',
+                'icon' => 'no-existe',
+                'color' => '#FF0000',
+                'rules' => [],
+            ])
+            ->assertSessionHasErrors(['icon', 'color']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.point-modes.store'), [
+                'name' => 'Navidad',
+                'icon' => 'pine-tree',
+                'color' => 'rojo-navideno',
+                'rules' => [],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.point-modes.store'), [
+                'name' => 'Normal',
+                'icon' => null,
+                'color' => null,
+                'rules' => [],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('point_modes', ['name' => 'Navidad', 'icon' => 'pine-tree', 'color' => 'rojo-navideno']);
+        $this->assertDatabaseHas('point_modes', ['name' => 'Normal', 'icon' => null, 'color' => null]);
+    }
 }
