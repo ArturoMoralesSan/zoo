@@ -75,6 +75,8 @@ class CardCreditController extends Controller
                     'asset' => CreditAsset::tryFrom((string) $request->query('asset'))?->value,
                     'role' => CreditRole::tryFrom((string) $request->query('role'))?->value,
                     'source' => AssetSource::tryFrom((string) $request->query('source'))?->value,
+                    // Paso 2 de "render de un modelo de otro sitio".
+                    'chain' => $request->query('chain') === 'render_model' ? 'render_model' : null,
                 ],
             ]
         );
@@ -168,6 +170,7 @@ class CardCreditController extends Controller
                 'card' => $card,
                 'asset' => $credit->asset->value,
                 'role' => CreditRole::BasedOn->value,
+                'chain' => 'render_model',
             ]);
         }
 
