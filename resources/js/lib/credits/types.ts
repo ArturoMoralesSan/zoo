@@ -115,30 +115,42 @@ export const CREDIT_ASSETS: { value: CreditAsset; label: string }[] = [
     { value: 'model', label: 'Modelo 3D' },
 ];
 
+/*
+ * "label" es el término que aparece en la app ("Basado en: …"), así que se
+ * usa en las insignias. En los formularios se pregunta con "question", que
+ * se entiende sin conocer el modelo de datos.
+ */
 export const CREDIT_ROLES: {
     value: CreditRole;
     label: string;
+    question: string;
     description: string;
 }[] = [
     {
         value: 'origin',
         label: 'Origen',
+        question: '¿Quién hizo este archivo?',
         description:
-            'Quién hizo este archivo o de dónde salió. Cada recurso tiene uno.',
+            'Autor, sitio o herramienta de donde salió. Obligatorio: cada archivo tiene uno.',
     },
     {
         value: 'based_on',
         label: 'Basado en',
+        question: '¿Usaste una obra de otra persona para crearlo?',
         description:
-            'Una obra externa usada para crearlo: la foto que se dio a Meshy, un modelo de otro sitio que se renderizó…',
+            'Por ejemplo, la foto que se dio a Meshy o un modelo de otro sitio que se renderizó.',
     },
     {
         value: 'component',
         label: 'Incluye',
+        question: '¿Contiene material de terceros?',
         description:
-            'Material de terceros dentro del recurso: HDRI, texturas, objetos de la escena…',
+            'Texturas, HDRI u objetos de la escena que hizo otra persona.',
     },
 ];
+
+export const creditRole = (role: CreditRole) =>
+    CREDIT_ROLES.find((item) => item.value === role)!;
 
 /*
  * Valores por defecto: las imágenes se recortan para la tarjeta y el modelo
