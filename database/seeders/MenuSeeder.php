@@ -212,9 +212,18 @@ class MenuSeeder extends Seeder
 
         $this->link(
             $gamification,
+            'Modos de puntos',
+            'CalendarRange',
+            3,
+            'admin.point-modes.index',
+            'point-modes.view'
+        );
+
+        $this->link(
+            $gamification,
             'Historial de puntos',
             'History',
-            3,
+            4,
             'admin.point-movements.index',
             'point-movements.view'
         );
@@ -223,7 +232,7 @@ class MenuSeeder extends Seeder
             $gamification,
             'Recompensas',
             'Gift',
-            4,
+            5,
             'admin.rewards.index',
             'rewards.view'
         );
@@ -232,7 +241,7 @@ class MenuSeeder extends Seeder
             $gamification,
             'Canje de recompensas',
             'BadgeCheck',
-            5,
+            6,
             'admin.reward-redemptions.index',
             'reward-redemptions.view'
         );

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Level;
+use App\Models\PointMode;
 use App\Models\PointMovement;
 use App\Models\PointRule;
 use App\Models\User;
@@ -17,13 +18,17 @@ class PointService
      * Los puntos son acumulativos.
      * Al alcanzar un nuevo nivel, se actualiza level_id.
      * El nivel nunca disminuye.
+     *
+     * Falla si no hay una regla activa de ese tipo. Si el modo de puntos
+     * activo deja la regla en 0, no otorga nada y devuelve null: un modo
+     * nunca debe impedir la acción que da los puntos (por ejemplo, una compra).
      */
     public function add(
         User $user,
         string $type,
         ?string $description = null,
         ?Model $reference = null
-    ): PointMovement {
+    ): ?PointMovement {
         $rule = PointRule::query()
             ->where('type', $type)
             ->where('is_active', true)
@@ -32,12 +37,6 @@ class PointService
         if (! $rule) {
             throw new RuntimeException(
                 "No existe una regla de puntos activa para: {$type}"
-            );
-        }
-
-        if ($rule->points <= 0) {
-            throw new RuntimeException(
-                'La regla de puntos debe otorgar una cantidad mayor a cero.'
             );
         }
 
@@ -64,11 +63,20 @@ class PointService
                 ->first();
         }
 
-        if (! $rule || ! $rule->is_active || $rule->points <= 0) {
+        if (! $rule || ! $rule->is_active) {
             return null;
         }
 
         return $this->apply($user, $rule, $description, $reference);
+    }
+
+    /**
+     * Puntos que otorga la regla: los del modo activo, o los base si no hay
+     * modo activo o el modo no cambia esta regla.
+     */
+    public function pointsFor(PointRule $rule, ?PointMode $mode): int
+    {
+        return $mode ? $mode->pointsFor($rule) : (int) $rule->points;
     }
 
     private function apply(
@@ -76,8 +84,13 @@ class PointService
         PointRule $rule,
         ?string $description,
         ?Model $reference
-    ): PointMovement {
-        $points = $rule->points;
+    ): ?PointMovement {
+        $mode = PointMode::active();
+        $points = $this->pointsFor($rule, $mode);
+
+        if ($points <= 0) {
+            return null;
+        }
 
         // Acumular puntos
         $user->increment('points', $points);
@@ -92,6 +105,7 @@ class PointService
         return $user->pointMovements()->create([
             'points' => $points,
             'type' => $rule->type,
+            'point_mode_id' => $mode?->id,
             'description' => $description ?? $rule->name,
             'reference_type' => $reference
                 ? $reference::class

@@ -66,8 +66,8 @@ php artisan cards:packs:build                  # encrypted offline-pack copies (
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 342 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-18) |
-| `npx vitest run` | 102 passing |
+| `php artisan test` | 360 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-19) |
+| `npx vitest run` | 113 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
 
@@ -116,7 +116,8 @@ Page folders match the route resource, except `quizquestions`, `card-qr-codes` a
 - **Map:** `ZooZone` → `MapMarker`, `SpeciesLocation`, `Event`; `MapPath`.
 - **Tickets:** `TicketOrder` → `TicketOrderItem` (→ `TicketType`), `TicketOrderPayment`
   (→ `PaymentMethod`), `Ticket`.
-- **Users:** `User` → `Profile`, `Level`, `PointMovement`; `PointRule`; `Reward` →
+- **Users:** `User` → `Profile`, `Level`, `PointMovement` (→ `PointMode`); `PointRule`;
+  `PointMode` ↔ `PointRule` (pivot `point_mode_rules.points`); `Reward` →
   `RewardRedemption`; `Donation`. Sidebar: `Menu` → `Link` → `Permission`.
 
 A model's `$fillable` and `$casts` show its columns; there is no need to read its migrations.
@@ -236,6 +237,11 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   the rule picked per rarity (`card_rarity_settings.point_rule_id`, null = no points; it
   starts as `card_capture_<rarity>`, see `CardRarity::pointRuleType()`) once per card and returns
   `data.points` (`awarded`, `total`, `level`, `level_up`). See `docs/card-points-app.md`.
+  **Point modes** (seasons/events, admin "Modos de puntos"): at most one `PointMode` is
+  active and overrides some rules' points; rules it doesn't override keep their base points.
+  `PointService::pointsFor()` resolves them, and every award goes through it. A mode can set a
+  rule to 0, which awards nothing and never throws (it must not block a purchase).
+  Movements store `point_mode_id`. Modes are invisible to the API; no response changed.
 
 **Logic duplicated across PHP and TS. Change both sides:**
 

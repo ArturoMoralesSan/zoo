@@ -12,6 +12,7 @@ use App\Models\CardCapture;
 use App\Models\CardQuizState;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
+use App\Models\PointMode;
 use App\Models\PointRule;
 use App\Models\Species;
 use App\Services\CardImageOptimizer;
@@ -138,10 +139,9 @@ class CardController extends Controller
 
                 'raritySettings' => $this->raritySettings(),
 
-                // Opciones de "Regla de puntos" en la configuración por rareza.
-                'pointRules' => PointRule::query()
-                    ->orderBy('name')
-                    ->get(['id', 'name', 'type', 'points', 'is_active']),
+                // Opciones de "Regla de puntos" en la configuración por rareza,
+                // con los puntos que dan ahora (los del modo activo, si hay).
+                'pointRules' => $this->pointRuleOptions(),
 
                 /*
                  * Mensajes predeterminados del duelo: los guardados (vacíos = texto
@@ -592,6 +592,25 @@ class CardController extends Controller
     private function duelMessageDefaults(): array
     {
         return DuelMessageSetting::current()->effective();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function pointRuleOptions(): array
+    {
+        $mode = PointMode::active();
+
+        return PointRule::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'points', 'is_active'])
+            ->map(fn (PointRule $rule) => [
+                ...$rule->only(['id', 'name', 'type', 'points', 'is_active']),
+                'effective_points' => $mode ? $mode->pointsFor($rule) : $rule->points,
+                'mode_name' => $mode?->name,
+            ])
+            ->values()
+            ->all();
     }
 
     private function raritySettings(): Collection

@@ -1,7 +1,8 @@
 
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
+    CalendarRange,
     Coins,
     FilterX,
     Plus,
@@ -43,6 +44,7 @@ interface RulesPagination {
 
 const props = defineProps<{
     rules: RulesPagination;
+    activeMode: { id: number; name: string } | null;
     filters: {
         search?: string;
     };
@@ -150,6 +152,33 @@ defineOptions({
             action-label="Nueva regla"
             :action-href="admin.pointRules.create().url"
         />
+
+        <div
+            class="flex flex-col gap-2 rounded-2xl border px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+            :class="
+                activeMode
+                    ? 'border-[#BFE3CB] bg-[#E2F3E8] text-[#244334]'
+                    : 'border-[#DCE7DF] bg-white text-[#435D4C]'
+            "
+        >
+            <p class="flex items-center gap-2">
+                <CalendarRange class="h-4 w-4 shrink-0 text-[#187744]" aria-hidden="true" />
+                <span v-if="activeMode">
+                    Modo activo: <strong>{{ activeMode.name }}</strong>. Los puntos de esta
+                    tabla son los base; el modo puede cambiarlos.
+                </span>
+                <span v-else>
+                    Sin modo activo: cada regla da los puntos de esta tabla.
+                </span>
+            </p>
+
+            <Link
+                :href="admin.pointModes.index().url"
+                class="shrink-0 font-semibold text-[#187744] hover:underline"
+            >
+                Ver modos de puntos
+            </Link>
+        </div>
 
         <DataTable
             :pagination="rules"

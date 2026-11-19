@@ -28,6 +28,9 @@ rareza". Al instalarse, cada rareza usa su propia regla:
   elegir otra regla para una rareza, o dejarla en "Sin puntos" ("Configuración por rareza").
   **La app nunca debe calcular ni guardar en código cuántos puntos vale una rareza**:
   siempre usa lo que devuelve el servidor.
+- Los puntos pueden cambiar por **temporada o evento**: el panel puede activar un "modo de
+  puntos" que cambia lo que da cada regla (por ejemplo, la mitad durante una temporada
+  difícil). La API no cambia; `points.awarded` ya trae el valor del modo activo.
 - Los puntos se otorgan **una sola vez por tarjeta** (solo en la captura). Perder un duelo
   no da ni quita puntos.
 - Si la regla de la rareza está desactivada o la rareza está en "Sin puntos", la tarjeta

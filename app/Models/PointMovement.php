@@ -14,6 +14,7 @@ class PointMovement extends Model
         'user_id',
         'points',
         'type',
+        'point_mode_id',
         'description',
         'reference_type',
         'reference_id',
@@ -30,5 +31,15 @@ class PointMovement extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Modo de puntos activo cuando se otorgaron; null = puntos base.
+     *
+     * @return BelongsTo<PointMode, $this>
+     */
+    public function pointMode(): BelongsTo
+    {
+        return $this->belongsTo(PointMode::class);
     }
 }

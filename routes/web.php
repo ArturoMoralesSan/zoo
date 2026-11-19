@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\MapPathController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\PointMovementController;
+use App\Http\Controllers\Admin\PointModeController;
 use App\Http\Controllers\Admin\PointRuleController;
 use App\Http\Controllers\Admin\QuizQuestionController;
 use App\Http\Controllers\Admin\RewardController;
@@ -231,6 +232,26 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:point-rules.edit',
                 'destroy' => 'permission:point-rules.delete',
             ]);
+
+        // Rutas literales antes del recurso con el mismo prefijo.
+        Route::post('point-modes/deactivate', [PointModeController::class, 'deactivate'])
+            ->middleware('permission:point-modes.edit')
+            ->name('point-modes.deactivate');
+
+        Route::post('point-modes/{point_mode}/activate', [PointModeController::class, 'activate'])
+            ->middleware('permission:point-modes.edit')
+            ->name('point-modes.activate');
+
+        Route::post('point-modes/{point_mode}/duplicate', [PointModeController::class, 'duplicate'])
+            ->middleware('permission:point-modes.create')
+            ->name('point-modes.duplicate');
+
+        Route::resource('point-modes', PointModeController::class)
+            ->except(['show'])
+            ->middlewareFor('index', 'permission:point-modes.view')
+            ->middlewareFor(['create', 'store'], 'permission:point-modes.create')
+            ->middlewareFor(['edit', 'update'], 'permission:point-modes.edit')
+            ->middlewareFor('destroy', 'permission:point-modes.delete');
 
         Route::resource('point-movements', PointMovementController::class)
             ->only(['index'])

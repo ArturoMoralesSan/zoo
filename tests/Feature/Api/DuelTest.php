@@ -8,6 +8,7 @@ use App\Models\CardQrCode;
 use App\Models\CardRaritySetting;
 use App\Models\DuelMessageSetting;
 use App\Models\Level;
+use App\Models\PointMode;
 use App\Models\PointRule;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
@@ -698,5 +699,38 @@ class DuelTest extends TestCase
             'card_id' => $this->card->id,
         ]);
         $this->assertDatabaseCount('point_movements', 0);
+    }
+
+    public function test_active_point_mode_changes_the_capture_points(): void
+    {
+        $rare = PointRule::where('type', 'card_capture_rara')->firstOrFail();
+        $mode = PointMode::create(['name' => 'Temporada difícil', 'is_active' => true]);
+        $mode->rules()->attach($rare->id, ['points' => 20]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.points.awarded', 20)
+            ->assertJsonPath('data.points.total', 20);
+    }
+
+    public function test_point_mode_with_zero_still_captures_the_card(): void
+    {
+        $rare = PointRule::where('type', 'card_capture_rara')->firstOrFail();
+        $mode = PointMode::create(['name' => 'Sin puntos', 'is_active' => true]);
+        $mode->rules()->attach($rare->id, ['points' => 0]);
+
+        $duel = $this->startDuel();
+
+        $this->submit($duel, $this->answersFor($duel))
+            ->assertCreated()
+            ->assertJsonPath('data.outcome', 'won')
+            ->assertJsonPath('data.points.awarded', 0);
+
+        $this->assertDatabaseHas('card_captures', [
+            'user_id' => $this->user->id,
+            'card_id' => $this->card->id,
+        ]);
     }
 }
