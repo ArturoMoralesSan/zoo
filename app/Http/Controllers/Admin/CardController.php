@@ -139,6 +139,7 @@ class CardController extends Controller
 
                 // Pestaña "Importar / Exportar": solo con alguno de sus permisos.
                 'canTransfer' => (bool) request()->user()?->canAny(['cards.export', 'cards.import']),
+                'canViewAssets' => (bool) request()->user()?->can('assets.view'),
 
                 'raritySettings' => $this->raritySettings(),
 

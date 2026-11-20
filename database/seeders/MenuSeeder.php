@@ -313,6 +313,15 @@ class MenuSeeder extends Seeder
             'admin.permissions.index',
             'permissions.view'
         );
+
+        $this->link(
+            $administration,
+            'Recursos',
+            'HardDrive',
+            4,
+            'admin.assets.index',
+            'assets.view'
+        );
     }
 
     /*

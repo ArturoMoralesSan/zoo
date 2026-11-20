@@ -48,6 +48,8 @@ class SpeciesImageOptimizationTest extends TestCase
             Permission::findOrCreate("species.{$action}");
         }
 
+        Permission::findOrCreate('assets.optimize');
+
         $category = SpeciesCategory::create(['name' => 'Aves', 'is_active' => true]);
 
         $this->species = Species::create([
@@ -71,7 +73,7 @@ class SpeciesImageOptimizationTest extends TestCase
     private function admin(): User
     {
         $user = User::factory()->create();
-        $user->givePermissionTo(['species.view', 'species.create', 'species.edit', 'species.delete']);
+        $user->givePermissionTo(['species.view', 'species.create', 'species.edit', 'species.delete', 'assets.optimize']);
 
         return $user;
     }
@@ -138,10 +140,10 @@ class SpeciesImageOptimizationTest extends TestCase
         Storage::disk('public')->assertMissing($original);
     }
 
-    public function test_optimizing_requires_edit_permission(): void
+    public function test_optimizing_requires_the_assets_permission(): void
     {
         $viewer = User::factory()->create();
-        $viewer->givePermissionTo('species.view');
+        $viewer->givePermissionTo(['species.view', 'species.edit']);
 
         $this->actingAs($viewer)
             ->getJson(route('admin.species.images.pending'))

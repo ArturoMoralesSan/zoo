@@ -40,9 +40,10 @@ class CardImageOptimizationTest extends TestCase
 
         Permission::findOrCreate('cards.view');
         Permission::findOrCreate('cards.edit');
+        Permission::findOrCreate('assets.optimize');
 
         $this->admin = User::factory()->create();
-        $this->admin->givePermissionTo(['cards.view', 'cards.edit']);
+        $this->admin->givePermissionTo(['cards.view', 'cards.edit', 'assets.optimize']);
 
         $category = SpeciesCategory::create([
             'name' => 'Aves '.uniqid(),
@@ -179,10 +180,11 @@ class CardImageOptimizationTest extends TestCase
         Storage::disk('public')->assertMissing($original);
     }
 
-    public function test_optimizing_requires_edit_permission(): void
+    public function test_optimizing_requires_the_assets_permission(): void
     {
+        // Editar tarjetas ya no basta: la conversión vive en Recursos.
         $viewer = User::factory()->create();
-        $viewer->givePermissionTo('cards.view');
+        $viewer->givePermissionTo(['cards.view', 'cards.edit']);
 
         $this->actingAs($viewer)
             ->post(route('admin.cards.images.optimize', [$this->card, 'generated']), [

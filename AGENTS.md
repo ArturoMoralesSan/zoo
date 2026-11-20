@@ -68,7 +68,7 @@ php artisan cards:export | cards:import x.zip --dry-run   # card .zip packages w
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 413 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-20) |
+| `php artisan test` | 417 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-20) |
 | `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
@@ -247,10 +247,14 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 - **Species images** (main, thumbnail, gallery) follow the same WebP flow with their own profiles
   (`resources/data/species-image-profiles.json`, `SpeciesImageOptimizer`, `species:images:*`).
   See the "Especies" section of `docs/image-optimization.md`.
+- **Recursos page** (`admin/assets`, `AssetController`, `AssetInventory`): sizes, savings and
+  pending conversions for card images, species images and card 3D models, plus both conversion
+  panels. Permissions `assets.view` and `assets.optimize` (admin only). The conversion endpoints
+  `cards.images.*` and `species.images.*` require `assets.optimize`.
 - **Card images** are stored as WebP. The browser encodes them (`lib/imageOptimize.ts`,
   libwebp in WASM) and the server re-encodes non-WebP uploads only if it has Imagick or
   GD (`IMAGE_ENCODER`). `generated_image` is 2× (1144×2032), not the 3× download. Older
-  images are converted from the "Configuración" tab or with `cards:images:optimize`, which
+  images are converted from Recursos → Optimización or with `cards:images:optimize`, which
   **deletes each original**. See `docs/image-optimization.md`.
 - **Points:** `PointService::add()` applies a `PointRule` by type (`addIfRuleActive()` skips
   a missing or inactive rule instead of throwing). Levels never go down, and redeeming a

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\CardCaptureController;
 use App\Http\Controllers\Admin\CardController;
 use App\Http\Controllers\Admin\CardCreditController;
@@ -127,19 +128,27 @@ Route::middleware(['auth', 'verified'])
             ]);
 
         /*
+         * Recursos: optimización de imágenes y modelos 3D. Los paneles de
+         * conversión usan las rutas cards.images.* y species.images.*.
+         */
+        Route::get('assets', [AssetController::class, 'index'])
+            ->middleware('permission:assets.view')
+            ->name('assets.index');
+
+        /*
          * Convertir a WebP las imágenes de especies ya guardadas. Van antes
          * del resource para que "images" no se tome como {species}.
          */
         Route::get(
             'species/images/pending',
             [SpeciesImageOptimizationController::class, 'pending']
-        )->middleware('permission:species.edit')
+        )->middleware('permission:assets.optimize')
             ->name('species.images.pending');
 
         Route::post(
             'species/images/{image}/optimize',
             [SpeciesImageOptimizationController::class, 'store']
-        )->middleware(['permission:species.edit', 'throttle:60,1'])
+        )->middleware(['permission:assets.optimize', 'throttle:60,1'])
             ->name('species.images.optimize');
 
         Route::resource('species', SpeciesController::class)
@@ -373,14 +382,14 @@ Route::middleware(['auth', 'verified'])
         Route::get(
             'cards/images/pending',
             [CardImageOptimizationController::class, 'pending']
-        )->middleware('permission:cards.edit')
+        )->middleware('permission:assets.optimize')
             ->name('cards.images.pending');
 
         Route::post(
             'cards/{card}/images/{image}/optimize',
             [CardImageOptimizationController::class, 'store']
         )->whereIn('image', array_keys(CardImageOptimizer::FIELDS))
-            ->middleware(['permission:cards.edit', 'throttle:60,1'])
+            ->middleware(['permission:assets.optimize', 'throttle:60,1'])
             ->name('cards.images.optimize');
 
         /*

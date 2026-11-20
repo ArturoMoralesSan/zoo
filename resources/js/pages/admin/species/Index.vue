@@ -11,7 +11,6 @@ import { ref } from 'vue';
 
 import DataTable from '@/components/admin/DataTable.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
-import OptimizeSpeciesImagesPanel from '@/components/admin/species/OptimizeSpeciesImagesPanel.vue';
 import TableActions from '@/components/admin/TableActions.vue';
 import {
     conservationStatusOption,
@@ -62,7 +61,6 @@ const props = defineProps<{
         search?: string;
         category_id?: number | string;
     };
-    canOptimizeImages: boolean;
 }>();
 
 const search = ref(props.filters?.search ?? '');
@@ -369,7 +367,5 @@ defineOptions({
                 </div>
             </template>
         </DataTable>
-
-        <OptimizeSpeciesImagesPanel v-if="canOptimizeImages" />
     </div>
 </template>

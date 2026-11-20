@@ -7,6 +7,7 @@ import {
     CircleCheck,
     CircleOff,
     Copyright,
+    ExternalLink,
     FilterX,
     HelpCircle,
     ImageOff,
@@ -26,7 +27,6 @@ import { onMounted, ref, watch } from 'vue';
 
 import CardTransferPanel from '@/components/admin/cards/CardTransferPanel.vue';
 import DuelMessagesSettings from '@/components/admin/cards/DuelMessagesSettings.vue';
-import OptimizeImagesPanel from '@/components/admin/cards/OptimizeImagesPanel.vue';
 import RaritySettingsTable from '@/components/admin/cards/RaritySettingsTable.vue';
 import DataTable from '@/components/admin/DataTable.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
@@ -122,6 +122,8 @@ const props = defineProps<{
     devTools: boolean;
     // Pestaña "Importar / Exportar" (permisos cards.export o cards.import).
     canTransfer: boolean;
+    // Enlace a Recursos, donde está la optimización de imágenes.
+    canViewAssets: boolean;
 }>();
 
 const search = ref(props.filters?.search ?? '');
@@ -499,7 +501,20 @@ defineOptions({
                 always-open
             />
 
-            <OptimizeImagesPanel />
+            <Link
+                v-if="canViewAssets"
+                :href="admin.assets.index().url"
+                class="flex items-center justify-between gap-3 rounded-xl border border-[#d7e2da] bg-white px-4 py-3 text-sm text-[#435d4c] transition hover:border-[#187744]"
+            >
+                <span>
+                    <span class="font-semibold text-[#244334]">
+                        Optimizar imágenes
+                    </span>
+                    · ahora está en Administración → Recursos, junto con las
+                    imágenes de especies y los modelos 3D.
+                </span>
+                <ExternalLink :size="16" class="shrink-0 text-[#187744]" />
+            </Link>
         </div>
 
         <!-- Importar / Exportar -->

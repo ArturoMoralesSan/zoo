@@ -86,9 +86,6 @@ class SpeciesController extends Controller
                     'search' => request('search'),
                     'category_id' => request('category_id'),
                 ],
-
-                // Panel "Optimizar imágenes" (rutas species.images.*).
-                'canOptimizeImages' => (bool) request()->user()?->can('species.edit'),
             ]
         );
     }
