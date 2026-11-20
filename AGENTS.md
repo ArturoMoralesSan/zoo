@@ -61,14 +61,14 @@ php artisan route:list --path=api --json
 php artisan cards:images:report                # read-only: card images still to convert
 php artisan species:images:report              # same for species images (optimize deletes originals)
 php artisan cards:packs:build                  # encrypted offline-pack copies (idempotent; --force re-encrypts)
-php artisan cards:export | cards:import x.zip --dry-run   # card .zip packages without the panel
+php artisan cards:export | cards:import x.zip --dry-run   # card+species .zip packages without the panel
 ```
 
 **Baseline on 2026-11-10.** Do not chase these failures unless asked; just add none.
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 417 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-20) |
+| `php artisan test` | 426 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-20) |
 | `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
@@ -102,7 +102,7 @@ docs/api-credits.md  docs/glb-resizing.md  docs/image-optimization.md   Read onl
 docs/offline-packs-{backend,app}.md   Offline card packs: server done, mobile app pending
 docs/points-app.md        Points for the app: rules, levels, seasons (GET /api/points/season), icon/color catalog
 docs/card-points-app.md   Card capture points (data.points on duel wins, incl. season); points done in the app
-docs/card-transfer.md     Export/import all cards as a .zip ("Importar / Exportar" tab)
+docs/card-transfer.md     Export/import all cards and species as a .zip (Recursos → Descargas)
 ```
 
 Page folders match the route resource, except `quizquestions`, `card-qr-codes` and
@@ -228,14 +228,16 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   (owned cards, duel start). `phpunit.xml` sets `CARD_PACKS_ENABLED=false`, so tests
   never write to real `storage/`; enable it only together with `Storage::fake('public')`.
   See `docs/offline-packs-backend.md`.
-- **Card packages** (`CardTransfer/*`, cards index tab "Importar / Exportar", permissions
-  `cards.export`/`cards.import`): queued jobs build or import a `.zip` with every card, its
-  questions, QRs, credits, global duel settings and files. Needs PHP `zip`; without it the tab
-  shows a notice and every action returns 503. Species are only referenced (slug, then a unique
-  scientific name, else the admin picks one); import never creates species, never deletes
-  questions, and copies files as-is. QR tokens travel only if the exporter ticks the box.
-  Adding a card column means adding it to `CardPackage::CARD_FIELDS` and the reader's rules.
-  See `docs/card-transfer.md`.
+- **Card and species packages** (`CardTransfer/*`, Recursos → Descargas, routes
+  `admin.assets.transfers.*`, permissions `assets.export`/`assets.import`): queued jobs build or
+  import a `.zip` (format v2, v1 still read) with every card, its questions, QRs, credits, global
+  duel settings and files, plus every species with category, tags and images. Needs PHP `zip`;
+  without it every action returns 503. Species are imported first (matched by slug, then a unique
+  scientific name) and created if missing; the preview lets the admin create or map missing
+  categories/tags and map or drop unknown zones. Species locations travel only if the exporter
+  ticks the box. Import never deletes questions and copies files as-is. QR tokens travel only if
+  the exporter ticks the box. Adding a card or species column means adding it to
+  `CardPackage::CARD_FIELDS`/`SPECIES_FIELDS` and the reader's rules. See `docs/card-transfer.md`.
 - **Species catalogs:** `conservation_status` (IUCN code), `diet` and `habitats` (JSON, several)
   store enum codes, never free text. The API keeps the old Spanish strings in `habitat`, `diet`
   and `conservation_status` and adds `habitats`, `diet_code`, `conservation_status_code`. The
@@ -247,9 +249,10 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 - **Species images** (main, thumbnail, gallery) follow the same WebP flow with their own profiles
   (`resources/data/species-image-profiles.json`, `SpeciesImageOptimizer`, `species:images:*`).
   See the "Especies" section of `docs/image-optimization.md`.
-- **Recursos page** (`admin/assets`, `AssetController`, `AssetInventory`): sizes, savings and
-  pending conversions for card images, species images and card 3D models, plus both conversion
-  panels. Permissions `assets.view` and `assets.optimize` (admin only). The conversion endpoints
+- **Recursos page** (`admin/assets`, `AssetController`, `AssetInventory`): tab "Optimización"
+  shows sizes, savings and pending conversions for card images, species images and card 3D
+  models, plus both conversion panels (`assets.view`, `assets.optimize`); tab "Descargas" is the
+  package export/import (`assets.export`, `assets.import`). All admin only. The conversion endpoints
   `cards.images.*` and `species.images.*` require `assets.optimize`.
 - **Card images** are stored as WebP. The browser encodes them (`lib/imageOptimize.ts`,
   libwebp in WASM) and the server re-encodes non-WebP uploads only if it has Imagick or

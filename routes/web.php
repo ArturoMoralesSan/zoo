@@ -131,9 +131,44 @@ Route::middleware(['auth', 'verified'])
          * Recursos: optimización de imágenes y modelos 3D. Los paneles de
          * conversión usan las rutas cards.images.* y species.images.*.
          */
+        // Cada pestaña revisa su propio permiso.
         Route::get('assets', [AssetController::class, 'index'])
-            ->middleware('permission:assets.view')
+            ->middleware('permission:assets.view|assets.export|assets.import')
             ->name('assets.index');
+
+        /*
+         * Exportar e importar paquetes .zip con tarjetas y especies
+         * (Recursos → Descargas).
+         */
+        Route::prefix('assets/transfers')
+            ->name('assets.transfers.')
+            ->controller(CardTransferController::class)
+            ->group(function () {
+                Route::get('/', 'index')
+                    ->middleware('permission:assets.export|assets.import')
+                    ->name('index');
+
+                Route::post('export', 'storeExport')
+                    ->middleware(['permission:assets.export', 'throttle:5,1'])
+                    ->name('export');
+
+                Route::get('{transfer}/download', 'download')
+                    ->middleware('permission:assets.export')
+                    ->name('download');
+
+                Route::post('import', 'storeImport')
+                    ->middleware(['permission:assets.import', 'throttle:10,1'])
+                    ->name('import');
+
+                Route::post('{transfer}/confirm', 'confirmImport')
+                    ->middleware(['permission:assets.import', 'throttle:10,1'])
+                    ->name('confirm');
+
+                // destroy() exige además el permiso del tipo de paquete.
+                Route::delete('{transfer}', 'destroy')
+                    ->middleware('permission:assets.export|assets.import')
+                    ->name('destroy');
+            });
 
         /*
          * Convertir a WebP las imágenes de especies ya guardadas. Van antes
@@ -391,40 +426,6 @@ Route::middleware(['auth', 'verified'])
         )->whereIn('image', array_keys(CardImageOptimizer::FIELDS))
             ->middleware(['permission:assets.optimize', 'throttle:60,1'])
             ->name('cards.images.optimize');
-
-        /*
-         * Exportar e importar paquetes .zip (pestaña "Importar / Exportar").
-         * Van antes del resource para que "transfers" no se tome como {card}.
-         */
-        Route::prefix('cards/transfers')
-            ->name('cards.transfers.')
-            ->controller(CardTransferController::class)
-            ->group(function () {
-                Route::get('/', 'index')
-                    ->middleware('permission:cards.export|cards.import')
-                    ->name('index');
-
-                Route::post('export', 'storeExport')
-                    ->middleware(['permission:cards.export', 'throttle:5,1'])
-                    ->name('export');
-
-                Route::get('{transfer}/download', 'download')
-                    ->middleware('permission:cards.export')
-                    ->name('download');
-
-                Route::post('import', 'storeImport')
-                    ->middleware(['permission:cards.import', 'throttle:10,1'])
-                    ->name('import');
-
-                Route::post('{transfer}/confirm', 'confirmImport')
-                    ->middleware(['permission:cards.import', 'throttle:10,1'])
-                    ->name('confirm');
-
-                // destroy() exige además el permiso del tipo de paquete.
-                Route::delete('{transfer}', 'destroy')
-                    ->middleware('permission:cards.export|cards.import')
-                    ->name('destroy');
-            });
 
         /*
          * middlewareFor asigna el permiso por acción; ->middleware([...])

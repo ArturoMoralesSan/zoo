@@ -56,8 +56,9 @@ class ImportCardsJob implements ShouldQueue
                 (string) ($options['mode'] ?? CardPackageImporter::MODE_SKIP),
                 (bool) ($options['replace_settings'] ?? false),
                 (array) ($options['species_map'] ?? []),
+                (array) ($options['references'] ?? []),
                 function (int $done, int $total) use ($preview) {
-                    // Progreso para el panel, como mucho cada 10 tarjetas.
+                    // Progreso para el panel (especies y tarjetas), como mucho cada 10.
                     if ($done === $total || $done % 10 === 0) {
                         $this->transfer->update([
                             'summary' => ['preview' => $preview, 'progress' => ['done' => $done, 'total' => $total]],

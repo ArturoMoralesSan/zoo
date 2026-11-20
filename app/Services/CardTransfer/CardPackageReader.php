@@ -4,12 +4,18 @@ namespace App\Services\CardTransfer;
 
 use App\Enums\AssetSource;
 use App\Enums\CardRarity;
+use App\Enums\ConservationStatus;
 use App\Enums\CreditAsset;
 use App\Enums\CreditRole;
+use App\Enums\Diet;
+use App\Enums\Habitat;
 use App\Models\Card;
 use App\Models\CardQrCode;
 use App\Models\License;
 use App\Models\PointRule;
+use App\Models\SpeciesCategory;
+use App\Models\SpeciesTag;
+use App\Models\ZooZone;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use ZipArchive;
@@ -42,6 +48,13 @@ class CardPackageReader
      * @var array<string, array{data: array<string, mixed>, errors: list<string>}>|null
      */
     private ?array $cards = null;
+
+    /**
+     * Especies del paquete por slug (versión 2): datos ya validados o errores.
+     *
+     * @var array<string, array{data: array<string, mixed>, errors: list<string>}>|null
+     */
+    private ?array $species = null;
 
     private function __construct(ZipArchive $zip)
     {
@@ -78,6 +91,19 @@ class CardPackageReader
     public function includesQrTokens(): bool
     {
         return (bool) ($this->manifest['include_qr_tokens'] ?? false);
+    }
+
+    /**
+     * El paquete trae la ubicación de las especies (se pidió al exportar).
+     */
+    public function includesLocations(): bool
+    {
+        return (bool) ($this->manifest['include_locations'] ?? false);
+    }
+
+    public function version(): int
+    {
+        return (int) ($this->manifest['version'] ?? 0);
     }
 
     /**
@@ -133,9 +159,9 @@ class CardPackageReader
             throw new InvalidCardPackageException('El manifest.json no es de un paquete de tarjetas de ZooDeck.');
         }
 
-        if ((int) ($manifest['version'] ?? 0) !== CardPackage::VERSION) {
+        if (! in_array((int) ($manifest['version'] ?? 0), CardPackage::SUPPORTED_VERSIONS, true)) {
             throw new InvalidCardPackageException(
-                'El paquete usa la versión '.((int) ($manifest['version'] ?? 0)).' del formato; este servidor solo lee la versión '.CardPackage::VERSION.'.'
+                'El paquete usa la versión '.((int) ($manifest['version'] ?? 0)).' del formato; este servidor lee hasta la versión '.CardPackage::VERSION.'.'
             );
         }
 
@@ -271,6 +297,35 @@ class CardPackageReader
     }
 
     /**
+     * @return array<string, array{data: array<string, mixed>, errors: list<string>}>
+     */
+    public function species(): array
+    {
+        if ($this->species !== null) {
+            return $this->species;
+        }
+
+        $this->species = [];
+
+        foreach (array_keys($this->manifest['files']) as $name) {
+            $name = (string) $name;
+
+            if (! preg_match('#^species/([a-z0-9-]+)/species\.json$#', $name, $matches)) {
+                continue;
+            }
+
+            $slug = $matches[1];
+            $data = json_decode((string) $this->zip->getFromName($name), true);
+
+            $this->species[$slug] = is_array($data)
+                ? ['data' => $data, 'errors' => $this->validateSpecies($slug, $data)]
+                : ['data' => [], 'errors' => ['species.json no es un JSON válido.']];
+        }
+
+        return $this->species;
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     public function raritySettings(): array
@@ -340,10 +395,28 @@ class CardPackageReader
         $licenseSlugs = [];
         $tokens = [];
 
+        // Especies del paquete que se crearán o ya existen: sus tarjetas no
+        // necesitan que la persona elija especie.
+        $packageSpecies = [];
+
+        foreach ($this->species() as $slug => $item) {
+            if (! $item['errors']) {
+                $packageSpecies['slug:'.$slug] = true;
+                $packageSpecies['name:'.SpeciesResolver::normalize((string) ($item['data']['scientific_name'] ?? ''))] = true;
+            }
+        }
+
         foreach ($cards as $uuid => $card) {
             $data = $card['data'];
             $species = (array) ($data['species'] ?? []);
             $match = $card['errors'] ? ['species_id' => null, 'match' => null] : $resolver->resolve($species);
+
+            if (! $card['errors'] && ! $match['species_id'] && (
+                isset($packageSpecies['slug:'.($species['slug'] ?? '')])
+                || isset($packageSpecies['name:'.SpeciesResolver::normalize((string) ($species['scientific_name'] ?? ''))])
+            )) {
+                $match = ['species_id' => null, 'match' => 'package'];
+            }
 
             $status = match (true) {
                 (bool) $card['errors'] => 'invalid',
@@ -351,7 +424,7 @@ class CardPackageReader
                 default => 'new',
             };
 
-            if (! $card['errors'] && ! $match['species_id']) {
+            if (! $card['errors'] && ! $match['species_id'] && $match['match'] !== 'package') {
                 $key = SpeciesResolver::key($species);
                 $missingSpecies[$key] ??= [
                     'key' => $key,
@@ -425,9 +498,12 @@ class CardPackageReader
                 'app' => $this->manifest['app'] ?? null,
                 'source_url' => $this->manifest['source_url'] ?? null,
                 'exported_at' => $this->manifest['exported_at'] ?? null,
+                'version' => $this->version(),
                 'include_qr_tokens' => $this->includesQrTokens(),
+                'include_locations' => $this->includesLocations(),
                 'total_bytes' => (int) ($this->manifest['total_bytes'] ?? 0),
             ],
+            'species' => $this->analyzeSpecies($resolver),
             'counts' => [
                 'total' => count($rows),
                 'new' => $counts->get('new', 0),
@@ -451,6 +527,171 @@ class CardPackageReader
             'missing_point_rules' => $ruleTypes->diff($knownRules)->values()->all(),
             'qr_token_conflicts' => $tokenConflicts,
         ];
+    }
+
+    /**
+     * Especies del paquete y lo que falta en este servidor para importarlas:
+     * categorías, etiquetas y zonas que la persona decide crear, asignar u
+     * omitir.
+     *
+     * @return array<string, mixed>
+     */
+    private function analyzeSpecies(SpeciesResolver $resolver): array
+    {
+        $rows = [];
+        $categories = [];
+        $tags = [];
+        $zones = [];
+
+        $knownCategories = SpeciesCategory::query()->pluck('name')
+            ->mapWithKeys(fn (string $name) => [CardPackage::nameKey($name) => true]);
+        $knownTags = SpeciesTag::query()->get(['name', 'slug'])
+            ->flatMap(fn (SpeciesTag $tag) => [CardPackage::nameKey($tag->name) => true, 'slug:'.$tag->slug => true]);
+        $knownZones = ZooZone::query()->pluck('name')
+            ->mapWithKeys(fn (string $name) => [CardPackage::nameKey($name) => true]);
+
+        foreach ($this->species() as $slug => $item) {
+            $data = $item['data'];
+            $match = $item['errors']
+                ? ['species_id' => null, 'match' => null]
+                : $resolver->resolve(['slug' => $slug, 'scientific_name' => $data['scientific_name'] ?? null]);
+
+            $rows[] = [
+                'slug' => $slug,
+                'common_name' => $data['common_name'] ?? $slug,
+                'scientific_name' => $data['scientific_name'] ?? null,
+                'status' => match (true) {
+                    (bool) $item['errors'] => 'invalid',
+                    $match['species_id'] !== null => 'existing',
+                    default => 'new',
+                },
+                'existing_id' => $match['species_id'],
+                'match' => $match['match'],
+                'images' => (int) isset($data['images']['main']['file'])
+                    + (int) isset($data['images']['thumbnail']['file'])
+                    + count((array) ($data['images']['gallery'] ?? [])),
+                'errors' => $item['errors'],
+            ];
+
+            if ($item['errors']) {
+                continue;
+            }
+
+            $category = (string) ($data['category']['name'] ?? '');
+
+            if ($category !== '' && ! $knownCategories->has(CardPackage::nameKey($category))) {
+                $key = CardPackage::nameKey($category);
+                $categories[$key] ??= ['key' => $key, 'name' => $category, 'species' => 0];
+                $categories[$key]['species']++;
+            }
+
+            foreach ((array) ($data['tags'] ?? []) as $tag) {
+                $name = (string) ($tag['name'] ?? '');
+                $key = CardPackage::nameKey($name);
+
+                if ($name === '' || $knownTags->has($key) || $knownTags->has('slug:'.($tag['slug'] ?? ''))) {
+                    continue;
+                }
+
+                $tags[$key] ??= ['key' => $key, 'name' => $name, 'species' => 0];
+                $tags[$key]['species']++;
+            }
+
+            foreach ((array) ($data['locations'] ?? []) as $location) {
+                $zone = (string) ($location['zone'] ?? '');
+
+                if ($zone === '' || $knownZones->has(CardPackage::nameKey($zone))) {
+                    continue;
+                }
+
+                $key = CardPackage::nameKey($zone);
+                $zones[$key] ??= ['key' => $key, 'name' => $zone, 'locations' => 0];
+                $zones[$key]['locations']++;
+            }
+        }
+
+        $counts = collect($rows)->countBy('status');
+
+        return [
+            'counts' => [
+                'total' => count($rows),
+                'new' => $counts->get('new', 0),
+                'existing' => $counts->get('existing', 0),
+                'invalid' => $counts->get('invalid', 0),
+            ],
+            'rows' => $rows,
+            'missing_categories' => array_values($categories),
+            'missing_tags' => array_values($tags),
+            'missing_zones' => array_values($zones),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return list<string>
+     */
+    private function validateSpecies(string $slug, array $data): array
+    {
+        $validator = Validator::make($data, [
+            'slug' => ['required', 'string', Rule::in([$slug])],
+            'common_name' => ['required', 'string', 'max:255'],
+            'scientific_name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'origin' => ['nullable', 'string', 'max:255'],
+            'habitats' => ['nullable', 'array'],
+            'habitats.*' => [Rule::enum(Habitat::class)],
+            'diet' => ['nullable', Rule::enum(Diet::class)],
+            'conservation_status' => ['nullable', Rule::enum(ConservationStatus::class)],
+            'is_active' => ['nullable', 'boolean'],
+            'category' => ['required', 'array'],
+            'category.name' => ['required', 'string', 'max:255'],
+            'category.description' => ['nullable', 'string'],
+            'tags' => ['array'],
+            'tags.*.name' => ['required', 'string', 'max:255'],
+            'tags.*.slug' => ['nullable', 'string', 'max:255'],
+            'images' => ['array'],
+            'images.main' => ['nullable', 'array'],
+            'images.thumbnail' => ['nullable', 'array'],
+            'images.gallery' => ['array'],
+            'images.*.file' => ['sometimes', 'string'],
+            'images.*.alt_text' => ['nullable', 'string', 'max:255'],
+            'images.*.original_bytes' => ['nullable', 'integer', 'min:1'],
+            'images.gallery.*.file' => ['required', 'string'],
+            'images.gallery.*.alt_text' => ['nullable', 'string', 'max:255'],
+            'images.gallery.*.original_bytes' => ['nullable', 'integer', 'min:1'],
+            'images.gallery.*.is_active' => ['nullable', 'boolean'],
+            'locations' => ['array'],
+            'locations.*.name' => ['nullable', 'string', 'max:255'],
+            'locations.*.latitude' => ['required', 'numeric', 'between:-90,90'],
+            'locations.*.longitude' => ['required', 'numeric', 'between:-180,180'],
+            'locations.*.description' => ['nullable', 'string'],
+            'locations.*.is_active' => ['nullable', 'boolean'],
+            'locations.*.zone' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $errors = $validator->errors()->all();
+
+        // Cada imagen nombrada debe estar en el zip, en su carpeta y con el nombre de su tipo.
+        $files = [];
+
+        foreach (['main', 'thumbnail'] as $type) {
+            if (isset($data['images'][$type]['file'])) {
+                $files[] = [$type, (string) $data['images'][$type]['file'], '#^'.$type.'\.(webp|png|jpe?g)$#'];
+            }
+        }
+
+        foreach ((array) ($data['images']['gallery'] ?? []) as $image) {
+            $files[] = ['gallery', (string) ($image['file'] ?? ''), '#^gallery/[0-9]{2,4}\.(webp|png|jpe?g)$#'];
+        }
+
+        foreach ($files as [$type, $name, $pattern]) {
+            if (! preg_match($pattern, $name)
+                || ! isset($this->manifest['files'][CardPackage::speciesDirectory($slug).'/'.$name])) {
+                $errors[] = "La imagen {$type} no está en el paquete.";
+            }
+        }
+
+        return array_values(array_unique($errors));
     }
 
     /**

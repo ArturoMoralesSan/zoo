@@ -165,13 +165,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'cards.create',
             'cards.edit',
             'cards.delete',
-            // Paquetes .zip con todas las tarjetas (no se dan a staff).
-            'cards.export',
-            'cards.import',
-
-            // Recursos: optimización de imágenes y modelos 3D (no se dan a staff).
+            // Recursos (no se dan a staff): optimización de imágenes y modelos
+            // 3D, y paquetes .zip con todas las tarjetas y especies.
             'assets.view',
             'assets.optimize',
+            'assets.export',
+            'assets.import',
         ];
 
         /*

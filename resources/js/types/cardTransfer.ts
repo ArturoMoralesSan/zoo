@@ -1,5 +1,6 @@
 /*
- * Respuestas de admin.cards.transfers.* (CardTransferController).
+ * Respuestas de admin.assets.transfers.* (CardTransferController):
+ * paquetes con tarjetas y especies (Recursos → Descargas).
  */
 
 export type CardTransferType = 'export' | 'import';
@@ -24,7 +25,8 @@ export interface CardImportPreviewCard {
         key: string;
         common_name: string | null;
         scientific_name: string | null;
-        match: 'slug' | 'scientific_name' | null;
+        // package: la especie viene en el paquete y se importa antes.
+        match: 'slug' | 'scientific_name' | 'package' | null;
     };
     questions: number;
     qr_codes: number;
@@ -40,14 +42,44 @@ export interface CardImportMissingSpecies {
     cards: number;
 }
 
+export interface SpeciesImportPreviewRow {
+    slug: string;
+    common_name: string;
+    scientific_name: string | null;
+    status: 'new' | 'existing' | 'invalid';
+    existing_id: number | null;
+    match: 'slug' | 'scientific_name' | null;
+    images: number;
+    errors: string[];
+}
+
+// Lo que falta en este servidor; `key` es el nombre normalizado.
+export interface MissingReference {
+    key: string;
+    name: string;
+    species?: number;
+    locations?: number;
+}
+
+export interface SpeciesImportPreview {
+    counts: { total: number; new: number; existing: number; invalid: number };
+    rows: SpeciesImportPreviewRow[];
+    missing_categories: MissingReference[];
+    missing_tags: MissingReference[];
+    missing_zones: MissingReference[];
+}
+
 export interface CardImportPreview {
     manifest: {
         app: string | null;
         source_url: string | null;
         exported_at: string | null;
+        version: number;
         include_qr_tokens: boolean;
+        include_locations: boolean;
         total_bytes: number;
     };
+    species: SpeciesImportPreview;
     counts: { total: number; new: number; existing: number; invalid: number };
     cards: CardImportPreviewCard[];
     missing_species: CardImportMissingSpecies[];
@@ -68,6 +100,15 @@ export interface CardImportResult {
     settings_replaced: boolean;
     qr_tokens_regenerated: number;
     licenses_created: string[];
+    species: {
+        created: number;
+        updated: number;
+        skipped: { name: string; reason: string }[];
+        failed: { name: string; message: string }[];
+    };
+    categories_created: string[];
+    tags_created: string[];
+    locations_skipped: number;
 }
 
 export interface CardExportSummary {
@@ -75,6 +116,8 @@ export interface CardExportSummary {
     questions: number;
     qr_codes: number;
     credits: number;
+    species: number;
+    species_images: number;
     files: number;
     bytes: number;
     missing_files: { card: string; field: string }[];
@@ -86,6 +129,7 @@ export interface CardTransfer {
     status: CardTransferStatus;
     options: {
         include_qr_tokens?: boolean;
+        include_locations?: boolean;
         mode?: CardImportMode;
         replace_settings?: boolean;
     } | null;
@@ -112,6 +156,10 @@ export interface CardTransferState {
     can_export: boolean;
     can_import: boolean;
     card_count: number;
+    species_count: number;
     species: { id: number; common_name: string; scientific_name: string }[];
+    categories: { id: number; name: string }[];
+    tags: { id: number; name: string }[];
+    zones: { id: number; name: string }[];
     transfers: CardTransfer[];
 }

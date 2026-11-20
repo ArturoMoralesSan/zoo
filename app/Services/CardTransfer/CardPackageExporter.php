@@ -10,12 +10,17 @@ use App\Models\DuelMessageSetting;
 use App\Models\License;
 use App\Models\QuizAnswer;
 use App\Models\QuizQuestion;
+use App\Models\Species;
+use App\Models\SpeciesImage;
+use App\Models\SpeciesLocation;
+use App\Models\SpeciesTag;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use ZipArchive;
 
 /**
- * Arma el paquete .zip con todas las tarjetas, su configuración y sus archivos.
+ * Arma el paquete .zip con todas las tarjetas, su configuración y sus
+ * archivos, y todas las especies con sus imágenes (ubicación opcional).
  */
 class CardPackageExporter
 {
@@ -27,9 +32,9 @@ class CardPackageExporter
     private array $temporary = [];
 
     /**
-     * @return array{cards: int, questions: int, qr_codes: int, credits: int, files: int, bytes: int, missing_files: list<array{card: string, field: string}>}
+     * @return array{cards: int, questions: int, qr_codes: int, credits: int, species: int, species_images: int, files: int, bytes: int, missing_files: list<array{card: string, field: string}>}
      */
-    public function export(string $absolutePath, bool $includeQrTokens): array
+    public function export(string $absolutePath, bool $includeQrTokens, bool $includeLocations = false): array
     {
         if (! is_dir(dirname($absolutePath))) {
             mkdir(dirname($absolutePath), 0775, true);
@@ -42,7 +47,7 @@ class CardPackageExporter
         }
 
         $files = [];
-        $counts = ['cards' => 0, 'questions' => 0, 'qr_codes' => 0, 'credits' => 0];
+        $counts = ['cards' => 0, 'questions' => 0, 'qr_codes' => 0, 'credits' => 0, 'species' => 0, 'species_images' => 0];
         $missing = [];
         $licenseIds = [];
 
@@ -90,6 +95,31 @@ class CardPackageExporter
                     }
                 });
 
+            Species::query()
+                ->with(['category:id,name,description', 'tags:id,name,slug', 'images', 'locations.zone:id,name'])
+                ->orderBy('id')
+                ->chunkById(50, function ($allSpecies) use ($zip, $includeLocations, $addString, &$files, &$counts, &$missing) {
+                    foreach ($allSpecies as $species) {
+                        /** @var Species $species */
+                        if (! preg_match(CardPackage::SPECIES_SLUG_PATTERN, $species->slug)) {
+                            // No se puede usar como carpeta: se avisa y se omite.
+                            $missing[] = ['card' => $species->common_name, 'field' => 'species'];
+
+                            continue;
+                        }
+
+                        $images = $this->addSpeciesImages($zip, $species, $files, $missing);
+                        $data = $this->speciesData($species, $images, $includeLocations);
+
+                        $addString(CardPackage::speciesJson($species->slug), CardPackage::encode($data));
+
+                        $counts['species']++;
+                        $counts['species_images'] += (int) ($images['main'] !== null)
+                            + (int) ($images['thumbnail'] !== null)
+                            + count($images['gallery']);
+                    }
+                });
+
             $addString(CardPackage::RARITY_SETTINGS, CardPackage::encode($this->raritySettings()));
             $addString(CardPackage::DUEL_MESSAGES, CardPackage::encode(
                 DuelMessageSetting::current()->only(['win_message', 'retry_message', 'locked_message'])
@@ -113,6 +143,7 @@ class CardPackageExporter
                 'source_url' => config('app.url'),
                 'exported_at' => now()->toIso8601String(),
                 'include_qr_tokens' => $includeQrTokens,
+                'include_locations' => $includeLocations,
                 'counts' => $counts,
                 'total_bytes' => $bytes,
                 'files' => $files,
@@ -188,6 +219,115 @@ class CardPackageExporter
         }
 
         return $entries;
+    }
+
+    /**
+     * Agrega las imágenes de la especie (principal, miniatura y galería).
+     *
+     * @param  array<string, array{sha256: string, bytes: int}>  $files
+     * @param  list<array{card: string, field: string}>  $missing
+     * @return array{main: array<string, mixed>|null, thumbnail: array<string, mixed>|null, gallery: list<array<string, mixed>>}
+     */
+    private function addSpeciesImages(ZipArchive $zip, Species $species, array &$files, array &$missing): array
+    {
+        $result = ['main' => null, 'thumbnail' => null, 'gallery' => []];
+        $galleryIndex = 0;
+
+        $images = $species->images
+            ->whereIn('type', ['main', 'thumbnail', 'gallery'])
+            ->sortBy([['sort_order', 'asc'], ['id', 'asc']]);
+
+        foreach ($images as $image) {
+            /** @var SpeciesImage $image */
+            if ($image->type !== 'gallery' && $result[$image->type] !== null) {
+                continue;
+            }
+
+            $extension = strtolower(pathinfo($image->path, PATHINFO_EXTENSION));
+            $source = in_array($extension, CardPackage::SPECIES_IMAGE_EXTENSIONS, true)
+                ? $this->localPath('public', $image->path)
+                : null;
+            $hash = $source ? hash_file('sha256', $source) : false;
+
+            if (! $source || $hash === false) {
+                $missing[] = ['card' => $species->common_name, 'field' => 'species_'.$image->type];
+
+                continue;
+            }
+
+            $name = $image->type === 'gallery'
+                ? sprintf('gallery/%02d.%s', ++$galleryIndex, $extension)
+                : $image->type.'.'.$extension;
+            $entry = CardPackage::speciesDirectory($species->slug).'/'.$name;
+
+            $zip->addFile($source, $entry);
+            $zip->setCompressionName($entry, ZipArchive::CM_STORE);
+            $files[$entry] = ['sha256' => $hash, 'bytes' => (int) filesize($source)];
+
+            $item = [
+                'file' => $name,
+                'alt_text' => $image->alt_text,
+                'original_bytes' => $image->original_bytes,
+                'is_active' => (bool) $image->is_active,
+            ];
+
+            if ($image->type === 'gallery') {
+                $result['gallery'][] = $item;
+            } elseif ($image->type === 'main') {
+                $result['main'] = $item;
+            } else {
+                $result['thumbnail'] = $item;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array{main: array<string, mixed>|null, thumbnail: array<string, mixed>|null, gallery: list<array<string, mixed>>}  $images
+     * @return array<string, mixed>
+     */
+    private function speciesData(Species $species, array $images, bool $includeLocations): array
+    {
+        $data = [];
+
+        foreach (CardPackage::SPECIES_FIELDS as $field) {
+            $value = $species->getAttribute($field);
+
+            $data[$field] = match (true) {
+                $value instanceof \BackedEnum => $value->value,
+                $field === 'habitats' => $species->sortedHabitats()->map(fn ($habitat) => $habitat->value)->all(),
+                default => $value,
+            };
+        }
+
+        $data['category'] = $species->category
+            ? ['name' => $species->category->name, 'description' => $species->category->description]
+            : null;
+
+        $data['tags'] = $species->tags
+            ->map(fn (SpeciesTag $tag) => ['name' => $tag->name, 'slug' => $tag->slug])
+            ->values()
+            ->all();
+
+        $data['images'] = $images;
+
+        // Coordenadas exactas de cada animal: solo si se pidió al exportar.
+        if ($includeLocations) {
+            $data['locations'] = $species->locations
+                ->map(fn (SpeciesLocation $location) => [
+                    'name' => $location->name,
+                    'latitude' => (float) $location->latitude,
+                    'longitude' => (float) $location->longitude,
+                    'description' => $location->description,
+                    'is_active' => (bool) $location->is_active,
+                    'zone' => $location->zone?->name,
+                ])
+                ->values()
+                ->all();
+        }
+
+        return $data;
     }
 
     /**

@@ -40,6 +40,9 @@ class SpeciesLocation extends Model
     /**
      * Zona del zoológico donde se encuentra la ubicación.
      */
+    /**
+     * @return BelongsTo<ZooZone, $this>
+     */
     public function zone(): BelongsTo
     {
         return $this->belongsTo(ZooZone::class, 'zone_id');

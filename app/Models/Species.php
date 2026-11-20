@@ -76,6 +76,9 @@ class Species extends Model
         return $labels !== '' ? $labels : null;
     }
 
+    /**
+     * @return BelongsTo<SpeciesCategory, $this>
+     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(
@@ -101,6 +104,9 @@ class Species extends Model
         );
     }
 
+    /**
+     * @return HasMany<SpeciesLocation, $this>
+     */
     public function locations(): HasMany
     {
         return $this->hasMany(
@@ -108,6 +114,9 @@ class Species extends Model
         );
     }
 
+    /**
+     * @return BelongsToMany<SpeciesTag, $this>
+     */
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(

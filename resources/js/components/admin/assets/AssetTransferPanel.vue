@@ -9,6 +9,7 @@ import {
     Image,
     KeyRound,
     LoaderCircle,
+    MapPin,
     PackageOpen,
     PackagePlus,
     QrCode,
@@ -21,6 +22,7 @@ import {
     Upload,
     Copyright,
     HelpCircle,
+    Leaf,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -37,7 +39,7 @@ import type {
 } from '@/types/cardTransfer';
 
 /*
- * Pestaña "Importar / Exportar": paquetes .zip con todas las tarjetas.
+ * Recursos → Descargas: paquetes .zip con todas las tarjetas y especies.
  * El servidor trabaja en la cola; aquí se consulta el estado cada 2 s
  * mientras algo está en curso.
  */
@@ -50,6 +52,8 @@ const loadError = ref<string | null>(null);
 
 // Exportar
 const includeQrTokens = ref(false);
+// Coordenadas exactas de cada animal: apagado por omisión.
+const includeLocations = ref(false);
 const exporting = ref(false);
 
 // Importar
@@ -60,8 +64,14 @@ const uploadError = ref<string | null>(null);
 const mode = ref<CardImportMode>('skip');
 const replaceSettings = ref(false);
 const speciesChoice = ref<Record<string, string>>({});
+// Lo que falta en este servidor, por nombre normalizado:
+// categoría 'create' o id; etiqueta 'create', 'skip' o id; zona id o '' (omitir).
+const categoryChoice = ref<Record<string, string>>({});
+const tagChoice = ref<Record<string, string>>({});
+const zoneChoice = ref<Record<string, string>>({});
 const confirming = ref(false);
 const showCards = ref(false);
+const showSpecies = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -152,6 +162,10 @@ const INCLUDED = [
     { icon: Copyright, text: 'Créditos y licencias de cada recurso' },
     { icon: Settings2, text: 'Configuración por rareza y mensajes de duelo' },
     { icon: Image, text: 'Imágenes y modelos 3D (original y escalado)' },
+    {
+        icon: Leaf,
+        text: 'Especies con su categoría, etiquetas, catálogos e imágenes',
+    },
 ];
 
 /*
@@ -179,7 +193,7 @@ const load = async (silent = false) => {
     loadError.value = null;
 
     try {
-        const response = await fetch(admin.cards.transfers.index().url, {
+        const response = await fetch(admin.assets.transfers.index().url, {
             headers: { Accept: 'application/json' },
         });
 
@@ -293,9 +307,12 @@ const startExport = async () => {
 
     try {
         const transfer = await request(
-            admin.cards.transfers.export().url,
+            admin.assets.transfers.export().url,
             'POST',
-            { include_qr_tokens: includeQrTokens.value },
+            {
+                include_qr_tokens: includeQrTokens.value,
+                include_locations: includeLocations.value,
+            },
         );
 
         if (transfer) {
@@ -309,7 +326,7 @@ const startExport = async () => {
 };
 
 const downloadUrl = (transfer: CardTransfer) =>
-    admin.cards.transfers.download(transfer.id).url;
+    admin.assets.transfers.download(transfer.id).url;
 
 /*
  * ---------------------------------------------------------------------
@@ -362,7 +379,7 @@ const upload = (file: File) => {
     body.append('package', file);
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', admin.cards.transfers.import().url);
+    xhr.open('POST', admin.assets.transfers.import().url);
     xhr.setRequestHeader('Accept', 'application/json');
     xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken());
 
@@ -409,7 +426,11 @@ const resetImportOptions = () => {
     mode.value = 'skip';
     replaceSettings.value = false;
     speciesChoice.value = {};
+    categoryChoice.value = {};
+    tagChoice.value = {};
+    zoneChoice.value = {};
     showCards.value = false;
+    showSpecies.value = false;
 };
 
 const finishImport = () => {
@@ -440,6 +461,38 @@ const importableCount = computed(() => {
     }).length;
 });
 
+// Especies que se crearán o sobrescribirán con las opciones elegidas.
+const importableSpecies = computed(
+    () =>
+        preview.value?.species?.rows.filter(
+            (row) =>
+                row.status === 'new' ||
+                (row.status === 'existing' && mode.value === 'overwrite'),
+        ).length ?? 0,
+);
+
+const existingTotal = computed(
+    () =>
+        (preview.value?.counts.existing ?? 0) +
+        (preview.value?.species?.counts.existing ?? 0),
+);
+
+const importLabel = computed(() => {
+    const parts = [];
+
+    if (importableSpecies.value) {
+        parts.push(
+            `${importableSpecies.value} ${importableSpecies.value === 1 ? 'especie' : 'especies'}`,
+        );
+    }
+
+    parts.push(
+        `${importableCount.value} ${importableCount.value === 1 ? 'tarjeta' : 'tarjetas'}`,
+    );
+
+    return `Importar ${parts.join(' y ')}`;
+});
+
 const hasWarnings = computed(
     () =>
         !!preview.value &&
@@ -458,7 +511,7 @@ const confirmImport = async () => {
     if (mode.value === 'overwrite' || replaceSettings.value) {
         const changes = [
             mode.value === 'overwrite'
-                ? `se sobrescribirán ${preview.value?.counts.existing ?? 0} tarjetas existentes`
+                ? `se sobrescribirán ${preview.value?.counts.existing ?? 0} tarjetas y ${preview.value?.species?.counts.existing ?? 0} especies existentes`
                 : null,
             replaceSettings.value
                 ? 'se reemplazará la configuración por rareza y los mensajes de duelo'
@@ -484,7 +537,7 @@ const confirmImport = async () => {
 
     try {
         const transfer = await request(
-            admin.cards.transfers.confirm(activeImport.value.id).url,
+            admin.assets.transfers.confirm(activeImport.value.id).url,
             'POST',
             {
                 mode: mode.value,
@@ -494,6 +547,41 @@ const confirmImport = async () => {
                         key: species.key,
                         species_id: speciesChoice.value[species.key]
                             ? Number(speciesChoice.value[species.key])
+                            : null,
+                    }),
+                ),
+                categories: (
+                    preview.value?.species?.missing_categories ?? []
+                ).map((category) => {
+                    const choice =
+                        categoryChoice.value[category.key] ?? 'create';
+
+                    return choice === 'create'
+                        ? { key: category.key, action: 'create' }
+                        : {
+                              key: category.key,
+                              action: 'existing',
+                              id: Number(choice),
+                          };
+                }),
+                tags: (preview.value?.species?.missing_tags ?? []).map(
+                    (tag) => {
+                        const choice = tagChoice.value[tag.key] ?? 'create';
+
+                        return choice === 'create' || choice === 'skip'
+                            ? { key: tag.key, action: choice }
+                            : {
+                                  key: tag.key,
+                                  action: 'existing',
+                                  id: Number(choice),
+                              };
+                    },
+                ),
+                zones: (preview.value?.species?.missing_zones ?? []).map(
+                    (zone) => ({
+                        key: zone.key,
+                        zone_id: zoneChoice.value[zone.key]
+                            ? Number(zoneChoice.value[zone.key])
                             : null,
                     }),
                 ),
@@ -517,7 +605,7 @@ const cancelImport = async () => {
 
     try {
         await request(
-            admin.cards.transfers.destroy(activeImport.value.id).url,
+            admin.assets.transfers.destroy(activeImport.value.id).url,
             'DELETE',
         );
 
@@ -533,12 +621,12 @@ const cancelImport = async () => {
     }
 };
 
-// Al terminar una importación, la lista de tarjetas se actualiza.
+// Al terminar una importación, el resumen de Recursos se actualiza.
 watch(
     () => activeImport.value?.status,
     (status, previous) => {
         if (status === 'completed' && previous && previous !== 'completed') {
-            router.reload({ only: ['cards'] });
+            router.reload({ only: ['summary'] });
         }
     },
 );
@@ -565,7 +653,10 @@ const removeTransfer = async (transfer: CardTransfer) => {
     }
 
     try {
-        await request(admin.cards.transfers.destroy(transfer.id).url, 'DELETE');
+        await request(
+            admin.assets.transfers.destroy(transfer.id).url,
+            'DELETE',
+        );
 
         if (state.value) {
             state.value.transfers = state.value.transfers.filter(
@@ -589,15 +680,20 @@ const transferSummary = (transfer: CardTransfer) => {
     }
 
     if (transfer.type === 'export' && transfer.status === 'completed') {
-        return `${summary?.cards ?? 0} tarjetas · ${summary?.files ?? 0} archivos`;
+        return `${summary?.cards ?? 0} tarjetas · ${summary?.species ?? 0} especies · ${summary?.files ?? 0} archivos`;
     }
 
     if (transfer.type === 'import' && summary?.result) {
-        return `${summary.result.created} creadas · ${summary.result.updated} actualizadas · ${summary.result.skipped.length} omitidas`;
+        const species = summary.result.species;
+        const speciesText = species
+            ? `${species.created + species.updated} especies · `
+            : '';
+
+        return `${speciesText}${summary.result.created} tarjetas creadas · ${summary.result.updated} actualizadas · ${summary.result.skipped.length} omitidas`;
     }
 
     if (transfer.type === 'import' && summary?.preview) {
-        return `${summary.preview.counts.total} tarjetas en el paquete`;
+        return `${summary.preview.counts.total} tarjetas y ${summary.preview.species?.counts.total ?? 0} especies en el paquete`;
     }
 
     return '';
@@ -652,8 +748,8 @@ onBeforeUnmount(() => {
             <!-- ============ Exportar ============ -->
             <AdminCard
                 v-if="state.can_export"
-                title="Exportar tarjetas"
-                description="Descarga un .zip con todas las tarjetas para respaldarlas o llevarlas a otro servidor."
+                title="Exportar tarjetas y especies"
+                description="Descarga un .zip con todas las tarjetas y especies para respaldarlas o llevarlas a otro servidor."
                 :icon="PackagePlus"
             >
                 <div class="space-y-4">
@@ -676,8 +772,8 @@ onBeforeUnmount(() => {
 
                     <p class="text-xs text-[#718477]">
                         No incluye las tarjetas obtenidas por los visitantes ni
-                        sus intentos. Las especies deben existir en el servidor
-                        donde se importe.
+                        sus intentos. Al importar, las especies que no existan
+                        se crean junto con sus tarjetas.
                     </p>
 
                     <label class="form-checkbox-row cursor-pointer">
@@ -703,6 +799,34 @@ onBeforeUnmount(() => {
                                 >
                                     Cualquiera con el archivo podría iniciar
                                     duelos: guárdalo en un lugar seguro.
+                                </strong>
+                            </span>
+                        </span>
+                    </label>
+
+                    <label class="form-checkbox-row cursor-pointer">
+                        <input
+                            v-model="includeLocations"
+                            type="checkbox"
+                            class="form-checkbox"
+                            :disabled="!available"
+                        />
+                        <span>
+                            <span
+                                class="form-checkbox-title flex items-center gap-1.5"
+                            >
+                                <MapPin :size="14" />
+                                Incluir la ubicación de las especies
+                            </span>
+                            <span class="form-checkbox-description block">
+                                Coordenadas y zona de cada especie en el mapa.
+                                <strong
+                                    v-if="includeLocations"
+                                    class="text-amber-700"
+                                >
+                                    El archivo dirá dónde está exactamente cada
+                                    animal del zoológico: no lo compartas fuera
+                                    del equipo.
                                 </strong>
                             </span>
                         </span>
@@ -798,10 +922,15 @@ onBeforeUnmount(() => {
                             :icon="FileArchive"
                             :loading="exporting || isRunning(latestExport)"
                             loading-text="Generando…"
-                            :disabled="!available || state.card_count === 0"
+                            :disabled="
+                                !available ||
+                                (state.card_count === 0 &&
+                                    state.species_count === 0)
+                            "
                             @click="startExport"
                         >
-                            Generar paquete ({{ state.card_count }} tarjetas)
+                            Generar paquete ({{ state.card_count }} tarjetas,
+                            {{ state.species_count }} especies)
                         </AdminButton>
                     </div>
                 </div>
@@ -810,7 +939,7 @@ onBeforeUnmount(() => {
             <!-- ============ Importar ============ -->
             <AdminCard
                 v-if="state.can_import"
-                title="Importar tarjetas"
+                title="Importar tarjetas y especies"
                 description="Sube un .zip exportado desde ZooDeck. Antes de importar verás qué se va a crear o actualizar."
                 :icon="PackageOpen"
             >
@@ -881,7 +1010,7 @@ onBeforeUnmount(() => {
                             class="animate-spin text-sky-600"
                         />
                         <template v-if="activeImport.status === 'processing'">
-                            Importando tarjetas…
+                            Importando especies y tarjetas…
                             <span v-if="progress" class="font-normal">
                                 {{ progress.done }} de {{ progress.total }}
                             </span>
@@ -950,8 +1079,301 @@ onBeforeUnmount(() => {
                             <template v-if="preview.manifest.include_qr_tokens">
                                 · incluye tokens de QR
                             </template>
+                            <template v-if="preview.manifest.include_locations">
+                                · incluye ubicaciones
+                            </template>
+                        </p>
+                        <p
+                            v-if="(preview.manifest.version ?? 1) < 2"
+                            class="mt-1 text-xs text-amber-700"
+                        >
+                            Paquete de una versión anterior: solo trae tarjetas;
+                            sus especies deben existir en este servidor.
                         </p>
                     </div>
+
+                    <!-- Especies del paquete -->
+                    <template v-if="preview.species?.counts.total">
+                        <p class="text-sm font-semibold text-[#244334]">
+                            Especies
+                        </p>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div
+                                class="rounded-xl border border-[#bfe0cb] bg-[#e2f3e8] p-3"
+                            >
+                                <p class="text-2xl font-bold text-[#187744]">
+                                    {{ preview.species.counts.new }}
+                                </p>
+                                <p class="text-xs text-[#435d4c]">Nuevas</p>
+                            </div>
+                            <div
+                                class="rounded-xl border border-[#dce7df] bg-[#f2f7f4] p-3"
+                            >
+                                <p class="text-2xl font-bold text-[#244334]">
+                                    {{ preview.species.counts.existing }}
+                                </p>
+                                <p class="text-xs text-[#435d4c]">Ya existen</p>
+                            </div>
+                            <div
+                                class="rounded-xl border p-3"
+                                :class="
+                                    preview.species.counts.invalid
+                                        ? 'border-red-200 bg-red-50'
+                                        : 'border-[#dce7df] bg-[#f2f7f4]'
+                                "
+                            >
+                                <p
+                                    class="text-2xl font-bold"
+                                    :class="
+                                        preview.species.counts.invalid
+                                            ? 'text-red-700'
+                                            : 'text-[#244334]'
+                                    "
+                                >
+                                    {{ preview.species.counts.invalid }}
+                                </p>
+                                <p class="text-xs text-[#435d4c]">
+                                    Con errores
+                                </p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <button
+                                type="button"
+                                class="text-sm font-semibold text-[#187744] hover:underline"
+                                @click="showSpecies = !showSpecies"
+                            >
+                                {{ showSpecies ? 'Ocultar' : 'Ver' }} las
+                                {{ preview.species.counts.total }} especies del
+                                paquete
+                            </button>
+
+                            <ul
+                                v-if="showSpecies"
+                                class="mt-2 max-h-72 divide-y divide-[#e5ece7] overflow-y-auto rounded-xl border border-[#c8dccf]"
+                            >
+                                <li
+                                    v-for="row in preview.species.rows"
+                                    :key="row.slug"
+                                    class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm"
+                                >
+                                    <span class="min-w-0">
+                                        <span
+                                            class="font-semibold text-[#244334]"
+                                        >
+                                            {{ row.common_name }}
+                                        </span>
+                                        <span
+                                            v-if="row.scientific_name"
+                                            class="text-xs text-[#718477] italic"
+                                        >
+                                            {{ row.scientific_name }}
+                                        </span>
+                                        <span class="text-xs text-[#718477]">
+                                            · {{ row.images }} imágenes
+                                        </span>
+                                        <span
+                                            v-if="row.errors.length"
+                                            class="block text-xs text-red-700"
+                                        >
+                                            {{ row.errors[0] }}
+                                        </span>
+                                        <span
+                                            v-else-if="
+                                                row.match === 'scientific_name'
+                                            "
+                                            class="block text-xs text-amber-700"
+                                        >
+                                            Encontrada por nombre científico
+                                        </span>
+                                    </span>
+                                    <span
+                                        class="rounded-full border px-2 py-0.5 text-xs font-semibold"
+                                        :class="{
+                                            'border-[#bfe0cb] bg-[#e2f3e8] text-[#187744]':
+                                                row.status === 'new',
+                                            'border-[#dce7df] bg-[#f2f7f4] text-[#435d4c]':
+                                                row.status === 'existing',
+                                            'border-red-200 bg-red-50 text-red-700':
+                                                row.status === 'invalid',
+                                        }"
+                                    >
+                                        {{
+                                            {
+                                                new: 'Nueva',
+                                                existing: 'Ya existe',
+                                                invalid: 'Inválida',
+                                            }[row.status]
+                                        }}
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                    </template>
+
+                    <!-- Categorías, etiquetas y zonas que faltan -->
+                    <div
+                        v-if="
+                            preview.species?.missing_categories.length ||
+                            preview.species?.missing_tags.length ||
+                            preview.species?.missing_zones.length
+                        "
+                        class="space-y-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4"
+                    >
+                        <p
+                            class="flex items-center gap-2 text-sm font-semibold text-amber-800"
+                        >
+                            <TriangleAlert :size="16" />
+                            Lo que no existe en este servidor
+                        </p>
+
+                        <div
+                            v-if="preview.species.missing_categories.length"
+                            class="space-y-2"
+                        >
+                            <p class="text-xs text-amber-800">
+                                <strong>Categorías.</strong> Cada especie
+                                necesita una: créala o usa una existente.
+                            </p>
+                            <div
+                                v-for="category in preview.species
+                                    .missing_categories"
+                                :key="category.key"
+                                class="grid gap-2 sm:grid-cols-[1fr_minmax(0,16rem)] sm:items-center"
+                            >
+                                <span class="text-sm text-[#244334]">
+                                    <span class="font-semibold">{{
+                                        category.name
+                                    }}</span>
+                                    <span class="block text-xs text-[#718477]">
+                                        {{ category.species }}
+                                        {{
+                                            category.species === 1
+                                                ? 'especie'
+                                                : 'especies'
+                                        }}
+                                    </span>
+                                </span>
+                                <select
+                                    v-model="categoryChoice[category.key]"
+                                    class="form-select"
+                                    :aria-label="`Categoría ${category.name}`"
+                                >
+                                    <option :value="undefined">
+                                        Crear «{{ category.name }}»
+                                    </option>
+                                    <option
+                                        v-for="option in state.categories"
+                                        :key="option.id"
+                                        :value="String(option.id)"
+                                    >
+                                        Usar «{{ option.name }}»
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div
+                            v-if="preview.species.missing_tags.length"
+                            class="space-y-2"
+                        >
+                            <p class="text-xs text-amber-800">
+                                <strong>Etiquetas.</strong> Créalas, usa una
+                                existente u omítelas.
+                            </p>
+                            <div
+                                v-for="tag in preview.species.missing_tags"
+                                :key="tag.key"
+                                class="grid gap-2 sm:grid-cols-[1fr_minmax(0,16rem)] sm:items-center"
+                            >
+                                <span class="text-sm text-[#244334]">
+                                    <span class="font-semibold">{{
+                                        tag.name
+                                    }}</span>
+                                    <span class="block text-xs text-[#718477]">
+                                        {{ tag.species }}
+                                        {{
+                                            tag.species === 1
+                                                ? 'especie'
+                                                : 'especies'
+                                        }}
+                                    </span>
+                                </span>
+                                <select
+                                    v-model="tagChoice[tag.key]"
+                                    class="form-select"
+                                    :aria-label="`Etiqueta ${tag.name}`"
+                                >
+                                    <option :value="undefined">
+                                        Crear «{{ tag.name }}»
+                                    </option>
+                                    <option value="skip">Omitirla</option>
+                                    <option
+                                        v-for="option in state.tags"
+                                        :key="option.id"
+                                        :value="String(option.id)"
+                                    >
+                                        Usar «{{ option.name }}»
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div
+                            v-if="preview.species.missing_zones.length"
+                            class="space-y-2"
+                        >
+                            <p class="text-xs text-amber-800">
+                                <strong>Zonas del mapa.</strong> No se pueden
+                                crear desde el paquete (necesitan su polígono):
+                                elige una zona existente u omite esas
+                                ubicaciones.
+                            </p>
+                            <div
+                                v-for="zone in preview.species.missing_zones"
+                                :key="zone.key"
+                                class="grid gap-2 sm:grid-cols-[1fr_minmax(0,16rem)] sm:items-center"
+                            >
+                                <span class="text-sm text-[#244334]">
+                                    <span class="font-semibold">{{
+                                        zone.name
+                                    }}</span>
+                                    <span class="block text-xs text-[#718477]">
+                                        {{ zone.locations }}
+                                        {{
+                                            zone.locations === 1
+                                                ? 'ubicación'
+                                                : 'ubicaciones'
+                                        }}
+                                    </span>
+                                </span>
+                                <select
+                                    v-model="zoneChoice[zone.key]"
+                                    class="form-select"
+                                    :aria-label="`Zona ${zone.name}`"
+                                >
+                                    <option :value="undefined">
+                                        Omitir la ubicación
+                                    </option>
+                                    <option
+                                        v-for="option in state.zones"
+                                        :key="option.id"
+                                        :value="String(option.id)"
+                                    >
+                                        Usar «{{ option.name }}»
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p
+                        v-if="preview.species?.counts.total"
+                        class="text-sm font-semibold text-[#244334]"
+                    >
+                        Tarjetas
+                    </p>
 
                     <!-- Resumen -->
                     <div class="grid grid-cols-3 gap-2 text-center">
@@ -1002,7 +1424,8 @@ onBeforeUnmount(() => {
                             class="flex items-center gap-2 text-sm font-semibold text-amber-800"
                         >
                             <TriangleAlert :size="16" />
-                            Especies que no existen en este servidor
+                            Especies que no existen en este servidor ni vienen
+                            en el paquete
                         </p>
                         <p class="text-xs text-amber-800">
                             Elige a qué especie asignar sus tarjetas o déjalas
@@ -1189,11 +1612,11 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- Opciones -->
-                    <fieldset v-if="preview.counts.existing" class="space-y-2">
+                    <fieldset v-if="existingTotal" class="space-y-2">
                         <legend
                             class="mb-2 text-sm font-semibold text-[#244334]"
                         >
-                            Tarjetas que ya existen
+                            Tarjetas y especies que ya existen
                         </legend>
                         <label class="form-checkbox-row cursor-pointer">
                             <input
@@ -1226,7 +1649,10 @@ onBeforeUnmount(() => {
                                 <span class="form-checkbox-description block">
                                     Sus datos, archivos y créditos se reemplazan
                                     por los del paquete. Las preguntas que no
-                                    vengan se desactivan (no se borran).
+                                    vengan se desactivan (no se borran). Las
+                                    especies reemplazan sus datos, etiquetas e
+                                    imágenes, y su ubicación solo si el paquete
+                                    la trae.
                                 </span>
                             </span>
                         </label>
@@ -1264,12 +1690,13 @@ onBeforeUnmount(() => {
                             loading-text="Iniciando…"
                             :disabled="
                                 !available ||
-                                (importableCount === 0 && !replaceSettings)
+                                (importableCount === 0 &&
+                                    importableSpecies === 0 &&
+                                    !replaceSettings)
                             "
                             @click="confirmImport"
                         >
-                            Importar {{ importableCount }}
-                            {{ importableCount === 1 ? 'tarjeta' : 'tarjetas' }}
+                            {{ importLabel }}
                         </AdminButton>
                     </div>
                 </div>
@@ -1285,6 +1712,21 @@ onBeforeUnmount(() => {
                         <CircleCheck :size="18" />
                         Importación terminada
                     </p>
+
+                    <p
+                        v-if="result.species"
+                        class="rounded-xl border border-[#dce7df] bg-[#f2f7f4] px-4 py-3 text-sm text-[#435d4c]"
+                    >
+                        <strong class="text-[#244334]">Especies:</strong>
+                        {{ result.species.created }} creadas ·
+                        {{ result.species.updated }} actualizadas ·
+                        {{ result.species.skipped.length }} omitidas
+                        <template v-if="result.species.failed.length">
+                            · {{ result.species.failed.length }} con error
+                        </template>
+                    </p>
+
+                    <p class="text-sm font-semibold text-[#244334]">Tarjetas</p>
 
                     <div class="grid grid-cols-3 gap-2 text-center">
                         <div
@@ -1314,9 +1756,30 @@ onBeforeUnmount(() => {
                     </div>
 
                     <ul
-                        v-if="result.failed.length || result.skipped.length"
+                        v-if="
+                            result.failed.length ||
+                            result.skipped.length ||
+                            result.species?.failed.length ||
+                            result.species?.skipped.length
+                        "
                         class="max-h-56 space-y-1 overflow-y-auto rounded-xl border border-[#dce7df] bg-[#fafcfa] p-4 text-xs"
                     >
+                        <li
+                            v-for="item in result.species?.failed ?? []"
+                            :key="`sf-${item.name}`"
+                            class="text-red-700"
+                        >
+                            <strong>Especie {{ item.name }}:</strong>
+                            {{ item.message }}
+                        </li>
+                        <li
+                            v-for="item in result.species?.skipped ?? []"
+                            :key="`ss-${item.name}`"
+                            class="text-[#435d4c]"
+                        >
+                            <strong>Especie {{ item.name }}:</strong>
+                            {{ item.reason }}
+                        </li>
                         <li
                             v-for="item in result.failed"
                             :key="`f-${item.name}`"
@@ -1339,6 +1802,26 @@ onBeforeUnmount(() => {
                     >
                         Se reemplazó la configuración por rareza y los mensajes
                         de duelo.
+                    </p>
+                    <p
+                        v-if="result.categories_created?.length"
+                        class="text-xs text-[#435d4c]"
+                    >
+                        Categorías creadas:
+                        {{ result.categories_created.join(', ') }}.
+                    </p>
+                    <p
+                        v-if="result.tags_created?.length"
+                        class="text-xs text-[#435d4c]"
+                    >
+                        Etiquetas creadas: {{ result.tags_created.join(', ') }}.
+                    </p>
+                    <p
+                        v-if="result.locations_skipped"
+                        class="text-xs text-amber-700"
+                    >
+                        {{ result.locations_skipped }} ubicaciones se omitieron
+                        porque su zona no existe en este servidor.
                     </p>
                     <p
                         v-if="result.licenses_created.length"

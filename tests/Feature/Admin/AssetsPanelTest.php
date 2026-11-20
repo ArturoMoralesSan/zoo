@@ -71,6 +71,20 @@ class AssetsPanelTest extends TestCase
                 ->where('canOptimize', false));
     }
 
+    public function test_export_permission_alone_opens_only_the_downloads_tab(): void
+    {
+        Permission::findOrCreate('assets.export');
+
+        $this->actingAs($this->userWith('assets.export'))
+            ->get(route('admin.assets.index', ['tab' => 'downloads']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('canView', false)
+                ->where('canTransfer', true)
+                ->where('initialTab', 'downloads')
+                ->where('summary', null));
+    }
+
     public function test_summary_adds_up_sizes_savings_and_pending_images(): void
     {
         $category = SpeciesCategory::create(['name' => 'Aves', 'is_active' => true]);

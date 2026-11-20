@@ -3,16 +3,24 @@
 namespace App\Services\CardTransfer;
 
 /**
- * Formato del paquete de tarjetas (.zip). Ver docs/card-transfer.md.
+ * Formato del paquete de tarjetas y especies (.zip). Ver docs/card-transfer.md.
  *
  * Nunca lleva id de la base: las tarjetas se reconocen por uuid, las especies
  * por slug, las licencias por slug y las reglas de puntos por tipo.
+ *
+ * Versión 2: agrega species/<slug>/ con los datos e imágenes de cada especie.
+ * La versión 1 (solo tarjetas) se sigue leyendo.
  */
 final class CardPackage
 {
     public const FORMAT = 'zoodeck-cards';
 
-    public const VERSION = 1;
+    public const VERSION = 2;
+
+    /**
+     * Versiones que este servidor sabe leer.
+     */
+    public const SUPPORTED_VERSIONS = [1, 2];
 
     public const MANIFEST = 'manifest.json';
 
@@ -26,7 +34,30 @@ final class CardPackage
      * Nombres válidos dentro del zip; cualquier otro rechaza el paquete
      * (así nunca se escribe fuera de las carpetas previstas).
      */
-    public const ENTRY_PATTERN = '#^(manifest\.json|licenses\.json|settings/(rarity|duel-messages)\.json|cards/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(card\.json|(thumbnail_image|artwork_image|generated_image)\.(webp|png|jpe?g)|model_(original_)?file\.glb))$#';
+    public const ENTRY_PATTERN = '#^(manifest\.json|licenses\.json|settings/(rarity|duel-messages)\.json|cards/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(card\.json|(thumbnail_image|artwork_image|generated_image)\.(webp|png|jpe?g)|model_(original_)?file\.glb)|species/[a-z0-9]+(-[a-z0-9]+)*/(species\.json|(main|thumbnail)\.(webp|png|jpe?g)|gallery/[0-9]{2,4}\.(webp|png|jpe?g)))$#';
+
+    /**
+     * Slug válido como nombre de carpeta (el que genera Str::slug).
+     */
+    public const SPECIES_SLUG_PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*$/';
+
+    public const SPECIES_IMAGE_EXTENSIONS = ['webp', 'png', 'jpg', 'jpeg'];
+
+    /**
+     * Columnas de la especie que viajan tal cual en species.json (la
+     * categoría, las etiquetas, las imágenes y la ubicación van aparte).
+     */
+    public const SPECIES_FIELDS = [
+        'slug',
+        'common_name',
+        'scientific_name',
+        'description',
+        'origin',
+        'habitats',
+        'diet',
+        'conservation_status',
+        'is_active',
+    ];
 
     /**
      * Columnas de la tarjeta que viajan en card.json (sin id, especie ni archivos).
@@ -123,6 +154,25 @@ final class CardPackage
                 'extensions' => ['glb'],
             ],
         ];
+    }
+
+    public static function speciesDirectory(string $slug): string
+    {
+        return 'species/'.$slug;
+    }
+
+    public static function speciesJson(string $slug): string
+    {
+        return self::speciesDirectory($slug).'/species.json';
+    }
+
+    /**
+     * Clave para comparar nombres de categorías, etiquetas y zonas entre
+     * servidores (sin distinguir mayúsculas ni espacios).
+     */
+    public static function nameKey(string $name): string
+    {
+        return mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $name)));
     }
 
     public static function cardDirectory(string $uuid): string
