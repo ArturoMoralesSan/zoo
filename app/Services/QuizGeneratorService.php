@@ -106,10 +106,10 @@ class QuizGeneratorService
 
         $facts = array_filter([
             'Descripción' => $species?->description,
-            'Hábitat' => $species?->habitat,
+            'Hábitat' => $species?->habitatLabel(),
             'Origen' => $species?->origin,
-            'Alimentación' => $species?->diet,
-            'Estado de conservación' => $species?->conservation_status,
+            'Alimentación' => $species?->diet?->label(),
+            'Estado de conservación' => $species?->conservation_status?->label(),
         ], fn ($value) => filled($value));
 
         if ($facts) {

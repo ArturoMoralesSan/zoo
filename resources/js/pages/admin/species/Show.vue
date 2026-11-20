@@ -13,6 +13,11 @@ import {
 
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 
+import {
+    conservationStatusOption,
+    dietLabel,
+    habitatLabels,
+} from '@/lib/speciesCatalogs';
 import admin from '@/routes/admin';
 
 interface SpeciesCategory {
@@ -74,7 +79,7 @@ interface Species {
     scientific_name?: string | null;
     slug: string;
     description?: string | null;
-    habitat?: string | null;
+    habitats?: string[] | null;
     origin?: string | null;
     diet?: string | null;
     conservation_status?: string | null;
@@ -88,6 +93,10 @@ interface Species {
 const props = defineProps<{
     species: Species;
 }>();
+
+const conservationStatus = conservationStatusOption(
+    props.species.conservation_status,
+);
 
 /**
  * --------------------------------------------------------------------------
@@ -336,7 +345,7 @@ const thumbnailMarkerUrl = thumbnailImage
 
                             <p class="mt-1 text-sm">
                                 {{
-                                    species.habitat ||
+                                    habitatLabels(species.habitats).join(', ') ||
                                     'Sin especificar'
                                 }}
                             </p>
@@ -370,7 +379,7 @@ const thumbnailMarkerUrl = thumbnailImage
 
                             <p class="mt-1 text-sm">
                                 {{
-                                    species.diet ||
+                                    dietLabel(species.diet) ||
                                     'Sin especificar'
                                 }}
                             </p>
@@ -385,12 +394,22 @@ const thumbnailMarkerUrl = thumbnailImage
                                 Estado de conservación
                             </p>
 
-                            <p class="mt-1 text-sm">
-                                {{
-                                    species.conservation_status ||
-                                    'Sin especificar'
-                                }}
+                            <p
+                                v-if="conservationStatus"
+                                class="mt-1 flex items-center gap-2 text-sm"
+                            >
+                                <span
+                                    :class="[
+                                        'rounded-md border px-1.5 text-xs font-bold',
+                                        conservationStatus.badgeClass,
+                                    ]"
+                                >
+                                    {{ conservationStatus.value }}
+                                </span>
+                                {{ conservationStatus.label }}
                             </p>
+
+                            <p v-else class="mt-1 text-sm">Sin especificar</p>
                         </div>
 
                         <!-- Estado -->

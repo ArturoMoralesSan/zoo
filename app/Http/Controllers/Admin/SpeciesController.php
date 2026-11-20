@@ -13,6 +13,7 @@ use App\Models\SpeciesModel;
 use App\Models\SpeciesTag;
 use App\Models\ZooZone;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -172,9 +173,12 @@ class SpeciesController extends Controller
     ): RedirectResponse {
         $validated = $request->validated();
 
+        $deletedPaths = [];
+
         DB::transaction(function () use (
             $request,
-            $validated
+            $validated,
+            &$deletedPaths
         ) {
             /*
             |--------------------------------------------------------------------------
@@ -195,7 +199,7 @@ class SpeciesController extends Controller
 
                 'description' => $validated['description'] ?? null,
 
-                'habitat' => $validated['habitat'] ?? null,
+                'habitats' => $validated['habitats'] ?? null,
 
                 'origin' => $validated['origin'] ?? null,
 
@@ -312,34 +316,11 @@ class SpeciesController extends Controller
             |--------------------------------------------------------------------------
             */
 
-            if ($request->hasFile('gallery_images')) {
-                foreach (
-                    $request->file('gallery_images') as $index => $image
-                ) {
-                    if (! $image->isValid()) {
-                        continue;
-                    }
-
-                    $path = $this->moveUploadedFile(
-                        $image,
-                        'species/'.$species->id
-                    );
-
-                    SpeciesImage::create([
-                        'species_id' => $species->id,
-
-                        'type' => 'gallery',
-
-                        'path' => $path,
-
-                        'alt_text' => $species->common_name,
-
-                        'is_active' => true,
-
-                        'sort_order' => $index,
-                    ]);
-                }
-            }
+            $deletedPaths = $this->syncGallery(
+                $request,
+                $species,
+                $validated
+            );
 
             /*
             |--------------------------------------------------------------------------
@@ -421,6 +402,10 @@ class SpeciesController extends Controller
             }
         });
 
+        // Los archivos se borran después del commit para no perderlos si
+        // la transacción falla.
+        Storage::disk('public')->delete($deletedPaths);
+
         return redirect()
             ->route('admin.species.index')
             ->with(
@@ -501,10 +486,13 @@ class SpeciesController extends Controller
     ): RedirectResponse {
         $validated = $request->validated();
 
+        $deletedPaths = [];
+
         DB::transaction(function () use (
             $request,
             $species,
-            $validated
+            $validated,
+            &$deletedPaths
         ) {
             /*
             |--------------------------------------------------------------------------
@@ -525,7 +513,7 @@ class SpeciesController extends Controller
 
                 'description' => $validated['description'] ?? null,
 
-                'habitat' => $validated['habitat'] ?? null,
+                'habitats' => $validated['habitats'] ?? null,
 
                 'origin' => $validated['origin'] ?? null,
 
@@ -718,48 +706,13 @@ class SpeciesController extends Controller
             |--------------------------------------------------------------------------
             | Galería
             |--------------------------------------------------------------------------
-            |
-            | Las imágenes nuevas se agregan a las existentes.
-            |
             */
 
-            if ($request->hasFile('gallery_images')) {
-                $lastSortOrder = $species
-                    ->images()
-                    ->where('type', 'gallery')
-                    ->max('sort_order');
-
-                $sortOrder = is_null($lastSortOrder)
-                    ? 0
-                    : $lastSortOrder + 1;
-
-                foreach (
-                    $request->file('gallery_images') as $index => $image
-                ) {
-                    if (! $image->isValid()) {
-                        continue;
-                    }
-
-                    $path = $this->moveUploadedFile(
-                        $image,
-                        'species/'.$species->id
-                    );
-
-                    SpeciesImage::create([
-                        'species_id' => $species->id,
-
-                        'type' => 'gallery',
-
-                        'path' => $path,
-
-                        'alt_text' => $species->common_name,
-
-                        'is_active' => true,
-
-                        'sort_order' => $sortOrder + $index,
-                    ]);
-                }
-            }
+            $deletedPaths = $this->syncGallery(
+                $request,
+                $species,
+                $validated
+            );
 
             /*
             |--------------------------------------------------------------------------
@@ -898,6 +851,10 @@ class SpeciesController extends Controller
             }
         });
 
+        // Los archivos se borran después del commit para no perderlos si
+        // la transacción falla.
+        Storage::disk('public')->delete($deletedPaths);
+
         return redirect()
             ->route('admin.species.index')
             ->with(
@@ -993,6 +950,101 @@ class SpeciesController extends Controller
     | MÉTODOS PRIVADOS
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Deja la galería como quedó en el formulario: borra las imágenes
+     * marcadas, guarda los archivos nuevos y aplica orden y texto
+     * alternativo. Las imágenes que el formulario no menciona conservan
+     * su orden relativo al final.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return list<string> Rutas a borrar del disco después del commit.
+     */
+    private function syncGallery(
+        Request $request,
+        Species $species,
+        array $validated
+    ): array {
+        $deletedPaths = [];
+
+        $deletedIds = $validated['deleted_gallery_ids'] ?? [];
+
+        if ($deletedIds !== []) {
+            $species->images()
+                ->where('type', 'gallery')
+                ->whereIn('id', $deletedIds)
+                ->get()
+                ->each(function (SpeciesImage $image) use (&$deletedPaths) {
+                    if ($image->path) {
+                        $deletedPaths[] = $image->path;
+                    }
+
+                    $image->delete();
+                });
+        }
+
+        $existing = $species->images()
+            ->where('type', 'gallery')
+            ->reorder('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->keyBy('id');
+
+        // Archivos nuevos, por su índice en gallery_images.
+        $uploaded = [];
+
+        foreach ($request->file('gallery_images', []) as $index => $file) {
+            if (! $file->isValid()) {
+                continue;
+            }
+
+            $uploaded[$index] = SpeciesImage::create([
+                'species_id' => $species->id,
+                'type' => 'gallery',
+                'path' => $this->moveUploadedFile(
+                    $file,
+                    'species/'.$species->id
+                ),
+                'alt_text' => $species->common_name,
+                'is_active' => true,
+                'sort_order' => 0,
+            ]);
+        }
+
+        /** @var array<int, array{0: SpeciesImage, 1: string|null}> $ordered */
+        $ordered = [];
+
+        // validated() arma los elementos anidados regla por regla, así que
+        // las claves pueden quedar desordenadas: la clave es la posición.
+        $items = $validated['gallery'] ?? [];
+        ksort($items);
+
+        foreach ($items as $item) {
+            $image = isset($item['id'])
+                ? $existing->get($item['id'])
+                : ($uploaded[$item['file_index'] ?? -1] ?? null);
+
+            if ($image && ! isset($ordered[$image->id])) {
+                $ordered[$image->id] = [
+                    $image,
+                    trim((string) ($item['alt_text'] ?? '')) ?: $species->common_name,
+                ];
+            }
+        }
+
+        foreach ([...$existing->values(), ...array_values($uploaded)] as $image) {
+            $ordered[$image->id] ??= [$image, $image->alt_text];
+        }
+
+        foreach (array_values($ordered) as $position => [$image, $altText]) {
+            $image->update([
+                'sort_order' => $position,
+                'alt_text' => $altText,
+            ]);
+        }
+
+        return $deletedPaths;
+    }
 
     private function moveUploadedFile(
         UploadedFile $file,

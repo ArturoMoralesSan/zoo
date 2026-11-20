@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\Diet;
 use App\Models\Card;
 use App\Models\QuizQuestion;
 use App\Models\Species;
@@ -52,7 +53,7 @@ class QuizQuestionGenerateTest extends TestCase
             'common_name' => 'Ocelote',
             'scientific_name' => 'Leopardus pardalis',
             'slug' => 'ocelote',
-            'diet' => 'Roedores y aves pequeñas',
+            'diet' => Diet::Carnivore,
             'is_active' => true,
         ]);
 
@@ -173,7 +174,7 @@ class QuizQuestionGenerateTest extends TestCase
                 && ! str_contains($request->url(), 'test-key')
                 && $request['generationConfig']['responseMimeType'] === 'application/json'
                 && str_contains($prompt, 'Leopardus pardalis')
-                && str_contains($prompt, 'Roedores y aves pequeñas')
+                && str_contains($prompt, 'Carnívoro')
                 && str_contains($prompt, 'su alimentación')
                 && str_contains($prompt, '¿Dónde vive el ocelote?')
                 && str_contains($prompt, '¿Cuánto pesa el ocelote?')
