@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
+    ArrowLeftRight,
     Box,
     CircleCheck,
     CircleOff,
@@ -23,6 +24,7 @@ import {
 import Swal from 'sweetalert2';
 import { onMounted, ref, watch } from 'vue';
 
+import CardTransferPanel from '@/components/admin/cards/CardTransferPanel.vue';
 import DuelMessagesSettings from '@/components/admin/cards/DuelMessagesSettings.vue';
 import OptimizeImagesPanel from '@/components/admin/cards/OptimizeImagesPanel.vue';
 import RaritySettingsTable from '@/components/admin/cards/RaritySettingsTable.vue';
@@ -118,6 +120,8 @@ const props = defineProps<{
     quizStates: QuizState[];
     // Pestañas de desarrollo activas (APP_ZOODECK_DEV=1).
     devTools: boolean;
+    // Pestaña "Importar / Exportar" (permisos cards.export o cards.import).
+    canTransfer: boolean;
 }>();
 
 const search = ref(props.filters?.search ?? '');
@@ -281,7 +285,7 @@ const chipClass = (warning: boolean) =>
  * Pestañas: lista de tarjetas, configuración de duelos y tarjetas obtenidas.
  * Se recuerda la última pestaña usada.
  */
-type Tab = 'cards' | 'settings' | 'captures' | 'attempts';
+type Tab = 'cards' | 'settings' | 'transfer' | 'captures' | 'attempts';
 
 const TAB_STORAGE_KEY = 'admin.cards.tab';
 
@@ -294,6 +298,7 @@ onMounted(() => {
 
         if (
             saved === 'settings' ||
+            (props.canTransfer && saved === 'transfer') ||
             (props.devTools &&
                 (saved === 'captures' || saved === 'attempts'))
         ) {
@@ -326,6 +331,16 @@ const tabs: {
         shortLabel: 'Configuración',
         icon: Settings2,
     },
+    ...(props.canTransfer
+        ? [
+              {
+                  value: 'transfer' as Tab,
+                  label: 'Importar / Exportar',
+                  shortLabel: 'Paquetes',
+                  icon: ArrowLeftRight,
+              },
+          ]
+        : []),
 ];
 
 // Pestañas de desarrollo: solo con APP_ZOODECK_DEV=1.
@@ -350,6 +365,7 @@ const tabCount = (value: Tab) =>
         captures: props.captures.length,
         attempts: props.quizStates.length,
         settings: null,
+        transfer: null,
     })[value];
 
 defineOptions({
@@ -485,6 +501,9 @@ defineOptions({
 
             <OptimizeImagesPanel />
         </div>
+
+        <!-- Importar / Exportar -->
+        <CardTransferPanel v-else-if="canTransfer && tab === 'transfer'" />
 
         <!-- Tarjetas obtenidas -->
         <div

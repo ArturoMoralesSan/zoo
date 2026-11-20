@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
 
 #[ObservedBy([CreditsCacheObserver::class, CardPackObserver::class])]
 class Card extends Model
@@ -21,6 +22,7 @@ class Card extends Model
     use HasFactory;
 
     protected $fillable = [
+        'uuid',
         'species_id',
         'name',
         'rarity',
@@ -76,6 +78,16 @@ class Card extends Model
         // Peso de cada imagen antes de comprimirla: { generated, thumbnail, artwork }.
         'image_original_bytes' => 'array',
     ];
+
+    /**
+     * Identificador estable entre servidores (exportar/importar paquetes).
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Card $card) {
+            $card->uuid ??= (string) Str::uuid();
+        });
+    }
 
     /**
      * Orígenes posibles de la configuración de duelos.

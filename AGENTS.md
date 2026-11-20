@@ -60,13 +60,14 @@ php artisan route:list --name=admin.events -v  # routes with their middleware
 php artisan route:list --path=api --json
 php artisan cards:images:report                # read-only: card images still to convert
 php artisan cards:packs:build                  # encrypted offline-pack copies (idempotent; --force re-encrypts)
+php artisan cards:export | cards:import x.zip --dry-run   # card .zip packages without the panel
 ```
 
 **Baseline on 2026-11-10.** Do not chase these failures unless asked; just add none.
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 381 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-19) |
+| `php artisan test` | 394 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-20) |
 | `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
@@ -85,7 +86,7 @@ app/Http/Controllers/Admin/      Inertia controllers, one per resource
 app/Http/Controllers/Api/        JSON controllers for the mobile app
 app/Http/Requests/{Admin,Api}/   Form requests (Admin/<Resource>/{Store,Update}…Request)
 app/Http/Resources/              API resources (CardResource, Duel/*, Credits/*)
-app/Services/                    CardDuelService, PointService, GlbInspector, CardImageOptimizer, ImageEncoding/*, Licensing/*, CardPack/*
+app/Services/                    CardDuelService, PointService, GlbInspector, CardImageOptimizer, ImageEncoding/*, Licensing/*, CardPack/*, CardTransfer/*
 app/Concerns/                    Validation rule traits shared by form requests
 app/Enums/ app/Rules/ app/Observers/ app/Policies/ app/Exceptions/
 config/glb.php config/licensing.php config/images.php config/cards.php   Project-specific settings
@@ -100,6 +101,7 @@ docs/api-credits.md  docs/glb-resizing.md  docs/image-optimization.md   Read onl
 docs/offline-packs-{backend,app}.md   Offline card packs: server done, mobile app pending
 docs/points-app.md        Points for the app: rules, levels, seasons (GET /api/points/season), icon/color catalog
 docs/card-points-app.md   Card capture points (data.points on duel wins, incl. season); points done in the app
+docs/card-transfer.md     Export/import all cards as a .zip ("Importar / Exportar" tab)
 ```
 
 Page folders match the route resource, except `quizquestions`, `card-qr-codes` and
@@ -112,7 +114,8 @@ Page folders match the route resource, except `quizquestions`, `card-qr-codes` a
 - **Cards:** `Card` → `Species`, `CardRaritySetting`, `QuizQuestion` → `QuizAnswer`,
   `CardQrCode`, `QuizAttempt`, `Credit` (polymorphic, alias `card`). Per user:
   `CardCapture` (owned), `CardQuizState` (retries and lockout).
-  Singleton: `DuelMessageSetting::current()`.
+  Singleton: `DuelMessageSetting::current()`. `Card.uuid` is the stable id across servers;
+  `CardTransfer` tracks queued .zip exports/imports.
 - **Credits:** `Credit` → `License`.
 - **Map:** `ZooZone` → `MapMarker`, `SpeciesLocation`, `Event`; `MapPath`.
 - **Tickets:** `TicketOrder` → `TicketOrderItem` (→ `TicketType`), `TicketOrderPayment`
@@ -224,6 +227,14 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   (owned cards, duel start). `phpunit.xml` sets `CARD_PACKS_ENABLED=false`, so tests
   never write to real `storage/`; enable it only together with `Storage::fake('public')`.
   See `docs/offline-packs-backend.md`.
+- **Card packages** (`CardTransfer/*`, cards index tab "Importar / Exportar", permissions
+  `cards.export`/`cards.import`): queued jobs build or import a `.zip` with every card, its
+  questions, QRs, credits, global duel settings and files. Needs PHP `zip`; without it the tab
+  shows a notice and every action returns 503. Species are only referenced (slug, then a unique
+  scientific name, else the admin picks one); import never creates species, never deletes
+  questions, and copies files as-is. QR tokens travel only if the exporter ticks the box.
+  Adding a card column means adding it to `CardPackage::CARD_FIELDS` and the reader's rules.
+  See `docs/card-transfer.md`.
 - **Credits:** licences and attribution are legally relevant, and restricted licences
   are off by default. `CreditsCacheObserver` invalidates the public `/api/v1/credits`
   cache. See `docs/api-credits.md`.
