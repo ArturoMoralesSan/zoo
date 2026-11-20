@@ -1,4 +1,4 @@
-# Optimización de imágenes de tarjetas (WebP)
+# Optimización de imágenes (WebP): tarjetas y especies
 
 Las imágenes de las tarjetas (`generated_image`, `thumbnail_image`, `artwork_image`) se
 guardan en **WebP**. La app las descarga por `card_image_url` y `thumbnail_image`, y Viro
@@ -98,3 +98,36 @@ Ambos usan `CardImageOptimizer::replace()`, que:
   como `application/wasm`, Emscripten recurre a una carga más lenta, pero funciona igual.
 - Imagick tarda ~7 s por tarjeta a 3×; GD ~1 s. Ambos caben en el `max_execution_time`
   habitual, porque el panel procesa una imagen por petición.
+
+## Especies
+
+Las imágenes de especies (`species_images` de tipo `main`, `thumbnail` y `gallery`) usan el
+mismo flujo: el navegador las comprime al elegirlas, el servidor las convierte al guardar si
+puede, y las ya guardadas se convierten desde el panel o la consola. Perfiles en
+`resources/data/species-image-profiles.json` (`config('images.species')`):
+
+| Imagen | Máximo | Calidad | Motivo |
+| --- | --- | --- | --- |
+| `main` | 1600 × 1600 | 85 | pantalla completa del teléfono |
+| `thumbnail` | 512 × 512 | 82 | listas y marcador del mapa |
+| `gallery` | 1600 × 1600 | 85 | pantalla completa del teléfono |
+
+- **Código:** `SpeciesImageOptimizer` (comparte con `CardImageOptimizer` el trait
+  `ImageEncoding\OptimizesWebpUploads`), `composables/useSpeciesImageUploads.ts` y
+  `optimizeImage()` de `lib/imageOptimize.ts`. El panel es el mismo componente que el de
+  tarjetas (`components/admin/OptimizeImagesPanel.vue`).
+- **Peso:** cada fila guarda `original_bytes`. El navegador envía
+  `image_original_bytes[main|thumbnail]` y `gallery_original_bytes[i]` (por índice de
+  `gallery_images`). Edit y Show reciben `bytes` (peso actual) en cada imagen.
+- **Límite:** el servidor acepta hasta 5 MB ya comprimida; la galería deja elegir archivos de
+  hasta 25 MB porque los comprime antes de subirlos.
+- **Panel:** aparece al final del listado de especies solo mientras haya pendientes (requiere
+  `species.edit`).
+- **Consola** (requiere Imagick o GD; **borra cada original**, copia antes
+  `storage/app/public/species`):
+
+```bash
+php artisan species:images:report
+php artisan species:images:optimize --dry-run
+php artisan species:images:optimize [--species=ID] [--image=main|thumbnail|gallery] [--limit=N]
+```

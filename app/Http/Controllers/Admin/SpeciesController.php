@@ -12,6 +12,7 @@ use App\Models\SpeciesLocation;
 use App\Models\SpeciesModel;
 use App\Models\SpeciesTag;
 use App\Models\ZooZone;
+use App\Services\SpeciesImageOptimizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -24,6 +25,8 @@ use Inertia\Response;
 
 class SpeciesController extends Controller
 {
+    public function __construct(private SpeciesImageOptimizer $imageOptimizer) {}
+
     /*
     |--------------------------------------------------------------------------
     | INDEX
@@ -83,6 +86,9 @@ class SpeciesController extends Controller
                     'search' => request('search'),
                     'category_id' => request('category_id'),
                 ],
+
+                // Panel "Optimizar imágenes" (rutas species.images.*).
+                'canOptimizeImages' => (bool) request()->user()?->can('species.edit'),
             ]
         );
     }
@@ -102,6 +108,8 @@ class SpeciesController extends Controller
             'locations.zone',
             'tags',
         ]);
+
+        $this->withImageBytes($species);
 
         return Inertia::render(
             'admin/species/Show',
@@ -230,9 +238,11 @@ class SpeciesController extends Controller
                 $request->hasFile('main_image') &&
                 $request->file('main_image')->isValid()
             ) {
-                $path = $this->moveUploadedFile(
-                    $request->file('main_image'),
-                    'species/'.$species->id
+                [$path, $originalBytes] = $this->storeOptimizedImage(
+                    $request,
+                    'main_image',
+                    'main',
+                    $species
                 );
 
                 SpeciesImage::create([
@@ -241,6 +251,8 @@ class SpeciesController extends Controller
                     'type' => 'main',
 
                     'path' => $path,
+
+                    'original_bytes' => $originalBytes,
 
                     'alt_text' => $species->common_name,
 
@@ -260,9 +272,11 @@ class SpeciesController extends Controller
                 $request->hasFile('thumbnail_image') &&
                 $request->file('thumbnail_image')->isValid()
             ) {
-                $path = $this->moveUploadedFile(
-                    $request->file('thumbnail_image'),
-                    'species/'.$species->id
+                [$path, $originalBytes] = $this->storeOptimizedImage(
+                    $request,
+                    'thumbnail_image',
+                    'thumbnail',
+                    $species
                 );
 
                 SpeciesImage::create([
@@ -271,6 +285,8 @@ class SpeciesController extends Controller
                     'type' => 'thumbnail',
 
                     'path' => $path,
+
+                    'original_bytes' => $originalBytes,
 
                     'alt_text' => $species->common_name,
 
@@ -430,6 +446,8 @@ class SpeciesController extends Controller
             'locations.zone',
         ]);
 
+        $this->withImageBytes($species);
+
         return Inertia::render(
             'admin/species/Edit',
             [
@@ -549,9 +567,11 @@ class SpeciesController extends Controller
                     ->where('type', 'main')
                     ->first();
 
-                $path = $this->moveUploadedFile(
-                    $request->file('main_image'),
-                    'species/'.$species->id
+                [$path, $originalBytes] = $this->storeOptimizedImage(
+                    $request,
+                    'main_image',
+                    'main',
+                    $species
                 );
 
                 if ($currentImage) {
@@ -569,6 +589,8 @@ class SpeciesController extends Controller
                     $currentImage->update([
                         'path' => $path,
 
+                        'original_bytes' => $originalBytes,
+
                         'alt_text' => $species->common_name,
 
                         'is_active' => true,
@@ -580,6 +602,8 @@ class SpeciesController extends Controller
                         'type' => 'main',
 
                         'path' => $path,
+
+                        'original_bytes' => $originalBytes,
 
                         'alt_text' => $species->common_name,
 
@@ -605,9 +629,11 @@ class SpeciesController extends Controller
                     ->where('type', 'thumbnail')
                     ->first();
 
-                $path = $this->moveUploadedFile(
-                    $request->file('thumbnail_image'),
-                    'species/'.$species->id
+                [$path, $originalBytes] = $this->storeOptimizedImage(
+                    $request,
+                    'thumbnail_image',
+                    'thumbnail',
+                    $species
                 );
 
                 if ($currentImage) {
@@ -625,6 +651,8 @@ class SpeciesController extends Controller
                     $currentImage->update([
                         'path' => $path,
 
+                        'original_bytes' => $originalBytes,
+
                         'alt_text' => $species->common_name,
 
                         'is_active' => true,
@@ -636,6 +664,8 @@ class SpeciesController extends Controller
                         'type' => 'thumbnail',
 
                         'path' => $path,
+
+                        'original_bytes' => $originalBytes,
 
                         'alt_text' => $species->common_name,
 
@@ -1001,8 +1031,13 @@ class SpeciesController extends Controller
             $uploaded[$index] = SpeciesImage::create([
                 'species_id' => $species->id,
                 'type' => 'gallery',
+                'original_bytes' => $this->imageOptimizer->originalBytes(
+                    $request,
+                    'gallery_original_bytes.'.$index,
+                    $file
+                ),
                 'path' => $this->moveUploadedFile(
-                    $file,
+                    $this->imageOptimizer->prepareUpload($file, 'gallery'),
                     'species/'.$species->id
                 ),
                 'alt_text' => $species->common_name,
@@ -1044,6 +1079,48 @@ class SpeciesController extends Controller
         }
 
         return $deletedPaths;
+    }
+
+    /**
+     * Peso actual de cada imagen (`bytes`), para mostrar el ahorro junto a
+     * `original_bytes`.
+     */
+    private function withImageBytes(Species $species): void
+    {
+        $species->images->each(
+            fn (SpeciesImage $image) => $image->setAttribute(
+                'bytes',
+                $this->imageOptimizer->storedBytes($image)
+            )
+        );
+    }
+
+    /**
+     * Guarda la imagen principal o la miniatura. Si el navegador no pudo
+     * comprimirla, lo intenta el servidor.
+     *
+     * @return array{0: string, 1: int} Ruta y peso antes de comprimir.
+     */
+    private function storeOptimizedImage(
+        Request $request,
+        string $field,
+        string $kind,
+        Species $species
+    ): array {
+        $file = $request->file($field);
+
+        $originalBytes = $this->imageOptimizer->originalBytes(
+            $request,
+            'image_original_bytes.'.$kind,
+            $file
+        );
+
+        $path = $this->moveUploadedFile(
+            $this->imageOptimizer->prepareUpload($file, $kind),
+            'species/'.$species->id
+        );
+
+        return [$path, $originalBytes];
     }
 
     private function moveUploadedFile(

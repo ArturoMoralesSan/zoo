@@ -6,11 +6,10 @@ use App\Exceptions\CardImageOptimizationException;
 use App\Models\Card;
 use App\Services\ImageEncoding\ImageEncodingException;
 use App\Services\ImageEncoding\ImageProfile;
+use App\Services\ImageEncoding\OptimizesWebpUploads;
 use App\Services\ImageEncoding\WebpEncoder;
 use Illuminate\Http\File;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -22,6 +21,8 @@ use Throwable;
  */
 class CardImageOptimizer
 {
+    use OptimizesWebpUploads;
+
     /**
      * Tipo de imagen => columna de la tarjeta.
      */
@@ -33,29 +34,9 @@ class CardImageOptimizer
 
     public function __construct(private WebpEncoder $encoder) {}
 
-    /**
-     * Codificador del servidor (imagick, gd) o null si no hay.
-     */
-    public function serverEncoder(): ?string
-    {
-        return $this->encoder->isAvailable() ? $this->encoder->name() : null;
-    }
-
     public function profile(string $image): ImageProfile
     {
         return ImageProfile::fromConfig(config('images.cards.'.$image));
-    }
-
-    /**
-     * Ya es WebP y cabe en su perfil.
-     */
-    public function isOptimized(string $image, string $file): bool
-    {
-        $info = @getimagesize($file);
-
-        return $info !== false
-            && $info['mime'] === 'image/webp'
-            && $this->profile($image)->fits($info[0], $info[1]);
     }
 
     /**
@@ -103,36 +84,6 @@ class CardImageOptimizer
         }
 
         return $items;
-    }
-
-    /**
-     * Al guardar la tarjeta: comprimir en el servidor si hace falta y se
-     * puede. Nunca falla: ante un error se guarda el archivo tal como llegó.
-     */
-    public function prepareUpload(UploadedFile $file, string $image): UploadedFile
-    {
-        if (
-            ! $this->encoder->isAvailable() ||
-            $this->isOptimized($image, $file->getRealPath())
-        ) {
-            return $file;
-        }
-
-        try {
-            $encoded = $this->encoder->encode($file->getRealPath(), $this->profile($image));
-        } catch (ImageEncodingException $exception) {
-            Log::warning('No se pudo optimizar la imagen de la tarjeta al guardarla.', [
-                'image' => $image,
-                'error' => $exception->getMessage(),
-            ]);
-
-            return $file;
-        }
-
-        $name = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) ?: 'imagen';
-
-        // test: true porque el archivo no llegó por HTTP (permite moverlo).
-        return new UploadedFile($encoded, $name.'.webp', 'image/webp', null, true);
     }
 
     /**

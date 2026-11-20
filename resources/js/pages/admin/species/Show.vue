@@ -11,6 +11,7 @@ import {
     Tags,
 } from 'lucide-vue-next';
 
+import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 
 import {
@@ -32,6 +33,9 @@ interface SpeciesImage {
     alt_text?: string | null;
     is_active: boolean;
     sort_order: number;
+    // Peso actual en disco y antes de comprimir (null si se desconoce).
+    bytes?: number | null;
+    original_bytes?: number | null;
 }
 
 interface MapImageBounds {
@@ -143,6 +147,17 @@ const currentLocation =
 const imageUrl = (path: string) => {
     return `/storage/${path}`;
 };
+
+// Peso total de la galería; sin original conocido cuenta el actual.
+const galleryBytes = galleryImages.reduce(
+    (sum, image) => sum + (image.bytes ?? 0),
+    0,
+);
+
+const galleryOriginalBytes = galleryImages.reduce(
+    (sum, image) => sum + (image.original_bytes ?? image.bytes ?? 0),
+    0,
+);
 
 const thumbnailMarkerUrl = thumbnailImage
     ? imageUrl(thumbnailImage.path)
@@ -630,6 +645,13 @@ const thumbnailMarkerUrl = thumbnailImage
                             Sin imagen
                         </div>
                     </div>
+
+                    <SizeSavings
+                        v-if="mainImage"
+                        class="mt-2"
+                        :original="mainImage.original_bytes ?? null"
+                        :optimized="mainImage.bytes ?? null"
+                    />
                 </div>
 
                 <!-- MINIATURA -->
@@ -665,6 +687,13 @@ const thumbnailMarkerUrl = thumbnailImage
                             Sin imagen
                         </div>
                     </div>
+
+                    <SizeSavings
+                        v-if="thumbnailImage"
+                        class="mt-2"
+                        :original="thumbnailImage.original_bytes ?? null"
+                        :optimized="thumbnailImage.bytes ?? null"
+                    />
                 </div>
 
                 <!-- GALERÍA -->
@@ -709,6 +738,14 @@ const thumbnailMarkerUrl = thumbnailImage
                     >
                         Sin imágenes
                     </div>
+
+                    <SizeSavings
+                        v-if="galleryImages.length"
+                        class="mt-2"
+                        label="Peso total"
+                        :original="galleryOriginalBytes"
+                        :optimized="galleryBytes"
+                    />
                 </div>
             </div>
         </div>

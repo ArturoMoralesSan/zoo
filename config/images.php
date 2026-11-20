@@ -23,4 +23,16 @@ return [
         flags: JSON_THROW_ON_ERROR
     ),
 
+    /*
+     * Perfiles por tipo de imagen de especie, compartidos con el navegador
+     * (resources/data/species-image-profiles.json).
+     * - main y gallery: pantalla completa del teléfono.
+     * - thumbnail: listas y marcador del mapa, se muestra pequeña.
+     */
+    'species' => json_decode(
+        file_get_contents(resource_path('data/species-image-profiles.json')),
+        true,
+        flags: JSON_THROW_ON_ERROR
+    ),
+
 ];

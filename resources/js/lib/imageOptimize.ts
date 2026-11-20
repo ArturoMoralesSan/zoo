@@ -1,5 +1,5 @@
 /**
- * Compresión WebP de las imágenes de las tarjetas, en el navegador.
+ * Compresión WebP de las imágenes de tarjetas y especies, en el navegador.
  *
  * Se usa libwebp en WASM (@jsquash/webp) porque el resultado es igual en
  * todos los navegadores (Safari no siempre codifica WebP con canvas) y no
@@ -7,6 +7,7 @@
  */
 
 import profiles from '../../data/card-image-profiles.json';
+import speciesProfiles from '../../data/species-image-profiles.json';
 
 export type CardImageKind = 'generated' | 'thumbnail' | 'artwork';
 
@@ -23,6 +24,14 @@ export interface ImageProfile {
  */
 export const CARD_IMAGE_PROFILES: Record<CardImageKind, ImageProfile> =
     profiles;
+
+export type SpeciesImageKind = 'main' | 'thumbnail' | 'gallery';
+
+/**
+ * Compartidos con el servidor (config/images.php, clave species).
+ */
+export const SPECIES_IMAGE_PROFILES: Record<SpeciesImageKind, ImageProfile> =
+    speciesProfiles;
 
 /**
  * Tamaño final conservando la proporción. Nunca agranda.
@@ -209,39 +218,47 @@ export const encodeWebp = async (
 };
 
 /*
- * Un resultado por archivo y tipo: el campo calcula el peso al elegir la
+ * Un resultado por archivo y perfil: el campo calcula el peso al elegir la
  * imagen y el formulario reutiliza el mismo archivo al guardar.
  */
-const uploads = new WeakMap<File, Map<CardImageKind, Promise<File>>>();
+const uploads = new WeakMap<File, Map<ImageProfile, Promise<File>>>();
 
 /**
- * Para los campos de archivo: el WebP si es más ligero, si no el original.
+ * Para los campos de archivo de tarjetas: el WebP si es más ligero, si no
+ * el original.
  */
 export const optimizeUpload = (
     file: File,
     kind: CardImageKind,
+): Promise<File> => optimizeImage(file, CARD_IMAGE_PROFILES[kind]);
+
+/**
+ * El WebP dentro del perfil si es más ligero, si no el original.
+ */
+export const optimizeImage = (
+    file: File,
+    profile: ImageProfile,
 ): Promise<File> => {
-    const byKind = uploads.get(file) ?? new Map<CardImageKind, Promise<File>>();
-    const cached = byKind.get(kind);
+    const byProfile =
+        uploads.get(file) ?? new Map<ImageProfile, Promise<File>>();
+    const cached = byProfile.get(profile);
 
     if (cached) {
         return cached;
     }
 
-    const result = optimizeUploadNow(file, kind);
+    const result = optimizeNow(file, profile);
 
-    byKind.set(kind, result);
-    uploads.set(file, byKind);
+    byProfile.set(profile, result);
+    uploads.set(file, byProfile);
 
     return result;
 };
 
-const optimizeUploadNow = async (
+const optimizeNow = async (
     file: File,
-    kind: CardImageKind,
+    profile: ImageProfile,
 ): Promise<File> => {
-    const profile = CARD_IMAGE_PROFILES[kind];
-
     // Un WebP que ya cabe no se vuelve a codificar (perdería calidad).
     if (file.type === 'image/webp') {
         const fits = await createImageBitmap(file)

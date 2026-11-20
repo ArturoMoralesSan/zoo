@@ -137,6 +137,35 @@ class StoreSpeciesRequest extends FormRequest
              * Orden final de la galería: cada elemento apunta a un archivo
              * nuevo por su índice en gallery_images.
              */
+            /*
+             * Peso de cada imagen antes de que el navegador la comprimiera,
+             * para mostrar el ahorro. gallery_original_bytes va por índice
+             * de gallery_images.
+             */
+            'image_original_bytes' => [
+                'nullable',
+                'array:main,thumbnail',
+            ],
+
+            'image_original_bytes.*' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:104857600',
+            ],
+
+            'gallery_original_bytes' => [
+                'nullable',
+                'array',
+            ],
+
+            'gallery_original_bytes.*' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:104857600',
+            ],
+
             'gallery' => [
                 'nullable',
                 'array',

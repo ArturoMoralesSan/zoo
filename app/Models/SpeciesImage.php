@@ -11,6 +11,7 @@ class SpeciesImage extends Model
         'species_id',
         'type',
         'path',
+        'original_bytes',
         'alt_text',
         'is_active',
         'sort_order',
@@ -21,9 +22,13 @@ class SpeciesImage extends Model
         return [
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'original_bytes' => 'integer',
         ];
     }
 
+    /**
+     * @return BelongsTo<Species, $this>
+     */
     public function species(): BelongsTo
     {
         return $this->belongsTo(Species::class);

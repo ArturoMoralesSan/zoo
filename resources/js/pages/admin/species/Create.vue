@@ -16,11 +16,16 @@ import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
+import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import SpeciesClassificationFields from '@/components/admin/species/SpeciesClassificationFields.vue';
 import SpeciesGalleryField from '@/components/admin/species/SpeciesGalleryField.vue';
 import type { GalleryLayoutItem } from '@/components/admin/species/SpeciesGalleryField.vue';
+import {
+    optimizeSpeciesUploads,
+    useEstimatedSize,
+} from '@/composables/useSpeciesImageUploads';
 import type { HabitatCode } from '@/lib/speciesCatalogs';
 import admin from '@/routes/admin';
 
@@ -173,10 +178,34 @@ const goToTab = (tabId: string) => {
     activeTab.value = tabId;
 };
 
-const submit = () => {
-    form.post(admin.species.store().url, {
-        forceFormData: true,
+const { bytes: mainBytes, estimating: mainEstimating } = useEstimatedSize(
+    () => form.main_image,
+    'main',
+);
+
+const { bytes: thumbnailBytes, estimating: thumbnailEstimating } =
+    useEstimatedSize(() => form.thumbnail_image, 'thumbnail');
+
+// Las imágenes se comprimen a WebP antes de enviarlas.
+const compressing = ref(false);
+
+const submit = async () => {
+    if (compressing.value || form.processing) {
+        return;
+    }
+
+    compressing.value = true;
+
+    const uploads = await optimizeSpeciesUploads(form).finally(() => {
+        compressing.value = false;
     });
+
+    form.transform((data) => ({ ...data, ...uploads })).post(
+        admin.species.store().url,
+        {
+            forceFormData: true,
+        },
+    );
 };
 
 onBeforeUnmount(() => {
@@ -523,8 +552,16 @@ onBeforeUnmount(() => {
                                 />
 
                                 <p class="form-help">
-                                    Formatos: JPG, JPEG, PNG o WEBP.
+                                    Formatos: JPG, JPEG, PNG o WEBP. Se comprime
+                                    a WebP antes de subirla.
                                 </p>
+
+                                <SizeSavings
+                                    class="mt-2"
+                                    :original="form.main_image?.size ?? null"
+                                    :optimized="mainBytes"
+                                    :estimating="mainEstimating"
+                                />
 
                                 <p
                                     v-if="form.errors.main_image"
@@ -587,6 +624,15 @@ onBeforeUnmount(() => {
                                     También se utilizará como icono del marker
                                     en el mapa.
                                 </p>
+
+                                <SizeSavings
+                                    class="mt-2"
+                                    :original="
+                                        form.thumbnail_image?.size ?? null
+                                    "
+                                    :optimized="thumbnailBytes"
+                                    :estimating="thumbnailEstimating"
+                                />
 
                                 <p
                                     v-if="form.errors.thumbnail_image"
@@ -918,8 +964,12 @@ onBeforeUnmount(() => {
                             type="submit"
                             variant="primary"
                             :icon="Save"
-                            :loading="form.processing"
-                            loading-text="Guardando..."
+                            :loading="form.processing || compressing"
+                            :loading-text="
+                                compressing
+                                    ? 'Comprimiendo imágenes...'
+                                    : 'Guardando...'
+                            "
                         >
                             Crear especie
                         </AdminButton>

@@ -16,11 +16,16 @@ import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
+import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import SpeciesClassificationFields from '@/components/admin/species/SpeciesClassificationFields.vue';
 import SpeciesGalleryField from '@/components/admin/species/SpeciesGalleryField.vue';
 import type { GalleryLayoutItem } from '@/components/admin/species/SpeciesGalleryField.vue';
+import {
+    optimizeSpeciesUploads,
+    useEstimatedSize,
+} from '@/composables/useSpeciesImageUploads';
 import type { HabitatCode } from '@/lib/speciesCatalogs';
 import admin from '@/routes/admin';
 
@@ -76,6 +81,9 @@ interface SpeciesImage {
     alt_text: string | null;
     is_active: boolean;
     sort_order: number;
+    // Peso actual en disco y antes de comprimir (null si se desconoce).
+    bytes?: number | null;
+    original_bytes?: number | null;
 }
 
 interface Species {
@@ -129,8 +137,8 @@ const existingImages = computed<SpeciesImage[]>(
 
 const imageUrl = (path: string | null | undefined): string | null => {
     if (!path) {
-return null;
-}
+        return null;
+    }
 
     if (
         path.startsWith('http://') ||
@@ -141,8 +149,8 @@ return null;
     }
 
     if (path.startsWith('/')) {
-return path;
-}
+        return path;
+    }
 
     if (path.startsWith('storage/')) {
         return `/${path}`;
@@ -175,6 +183,8 @@ const savedGallery = existingGalleryImages.value.map((image) => ({
     id: image.id,
     url: imageUrl(image.path) ?? '',
     alt_text: image.alt_text,
+    bytes: image.bytes,
+    original_bytes: image.original_bytes,
 }));
 
 const existingMainImageUrl = computed(() =>
@@ -295,10 +305,34 @@ const goToTab = (tabId: string) => {
     activeTab.value = tabId;
 };
 
-const submit = () => {
-    form.put(admin.species.update(props.species.id).url, {
-        forceFormData: true,
+const { bytes: mainBytes, estimating: mainEstimating } = useEstimatedSize(
+    () => form.main_image,
+    'main',
+);
+
+const { bytes: thumbnailBytes, estimating: thumbnailEstimating } =
+    useEstimatedSize(() => form.thumbnail_image, 'thumbnail');
+
+// Las imágenes se comprimen a WebP antes de enviarlas.
+const compressing = ref(false);
+
+const submit = async () => {
+    if (compressing.value || form.processing) {
+        return;
+    }
+
+    compressing.value = true;
+
+    const uploads = await optimizeSpeciesUploads(form).finally(() => {
+        compressing.value = false;
     });
+
+    form.transform((data) => ({ ...data, ...uploads })).put(
+        admin.species.update(props.species.id).url,
+        {
+            forceFormData: true,
+        },
+    );
 };
 
 onBeforeUnmount(() => {
@@ -621,7 +655,29 @@ onBeforeUnmount(() => {
                                             ? 'Nueva imagen seleccionada.'
                                             : 'Selecciona un archivo para reemplazar la imagen actual.'
                                     }}
+                                    Se comprime a WebP antes de subirla.
                                 </p>
+
+                                <SizeSavings
+                                    class="mt-2"
+                                    :original="
+                                        form.main_image
+                                            ? form.main_image.size
+                                            : (existingMainImage?.original_bytes ??
+                                              null)
+                                    "
+                                    :optimized="
+                                        form.main_image
+                                            ? mainBytes
+                                            : (existingMainImage?.bytes ?? null)
+                                    "
+                                    :estimating="mainEstimating"
+                                    :previous="
+                                        form.main_image
+                                            ? (existingMainImage?.bytes ?? null)
+                                            : null
+                                    "
+                                />
 
                                 <p
                                     v-if="form.errors.main_image"
@@ -686,6 +742,29 @@ onBeforeUnmount(() => {
                                     Deja vacío para conservar la miniatura
                                     actual.
                                 </p>
+
+                                <SizeSavings
+                                    class="mt-2"
+                                    :original="
+                                        form.thumbnail_image
+                                            ? form.thumbnail_image.size
+                                            : (existingThumbnailImage?.original_bytes ??
+                                              null)
+                                    "
+                                    :optimized="
+                                        form.thumbnail_image
+                                            ? thumbnailBytes
+                                            : (existingThumbnailImage?.bytes ??
+                                              null)
+                                    "
+                                    :estimating="thumbnailEstimating"
+                                    :previous="
+                                        form.thumbnail_image
+                                            ? (existingThumbnailImage?.bytes ??
+                                              null)
+                                            : null
+                                    "
+                                />
 
                                 <p
                                     v-if="form.errors.thumbnail_image"
@@ -1001,8 +1080,12 @@ onBeforeUnmount(() => {
                             type="submit"
                             variant="primary"
                             :icon="Save"
-                            :loading="form.processing"
-                            loading-text="Guardando..."
+                            :loading="form.processing || compressing"
+                            :loading-text="
+                                compressing
+                                    ? 'Comprimiendo imágenes...'
+                                    : 'Guardando...'
+                            "
                         >
                             Actualizar especie
                         </AdminButton>

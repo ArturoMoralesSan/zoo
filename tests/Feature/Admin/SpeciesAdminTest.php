@@ -9,6 +9,8 @@ use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\SpeciesImage;
 use App\Models\User;
+use App\Services\ImageEncoding\NullWebpEncoder;
+use App\Services\ImageEncoding\WebpEncoder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -34,6 +36,8 @@ class SpeciesAdminTest extends TestCase
         $this->storagePath = sys_get_temp_dir().'/zoo-species-test-'.uniqid();
         $this->app->useStoragePath($this->storagePath);
         Storage::fake('public');
+        // Sin compresión en el servidor: las pruebas de galería miran los archivos tal cual.
+        $this->app->instance(WebpEncoder::class, new NullWebpEncoder);
 
         foreach (['view', 'create', 'edit', 'delete'] as $action) {
             Permission::findOrCreate("species.{$action}");

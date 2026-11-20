@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\RewardRedemptionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SpeciesCategoryController;
 use App\Http\Controllers\Admin\SpeciesController;
+use App\Http\Controllers\Admin\SpeciesImageOptimizationController;
 use App\Http\Controllers\Admin\SpeciesTagController;
 use App\Http\Controllers\Admin\TicketOrderController;
 use App\Http\Controllers\Admin\TicketTypeController;
@@ -124,6 +125,22 @@ Route::middleware(['auth', 'verified'])
                 'update' => 'permission:species_categories.edit',
                 'destroy' => 'permission:species_categories.delete',
             ]);
+
+        /*
+         * Convertir a WebP las imágenes de especies ya guardadas. Van antes
+         * del resource para que "images" no se tome como {species}.
+         */
+        Route::get(
+            'species/images/pending',
+            [SpeciesImageOptimizationController::class, 'pending']
+        )->middleware('permission:species.edit')
+            ->name('species.images.pending');
+
+        Route::post(
+            'species/images/{image}/optimize',
+            [SpeciesImageOptimizationController::class, 'store']
+        )->middleware(['permission:species.edit', 'throttle:60,1'])
+            ->name('species.images.optimize');
 
         Route::resource('species', SpeciesController::class)
             ->middleware([

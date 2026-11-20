@@ -13,17 +13,24 @@ import {
 } from 'lucide-vue-next';
 import { computed, markRaw, onBeforeUnmount, ref, useId, watch } from 'vue';
 
+import { formatBytes } from '@/lib/glb/modelSize';
+import { optimizeImage, SPECIES_IMAGE_PROFILES } from '@/lib/imageOptimize';
 import { cn } from '@/lib/utils';
 
 // Galería de una especie en una sola rejilla: fotos guardadas y nuevas
 // juntas, en el orden final. Nada se aplica hasta guardar el formulario:
 // las nuevas viajan en `files`, el orden y el texto alternativo en `layout`
 // y las eliminadas en `deletedIds` (ver SpeciesController::syncGallery).
+// Cada foto nueva se comprime a WebP al agregarla para mostrar su peso; el
+// formulario reutiliza ese resultado al guardar (optimizeImage lo guarda).
 
 export interface SavedGalleryImage {
     id: number;
     url: string;
     alt_text: string | null;
+    // Peso actual y antes de comprimir (null si se desconoce).
+    bytes?: number | null;
+    original_bytes?: number | null;
 }
 
 export interface GalleryLayoutItem {
@@ -39,6 +46,9 @@ interface Tile {
     url: string;
     alt: string;
     deleted: boolean;
+    bytes: number | null;
+    originalBytes: number | null;
+    estimating: boolean;
 }
 
 const props = withDefaults(
@@ -58,8 +68,10 @@ const emit = defineEmits<{
     'use-as-thumbnail': [file: File];
 }>();
 
-// Mismos límites que StoreSpeciesRequest/UpdateSpeciesRequest.
+// El servidor acepta hasta 5 MB ya comprimida (StoreSpeciesRequest);
+// el archivo elegido puede pesar más porque se comprime antes de subir.
 const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const inputId = useId();
@@ -72,6 +84,9 @@ const tiles = ref<Tile[]>(
         url: image.url,
         alt: image.alt_text ?? '',
         deleted: false,
+        bytes: image.bytes ?? null,
+        originalBytes: image.original_bytes ?? null,
+        estimating: false,
     })),
 );
 
@@ -117,12 +132,12 @@ const summary = computed(() => {
     const parts = [`${total} ${total === 1 ? 'foto' : 'fotos'}`];
 
     if (added) {
-parts.push(`${added} ${added === 1 ? 'nueva' : 'nuevas'}`);
-}
+        parts.push(`${added} ${added === 1 ? 'nueva' : 'nuevas'}`);
+    }
 
     if (removed) {
-parts.push(`${removed} por eliminar`);
-}
+        parts.push(`${removed} por eliminar`);
+    }
 
     return parts.join(' · ');
 });
@@ -154,8 +169,8 @@ const addFiles = (list: FileList | null | undefined) => {
             continue;
         }
 
-        if (file.size > MAX_BYTES) {
-            rejected.value.push(`${file.name}: pesa más de 5 MB`);
+        if (file.size > MAX_SOURCE_BYTES) {
+            rejected.value.push(`${file.name}: pesa más de 25 MB`);
             continue;
         }
 
@@ -166,9 +181,37 @@ const addFiles = (list: FileList | null | undefined) => {
             url: URL.createObjectURL(file),
             alt: '',
             deleted: false,
+            bytes: null,
+            originalBytes: file.size,
+            estimating: true,
         });
+
+        estimate(tiles.value[tiles.value.length - 1]);
     }
 };
+
+const estimate = async (tile: Tile) => {
+    const optimized = await optimizeImage(
+        tile.file as File,
+        SPECIES_IMAGE_PROFILES.gallery,
+    );
+
+    tile.bytes = optimized.size;
+    tile.estimating = false;
+
+    // Ni comprimida cabe: el servidor la rechazaría al guardar.
+    if (optimized.size > MAX_BYTES && tiles.value.includes(tile)) {
+        rejected.value.push(
+            `${tile.file?.name}: pesa más de 5 MB aun comprimida`,
+        );
+        remove(tile);
+    }
+};
+
+const savedPercent = (tile: Tile): number | null =>
+    tile.bytes && tile.originalBytes && tile.bytes < tile.originalBytes
+        ? Math.round((1 - tile.bytes / tile.originalBytes) * 100)
+        : null;
 
 const onInputChange = (event: Event) => {
     const input = event.target as HTMLInputElement;
@@ -197,8 +240,8 @@ const moveTo = (tile: Tile, targetIndex: number) => {
     const from = tiles.value.indexOf(tile);
 
     if (from === -1 || targetIndex < 0 || targetIndex >= tiles.value.length) {
-return;
-}
+        return;
+    }
 
     const next = [...tiles.value];
     next.splice(from, 1);
@@ -215,22 +258,22 @@ const onTileDragStart = (tile: Tile, event: DragEvent) => {
     event.dataTransfer?.setData('text/plain', tile.key);
 
     if (event.dataTransfer) {
-event.dataTransfer.effectAllowed = 'move';
-}
+        event.dataTransfer.effectAllowed = 'move';
+    }
 };
 
 const onTileDragOver = (tile: Tile) => {
     if (draggingKey.value) {
-overKey.value = tile.key;
-}
+        overKey.value = tile.key;
+    }
 };
 
 const onTileDrop = (tile: Tile) => {
     const dragged = tiles.value.find((item) => item.key === draggingKey.value);
 
     if (dragged && dragged !== tile) {
-moveTo(dragged, tiles.value.indexOf(tile));
-}
+        moveTo(dragged, tiles.value.indexOf(tile));
+    }
 
     onDragEnd();
 };
@@ -245,16 +288,16 @@ const isFileDrag = (event: DragEvent) =>
 
 const onAreaDragOver = (event: DragEvent) => {
     if (isFileDrag(event)) {
-filesOver.value = true;
-}
+        filesOver.value = true;
+    }
 };
 
 const onAreaDrop = (event: DragEvent) => {
     filesOver.value = false;
 
     if (isFileDrag(event)) {
-addFiles(event.dataTransfer?.files);
-}
+        addFiles(event.dataTransfer?.files);
+    }
 };
 
 /*
@@ -273,8 +316,8 @@ const showNotice = (type: 'success' | 'error', text: string) => {
 
 const fileFor = async (tile: Tile): Promise<File> => {
     if (tile.file) {
-return tile.file;
-}
+        return tile.file;
+    }
 
     const response = await fetch(tile.url);
     const blob = await response.blob();
@@ -360,7 +403,8 @@ const iconButton =
         >
             <div>
                 <p class="font-medium">
-                    No se agregaron estos archivos (JPG, PNG o WEBP, máx. 5 MB):
+                    No se agregaron estos archivos (JPG, PNG o WEBP; máx. 5 MB
+                    ya comprimida):
                 </p>
                 <ul class="mt-1 list-disc pl-5">
                     <li v-for="item in rejected" :key="item">{{ item }}</li>
@@ -516,6 +560,25 @@ const iconButton =
                         class="form-input h-8 px-2 text-xs"
                     />
 
+                    <p class="text-[11px] text-[#718477]">
+                        <template v-if="tile.estimating"
+                            >Comprimiendo…</template
+                        >
+                        <template v-else-if="tile.bytes !== null">
+                            <template v-if="savedPercent(tile) !== null">
+                                {{ formatBytes(tile.originalBytes) }} →
+                            </template>
+                            <span class="font-semibold text-[#244334]">{{
+                                formatBytes(tile.bytes)
+                            }}</span>
+                            <span
+                                v-if="savedPercent(tile) !== null"
+                                class="ml-1 font-semibold text-[#187744]"
+                                >−{{ savedPercent(tile) }} %</span
+                            >
+                        </template>
+                    </p>
+
                     <div class="flex items-center justify-between">
                         <span
                             class="flex cursor-grab items-center text-[#84958A]"
@@ -567,7 +630,7 @@ const iconButton =
                         >o arrástralas aquí</span
                     >
                     <span class="mt-1 text-[11px] text-[#84958A]"
-                        >JPG, PNG o WEBP · máx. 5 MB</span
+                        >JPG, PNG o WEBP · se comprimen a WebP</span
                     >
                 </label>
 
