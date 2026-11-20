@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Duel;
 
 use App\Http\Resources\CardResource;
+use App\Http\Resources\Points\PointsAwardResource;
 use App\Services\Duel\DuelResult;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -69,7 +70,7 @@ class DuelResultResource extends JsonResource
              * Solo si ganó; si no, `null`.
              */
             'points' => $this->points
-                ? new DuelPointsResource($this->points)
+                ? new PointsAwardResource($this->points)
                 : null,
         ];
     }

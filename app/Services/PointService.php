@@ -3,17 +3,21 @@
 namespace App\Services;
 
 use App\Enums\CardRarity;
+use App\Enums\PointAction;
 use App\Models\CardRaritySetting;
 use App\Models\Level;
 use App\Models\PointMode;
 use App\Models\PointMovement;
 use App\Models\PointRule;
 use App\Models\User;
+use App\Services\Points\PointsAward;
+use App\Services\Points\PointsAwardSeason;
 use App\Services\Points\PointSeason;
 use App\Services\Points\PointSeasonCardChange;
 use App\Services\Points\PointSeasonRuleChange;
 use App\Services\Points\PointSeasonStyles;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class PointService
@@ -77,15 +81,109 @@ class PointService
     }
 
     /**
-     * Puntos que otorga la regla: los del modo activo, o los base si no hay
-     * modo activo o el modo no cambia esta regla.
+     * Otorga la regla una sola vez por referencia (una orden, una donación…)
+     * y devuelve el resumen para la respuesta de la acción.
+     *
+     * Si la referencia ya tiene un movimiento de puntos no otorga nada otra
+     * vez (por ejemplo, un webhook de pago repetido) y `awarded` trae los
+     * puntos que ya dio. Con $rule null (la acción no da puntos) solo arma
+     * el resumen. Igual que addIfRuleActive(), nunca falla por la regla.
      */
+    public function awardOnce(
+        User $user,
+        ?PointRule $rule,
+        string $description,
+        Model $reference
+    ): PointsAward {
+        return DB::transaction(function () use ($user, $rule, $description, $reference) {
+            // Bloquear al usuario serializa los otorgamientos simultáneos
+            // de la misma referencia.
+            $user = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+            $previousLevelId = $user->level_id;
+
+            $existing = PointMovement::query()
+                ->where('reference_type', $reference::class)
+                ->where('reference_id', $reference->getKey())
+                ->first();
+
+            $awarded = $existing
+                ? (int) $existing->points
+                : ($rule ? $this->addIfRuleActive($user, $rule, $description, $reference)->points ?? 0 : 0);
+
+            return $this->summary($user, $previousLevelId, $awarded, $rule);
+        });
+    }
+
+    /**
+     * Resumen de los puntos de una acción, con el formato de
+     * PointsAwardResource. $baseRule es la regla de la acción; si no da
+     * puntos (null o inactiva), la temporada lleva base_points null.
+     */
+    public function summary(User $user, ?int $previousLevelId, int $awarded, ?PointRule $baseRule): PointsAward
+    {
+        $user->refresh();
+
+        $season = $this->visibleSeason();
+
+        return new PointsAward(
+            awarded: $awarded,
+            total: (int) $user->points,
+            level: $user->level_id ? Level::find($user->level_id) : null,
+            levelUp: $user->level_id !== null && $user->level_id !== $previousLevelId,
+            season: $season
+                ? new PointsAwardSeason(
+                    title: $season->title,
+                    message: $season->message,
+                    icon: $season->icon,
+                    color: $season->color,
+                    basePoints: $baseRule?->is_active ? (int) $baseRule->points : null,
+                )
+                : null,
+        );
+    }
+
+    /**
+     * Dónde tiene efecto cada regla: las acciones del código que la otorgan
+     * por su tipo (PointAction) y las rarezas que la usan al capturar.
+     * Una regla sin ninguna de las dos no da puntos aunque esté activa.
+     *
+     * @param  iterable<PointRule>  $rules
+     * @return array<int, array{actions: list<string>, rarities: list<string>, in_use: bool}>
+     */
+    public function ruleUsage(iterable $rules): array
+    {
+        $captureRuleIds = $this->captureRuleIds();
+        $usage = [];
+
+        foreach ($rules as $rule) {
+            $action = PointAction::tryFrom((string) $rule->type);
+            $actions = $action ? [$action->label()] : [];
+            $rarities = [];
+
+            foreach ($captureRuleIds as $rarityValue => $ruleId) {
+                if ($ruleId === $rule->id) {
+                    $rarities[] = CardRarity::from($rarityValue)->label();
+                }
+            }
+
+            $usage[$rule->id] = [
+                'actions' => $actions,
+                'rarities' => $rarities,
+                'in_use' => $actions !== [] || $rarities !== [],
+            ];
+        }
+
+        return $usage;
+    }
+
     /**
      * Temporada que ven los visitantes: el modo activo, solo si está marcado
      * como visible. Separa lo que cambia en dos listas:
      * - cards: una entrada por rareza cuya regla de captura ("Configuración
      *   por rareza") cambia; así la app no tiene que cruzar reglas y rarezas.
-     * - other: las demás reglas activas que cambian (boletos, donaciones…).
+     * - other: las demás reglas activas que cambian y que alguna acción del
+     *   código otorga (PointAction: boletos, donaciones…). Las reglas sin uso
+     *   no aparecen: la app no debe anunciar acciones que no dan puntos.
      * Una regla usada por alguna rareza solo aparece en cards.
      */
     public function visibleSeason(): ?PointSeason
@@ -137,7 +235,7 @@ class PointService
         $other = [];
 
         foreach ($changed as $ruleId => $rule) {
-            if (isset($usedByRarity[$ruleId])) {
+            if (isset($usedByRarity[$ruleId]) || PointAction::tryFrom((string) $rule->type) === null) {
                 continue;
             }
 
@@ -188,6 +286,10 @@ class PointService
         return $ruleIds;
     }
 
+    /**
+     * Puntos que otorga la regla: los del modo activo, o los base si no hay
+     * modo activo o el modo no cambia esta regla.
+     */
     public function pointsFor(PointRule $rule, ?PointMode $mode): int
     {
         return $mode ? $mode->pointsFor($rule) : (int) $rule->points;

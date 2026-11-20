@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PointMode;
 use App\Models\PointRule;
+use App\Services\PointService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,12 +13,20 @@ use Inertia\Response;
 
 class PointRuleController extends Controller
 {
-    public function index(): Response
+    public function index(PointService $points): Response
     {
         $rules = PointRule::query()
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString();
+
+        // Una regla solo da puntos si una acción del código la otorga o si
+        // está asignada a una rareza; el panel lo muestra por regla.
+        $usage = $points->ruleUsage($rules->items());
+        $rules->through(fn (PointRule $rule) => [
+            ...$rule->toArray(),
+            'usage' => $usage[$rule->id],
+        ]);
 
         return Inertia::render(
             'admin/point-rules/Index',

@@ -349,9 +349,18 @@ defineOptions({
                                 :key="change.rule.id"
                                 class="flex items-center justify-between gap-2 text-sm"
                             >
-                                <span class="truncate text-[#244334]">{{
-                                    change.rule.name
-                                }}</span>
+                                <span class="flex min-w-0 items-center gap-1.5">
+                                    <span class="truncate text-[#244334]">{{
+                                        change.rule.name
+                                    }}</span>
+                                    <span
+                                        v-if="!change.rule.in_use"
+                                        class="shrink-0 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800"
+                                        title="Ninguna acción otorga esta regla ni está asignada a una rareza: este cambio no tiene efecto."
+                                    >
+                                        Sin uso
+                                    </span>
+                                </span>
 
                                 <span
                                     class="flex shrink-0 items-center gap-1.5 text-[#435D4C]"

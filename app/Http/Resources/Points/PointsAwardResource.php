@@ -1,20 +1,21 @@
 <?php
 
-namespace App\Http\Resources\Duel;
+namespace App\Http\Resources\Points;
 
-use App\Services\Duel\DuelPoints;
+use App\Services\Points\PointsAward;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Puntos obtenidos al capturar la tarjeta.
+ * Puntos que dejó una acción: capturar una tarjeta (duelo), comprar boletos o donar.
  *
- * Los puntos salen de la regla elegida para la rareza de la tarjeta en
- * "Configuración por rareza" del panel; la app nunca debe calcularlos.
+ * Mismo formato en todas las acciones. Los puntos salen de la regla de la acción
+ * en el panel ("Reglas de puntos" y, para las tarjetas, "Configuración por rareza");
+ * la app nunca debe calcularlos.
  *
- * @mixin DuelPoints
+ * @mixin PointsAward
  */
-class DuelPointsResource extends JsonResource
+class PointsAwardResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -23,21 +24,22 @@ class DuelPointsResource extends JsonResource
     {
         return [
             /**
-             * Puntos otorgados por esta captura. `0` si la rareza no otorga puntos o su regla está desactivada.
+             * Puntos otorgados por esta acción. `0` si la acción no da puntos: regla desactivada,
+             * puesta en 0 por la temporada, rareza sin puntos o donación bajo el monto mínimo.
              *
              * @example 50
              */
             'awarded' => $this->awarded,
 
             /**
-             * Total de puntos acumulados del usuario después de esta captura.
+             * Total de puntos acumulados del usuario después de esta acción.
              *
              * @example 320
              */
             'total' => $this->total,
 
             /**
-             * Nivel del usuario después de esta captura; `null` si no hay niveles configurados.
+             * Nivel del usuario después de esta acción; `null` si no hay niveles configurados.
              *
              * @var array{id: int, name: string}|null
              */
@@ -49,28 +51,29 @@ class DuelPointsResource extends JsonResource
                 : null,
 
             /**
-             * `true` si esta captura subió al usuario de nivel.
+             * `true` si esta acción subió al usuario de nivel.
              *
              * @example false
              */
             'level_up' => $this->levelUp,
 
             /**
-             * Temporada (modo de puntos visible) activa al ganar, para explicar en el aviso
-             * de victoria por qué los puntos son distintos. Por ejemplo:
-             * "Por la temporada `title`, esta carta da `awarded` puntos en lugar de `base_points`",
+             * Temporada (modo de puntos visible) activa al otorgar los puntos, para explicar en
+             * el aviso por qué son distintos. Por ejemplo:
+             * "Por la temporada `title`, esto da `awarded` puntos en lugar de `base_points`",
              * seguido de `message`.
              *
              * `null` si no hay modo activo o si el modo está oculto a los visitantes. Un modo
              * oculto igual cambia los puntos: `awarded` siempre trae los puntos reales.
              *
              * - `title`: nombre público de la temporada.
-             * - `message`: texto del zoológico para el aviso de victoria; `null` si no escribió uno.
-             * - `base_points`: puntos normales (sin temporada) de la regla de esta rareza.
-             *   Compáralo con `awarded`: menor = la temporada los bajó, mayor = los subió, igual =
-             *   la temporada no cambia esta rareza (no expliques nada). Si la temporada pone la
-             *   rareza en 0, `awarded` es `0` y `base_points` trae el valor normal. `null` si la
-             *   rareza no da puntos ("Sin puntos" o regla desactivada).
+             * - `message`: texto del zoológico para el aviso; `null` si no escribió uno.
+             * - `base_points`: puntos normales (sin temporada) de la regla de esta acción (en el
+             *   duelo, la de la rareza de la tarjeta). Compáralo con `awarded`: menor = la
+             *   temporada los bajó, mayor = los subió, igual = la temporada no cambia esta acción
+             *   (no expliques nada). Si la temporada la pone en 0, `awarded` es `0` y
+             *   `base_points` trae el valor normal. `null` si la acción no da puntos (rareza
+             *   "Sin puntos", regla desactivada o donación bajo el monto mínimo).
              * - `icon` y `color`: los mismos que en `GET /points/season`; `null` = usa el ícono o
              *   color predeterminado de la app.
              *

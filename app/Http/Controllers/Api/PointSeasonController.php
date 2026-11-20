@@ -23,16 +23,18 @@ class PointSeasonController extends Controller
      * **Cuándo `data` es `null`:** no hay temporada activa, o el zoológico la activó sin
      * mostrarla a los visitantes. En ambos casos no se muestra ningún aviso. Una temporada
      * oculta igual cambia los puntos: los reales siempre llegan en la respuesta de cada
-     * acción (por ejemplo, `data.points` al ganar un duelo).
+     * acción (`data.points` al ganar un duelo, comprar boletos o donar).
      *
      * **Qué cambia, en dos listas:**
      *
      * | Lista | Qué contiene | Cómo mostrarla |
      * |---|---|---|
      * | `cards` | Una entrada por **rareza** cuyos puntos de captura cambian, en orden de rareza. | "Cartas épicas: ~~75~~ 150 pts". Nombra la rareza con los textos de la app según `rarity`. |
-     * | `other` | Las demás **acciones** que cambian: boletos, donaciones, eventos… | "Compra de boleto: ~~10~~ 20 pts". Usa `name` tal cual. |
+     * | `other` | Las demás **acciones** que cambian y que alguna acción otorga: boletos, donaciones… | "Compra de boleto: ~~10~~ 20 pts". Usa `name` tal cual. |
      *
      * - Lo que no aparece en ninguna lista da sus puntos normales.
+     * - Una regla que ninguna acción otorga ("Sin uso" en el panel) no aparece aunque la
+     *   temporada cambie sus puntos: cambiarla no tiene efecto.
      * - `points: 0` significa que esa acción no da puntos durante la temporada (la tarjeta
      *   se captura igual).
      * - Ambas listas pueden venir vacías aunque haya temporada (solo un aviso).

@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Services\Duel;
+namespace App\Services\Points;
 
 /**
- * Temporada visible al ganar el duelo, para explicar por qué los puntos
- * son distintos de lo normal.
+ * Temporada visible al otorgar los puntos, para explicar por qué son
+ * distintos de lo normal.
  */
-final readonly class DuelPointsSeason
+final readonly class PointsAwardSeason
 {
     /**
      * @param  array{accent: string, on_accent: string, soft: string, text: string}|null  $color
@@ -16,7 +16,7 @@ final readonly class DuelPointsSeason
         public ?string $message,
         public ?string $icon,
         public ?array $color,
-        // Puntos que la tarjeta daría sin temporada; null si su rareza no otorga puntos.
+        // Puntos que la acción daría sin temporada; null si no otorga puntos.
         public ?int $basePoints,
     ) {}
 }

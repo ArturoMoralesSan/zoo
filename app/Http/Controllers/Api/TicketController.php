@@ -3,20 +3,24 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Points\PointsAwardResource;
 use App\Models\PaymentMethod;
 use App\Models\Ticket;
 use App\Models\TicketOrder;
 use App\Models\TicketType;
-use App\Services\PointService;
+use App\Services\Points\PaymentPoints;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+/**
+ * @tags Boletos
+ */
 class TicketController extends Controller
 {
     public function __construct(
-        private PointService $pointService
+        private PaymentPoints $paymentPoints
     ) {}
 
     /**
@@ -40,10 +44,16 @@ class TicketController extends Controller
     }
 
     /**
-     * Crear y aprobar inmediatamente una compra desde la app.
+     * Comprar boletos
      *
-     * Por ahora el pago se considera aprobado automáticamente.
-     * Posteriormente aquí se integrará Mercado Pago.
+     * Crea y aprueba inmediatamente una compra desde la app. Por ahora el pago se considera
+     * aprobado automáticamente; posteriormente aquí se integrará Mercado Pago.
+     *
+     * Al confirmarse el pago otorga los puntos de la regla "Compra de boleto" (`ticket_purchase`),
+     * una vez por orden sin importar cuántos boletos tenga, y los devuelve en `data.points`
+     * con el mismo formato que al ganar un duelo. Si la regla está desactivada o la temporada la
+     * pone en 0, la compra se completa igual con `awarded: 0`. Después de mostrarlos, la app
+     * debe revalidar `GET /profile`.
      */
     public function storeOrder(Request $request): JsonResponse
     {
@@ -64,7 +74,7 @@ class TicketController extends Controller
             ],
         ]);
 
-        $order = DB::transaction(function () use ($validated, $request) {
+        [$order, $points] = DB::transaction(function () use ($validated, $request) {
 
             /*
             |--------------------------------------------------------------------------
@@ -237,16 +247,15 @@ class TicketController extends Controller
             |--------------------------------------------------------------------------
             | Puntos
             |--------------------------------------------------------------------------
+            |
+            | El pago ya quedó confirmado. Una regla desactivada o en 0
+            | no da puntos, pero nunca impide la compra.
+            |
             */
 
-            $this->pointService->add(
-                $request->user(),
-                'ticket_purchase',
-                'Compra de boleto',
-                $order
-            );
+            $points = $this->paymentPoints->awardTicketOrder($order);
 
-            return $order;
+            return [$order, $points];
         });
 
         /*
@@ -322,6 +331,14 @@ class TicketController extends Controller
                         ];
                     })
                     ->values(),
+
+                /**
+                 * Puntos ganados con esta compra (una vez por orden, sin importar cuántos
+                 * boletos tenga), con el mismo formato que `data.points` al ganar un duelo.
+                 *
+                 * @var PointsAwardResource
+                 */
+                'points' => $points ? new PointsAwardResource($points) : null,
             ],
         ], 201);
     }

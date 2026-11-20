@@ -377,6 +377,16 @@ const rowError = (index: number) =>
                             >
                                 Regla inactiva
                             </span>
+                            <span
+                                v-if="
+                                    ruleById.get(item.point_rule_id)?.in_use ===
+                                    false
+                                "
+                                class="mt-1.5 ml-1 inline-flex rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                                title="Ninguna acción otorga esta regla ni está asignada a una rareza: cambiar sus puntos no tiene efecto."
+                            >
+                                Sin uso
+                            </span>
                         </td>
 
                         <td

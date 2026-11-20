@@ -4,9 +4,8 @@ import {
     ArrowLeft,
     Check,
     Coins,
-    Hash,
+    Info,
     Save,
-    Text,
     ToggleLeft,
 } from 'lucide-vue-next';
 
@@ -66,6 +65,26 @@ defineOptions({
         />
 
         <form class="space-y-5" @submit.prevent="submit">
+            <!-- Una regla nueva no tiene efecto por sí sola -->
+            <div
+                class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+            >
+                <Info class="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+
+                <div>
+                    <p class="font-semibold">
+                        Una regla nueva no da puntos por sí sola
+                    </p>
+
+                    <p class="mt-1 leading-6">
+                        Solo dará puntos si la asignas a una rareza en
+                        "Configuración por rareza" (captura de tarjetas) o si el
+                        equipo de desarrollo la conecta a una acción de la app.
+                        Hasta entonces aparecerá como "Sin uso".
+                    </p>
+                </div>
+            </div>
+
             <!-- Información general -->
             <AdminCard
                 title="Información general"
@@ -98,8 +117,8 @@ defineOptions({
                         </p>
 
                         <p v-else class="form-help">
-                            Identificador interno de la regla. Utiliza un
-                            código descriptivo y consistente.
+                            Identificador interno de la regla. Utiliza un código
+                            descriptivo y consistente.
                         </p>
                     </div>
 
@@ -174,22 +193,18 @@ defineOptions({
                             rows="4"
                             class="form-textarea"
                             :class="{
-                                'form-textarea-error':
-                                    form.errors.description,
+                                'form-textarea-error': form.errors.description,
                             }"
                             placeholder="Describe cuándo y por qué se aplican estos puntos..."
                         />
 
-                        <p
-                            v-if="form.errors.description"
-                            class="form-error"
-                        >
+                        <p v-if="form.errors.description" class="form-error">
                             {{ form.errors.description }}
                         </p>
 
                         <p v-else class="form-help">
-                            Agrega información adicional sobre el propósito
-                            de la regla.
+                            Agrega información adicional sobre el propósito de
+                            la regla.
                         </p>
                     </div>
                 </div>

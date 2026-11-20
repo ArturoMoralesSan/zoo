@@ -68,7 +68,7 @@ php artisan cards:export | cards:import x.zip --dry-run   # card+species .zip pa
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 426 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-20) |
+| `php artisan test` | 460 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-20) |
 | `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
@@ -87,10 +87,10 @@ app/Http/Controllers/Admin/      Inertia controllers, one per resource
 app/Http/Controllers/Api/        JSON controllers for the mobile app
 app/Http/Requests/{Admin,Api}/   Form requests (Admin/<Resource>/{Store,Update}…Request)
 app/Http/Resources/              API resources (CardResource, Duel/*, Credits/*)
-app/Services/                    CardDuelService, PointService, GlbInspector, CardImageOptimizer, ImageEncoding/*, Licensing/*, CardPack/*, CardTransfer/*
+app/Services/                    CardDuelService, PointService, Points/*, GlbInspector, CardImageOptimizer, ImageEncoding/*, Licensing/*, CardPack/*, CardTransfer/*
 app/Concerns/                    Validation rule traits shared by form requests
 app/Enums/ app/Rules/ app/Observers/ app/Policies/ app/Exceptions/
-config/glb.php config/licensing.php config/images.php config/cards.php   Project-specific settings
+config/glb.php config/licensing.php config/images.php config/cards.php config/points.php   Project-specific settings
 database/seeders/                Roles and permissions, menu, catalogs
 resources/js/pages/admin/<resource>/{Index,Create,Edit,Show}.vue
 resources/js/components/admin/   Shared admin UI; admin/cards/ for the card editor
@@ -102,6 +102,7 @@ docs/api-credits.md  docs/glb-resizing.md  docs/image-optimization.md   Read onl
 docs/offline-packs-{backend,app}.md   Offline card packs: server done, mobile app pending
 docs/points-app.md        Points for the app: rules, levels, seasons (GET /api/points/season), icon/color catalog
 docs/card-points-app.md   Card capture points (data.points on duel wins, incl. season); points done in the app
+docs/purchase-points-app.md  Same data.points on ticket purchases and donations; app side pending
 docs/card-transfer.md     Export/import all cards and species as a .zip (Recursos → Descargas)
 ```
 
@@ -259,12 +260,22 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   GD (`IMAGE_ENCODER`). `generated_image` is 2× (1144×2032), not the 3× download. Older
   images are converted from Recursos → Optimización or with `cards:images:optimize`, which
   **deletes each original**. See `docs/image-optimization.md`.
-- **Points:** `PointService::add()` applies a `PointRule` by type (`addIfRuleActive()` skips
-  a missing or inactive rule instead of throwing). Levels never go down, and redeeming a
-  reward does not deduct points. Ticket flows award `ticket_purchase`; winning a duel awards
-  the rule picked per rarity (`card_rarity_settings.point_rule_id`, null = no points; it
-  starts as `card_capture_<rarity>`, see `CardRarity::pointRuleType()`) once per card and returns
-  `data.points` (`awarded`, `total`, `level`, `level_up`). See `docs/card-points-app.md`.
+- **Points:** `PointService::add()` applies a `PointRule` by type and throws if it is missing or
+  inactive; `addIfRuleActive()` skips it instead. Levels never go down, and redeeming a reward
+  does not deduct points. Points are awarded inside the action's own request and transaction and
+  come back in its response as `data.points` (`PointsAwardResource`: `awarded`, `total`, `level`,
+  `level_up`, `season`); there is no endpoint to add points from the app. Winning a duel awards
+  the rule picked per rarity (`card_rarity_settings.point_rule_id`, null = no points; it starts as
+  `card_capture_<rarity>`, see `CardRarity::pointRuleType()`) once per card. Paid ticket orders
+  (app and box office, once per order) and completed donations (app and panel, once, only from
+  `config('points.donation_min_amount')`, 50 MXN) go through `Points/PaymentPoints`, which is
+  idempotent per reference (`PointService::awardOnce()`) so a payment webhook can call it again.
+  See `docs/card-points-app.md` and `docs/purchase-points-app.md`.
+  **A new action that awards points** gets a case in `Enums/PointAction` (its `type` and panel
+  label) and is awarded with `addIfRuleActive()` (or `awardOnce()`) inside its transaction, never
+  `add()`, so a disabled rule never blocks the action. `PointService::ruleUsage()` uses that enum
+  plus the rarity settings to mark rules "Sin uso" in the panel, and `visibleSeason()` leaves
+  unused rules out of `other`.
   **Point modes** (seasons/events, admin "Modos de puntos"): at most one `PointMode` is
   active and overrides some rules' points; rules it doesn't override keep their base points.
   `PointService::pointsFor()` resolves them, and every award goes through it. A mode can set a

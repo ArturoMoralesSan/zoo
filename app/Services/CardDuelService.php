@@ -10,18 +10,16 @@ use App\Models\CardCapture;
 use App\Models\CardQrCode;
 use App\Models\CardQuizState;
 use App\Models\DuelMessageSetting;
-use App\Models\Level;
 use App\Models\PointRule;
 use App\Models\QuizAttempt;
 use App\Models\QuizQuestion;
 use App\Models\User;
 use App\Services\Duel\DuelAttempts;
-use App\Services\Duel\DuelPoints;
-use App\Services\Duel\DuelPointsSeason;
 use App\Services\Duel\DuelQuestionResult;
 use App\Services\Duel\DuelResult;
 use App\Services\Duel\DuelReviewItem;
 use App\Services\Duel\DuelStart;
+use App\Services\Points\PointsAward;
 use App\Services\ZooDeck\VisitValidator;
 use Carbon\CarbonInterval;
 use Illuminate\Database\Eloquent\Collection;
@@ -299,7 +297,7 @@ class CardDuelService
      * se captura. Si la regla está desactivada la captura sigue siendo
      * válida: solo se otorgan 0 puntos.
      */
-    private function awardCapturePoints(User $user, Card $card, CardCapture $capture): DuelPoints
+    private function awardCapturePoints(User $user, Card $card, CardCapture $capture): PointsAward
     {
         $previousLevelId = $user->level_id;
         $rule = $capture->wasRecentlyCreated
@@ -315,25 +313,11 @@ class CardDuelService
             )
             : null;
 
-        $user->refresh();
-
-        $season = $this->points->visibleSeason();
-        $baseRule = $rule ?? $this->capturePointRule($card);
-
-        return new DuelPoints(
-            awarded: $movement->points ?? 0,
-            total: (int) $user->points,
-            level: $user->level_id ? Level::find($user->level_id) : null,
-            levelUp: $user->level_id !== null && $user->level_id !== $previousLevelId,
-            season: $season
-                ? new DuelPointsSeason(
-                    title: $season->title,
-                    message: $season->message,
-                    icon: $season->icon,
-                    color: $season->color,
-                    basePoints: $baseRule?->is_active ? (int) $baseRule->points : null,
-                )
-                : null,
+        return $this->points->summary(
+            $user,
+            $previousLevelId,
+            $movement->points ?? 0,
+            $rule ?? $this->capturePointRule($card),
         );
     }
 

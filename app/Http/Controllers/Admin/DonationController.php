@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Donation;
 use App\Models\PaymentMethod;
 use App\Models\User;
+use App\Services\Points\PaymentPoints;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -79,7 +81,7 @@ class DonationController extends Controller
     /**
      * Registrar una donación.
      */
-    public function store(Request $request)
+    public function store(Request $request, PaymentPoints $paymentPoints)
     {
         $validated = $request->validate([
             'user_id' => [
@@ -159,19 +161,26 @@ class DonationController extends Controller
         | seller_id se obtiene del usuario autenticado.
         |
         */
-        $donation = Donation::create([
-            'user_id' => $user->id,
+        $donation = DB::transaction(function () use ($user, $validated, $paymentPoints) {
+            $donation = Donation::create([
+                'user_id' => $user->id,
 
-            'seller_id' => Auth::id(),
+                'seller_id' => Auth::id(),
 
-            'payment_method_id' => $validated['payment_method_id'],
+                'payment_method_id' => $validated['payment_method_id'],
 
-            'amount' => $validated['amount'],
+                'amount' => $validated['amount'],
 
-            'reference' => $validated['reference'] ?? null,
+                'reference' => $validated['reference'] ?? null,
 
-            'status' => 'completed',
-        ]);
+                'status' => 'completed',
+            ]);
+
+            // Misma regla que en la app; los puntos nunca impiden registrarla.
+            $paymentPoints->awardDonation($donation);
+
+            return $donation;
+        });
 
         return redirect()
             ->route('admin.donations.show', $donation)
