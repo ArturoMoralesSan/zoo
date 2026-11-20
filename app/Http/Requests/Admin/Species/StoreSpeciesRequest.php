@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\Admin\Species;
 
+use App\Enums\ConservationStatus;
+use App\Enums\Diet;
+use App\Enums\Habitat;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -52,10 +55,14 @@ class StoreSpeciesRequest extends FormRequest
                 'string',
             ],
 
-            'habitat' => [
+            'habitats' => [
                 'nullable',
-                'string',
-                'max:255',
+                'array',
+            ],
+
+            'habitats.*' => [
+                'distinct',
+                Rule::enum(Habitat::class),
             ],
 
             'origin' => [
@@ -66,14 +73,12 @@ class StoreSpeciesRequest extends FormRequest
 
             'diet' => [
                 'nullable',
-                'string',
-                'max:255',
+                Rule::enum(Diet::class),
             ],
 
             'conservation_status' => [
                 'nullable',
-                'string',
-                'max:255',
+                Rule::enum(ConservationStatus::class),
             ],
 
             'is_active' => [
@@ -129,6 +134,56 @@ class StoreSpeciesRequest extends FormRequest
             ],
 
             /*
+             * Orden final de la galería: cada elemento apunta a un archivo
+             * nuevo por su índice en gallery_images.
+             */
+            /*
+             * Peso de cada imagen antes de que el navegador la comprimiera,
+             * para mostrar el ahorro. gallery_original_bytes va por índice
+             * de gallery_images.
+             */
+            'image_original_bytes' => [
+                'nullable',
+                'array:main,thumbnail',
+            ],
+
+            'image_original_bytes.*' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:104857600',
+            ],
+
+            'gallery_original_bytes' => [
+                'nullable',
+                'array',
+            ],
+
+            'gallery_original_bytes.*' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:104857600',
+            ],
+
+            'gallery' => [
+                'nullable',
+                'array',
+            ],
+
+            'gallery.*.file_index' => [
+                'required',
+                'integer',
+                'min:0',
+            ],
+
+            'gallery.*.alt_text' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            /*
             |--------------------------------------------------------------------------
             | Ubicación
             |--------------------------------------------------------------------------
@@ -173,7 +228,8 @@ class StoreSpeciesRequest extends FormRequest
             'common_name' => 'nombre común',
             'scientific_name' => 'nombre científico',
             'description' => 'descripción',
-            'habitat' => 'hábitat',
+            'habitats' => 'hábitats',
+            'habitats.*' => 'hábitat',
             'origin' => 'origen',
             'diet' => 'dieta',
             'conservation_status' => 'estado de conservación',
@@ -185,6 +241,8 @@ class StoreSpeciesRequest extends FormRequest
             'thumbnail_image' => 'miniatura',
             'card_image' => 'imagen de tarjeta',
             'gallery_images' => 'imágenes de galería',
+            'gallery_images.*' => 'imagen de galería',
+            'gallery.*.alt_text' => 'texto alternativo',
 
             'model_name' => 'nombre del modelo 3D',
             'model_file' => 'archivo del modelo 3D',

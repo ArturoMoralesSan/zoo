@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\Habitat;
 use App\Http\Controllers\Controller;
 use App\Models\Species;
 use Illuminate\Http\JsonResponse;
@@ -111,10 +112,21 @@ class SpeciesController extends Controller
                     'scientific_name' => $species->scientific_name,
                     'slug' => $species->slug,
                     'description' => $species->description,
-                    'habitat' => $species->habitat,
+                    // Etiquetas en español, como antes de los catálogos.
+                    'habitat' => $species->habitatLabel(),
                     'origin' => $species->origin,
-                    'diet' => $species->diet,
-                    'conservation_status' => $species->conservation_status,
+                    'diet' => $species->diet?->label(),
+                    'conservation_status' => $species->conservation_status?->label(),
+
+                    // Códigos estables de los catálogos.
+                    'habitats' => $species->sortedHabitats()
+                        ->map(fn (Habitat $habitat) => [
+                            'code' => $habitat->value,
+                            'label' => $habitat->label(),
+                        ])
+                        ->values(),
+                    'diet_code' => $species->diet?->value,
+                    'conservation_status_code' => $species->conservation_status?->value,
 
                     'category' => $species->category
                         ? [

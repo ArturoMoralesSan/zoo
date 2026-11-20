@@ -9,10 +9,15 @@ import {
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
 
-import admin from '@/routes/admin';
-import PageHeader from '@/components/admin/PageHeader.vue';
 import DataTable from '@/components/admin/DataTable.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import OptimizeSpeciesImagesPanel from '@/components/admin/species/OptimizeSpeciesImagesPanel.vue';
 import TableActions from '@/components/admin/TableActions.vue';
+import {
+    conservationStatusOption,
+    habitatLabels,
+} from '@/lib/speciesCatalogs';
+import admin from '@/routes/admin';
 
 interface Category {
     id: number;
@@ -26,7 +31,7 @@ interface Species {
     scientific_name: string;
     slug: string;
     description: string | null;
-    habitat: string | null;
+    habitats: string[] | null;
     origin: string | null;
     diet: string | null;
     conservation_status: string | null;
@@ -57,6 +62,7 @@ const props = defineProps<{
         search?: string;
         category_id?: number | string;
     };
+    canOptimizeImages: boolean;
 }>();
 
 const search = ref(props.filters?.search ?? '');
@@ -276,10 +282,10 @@ defineOptions({
 
                     <td class="px-5 py-4 sm:px-6">
                         <span
-                            v-if="item.habitat"
+                            v-if="item.habitats?.length"
                             class="text-sm text-[#42604C]"
                         >
-                            {{ item.habitat }}
+                            {{ habitatLabels(item.habitats).join(', ') }}
                         </span>
 
                         <span
@@ -292,10 +298,18 @@ defineOptions({
 
                     <td class="px-5 py-4 sm:px-6">
                         <span
-                            v-if="item.conservation_status"
-                            class="inline-flex items-center rounded-full border border-[#DCE7DF] bg-[#F5F9F6] px-2.5 py-1 text-xs font-medium text-[#42604C]"
+                            v-if="conservationStatusOption(item.conservation_status)"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F9F6] py-1 pr-2.5 pl-1 text-xs font-medium text-[#42604C]"
                         >
-                            {{ item.conservation_status }}
+                            <span
+                                :class="[
+                                    'rounded-full border px-1.5 text-[10px] font-bold',
+                                    conservationStatusOption(item.conservation_status)?.badgeClass,
+                                ]"
+                            >
+                                {{ item.conservation_status }}
+                            </span>
+                            {{ conservationStatusOption(item.conservation_status)?.label }}
                         </span>
 
                         <span
@@ -355,5 +369,7 @@ defineOptions({
                 </div>
             </template>
         </DataTable>
+
+        <OptimizeSpeciesImagesPanel v-if="canOptimizeImages" />
     </div>
 </template>

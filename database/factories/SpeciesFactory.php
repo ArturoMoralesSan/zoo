@@ -2,6 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Enums\ConservationStatus;
+use App\Enums\Diet;
+use App\Enums\Habitat;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -29,15 +32,7 @@ class SpeciesFactory extends Factory
 
             'description' => fake()->optional()->paragraph(),
 
-            'habitat' => fake()->randomElement([
-                'Bosque',
-                'Selva',
-                'Desierto',
-                'Humedal',
-                'Pradera',
-                'Río',
-                'Zona montañosa',
-            ]),
+            'habitats' => fake()->randomElements(Habitat::cases(), fake()->numberBetween(1, 3)),
 
             'origin' => fake()->randomElement([
                 'México',
@@ -48,19 +43,9 @@ class SpeciesFactory extends Factory
                 'Asia',
             ]),
 
-            'diet' => fake()->randomElement([
-                'Herbívoro',
-                'Carnívoro',
-                'Omnívoro',
-                'Insectívoro',
-            ]),
+            'diet' => fake()->randomElement(Diet::cases()),
 
-            'conservation_status' => fake()->randomElement([
-                'Preocupación menor',
-                'Vulnerable',
-                'En peligro',
-                'En peligro crítico',
-            ]),
+            'conservation_status' => fake()->randomElement(ConservationStatus::cases()),
 
             'is_active' => true,
         ];

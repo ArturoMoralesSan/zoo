@@ -59,6 +59,7 @@ php artisan wayfinder:generate --with-form     # after route changes, if Vite is
 php artisan route:list --name=admin.events -v  # routes with their middleware
 php artisan route:list --path=api --json
 php artisan cards:images:report                # read-only: card images still to convert
+php artisan species:images:report              # same for species images (optimize deletes originals)
 php artisan cards:packs:build                  # encrypted offline-pack copies (idempotent; --force re-encrypts)
 php artisan cards:export | cards:import x.zip --dry-run   # card .zip packages without the panel
 ```
@@ -67,7 +68,7 @@ php artisan cards:export | cards:import x.zip --dry-run   # card .zip packages w
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 394 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-20) |
+| `php artisan test` | 413 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-20) |
 | `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
@@ -235,9 +236,17 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   questions, and copies files as-is. QR tokens travel only if the exporter ticks the box.
   Adding a card column means adding it to `CardPackage::CARD_FIELDS` and the reader's rules.
   See `docs/card-transfer.md`.
+- **Species catalogs:** `conservation_status` (IUCN code), `diet` and `habitats` (JSON, several)
+  store enum codes, never free text. The API keeps the old Spanish strings in `habitat`, `diet`
+  and `conservation_status` and adds `habitats`, `diet_code`, `conservation_status_code`. The
+  species gallery is saved with the form (`SpeciesController::syncGallery`: order, alt text and
+  deletes in one request); `SpeciesGalleryField.vue` builds that payload.
 - **Credits:** licences and attribution are legally relevant, and restricted licences
   are off by default. `CreditsCacheObserver` invalidates the public `/api/v1/credits`
   cache. See `docs/api-credits.md`.
+- **Species images** (main, thumbnail, gallery) follow the same WebP flow with their own profiles
+  (`resources/data/species-image-profiles.json`, `SpeciesImageOptimizer`, `species:images:*`).
+  See the "Especies" section of `docs/image-optimization.md`.
 - **Card images** are stored as WebP. The browser encodes them (`lib/imageOptimize.ts`,
   libwebp in WASM) and the server re-encodes non-WebP uploads only if it has Imagick or
   GD (`IMAGE_ENCODER`). `generated_image` is 2× (1144×2032), not the 3× download. Older
@@ -268,10 +277,11 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 | `QuizQuestion::normalizeText` | `quizImport.ts` `normalizeQuestionText` | none |
 | `QuizGeneratorService` prompt rules | `quizImport.ts` `buildQuizPrompt` | none |
 | `Enums/CardRarity` | `lib/cardRarity.ts` | none |
+| `Enums/{ConservationStatus,Diet,Habitat}` | `lib/speciesCatalogs.ts` | `SpeciesAdminTest` (catalog parity) |
 | `GlbInspector`, `config/glb.php` | `lib/glb/resizeGlb.ts` | `tests/Fixtures/glb` |
 
-Card fonts are shared through `resources/data/card-fonts.json`, card image profiles
-(size and quality) through `resources/data/card-image-profiles.json`, and season icons and
+Card fonts are shared through `resources/data/card-fonts.json`, card and species image profiles
+(size and quality) through `resources/data/{card,species}-image-profiles.json`, and season icons and
 colors through `resources/data/point-season-styles.json` (keys never change; the app maps
 them, see `docs/points-app.md`).
 

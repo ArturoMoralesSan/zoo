@@ -12,7 +12,9 @@ use App\Models\SpeciesLocation;
 use App\Models\SpeciesModel;
 use App\Models\SpeciesTag;
 use App\Models\ZooZone;
+use App\Services\SpeciesImageOptimizer;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -23,6 +25,8 @@ use Inertia\Response;
 
 class SpeciesController extends Controller
 {
+    public function __construct(private SpeciesImageOptimizer $imageOptimizer) {}
+
     /*
     |--------------------------------------------------------------------------
     | INDEX
@@ -82,6 +86,9 @@ class SpeciesController extends Controller
                     'search' => request('search'),
                     'category_id' => request('category_id'),
                 ],
+
+                // Panel "Optimizar imágenes" (rutas species.images.*).
+                'canOptimizeImages' => (bool) request()->user()?->can('species.edit'),
             ]
         );
     }
@@ -101,6 +108,8 @@ class SpeciesController extends Controller
             'locations.zone',
             'tags',
         ]);
+
+        $this->withImageBytes($species);
 
         return Inertia::render(
             'admin/species/Show',
@@ -172,9 +181,12 @@ class SpeciesController extends Controller
     ): RedirectResponse {
         $validated = $request->validated();
 
+        $deletedPaths = [];
+
         DB::transaction(function () use (
             $request,
-            $validated
+            $validated,
+            &$deletedPaths
         ) {
             /*
             |--------------------------------------------------------------------------
@@ -195,7 +207,7 @@ class SpeciesController extends Controller
 
                 'description' => $validated['description'] ?? null,
 
-                'habitat' => $validated['habitat'] ?? null,
+                'habitats' => $validated['habitats'] ?? null,
 
                 'origin' => $validated['origin'] ?? null,
 
@@ -226,9 +238,11 @@ class SpeciesController extends Controller
                 $request->hasFile('main_image') &&
                 $request->file('main_image')->isValid()
             ) {
-                $path = $this->moveUploadedFile(
-                    $request->file('main_image'),
-                    'species/'.$species->id
+                [$path, $originalBytes] = $this->storeOptimizedImage(
+                    $request,
+                    'main_image',
+                    'main',
+                    $species
                 );
 
                 SpeciesImage::create([
@@ -237,6 +251,8 @@ class SpeciesController extends Controller
                     'type' => 'main',
 
                     'path' => $path,
+
+                    'original_bytes' => $originalBytes,
 
                     'alt_text' => $species->common_name,
 
@@ -256,9 +272,11 @@ class SpeciesController extends Controller
                 $request->hasFile('thumbnail_image') &&
                 $request->file('thumbnail_image')->isValid()
             ) {
-                $path = $this->moveUploadedFile(
-                    $request->file('thumbnail_image'),
-                    'species/'.$species->id
+                [$path, $originalBytes] = $this->storeOptimizedImage(
+                    $request,
+                    'thumbnail_image',
+                    'thumbnail',
+                    $species
                 );
 
                 SpeciesImage::create([
@@ -267,6 +285,8 @@ class SpeciesController extends Controller
                     'type' => 'thumbnail',
 
                     'path' => $path,
+
+                    'original_bytes' => $originalBytes,
 
                     'alt_text' => $species->common_name,
 
@@ -312,34 +332,11 @@ class SpeciesController extends Controller
             |--------------------------------------------------------------------------
             */
 
-            if ($request->hasFile('gallery_images')) {
-                foreach (
-                    $request->file('gallery_images') as $index => $image
-                ) {
-                    if (! $image->isValid()) {
-                        continue;
-                    }
-
-                    $path = $this->moveUploadedFile(
-                        $image,
-                        'species/'.$species->id
-                    );
-
-                    SpeciesImage::create([
-                        'species_id' => $species->id,
-
-                        'type' => 'gallery',
-
-                        'path' => $path,
-
-                        'alt_text' => $species->common_name,
-
-                        'is_active' => true,
-
-                        'sort_order' => $index,
-                    ]);
-                }
-            }
+            $deletedPaths = $this->syncGallery(
+                $request,
+                $species,
+                $validated
+            );
 
             /*
             |--------------------------------------------------------------------------
@@ -421,6 +418,10 @@ class SpeciesController extends Controller
             }
         });
 
+        // Los archivos se borran después del commit para no perderlos si
+        // la transacción falla.
+        Storage::disk('public')->delete($deletedPaths);
+
         return redirect()
             ->route('admin.species.index')
             ->with(
@@ -444,6 +445,8 @@ class SpeciesController extends Controller
             'models',
             'locations.zone',
         ]);
+
+        $this->withImageBytes($species);
 
         return Inertia::render(
             'admin/species/Edit',
@@ -501,10 +504,13 @@ class SpeciesController extends Controller
     ): RedirectResponse {
         $validated = $request->validated();
 
+        $deletedPaths = [];
+
         DB::transaction(function () use (
             $request,
             $species,
-            $validated
+            $validated,
+            &$deletedPaths
         ) {
             /*
             |--------------------------------------------------------------------------
@@ -525,7 +531,7 @@ class SpeciesController extends Controller
 
                 'description' => $validated['description'] ?? null,
 
-                'habitat' => $validated['habitat'] ?? null,
+                'habitats' => $validated['habitats'] ?? null,
 
                 'origin' => $validated['origin'] ?? null,
 
@@ -561,9 +567,11 @@ class SpeciesController extends Controller
                     ->where('type', 'main')
                     ->first();
 
-                $path = $this->moveUploadedFile(
-                    $request->file('main_image'),
-                    'species/'.$species->id
+                [$path, $originalBytes] = $this->storeOptimizedImage(
+                    $request,
+                    'main_image',
+                    'main',
+                    $species
                 );
 
                 if ($currentImage) {
@@ -581,6 +589,8 @@ class SpeciesController extends Controller
                     $currentImage->update([
                         'path' => $path,
 
+                        'original_bytes' => $originalBytes,
+
                         'alt_text' => $species->common_name,
 
                         'is_active' => true,
@@ -592,6 +602,8 @@ class SpeciesController extends Controller
                         'type' => 'main',
 
                         'path' => $path,
+
+                        'original_bytes' => $originalBytes,
 
                         'alt_text' => $species->common_name,
 
@@ -617,9 +629,11 @@ class SpeciesController extends Controller
                     ->where('type', 'thumbnail')
                     ->first();
 
-                $path = $this->moveUploadedFile(
-                    $request->file('thumbnail_image'),
-                    'species/'.$species->id
+                [$path, $originalBytes] = $this->storeOptimizedImage(
+                    $request,
+                    'thumbnail_image',
+                    'thumbnail',
+                    $species
                 );
 
                 if ($currentImage) {
@@ -637,6 +651,8 @@ class SpeciesController extends Controller
                     $currentImage->update([
                         'path' => $path,
 
+                        'original_bytes' => $originalBytes,
+
                         'alt_text' => $species->common_name,
 
                         'is_active' => true,
@@ -648,6 +664,8 @@ class SpeciesController extends Controller
                         'type' => 'thumbnail',
 
                         'path' => $path,
+
+                        'original_bytes' => $originalBytes,
 
                         'alt_text' => $species->common_name,
 
@@ -718,48 +736,13 @@ class SpeciesController extends Controller
             |--------------------------------------------------------------------------
             | Galería
             |--------------------------------------------------------------------------
-            |
-            | Las imágenes nuevas se agregan a las existentes.
-            |
             */
 
-            if ($request->hasFile('gallery_images')) {
-                $lastSortOrder = $species
-                    ->images()
-                    ->where('type', 'gallery')
-                    ->max('sort_order');
-
-                $sortOrder = is_null($lastSortOrder)
-                    ? 0
-                    : $lastSortOrder + 1;
-
-                foreach (
-                    $request->file('gallery_images') as $index => $image
-                ) {
-                    if (! $image->isValid()) {
-                        continue;
-                    }
-
-                    $path = $this->moveUploadedFile(
-                        $image,
-                        'species/'.$species->id
-                    );
-
-                    SpeciesImage::create([
-                        'species_id' => $species->id,
-
-                        'type' => 'gallery',
-
-                        'path' => $path,
-
-                        'alt_text' => $species->common_name,
-
-                        'is_active' => true,
-
-                        'sort_order' => $sortOrder + $index,
-                    ]);
-                }
-            }
+            $deletedPaths = $this->syncGallery(
+                $request,
+                $species,
+                $validated
+            );
 
             /*
             |--------------------------------------------------------------------------
@@ -898,6 +881,10 @@ class SpeciesController extends Controller
             }
         });
 
+        // Los archivos se borran después del commit para no perderlos si
+        // la transacción falla.
+        Storage::disk('public')->delete($deletedPaths);
+
         return redirect()
             ->route('admin.species.index')
             ->with(
@@ -993,6 +980,148 @@ class SpeciesController extends Controller
     | MÉTODOS PRIVADOS
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Deja la galería como quedó en el formulario: borra las imágenes
+     * marcadas, guarda los archivos nuevos y aplica orden y texto
+     * alternativo. Las imágenes que el formulario no menciona conservan
+     * su orden relativo al final.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return list<string> Rutas a borrar del disco después del commit.
+     */
+    private function syncGallery(
+        Request $request,
+        Species $species,
+        array $validated
+    ): array {
+        $deletedPaths = [];
+
+        $deletedIds = $validated['deleted_gallery_ids'] ?? [];
+
+        if ($deletedIds !== []) {
+            $species->images()
+                ->where('type', 'gallery')
+                ->whereIn('id', $deletedIds)
+                ->get()
+                ->each(function (SpeciesImage $image) use (&$deletedPaths) {
+                    if ($image->path) {
+                        $deletedPaths[] = $image->path;
+                    }
+
+                    $image->delete();
+                });
+        }
+
+        $existing = $species->images()
+            ->where('type', 'gallery')
+            ->reorder('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->keyBy('id');
+
+        // Archivos nuevos, por su índice en gallery_images.
+        $uploaded = [];
+
+        foreach ($request->file('gallery_images', []) as $index => $file) {
+            if (! $file->isValid()) {
+                continue;
+            }
+
+            $uploaded[$index] = SpeciesImage::create([
+                'species_id' => $species->id,
+                'type' => 'gallery',
+                'original_bytes' => $this->imageOptimizer->originalBytes(
+                    $request,
+                    'gallery_original_bytes.'.$index,
+                    $file
+                ),
+                'path' => $this->moveUploadedFile(
+                    $this->imageOptimizer->prepareUpload($file, 'gallery'),
+                    'species/'.$species->id
+                ),
+                'alt_text' => $species->common_name,
+                'is_active' => true,
+                'sort_order' => 0,
+            ]);
+        }
+
+        /** @var array<int, array{0: SpeciesImage, 1: string|null}> $ordered */
+        $ordered = [];
+
+        // validated() arma los elementos anidados regla por regla, así que
+        // las claves pueden quedar desordenadas: la clave es la posición.
+        $items = $validated['gallery'] ?? [];
+        ksort($items);
+
+        foreach ($items as $item) {
+            $image = isset($item['id'])
+                ? $existing->get($item['id'])
+                : ($uploaded[$item['file_index'] ?? -1] ?? null);
+
+            if ($image && ! isset($ordered[$image->id])) {
+                $ordered[$image->id] = [
+                    $image,
+                    trim((string) ($item['alt_text'] ?? '')) ?: $species->common_name,
+                ];
+            }
+        }
+
+        foreach ([...$existing->values(), ...array_values($uploaded)] as $image) {
+            $ordered[$image->id] ??= [$image, $image->alt_text];
+        }
+
+        foreach (array_values($ordered) as $position => [$image, $altText]) {
+            $image->update([
+                'sort_order' => $position,
+                'alt_text' => $altText,
+            ]);
+        }
+
+        return $deletedPaths;
+    }
+
+    /**
+     * Peso actual de cada imagen (`bytes`), para mostrar el ahorro junto a
+     * `original_bytes`.
+     */
+    private function withImageBytes(Species $species): void
+    {
+        $species->images->each(
+            fn (SpeciesImage $image) => $image->setAttribute(
+                'bytes',
+                $this->imageOptimizer->storedBytes($image)
+            )
+        );
+    }
+
+    /**
+     * Guarda la imagen principal o la miniatura. Si el navegador no pudo
+     * comprimirla, lo intenta el servidor.
+     *
+     * @return array{0: string, 1: int} Ruta y peso antes de comprimir.
+     */
+    private function storeOptimizedImage(
+        Request $request,
+        string $field,
+        string $kind,
+        Species $species
+    ): array {
+        $file = $request->file($field);
+
+        $originalBytes = $this->imageOptimizer->originalBytes(
+            $request,
+            'image_original_bytes.'.$kind,
+            $file
+        );
+
+        $path = $this->moveUploadedFile(
+            $this->imageOptimizer->prepareUpload($file, $kind),
+            'species/'.$species->id
+        );
+
+        return [$path, $originalBytes];
+    }
 
     private function moveUploadedFile(
         UploadedFile $file,

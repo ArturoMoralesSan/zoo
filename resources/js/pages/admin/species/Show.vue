@@ -11,8 +11,14 @@ import {
     Tags,
 } from 'lucide-vue-next';
 
+import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 
+import {
+    conservationStatusOption,
+    dietLabel,
+    habitatLabels,
+} from '@/lib/speciesCatalogs';
 import admin from '@/routes/admin';
 
 interface SpeciesCategory {
@@ -27,6 +33,9 @@ interface SpeciesImage {
     alt_text?: string | null;
     is_active: boolean;
     sort_order: number;
+    // Peso actual en disco y antes de comprimir (null si se desconoce).
+    bytes?: number | null;
+    original_bytes?: number | null;
 }
 
 interface MapImageBounds {
@@ -74,7 +83,7 @@ interface Species {
     scientific_name?: string | null;
     slug: string;
     description?: string | null;
-    habitat?: string | null;
+    habitats?: string[] | null;
     origin?: string | null;
     diet?: string | null;
     conservation_status?: string | null;
@@ -88,6 +97,10 @@ interface Species {
 const props = defineProps<{
     species: Species;
 }>();
+
+const conservationStatus = conservationStatusOption(
+    props.species.conservation_status,
+);
 
 /**
  * --------------------------------------------------------------------------
@@ -134,6 +147,17 @@ const currentLocation =
 const imageUrl = (path: string) => {
     return `/storage/${path}`;
 };
+
+// Peso total de la galería; sin original conocido cuenta el actual.
+const galleryBytes = galleryImages.reduce(
+    (sum, image) => sum + (image.bytes ?? 0),
+    0,
+);
+
+const galleryOriginalBytes = galleryImages.reduce(
+    (sum, image) => sum + (image.original_bytes ?? image.bytes ?? 0),
+    0,
+);
 
 const thumbnailMarkerUrl = thumbnailImage
     ? imageUrl(thumbnailImage.path)
@@ -336,7 +360,7 @@ const thumbnailMarkerUrl = thumbnailImage
 
                             <p class="mt-1 text-sm">
                                 {{
-                                    species.habitat ||
+                                    habitatLabels(species.habitats).join(', ') ||
                                     'Sin especificar'
                                 }}
                             </p>
@@ -370,7 +394,7 @@ const thumbnailMarkerUrl = thumbnailImage
 
                             <p class="mt-1 text-sm">
                                 {{
-                                    species.diet ||
+                                    dietLabel(species.diet) ||
                                     'Sin especificar'
                                 }}
                             </p>
@@ -385,12 +409,22 @@ const thumbnailMarkerUrl = thumbnailImage
                                 Estado de conservación
                             </p>
 
-                            <p class="mt-1 text-sm">
-                                {{
-                                    species.conservation_status ||
-                                    'Sin especificar'
-                                }}
+                            <p
+                                v-if="conservationStatus"
+                                class="mt-1 flex items-center gap-2 text-sm"
+                            >
+                                <span
+                                    :class="[
+                                        'rounded-md border px-1.5 text-xs font-bold',
+                                        conservationStatus.badgeClass,
+                                    ]"
+                                >
+                                    {{ conservationStatus.value }}
+                                </span>
+                                {{ conservationStatus.label }}
                             </p>
+
+                            <p v-else class="mt-1 text-sm">Sin especificar</p>
                         </div>
 
                         <!-- Estado -->
@@ -611,6 +645,13 @@ const thumbnailMarkerUrl = thumbnailImage
                             Sin imagen
                         </div>
                     </div>
+
+                    <SizeSavings
+                        v-if="mainImage"
+                        class="mt-2"
+                        :original="mainImage.original_bytes ?? null"
+                        :optimized="mainImage.bytes ?? null"
+                    />
                 </div>
 
                 <!-- MINIATURA -->
@@ -646,6 +687,13 @@ const thumbnailMarkerUrl = thumbnailImage
                             Sin imagen
                         </div>
                     </div>
+
+                    <SizeSavings
+                        v-if="thumbnailImage"
+                        class="mt-2"
+                        :original="thumbnailImage.original_bytes ?? null"
+                        :optimized="thumbnailImage.bytes ?? null"
+                    />
                 </div>
 
                 <!-- GALERÍA -->
@@ -690,6 +738,14 @@ const thumbnailMarkerUrl = thumbnailImage
                     >
                         Sin imágenes
                     </div>
+
+                    <SizeSavings
+                        v-if="galleryImages.length"
+                        class="mt-2"
+                        label="Peso total"
+                        :original="galleryOriginalBytes"
+                        :optimized="galleryBytes"
+                    />
                 </div>
             </div>
         </div>

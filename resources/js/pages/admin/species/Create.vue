@@ -3,7 +3,6 @@ import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     ArrowRight,
-    Check,
     Image as ImageIcon,
     Info,
     Leaf,
@@ -17,8 +16,17 @@ import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
 import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
+import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
+import SpeciesClassificationFields from '@/components/admin/species/SpeciesClassificationFields.vue';
+import SpeciesGalleryField from '@/components/admin/species/SpeciesGalleryField.vue';
+import type { GalleryLayoutItem } from '@/components/admin/species/SpeciesGalleryField.vue';
+import {
+    optimizeSpeciesUploads,
+    useEstimatedSize,
+} from '@/composables/useSpeciesImageUploads';
+import type { HabitatCode } from '@/lib/speciesCatalogs';
 import admin from '@/routes/admin';
 
 interface GeoJsonGeometry {
@@ -62,7 +70,7 @@ const form = useForm({
     common_name: '',
     scientific_name: '',
     description: '',
-    habitat: '',
+    habitats: [] as HabitatCode[],
     origin: '',
     diet: '',
     conservation_status: '',
@@ -71,6 +79,7 @@ const form = useForm({
     main_image: null as File | null,
     thumbnail_image: null as File | null,
     gallery_images: [] as File[],
+    gallery: [] as GalleryLayoutItem[],
     zone_id: '',
     location_name: '',
     latitude: null as number | null,
@@ -88,11 +97,7 @@ const tabs = [
 ];
 
 const selectedZone = computed<Zone | null>(() => {
-    return (
-        props.zones.find(
-            (zone) => zone.id === Number(form.zone_id),
-        ) ?? null
-    );
+    return props.zones.find((zone) => zone.id === Number(form.zone_id)) ?? null;
 });
 
 const thumbnailPreviewUrl = ref<string | null>(null);
@@ -100,9 +105,6 @@ const thumbnailObjectUrl = ref<string | null>(null);
 
 const mainPreviewUrl = ref<string | null>(null);
 const mainObjectUrl = ref<string | null>(null);
-
-const galleryPreviewUrls = ref<string[]>([]);
-const galleryObjectUrls = ref<string[]>([]);
 
 watch(
     () => form.zone_id,
@@ -114,8 +116,10 @@ watch(
 
 const setMainImage = (event: Event) => {
     const target = event.target as HTMLInputElement;
-    const file = target.files?.[0] ?? null;
+    applyMainImage(target.files?.[0] ?? null);
+};
 
+const applyMainImage = (file: File | null) => {
     if (mainObjectUrl.value) {
         URL.revokeObjectURL(mainObjectUrl.value);
         mainObjectUrl.value = null;
@@ -134,13 +138,15 @@ const setMainImage = (event: Event) => {
 
 const setThumbnailImage = (event: Event) => {
     const target = event.target as HTMLInputElement;
+    applyThumbnailImage(target.files?.[0] ?? null);
+};
 
+const applyThumbnailImage = (file: File | null) => {
     if (thumbnailObjectUrl.value) {
         URL.revokeObjectURL(thumbnailObjectUrl.value);
         thumbnailObjectUrl.value = null;
     }
 
-    const file = target.files?.[0] ?? null;
     form.thumbnail_image = file;
 
     if (file) {
@@ -152,28 +158,8 @@ const setThumbnailImage = (event: Event) => {
     }
 };
 
-const setGalleryImages = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-
-    galleryObjectUrls.value.forEach((url) => URL.revokeObjectURL(url));
-
-    galleryObjectUrls.value = [];
-    galleryPreviewUrls.value = [];
-
-    const files = target.files ? Array.from(target.files) : [];
-    form.gallery_images = files;
-
-    files.forEach((file) => {
-        const objectUrl = URL.createObjectURL(file);
-        galleryObjectUrls.value.push(objectUrl);
-        galleryPreviewUrls.value.push(objectUrl);
-    });
-};
-
 const nextTab = () => {
-    const currentIndex = tabs.findIndex(
-        (tab) => tab.id === activeTab.value,
-    );
+    const currentIndex = tabs.findIndex((tab) => tab.id === activeTab.value);
 
     if (currentIndex < tabs.length - 1) {
         activeTab.value = tabs[currentIndex + 1].id;
@@ -181,9 +167,7 @@ const nextTab = () => {
 };
 
 const previousTab = () => {
-    const currentIndex = tabs.findIndex(
-        (tab) => tab.id === activeTab.value,
-    );
+    const currentIndex = tabs.findIndex((tab) => tab.id === activeTab.value);
 
     if (currentIndex > 0) {
         activeTab.value = tabs[currentIndex - 1].id;
@@ -194,10 +178,34 @@ const goToTab = (tabId: string) => {
     activeTab.value = tabId;
 };
 
-const submit = () => {
-    form.post(admin.species.store().url, {
-        forceFormData: true,
+const { bytes: mainBytes, estimating: mainEstimating } = useEstimatedSize(
+    () => form.main_image,
+    'main',
+);
+
+const { bytes: thumbnailBytes, estimating: thumbnailEstimating } =
+    useEstimatedSize(() => form.thumbnail_image, 'thumbnail');
+
+// Las imágenes se comprimen a WebP antes de enviarlas.
+const compressing = ref(false);
+
+const submit = async () => {
+    if (compressing.value || form.processing) {
+        return;
+    }
+
+    compressing.value = true;
+
+    const uploads = await optimizeSpeciesUploads(form).finally(() => {
+        compressing.value = false;
     });
+
+    form.transform((data) => ({ ...data, ...uploads })).post(
+        admin.species.store().url,
+        {
+            forceFormData: true,
+        },
+    );
 };
 
 onBeforeUnmount(() => {
@@ -208,15 +216,15 @@ onBeforeUnmount(() => {
     if (mainObjectUrl.value) {
         URL.revokeObjectURL(mainObjectUrl.value);
     }
-
-    galleryObjectUrls.value.forEach((url) => URL.revokeObjectURL(url));
 });
 </script>
 
 <template>
     <Head title="Nueva especie" />
 
-    <div class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5">
+    <div
+        class="flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#F2F7F4] p-4 sm:p-5"
+    >
         <PageHeader
             title="Nueva especie"
             description="Registra una nueva especie en el zoológico."
@@ -229,8 +237,12 @@ onBeforeUnmount(() => {
 
         <form class="flex flex-col gap-5" @submit.prevent="submit">
             <!-- Navegación de pestañas -->
-            <div class="overflow-hidden rounded-2xl border border-[#DCE7DF] bg-white">
-                <div class="border-b border-[#DCE7DF] px-4 pt-4 sm:px-6 sm:pt-6">
+            <div
+                class="overflow-hidden rounded-2xl border border-[#DCE7DF] bg-white"
+            >
+                <div
+                    class="border-b border-[#DCE7DF] px-4 pt-4 sm:px-6 sm:pt-6"
+                >
                     <div class="flex gap-2 overflow-x-auto pb-0.5">
                         <button
                             v-for="(tab, index) in tabs"
@@ -245,7 +257,9 @@ onBeforeUnmount(() => {
                             @click="goToTab(tab.id)"
                         >
                             <component :is="tab.icon" class="h-4 w-4" />
-                            <span class="text-xs opacity-70">{{ index + 1 }}.</span>
+                            <span class="text-xs opacity-70"
+                                >{{ index + 1 }}.</span
+                            >
                             {{ tab.name }}
                         </button>
                     </div>
@@ -261,8 +275,12 @@ onBeforeUnmount(() => {
                     >
                         <div class="flex flex-col gap-5">
                             <div class="form-field">
-                                <label for="species_category_id" class="form-label">
-                                    Categoría <span class="form-required">*</span>
+                                <label
+                                    for="species_category_id"
+                                    class="form-label"
+                                >
+                                    Categoría
+                                    <span class="form-required">*</span>
                                 </label>
 
                                 <select
@@ -270,10 +288,13 @@ onBeforeUnmount(() => {
                                     v-model="form.species_category_id"
                                     class="form-select"
                                     :class="{
-                                        'form-select-error': form.errors.species_category_id,
+                                        'form-select-error':
+                                            form.errors.species_category_id,
                                     }"
                                 >
-                                    <option value="">Selecciona una categoría</option>
+                                    <option value="">
+                                        Selecciona una categoría
+                                    </option>
                                     <option
                                         v-for="category in props.categories"
                                         :key="category.id"
@@ -283,7 +304,10 @@ onBeforeUnmount(() => {
                                     </option>
                                 </select>
 
-                                <p v-if="form.errors.species_category_id" class="form-error">
+                                <p
+                                    v-if="form.errors.species_category_id"
+                                    class="form-error"
+                                >
                                     {{ form.errors.species_category_id }}
                                 </p>
                             </div>
@@ -291,7 +315,8 @@ onBeforeUnmount(() => {
                             <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                                 <div class="form-field">
                                     <label for="common_name" class="form-label">
-                                        Nombre común <span class="form-required">*</span>
+                                        Nombre común
+                                        <span class="form-required">*</span>
                                     </label>
 
                                     <input
@@ -301,17 +326,24 @@ onBeforeUnmount(() => {
                                         placeholder="Ej. Jaguar"
                                         class="form-input"
                                         :class="{
-                                            'form-input-error': form.errors.common_name,
+                                            'form-input-error':
+                                                form.errors.common_name,
                                         }"
                                     />
 
-                                    <p v-if="form.errors.common_name" class="form-error">
+                                    <p
+                                        v-if="form.errors.common_name"
+                                        class="form-error"
+                                    >
                                         {{ form.errors.common_name }}
                                     </p>
                                 </div>
 
                                 <div class="form-field">
-                                    <label for="scientific_name" class="form-label">
+                                    <label
+                                        for="scientific_name"
+                                        class="form-label"
+                                    >
                                         Nombre científico
                                     </label>
 
@@ -322,11 +354,15 @@ onBeforeUnmount(() => {
                                         placeholder="Ej. Panthera onca"
                                         class="form-input italic"
                                         :class="{
-                                            'form-input-error': form.errors.scientific_name,
+                                            'form-input-error':
+                                                form.errors.scientific_name,
                                         }"
                                     />
 
-                                    <p v-if="form.errors.scientific_name" class="form-error">
+                                    <p
+                                        v-if="form.errors.scientific_name"
+                                        class="form-error"
+                                    >
                                         {{ form.errors.scientific_name }}
                                     </p>
                                 </div>
@@ -344,37 +380,31 @@ onBeforeUnmount(() => {
                                     placeholder="Describe las características principales de la especie..."
                                     class="form-textarea"
                                     :class="{
-                                        'form-textarea-error': form.errors.description,
+                                        'form-textarea-error':
+                                            form.errors.description,
                                     }"
                                 />
 
-                                <p v-if="form.errors.description" class="form-error">
+                                <p
+                                    v-if="form.errors.description"
+                                    class="form-error"
+                                >
                                     {{ form.errors.description }}
                                 </p>
                             </div>
 
-                            <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <SpeciesClassificationFields
+                                v-model:diet="form.diet"
+                                v-model:conservation-status="
+                                    form.conservation_status
+                                "
+                                v-model:habitats="form.habitats"
+                                :errors="form.errors"
+                            >
                                 <div class="form-field">
-                                    <label for="habitat" class="form-label">Hábitat</label>
-
-                                    <input
-                                        id="habitat"
-                                        v-model="form.habitat"
-                                        type="text"
-                                        placeholder="Ej. Selva tropical"
-                                        class="form-input"
-                                        :class="{
-                                            'form-input-error': form.errors.habitat,
-                                        }"
-                                    />
-
-                                    <p v-if="form.errors.habitat" class="form-error">
-                                        {{ form.errors.habitat }}
-                                    </p>
-                                </div>
-
-                                <div class="form-field">
-                                    <label for="origin" class="form-label">Origen</label>
+                                    <label for="origin" class="form-label"
+                                        >Origen</label
+                                    >
 
                                     <input
                                         id="origin"
@@ -383,55 +413,19 @@ onBeforeUnmount(() => {
                                         placeholder="Ej. América"
                                         class="form-input"
                                         :class="{
-                                            'form-input-error': form.errors.origin,
+                                            'form-input-error':
+                                                form.errors.origin,
                                         }"
                                     />
 
-                                    <p v-if="form.errors.origin" class="form-error">
+                                    <p
+                                        v-if="form.errors.origin"
+                                        class="form-error"
+                                    >
                                         {{ form.errors.origin }}
                                     </p>
                                 </div>
-
-                                <div class="form-field">
-                                    <label for="diet" class="form-label">Dieta</label>
-
-                                    <input
-                                        id="diet"
-                                        v-model="form.diet"
-                                        type="text"
-                                        placeholder="Ej. Carnívora"
-                                        class="form-input"
-                                        :class="{
-                                            'form-input-error': form.errors.diet,
-                                        }"
-                                    />
-
-                                    <p v-if="form.errors.diet" class="form-error">
-                                        {{ form.errors.diet }}
-                                    </p>
-                                </div>
-
-                                <div class="form-field">
-                                    <label for="conservation_status" class="form-label">
-                                        Estado de conservación
-                                    </label>
-
-                                    <input
-                                        id="conservation_status"
-                                        v-model="form.conservation_status"
-                                        type="text"
-                                        placeholder="Ej. Vulnerable"
-                                        class="form-input"
-                                        :class="{
-                                            'form-input-error': form.errors.conservation_status,
-                                        }"
-                                    />
-
-                                    <p v-if="form.errors.conservation_status" class="form-error">
-                                        {{ form.errors.conservation_status }}
-                                    </p>
-                                </div>
-                            </div>
+                            </SpeciesClassificationFields>
 
                             <div class="border-t border-[#E5ECE7] pt-5">
                                 <ActiveSwitch
@@ -471,7 +465,9 @@ onBeforeUnmount(() => {
                                     class="form-checkbox"
                                 />
 
-                                <span class="text-sm font-medium text-[#244334]">
+                                <span
+                                    class="text-sm font-medium text-[#244334]"
+                                >
                                     {{ tag.name }}
                                 </span>
                             </label>
@@ -518,7 +514,9 @@ onBeforeUnmount(() => {
                     >
                         <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                             <!-- Imagen principal -->
-                            <div class="rounded-xl border border-[#DCE7DF] bg-white p-4 sm:p-5">
+                            <div
+                                class="rounded-xl border border-[#DCE7DF] bg-white p-4 sm:p-5"
+                            >
                                 <label for="main_image" class="form-label">
                                     Imagen principal
                                 </label>
@@ -554,23 +552,43 @@ onBeforeUnmount(() => {
                                 />
 
                                 <p class="form-help">
-                                    Formatos: JPG, JPEG, PNG o WEBP.
+                                    Formatos: JPG, JPEG, PNG o WEBP. Se comprime
+                                    a WebP antes de subirla.
                                 </p>
 
-                                <p v-if="form.errors.main_image" class="form-error">
+                                <SizeSavings
+                                    class="mt-2"
+                                    :original="form.main_image?.size ?? null"
+                                    :optimized="mainBytes"
+                                    :estimating="mainEstimating"
+                                />
+
+                                <p
+                                    v-if="form.errors.main_image"
+                                    class="form-error"
+                                >
                                     {{ form.errors.main_image }}
                                 </p>
                             </div>
 
                             <!-- Miniatura -->
-                            <div class="rounded-xl border border-[#DCE7DF] bg-white p-4 sm:p-5">
+                            <div
+                                class="rounded-xl border border-[#DCE7DF] bg-white p-4 sm:p-5"
+                            >
                                 <label for="thumbnail_image" class="form-label">
                                     Miniatura
                                 </label>
 
-                                <div class="my-4 flex min-h-48 items-center justify-center rounded-xl bg-[#F7FAF8] p-4">
-                                    <div v-if="thumbnailPreviewUrl" class="text-center">
-                                        <div class="mx-auto h-32 w-32 overflow-hidden rounded-full border-4 border-white shadow-sm">
+                                <div
+                                    class="my-4 flex min-h-48 items-center justify-center rounded-xl bg-[#F7FAF8] p-4"
+                                >
+                                    <div
+                                        v-if="thumbnailPreviewUrl"
+                                        class="text-center"
+                                    >
+                                        <div
+                                            class="mx-auto h-32 w-32 overflow-hidden rounded-full border-4 border-white shadow-sm"
+                                        >
                                             <img
                                                 :src="thumbnailPreviewUrl"
                                                 alt="Vista previa de la miniatura"
@@ -584,7 +602,9 @@ onBeforeUnmount(() => {
                                     </div>
 
                                     <div v-else class="text-center">
-                                        <ImageIcon class="mx-auto h-7 w-7 text-[#84958A]" />
+                                        <ImageIcon
+                                            class="mx-auto h-7 w-7 text-[#84958A]"
+                                        />
 
                                         <p class="mt-2 text-sm text-[#718477]">
                                             Selecciona una miniatura
@@ -601,76 +621,38 @@ onBeforeUnmount(() => {
                                 />
 
                                 <p class="form-help">
-                                    También se utilizará como icono del marker en el mapa.
+                                    También se utilizará como icono del marker
+                                    en el mapa.
                                 </p>
 
-                                <p v-if="form.errors.thumbnail_image" class="form-error">
+                                <SizeSavings
+                                    class="mt-2"
+                                    :original="
+                                        form.thumbnail_image?.size ?? null
+                                    "
+                                    :optimized="thumbnailBytes"
+                                    :estimating="thumbnailEstimating"
+                                />
+
+                                <p
+                                    v-if="form.errors.thumbnail_image"
+                                    class="form-error"
+                                >
                                     {{ form.errors.thumbnail_image }}
                                 </p>
                             </div>
 
                             <!-- Galería -->
-                            <div class="rounded-xl border border-[#DCE7DF] bg-white p-4 sm:col-span-2 sm:p-5">
-                                <label for="gallery_images" class="form-label">
-                                    Galería de imágenes
-                                </label>
-
-                                <div
-                                    v-if="galleryPreviewUrls.length"
-                                    class="my-4 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6"
-                                >
-                                    <div
-                                        v-for="(url, index) in galleryPreviewUrls"
-                                        :key="`${url}-${index}`"
-                                        class="aspect-square overflow-hidden rounded-lg border border-[#DCE7DF]"
-                                    >
-                                        <img
-                                            :src="url"
-                                            alt="Vista previa de imagen de galería"
-                                            class="h-full w-full object-cover"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div
-                                    v-else
-                                    class="my-4 rounded-xl border border-dashed border-[#DCE7DF] p-6 text-center"
-                                >
-                                    <ImageIcon class="mx-auto h-6 w-6 text-[#84958A]" />
-
-                                    <p class="mt-2 text-sm text-[#718477]">
-                                        Selecciona varias imágenes para la galería.
-                                    </p>
-                                </div>
-
-                                <input
-                                    id="gallery_images"
-                                    type="file"
-                                    accept=".jpg,.jpeg,.png,.webp"
-                                    multiple
-                                    class="form-input text-sm file:mr-4 file:rounded-md file:border-0 file:bg-[#EAF4ED] file:px-3 file:py-2 file:font-medium file:text-[#187744]"
-                                    @change="setGalleryImages"
+                            <div
+                                class="rounded-xl border border-[#DCE7DF] bg-white p-4 sm:col-span-2 sm:p-5"
+                            >
+                                <SpeciesGalleryField
+                                    v-model:files="form.gallery_images"
+                                    v-model:layout="form.gallery"
+                                    :errors="form.errors"
+                                    @use-as-main="applyMainImage"
+                                    @use-as-thumbnail="applyThumbnailImage"
                                 />
-
-                                <p class="form-help">
-                                    Puedes seleccionar varias imágenes a la vez.
-                                </p>
-
-                                <p
-                                    v-if="form.gallery_images.length"
-                                    class="mt-2 text-sm font-medium text-[#187744]"
-                                >
-                                    {{ form.gallery_images.length }}
-                                    {{
-                                        form.gallery_images.length === 1
-                                            ? 'imagen seleccionada'
-                                            : 'imágenes seleccionadas'
-                                    }}.
-                                </p>
-
-                                <p v-if="form.errors.gallery_images" class="form-error">
-                                    {{ form.errors.gallery_images }}
-                                </p>
                             </div>
                         </div>
                     </AdminCard>
@@ -693,7 +675,8 @@ onBeforeUnmount(() => {
                                     v-model="form.zone_id"
                                     class="form-select"
                                     :class="{
-                                        'form-select-error': form.errors.zone_id,
+                                        'form-select-error':
+                                            form.errors.zone_id,
                                     }"
                                 >
                                     <option value="">Sin zona asignada</option>
@@ -707,46 +690,70 @@ onBeforeUnmount(() => {
                                     </option>
                                 </select>
 
-                                <p v-if="form.errors.zone_id" class="form-error">
+                                <p
+                                    v-if="form.errors.zone_id"
+                                    class="form-error"
+                                >
                                     {{ form.errors.zone_id }}
                                 </p>
 
                                 <div
-                                    v-if="selectedZone && !selectedZone.map_image"
+                                    v-if="
+                                        selectedZone && !selectedZone.map_image
+                                    "
                                     class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3"
                                 >
                                     <p class="text-xs text-amber-800">
-                                        Esta zona no tiene un plano configurado. Podrás colocar la especie usando el área delimitada de la zona.
+                                        Esta zona no tiene un plano configurado.
+                                        Podrás colocar la especie usando el área
+                                        delimitada de la zona.
                                     </p>
                                 </div>
                             </div>
 
-                            <div v-if="selectedZone" class="flex flex-col gap-4">
-                                <div class="rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4">
+                            <div
+                                v-if="selectedZone"
+                                class="flex flex-col gap-4"
+                            >
+                                <div
+                                    class="rounded-xl border border-[#DCE7DF] bg-[#F7FAF8] p-4"
+                                >
                                     <div class="flex items-center gap-2">
-                                        <MapPin class="h-4 w-4 text-[#187744]" />
+                                        <MapPin
+                                            class="h-4 w-4 text-[#187744]"
+                                        />
 
-                                        <h3 class="text-sm font-semibold text-[#244334]">
+                                        <h3
+                                            class="text-sm font-semibold text-[#244334]"
+                                        >
                                             Ubicación en el mapa
                                         </h3>
                                     </div>
 
                                     <p class="mt-1 text-xs text-[#718477]">
-                                        Haz clic en el mapa o arrastra el marcador para seleccionar las coordenadas.
+                                        Haz clic en el mapa o arrastra el
+                                        marcador para seleccionar las
+                                        coordenadas.
                                     </p>
                                 </div>
 
                                 <MapMarkerMap
                                     :geometry="selectedZone.geometry"
                                     :map-image="selectedZone.map_image"
-                                    :map-image-bounds="selectedZone.map_image_bounds"
+                                    :map-image-bounds="
+                                        selectedZone.map_image_bounds
+                                    "
                                     :marker-image="thumbnailPreviewUrl"
                                     v-model:latitude="form.latitude"
                                     v-model:longitude="form.longitude"
                                 />
 
-                                <div class="flex items-center gap-3 rounded-xl border border-[#DCE7DF] bg-white p-4">
-                                    <div class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#DCE7DF] bg-[#F7FAF8]">
+                                <div
+                                    class="flex items-center gap-3 rounded-xl border border-[#DCE7DF] bg-white p-4"
+                                >
+                                    <div
+                                        class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#DCE7DF] bg-[#F7FAF8]"
+                                    >
                                         <img
                                             v-if="thumbnailPreviewUrl"
                                             :src="thumbnailPreviewUrl"
@@ -754,16 +761,23 @@ onBeforeUnmount(() => {
                                             class="h-full w-full object-cover"
                                         />
 
-                                        <Leaf v-else class="h-5 w-5 text-[#84958A]" />
+                                        <Leaf
+                                            v-else
+                                            class="h-5 w-5 text-[#84958A]"
+                                        />
                                     </div>
 
                                     <div>
-                                        <p class="text-sm font-medium text-[#244334]">
+                                        <p
+                                            class="text-sm font-medium text-[#244334]"
+                                        >
                                             Marcador de la especie
                                         </p>
 
                                         <p class="mt-1 text-xs text-[#718477]">
-                                            Se utilizará la miniatura seleccionada como icono del marcador.
+                                            Se utilizará la miniatura
+                                            seleccionada como icono del
+                                            marcador.
                                         </p>
                                     </div>
                                 </div>
@@ -773,9 +787,13 @@ onBeforeUnmount(() => {
                                 v-else
                                 class="rounded-xl border border-dashed border-[#DCE7DF] p-8 text-center"
                             >
-                                <MapPin class="mx-auto h-6 w-6 text-[#84958A]" />
+                                <MapPin
+                                    class="mx-auto h-6 w-6 text-[#84958A]"
+                                />
 
-                                <p class="mt-3 text-sm font-medium text-[#244334]">
+                                <p
+                                    class="mt-3 text-sm font-medium text-[#244334]"
+                                >
                                     No hay una zona seleccionada
                                 </p>
 
@@ -786,7 +804,10 @@ onBeforeUnmount(() => {
 
                             <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                                 <div class="form-field md:col-span-2">
-                                    <label for="location_name" class="form-label">
+                                    <label
+                                        for="location_name"
+                                        class="form-label"
+                                    >
                                         Nombre de la ubicación
                                     </label>
 
@@ -797,11 +818,15 @@ onBeforeUnmount(() => {
                                         placeholder="Ej. Área de felinos"
                                         class="form-input"
                                         :class="{
-                                            'form-input-error': form.errors.location_name,
+                                            'form-input-error':
+                                                form.errors.location_name,
                                         }"
                                     />
 
-                                    <p v-if="form.errors.location_name" class="form-error">
+                                    <p
+                                        v-if="form.errors.location_name"
+                                        class="form-error"
+                                    >
                                         {{ form.errors.location_name }}
                                     </p>
                                 </div>
@@ -813,14 +838,21 @@ onBeforeUnmount(() => {
 
                                     <input
                                         id="latitude"
-                                        :value="form.latitude !== null ? form.latitude.toFixed(7) : ''"
+                                        :value="
+                                            form.latitude !== null
+                                                ? form.latitude.toFixed(7)
+                                                : ''
+                                        "
                                         type="text"
                                         readonly
                                         placeholder="Selecciona un punto en el mapa"
                                         class="form-input bg-[#F2F7F4]"
                                     />
 
-                                    <p v-if="form.errors.latitude" class="form-error">
+                                    <p
+                                        v-if="form.errors.latitude"
+                                        class="form-error"
+                                    >
                                         {{ form.errors.latitude }}
                                     </p>
                                 </div>
@@ -832,20 +864,30 @@ onBeforeUnmount(() => {
 
                                     <input
                                         id="longitude"
-                                        :value="form.longitude !== null ? form.longitude.toFixed(7) : ''"
+                                        :value="
+                                            form.longitude !== null
+                                                ? form.longitude.toFixed(7)
+                                                : ''
+                                        "
                                         type="text"
                                         readonly
                                         placeholder="Selecciona un punto en el mapa"
                                         class="form-input bg-[#F2F7F4]"
                                     />
 
-                                    <p v-if="form.errors.longitude" class="form-error">
+                                    <p
+                                        v-if="form.errors.longitude"
+                                        class="form-error"
+                                    >
                                         {{ form.errors.longitude }}
                                     </p>
                                 </div>
 
                                 <div class="form-field md:col-span-2">
-                                    <label for="location_description" class="form-label">
+                                    <label
+                                        for="location_description"
+                                        class="form-label"
+                                    >
                                         Descripción de la ubicación
                                     </label>
 
@@ -856,11 +898,16 @@ onBeforeUnmount(() => {
                                         placeholder="Describe la ubicación dentro del zoológico..."
                                         class="form-textarea"
                                         :class="{
-                                            'form-textarea-error': form.errors.location_description,
+                                            'form-textarea-error':
+                                                form.errors
+                                                    .location_description,
                                         }"
                                     />
 
-                                    <p v-if="form.errors.location_description" class="form-error">
+                                    <p
+                                        v-if="form.errors.location_description"
+                                        class="form-error"
+                                    >
                                         {{ form.errors.location_description }}
                                     </p>
                                 </div>
@@ -870,7 +917,9 @@ onBeforeUnmount(() => {
                                 <Info class="form-info-icon" />
 
                                 <p class="form-info-text">
-                                    Las coordenadas se actualizan al seleccionar un punto en el mapa. El mapa funciona como referencia visual para ubicar la especie.
+                                    Las coordenadas se actualizan al seleccionar
+                                    un punto en el mapa. El mapa funciona como
+                                    referencia visual para ubicar la especie.
                                 </p>
                             </div>
                         </div>
@@ -878,7 +927,9 @@ onBeforeUnmount(() => {
                 </div>
 
                 <!-- Acciones de navegación y envío -->
-                <div class="flex flex-col gap-3 border-t border-[#DCE7DF] bg-[#FAFCFA] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <div
+                    class="flex flex-col gap-3 border-t border-[#DCE7DF] bg-[#FAFCFA] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+                >
                     <div>
                         <AdminButton
                             v-if="activeTab !== 'information'"
@@ -913,8 +964,12 @@ onBeforeUnmount(() => {
                             type="submit"
                             variant="primary"
                             :icon="Save"
-                            :loading="form.processing"
-                            loading-text="Guardando..."
+                            :loading="form.processing || compressing"
+                            :loading-text="
+                                compressing
+                                    ? 'Comprimiendo imágenes...'
+                                    : 'Guardando...'
+                            "
                         >
                             Crear especie
                         </AdminButton>
