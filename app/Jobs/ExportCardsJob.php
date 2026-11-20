@@ -28,7 +28,8 @@ class ExportCardsJob implements ShouldQueue
 
         $summary = $exporter->export(
             (string) $this->transfer->absolutePath(),
-            (bool) ($this->transfer->options['include_qr_tokens'] ?? false)
+            (bool) ($this->transfer->options['include_qr_tokens'] ?? false),
+            (bool) ($this->transfer->options['include_locations'] ?? false)
         );
 
         $this->transfer->update([

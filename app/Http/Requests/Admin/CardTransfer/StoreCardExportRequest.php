@@ -18,6 +18,8 @@ class StoreCardExportRequest extends FormRequest
     {
         return [
             'include_qr_tokens' => ['sometimes', 'boolean'],
+            // Coordenadas exactas de cada animal: apagado por omisión.
+            'include_locations' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -25,6 +27,7 @@ class StoreCardExportRequest extends FormRequest
     {
         return [
             'include_qr_tokens' => 'incluir tokens de QR',
+            'include_locations' => 'incluir ubicación de las especies',
         ];
     }
 }

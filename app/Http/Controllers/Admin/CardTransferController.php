@@ -14,6 +14,9 @@ use App\Jobs\ImportCardsJob;
 use App\Models\Card;
 use App\Models\CardTransfer;
 use App\Models\Species;
+use App\Models\SpeciesCategory;
+use App\Models\SpeciesTag;
+use App\Models\ZooZone;
 use App\Services\CardTransfer\CardTransferSupport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +24,7 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Pestaña "Importar / Exportar" de tarjetas (paquetes .zip).
+ * Recursos → Descargas: paquetes .zip con tarjetas y especies.
  *
  * El trabajo pesado corre en la cola; el panel consulta index() hasta que
  * termina. Sin la extensión zip todas las acciones responden 503.
@@ -43,12 +46,17 @@ class CardTransferController extends Controller
                 'available' => $this->support->available(),
                 'unavailable_message' => $this->support->available() ? null : CardTransferSupport::UNAVAILABLE_MESSAGE,
                 'max_upload_bytes' => $this->support->maxUploadBytes(),
-                'can_export' => $user->can('cards.export'),
-                'can_import' => $user->can('cards.import'),
+                'can_export' => $user->can('assets.export'),
+                'can_import' => $user->can('assets.import'),
                 'card_count' => Card::count(),
+                'species_count' => Species::count(),
                 'species' => Species::query()
                     ->orderBy('common_name')
                     ->get(['id', 'common_name', 'scientific_name']),
+                // Opciones de la vista previa para lo que falta en este servidor.
+                'categories' => SpeciesCategory::query()->orderBy('name')->get(['id', 'name']),
+                'tags' => SpeciesTag::query()->orderBy('name')->get(['id', 'name']),
+                'zones' => ZooZone::query()->orderBy('name')->get(['id', 'name']),
                 'transfers' => CardTransfer::query()
                     ->with('user:id,name')
                     ->latest('id')
@@ -73,8 +81,11 @@ class CardTransferController extends Controller
             'user_id' => $request->user()->id,
             'type' => CardTransferType::Export,
             'status' => CardTransferStatus::Pending,
-            'options' => ['include_qr_tokens' => $request->boolean('include_qr_tokens')],
-            'original_name' => 'zoodeck-tarjetas-'.now()->format('Y-m-d-His').'.zip',
+            'options' => [
+                'include_qr_tokens' => $request->boolean('include_qr_tokens'),
+                'include_locations' => $request->boolean('include_locations'),
+            ],
+            'original_name' => 'zoodeck-tarjetas-especies-'.now()->format('Y-m-d-His').'.zip',
         ]);
 
         $transfer->update(['file_path' => CardTransfer::DIRECTORY.'/export-'.$transfer->id.'-'.bin2hex(random_bytes(8)).'.zip']);
@@ -160,6 +171,7 @@ class CardTransferController extends Controller
                 'mode' => $request->validated('mode'),
                 'replace_settings' => $request->boolean('replace_settings'),
                 'species_map' => $request->speciesMap(),
+                'references' => $request->references(),
             ],
         ]);
 
@@ -170,7 +182,7 @@ class CardTransferController extends Controller
 
     public function destroy(Request $request, CardTransfer $transfer): JsonResponse
     {
-        $permission = $transfer->type === CardTransferType::Export ? 'cards.export' : 'cards.import';
+        $permission = $transfer->type === CardTransferType::Export ? 'assets.export' : 'assets.import';
 
         if (! $request->user()->can($permission)) {
             abort(403);
@@ -191,7 +203,7 @@ class CardTransferController extends Controller
     private function present(CardTransfer $transfer): array
     {
         $options = $transfer->options ?? [];
-        unset($options['species_map']);
+        unset($options['species_map'], $options['references']);
 
         return [
             'id' => $transfer->id,

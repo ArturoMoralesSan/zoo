@@ -17,11 +17,11 @@ class CardsImportCommand extends Command
 {
     protected $signature = 'cards:import
         {path : Ruta del .zip}
-        {--overwrite : Sobrescribir las tarjetas que ya existen (por defecto se omiten)}
+        {--overwrite : Sobrescribir las tarjetas y especies que ya existen (por defecto se omiten)}
         {--settings : Reemplazar la configuración por rareza y los mensajes de duelo}
         {--dry-run : Solo revisar el paquete y mostrar qué se haría}';
 
-    protected $description = 'Importa tarjetas desde un paquete .zip exportado de ZooDeck';
+    protected $description = 'Importa tarjetas y especies desde un paquete .zip exportado de ZooDeck';
 
     public function handle(CardTransferSupport $support, CardPackageImporter $importer): int
     {
@@ -42,6 +42,23 @@ class CardsImportCommand extends Command
         try {
             $reader->verifyFiles();
             $preview = $reader->analyze(new SpeciesResolver);
+
+            $this->info(sprintf(
+                'Especies: %d nuevas, %d existentes, %d inválidas.',
+                $preview['species']['counts']['new'],
+                $preview['species']['counts']['existing'],
+                $preview['species']['counts']['invalid']
+            ));
+
+            // Sin panel: las categorías y etiquetas que faltan se crean y las
+            // ubicaciones en zonas que no existen aquí se omiten.
+            foreach ($preview['species']['missing_categories'] as $category) {
+                $this->warn("Se creará la categoría «{$category['name']}».");
+            }
+
+            foreach ($preview['species']['missing_zones'] as $zone) {
+                $this->warn("La zona «{$zone['name']}» no existe: se omitirán {$zone['locations']} ubicaciones.");
+            }
 
             $this->info(sprintf(
                 'Tarjetas: %d nuevas, %d existentes, %d inválidas.',
@@ -71,9 +88,17 @@ class CardsImportCommand extends Command
             $reader->close();
         }
 
-        foreach ($result['failed'] as $failed) {
+        foreach ([...$result['species']['failed'], ...$result['failed']] as $failed) {
             $this->error("«{$failed['name']}»: {$failed['message']}");
         }
+
+        $this->info(sprintf(
+            'Especies creadas: %d. Actualizadas: %d. Omitidas: %d. Con error: %d.',
+            $result['species']['created'],
+            $result['species']['updated'],
+            count($result['species']['skipped']),
+            count($result['species']['failed'])
+        ));
 
         $this->info(sprintf(
             'Creadas: %d. Actualizadas: %d. Omitidas: %d. Con error: %d.',
@@ -83,6 +108,6 @@ class CardsImportCommand extends Command
             count($result['failed'])
         ));
 
-        return $result['failed'] ? self::FAILURE : self::SUCCESS;
+        return $result['failed'] || $result['species']['failed'] ? self::FAILURE : self::SUCCESS;
     }
 }

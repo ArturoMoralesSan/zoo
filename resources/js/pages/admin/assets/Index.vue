@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import {
     Archive,
+    ArrowLeftRight,
     Box,
     CircleCheck,
     CircleAlert,
@@ -13,6 +14,7 @@ import {
 import { ref } from 'vue';
 
 import AdminCard from '@/components/admin/AdminCard.vue';
+import AssetTransferPanel from '@/components/admin/assets/AssetTransferPanel.vue';
 import OptimizeImagesPanel from '@/components/admin/cards/OptimizeImagesPanel.vue';
 import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
@@ -20,8 +22,8 @@ import OptimizeSpeciesImagesPanel from '@/components/admin/species/OptimizeSpeci
 import { formatBytes } from '@/lib/glb/modelSize';
 import admin from '@/routes/admin';
 
-// Recursos: peso y optimización de los archivos que descarga la app.
-// Los datos vienen de App\Services\AssetInventory.
+// Recursos: peso y optimización de los archivos que descarga la app
+// (App\Services\AssetInventory) y paquetes .zip con tarjetas y especies.
 
 interface AssetGroup {
     key: 'card_images' | 'species_images' | 'card_models';
@@ -51,15 +53,20 @@ interface HeavyFile {
     bytes: number;
 }
 
-defineProps<{
+const props = defineProps<{
+    // null sin el permiso assets.view.
     summary: {
         server_encoder: string | null;
         zip_available: boolean;
         groups: AssetGroup[];
         models: ModelRow[];
         heaviest: HeavyFile[];
-    };
+    } | null;
+    canView: boolean;
     canOptimize: boolean;
+    // assets.export o assets.import.
+    canTransfer: boolean;
+    initialTab: Tab;
 }>();
 
 defineOptions({
@@ -77,14 +84,28 @@ defineOptions({
     },
 });
 
-type Tab = 'optimization';
+type Tab = 'optimization' | 'downloads';
 
-// La pestaña "Descargas" llega con la exportación de tarjetas y especies.
 const tabs: { value: Tab; label: string; icon: typeof Gauge }[] = [
-    { value: 'optimization', label: 'Optimización', icon: Gauge },
+    ...(props.canView
+        ? [{ value: 'optimization' as Tab, label: 'Optimización', icon: Gauge }]
+        : []),
+    ...(props.canTransfer
+        ? [
+              {
+                  value: 'downloads' as Tab,
+                  label: 'Descargas',
+                  icon: ArrowLeftRight,
+              },
+          ]
+        : []),
 ];
 
-const tab = ref<Tab>('optimization');
+const tab = ref<Tab>(
+    tabs.some((item) => item.value === props.initialTab)
+        ? props.initialTab
+        : (tabs[0]?.value ?? 'optimization'),
+);
 
 const metres = (value: number | null) =>
     value === null ? '—' : `${value.toFixed(2)} m`;
@@ -96,7 +117,7 @@ const metres = (value: number | null) =>
     <div class="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader
             title="Recursos"
-            description="Peso y optimización de las imágenes y modelos 3D que descarga la app."
+            description="Peso y optimización de las imágenes y modelos 3D, y paquetes con todas las tarjetas y especies."
             section="Administración"
             :icon="HardDrive"
         />
@@ -125,7 +146,7 @@ const metres = (value: number | null) =>
             </button>
         </div>
 
-        <div v-if="tab === 'optimization'" class="space-y-6">
+        <div v-if="tab === 'optimization' && summary" class="space-y-6">
             <!-- Estado del servidor -->
             <div
                 class="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-[#d7e2da] bg-white px-4 py-3 text-sm text-[#435d4c]"
@@ -332,5 +353,7 @@ const metres = (value: number | null) =>
                 </div>
             </AdminCard>
         </div>
+
+        <AssetTransferPanel v-else-if="tab === 'downloads'" />
     </div>
 </template>

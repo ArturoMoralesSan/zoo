@@ -2,7 +2,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
-    ArrowLeftRight,
     Box,
     CircleCheck,
     CircleOff,
@@ -25,7 +24,6 @@ import {
 import Swal from 'sweetalert2';
 import { onMounted, ref, watch } from 'vue';
 
-import CardTransferPanel from '@/components/admin/cards/CardTransferPanel.vue';
 import DuelMessagesSettings from '@/components/admin/cards/DuelMessagesSettings.vue';
 import RaritySettingsTable from '@/components/admin/cards/RaritySettingsTable.vue';
 import DataTable from '@/components/admin/DataTable.vue';
@@ -120,9 +118,7 @@ const props = defineProps<{
     quizStates: QuizState[];
     // Pestañas de desarrollo activas (APP_ZOODECK_DEV=1).
     devTools: boolean;
-    // Pestaña "Importar / Exportar" (permisos cards.export o cards.import).
-    canTransfer: boolean;
-    // Enlace a Recursos, donde está la optimización de imágenes.
+    // Enlace a Recursos (optimización de imágenes y paquetes .zip).
     canViewAssets: boolean;
 }>();
 
@@ -287,7 +283,7 @@ const chipClass = (warning: boolean) =>
  * Pestañas: lista de tarjetas, configuración de duelos y tarjetas obtenidas.
  * Se recuerda la última pestaña usada.
  */
-type Tab = 'cards' | 'settings' | 'transfer' | 'captures' | 'attempts';
+type Tab = 'cards' | 'settings' | 'captures' | 'attempts';
 
 const TAB_STORAGE_KEY = 'admin.cards.tab';
 
@@ -300,7 +296,6 @@ onMounted(() => {
 
         if (
             saved === 'settings' ||
-            (props.canTransfer && saved === 'transfer') ||
             (props.devTools &&
                 (saved === 'captures' || saved === 'attempts'))
         ) {
@@ -333,16 +328,6 @@ const tabs: {
         shortLabel: 'Configuración',
         icon: Settings2,
     },
-    ...(props.canTransfer
-        ? [
-              {
-                  value: 'transfer' as Tab,
-                  label: 'Importar / Exportar',
-                  shortLabel: 'Paquetes',
-                  icon: ArrowLeftRight,
-              },
-          ]
-        : []),
 ];
 
 // Pestañas de desarrollo: solo con APP_ZOODECK_DEV=1.
@@ -508,17 +493,14 @@ defineOptions({
             >
                 <span>
                     <span class="font-semibold text-[#244334]">
-                        Optimizar imágenes
+                        Optimizar imágenes e Importar / Exportar
                     </span>
-                    · ahora está en Administración → Recursos, junto con las
-                    imágenes de especies y los modelos 3D.
+                    · ahora están en Administración → Recursos, junto con las
+                    especies y los modelos 3D.
                 </span>
                 <ExternalLink :size="16" class="shrink-0 text-[#187744]" />
             </Link>
         </div>
-
-        <!-- Importar / Exportar -->
-        <CardTransferPanel v-else-if="canTransfer && tab === 'transfer'" />
 
         <!-- Tarjetas obtenidas -->
         <div
