@@ -1,15 +1,16 @@
 <?php
 
+use App\Http\Controllers\Admin\CardCaptureController;
 use App\Http\Controllers\Admin\CardController;
-use App\Http\Controllers\Admin\CardImageOptimizationController;
 use App\Http\Controllers\Admin\CardCreditController;
+use App\Http\Controllers\Admin\CardImageOptimizationController;
 use App\Http\Controllers\Admin\CardQrCodeController;
+use App\Http\Controllers\Admin\CardQuizStateController;
 use App\Http\Controllers\Admin\CardRaritySettingController;
+use App\Http\Controllers\Admin\CardTransferController;
 use App\Http\Controllers\Admin\CreditController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DonationController;
-use App\Http\Controllers\Admin\CardCaptureController;
-use App\Http\Controllers\Admin\CardQuizStateController;
 use App\Http\Controllers\Admin\DuelMessageSettingController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\LevelController;
@@ -17,8 +18,8 @@ use App\Http\Controllers\Admin\MapMarkerController;
 use App\Http\Controllers\Admin\MapPathController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\PointMovementController;
 use App\Http\Controllers\Admin\PointModeController;
+use App\Http\Controllers\Admin\PointMovementController;
 use App\Http\Controllers\Admin\PointRuleController;
 use App\Http\Controllers\Admin\QuizQuestionController;
 use App\Http\Controllers\Admin\RewardController;
@@ -42,7 +43,6 @@ Route::get('/', function () {
 
     return redirect()->route('login');
 })->name('home');
-
 
 Route::get('/map', [MapController::class, 'index'])
     ->name('map.index');
@@ -365,6 +365,40 @@ Route::middleware(['auth', 'verified'])
         )->whereIn('image', array_keys(CardImageOptimizer::FIELDS))
             ->middleware(['permission:cards.edit', 'throttle:60,1'])
             ->name('cards.images.optimize');
+
+        /*
+         * Exportar e importar paquetes .zip (pestaña "Importar / Exportar").
+         * Van antes del resource para que "transfers" no se tome como {card}.
+         */
+        Route::prefix('cards/transfers')
+            ->name('cards.transfers.')
+            ->controller(CardTransferController::class)
+            ->group(function () {
+                Route::get('/', 'index')
+                    ->middleware('permission:cards.export|cards.import')
+                    ->name('index');
+
+                Route::post('export', 'storeExport')
+                    ->middleware(['permission:cards.export', 'throttle:5,1'])
+                    ->name('export');
+
+                Route::get('{transfer}/download', 'download')
+                    ->middleware('permission:cards.export')
+                    ->name('download');
+
+                Route::post('import', 'storeImport')
+                    ->middleware(['permission:cards.import', 'throttle:10,1'])
+                    ->name('import');
+
+                Route::post('{transfer}/confirm', 'confirmImport')
+                    ->middleware(['permission:cards.import', 'throttle:10,1'])
+                    ->name('confirm');
+
+                // destroy() exige además el permiso del tipo de paquete.
+                Route::delete('{transfer}', 'destroy')
+                    ->middleware('permission:cards.export|cards.import')
+                    ->name('destroy');
+            });
 
         /*
          * middlewareFor asigna el permiso por acción; ->middleware([...])

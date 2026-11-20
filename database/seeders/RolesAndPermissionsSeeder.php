@@ -165,6 +165,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'cards.create',
             'cards.edit',
             'cards.delete',
+            // Paquetes .zip con todas las tarjetas (no se dan a staff).
+            'cards.export',
+            'cards.import',
         ];
 
         /*

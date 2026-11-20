@@ -29,4 +29,18 @@ return [
 
     ],
 
+    /*
+     * Exportar e importar tarjetas en un .zip (pestaña "Importar / Exportar").
+     * Ver docs/card-transfer.md.
+     */
+    'transfer' => [
+
+        // Tamaño máximo descomprimido de un paquete (protege contra bombas zip).
+        'max_uncompressed_bytes' => (int) env('CARD_TRANSFER_MAX_BYTES', 4 * 1024 ** 3),
+
+        // Número máximo de archivos dentro de un paquete.
+        'max_entries' => 20000,
+
+    ],
+
 ];

@@ -137,6 +137,9 @@ class CardController extends Controller
                 // Pestañas de desarrollo (APP_ZOODECK_DEV).
                 'devTools' => $devTools,
 
+                // Pestaña "Importar / Exportar": solo con alguno de sus permisos.
+                'canTransfer' => (bool) request()->user()?->canAny(['cards.export', 'cards.import']),
+
                 'raritySettings' => $this->raritySettings(),
 
                 // Opciones de "Regla de puntos" en la configuración por rareza,
