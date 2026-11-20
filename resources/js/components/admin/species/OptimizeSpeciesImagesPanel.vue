@@ -4,8 +4,7 @@ import { SPECIES_IMAGE_PROFILES } from '@/lib/imageOptimize';
 import type { SpeciesImageKind } from '@/lib/imageOptimize';
 import admin from '@/routes/admin';
 
-// Panel de optimización con las rutas y perfiles de las especies. Solo
-// aparece mientras haya imágenes pendientes.
+// Panel de optimización con las rutas y perfiles de las especies.
 
 interface PendingSpeciesImage {
     image_id: number;
@@ -38,7 +37,6 @@ const labels: Record<SpeciesImageKind, string> = {
         :item-name="(item: PendingSpeciesImage) => item.species_name"
         :labels="labels"
         :profiles="SPECIES_IMAGE_PROFILES"
-        :reload-only="['species']"
-        hide-when-empty
+        :reload-only="['summary']"
     />
 </template>

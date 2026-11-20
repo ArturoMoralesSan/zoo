@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 
@@ -8,6 +7,7 @@ import {
     CalendarDays,
     CalendarRange,
     CreditCard,
+    HardDrive,
     LayoutDashboard,
     LayoutGrid,
     Shield,
@@ -69,6 +69,7 @@ const icons = {
     CalendarDays,
     CalendarRange,
     CreditCard,
+    HardDrive,
     LayoutDashboard,
     LayoutGrid,
     Shield,
@@ -116,10 +117,7 @@ const footerNavItems: NavItem[] = [];
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton
-                        size="lg"
-                        as-child
-                    >
+                    <SidebarMenuButton size="lg" as-child>
                         <Link :href="admin.dashboard()">
                             <AppLogo />
                         </Link>

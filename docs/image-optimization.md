@@ -73,7 +73,8 @@ para no codificarla dos veces al enviar.
 **Cada original se borra** en cuanto su WebP queda guardado. No hay forma de deshacerlo,
 así que antes de convertir copia `storage/app/public/cards`.
 
-- **Panel:** Tarjetas → Configuración → "Optimizar imágenes". Procesa una imagen a la vez.
+- **Panel:** Administración → Recursos → Optimización (permiso `assets.optimize`). Procesa
+  una imagen a la vez.
   Si el servidor tiene codificador, codifica él; si no, el navegador descarga, codifica y
   sube cada imagen.
 - **Consola** (requiere Imagick o GD):
@@ -121,8 +122,7 @@ puede, y las ya guardadas se convierten desde el panel o la consola. Perfiles en
   `gallery_images`). Edit y Show reciben `bytes` (peso actual) en cada imagen.
 - **Límite:** el servidor acepta hasta 5 MB ya comprimida; la galería deja elegir archivos de
   hasta 25 MB porque los comprime antes de subirlos.
-- **Panel:** aparece al final del listado de especies solo mientras haya pendientes (requiere
-  `species.edit`).
+- **Panel:** el mismo de Recursos → Optimización, debajo del de tarjetas.
 - **Consola** (requiere Imagick o GD; **borra cada original**, copia antes
   `storage/app/public/species`):
 
@@ -131,3 +131,16 @@ php artisan species:images:report
 php artisan species:images:optimize --dry-run
 php artisan species:images:optimize [--species=ID] [--image=main|thumbnail|gallery] [--limit=N]
 ```
+
+## Página "Recursos"
+
+Administración → Recursos (`admin/assets`, permiso `assets.view`). La pestaña
+**Optimización** muestra, por tipo (imágenes de tarjetas, imágenes de especies y modelos 3D de
+tarjetas), cuántos archivos hay, cuánto pesan ahora y antes de optimizar, y cuántas imágenes
+faltan por convertir; además los modelos 3D con sus medidas y los 20 archivos más pesados. Los
+números salen de `App\Services\AssetInventory`. Sin peso original registrado cuenta el actual.
+Con `assets.optimize` aparecen los dos paneles de conversión.
+
+`assets.view` y `assets.optimize` solo los tiene `admin`; la migración
+`add_assets_panel_permissions_and_link` se los da y agrega el enlace del menú sin volver a correr
+los seeders.

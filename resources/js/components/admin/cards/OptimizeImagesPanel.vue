@@ -39,6 +39,6 @@ const labels: Record<CardImageKind, string> = {
         :item-name="(item: PendingCardImage) => item.card_name"
         :labels="labels"
         :profiles="CARD_IMAGE_PROFILES"
-        :reload-only="['cards']"
+        :reload-only="['summary']"
     />
 </template>
