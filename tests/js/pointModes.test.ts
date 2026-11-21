@@ -15,6 +15,7 @@ const rules: PointRuleRow[] = [
         type: 'ticket_purchase',
         points: 10,
         is_active: true,
+        in_use: true,
     },
     {
         id: 2,
@@ -22,8 +23,16 @@ const rules: PointRuleRow[] = [
         type: 'card_capture_rara',
         points: 50,
         is_active: true,
+        in_use: true,
     },
-    { id: 3, name: 'Donación', type: 'donation', points: 5, is_active: false },
+    {
+        id: 3,
+        name: 'Donación',
+        type: 'donation',
+        points: 5,
+        is_active: false,
+        in_use: true,
+    },
 ];
 
 describe('modeChanges', () => {

@@ -6,6 +6,8 @@ export interface PointRuleRow {
     type: string;
     points: number;
     is_active: boolean;
+    // false = ninguna acción la otorga ni la usa una rareza: cambiar sus puntos no tiene efecto.
+    in_use: boolean;
 }
 
 export interface PointModeOverride {

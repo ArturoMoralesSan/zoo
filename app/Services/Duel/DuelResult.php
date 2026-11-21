@@ -3,6 +3,7 @@
 namespace App\Services\Duel;
 
 use App\Models\Card;
+use App\Services\Points\PointsAward;
 
 /**
  * Resultado de responder un duelo.
@@ -36,7 +37,7 @@ final readonly class DuelResult
         public ?DuelAttempts $attempts,
         public ?array $review,
         public ?Card $card,
-        public ?DuelPoints $points = null,
+        public ?PointsAward $points = null,
     ) {}
 
     public function passed(): bool

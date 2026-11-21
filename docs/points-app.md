@@ -10,7 +10,8 @@
 > sobre este.
 >
 > Los puntos por capturar tarjetas (`data.points` al ganar un duelo) tienen su propia
-> guía: [card-points-app.md](card-points-app.md).
+> guía: [card-points-app.md](card-points-app.md). Los de comprar boletos y donar (el mismo
+> `data.points`), en [purchase-points-app.md](purchase-points-app.md).
 
 ## Cómo funcionan los puntos
 
@@ -23,8 +24,18 @@
   el total y el nivel, en `GET /api/profile`.
 - **Niveles:** dependen del total acumulado y **nunca bajan**. Canjear una recompensa en el
   zoológico no descuenta puntos (los puntos de la recompensa son un mínimo, no un precio).
-- **Hoy dan puntos:** la compra de boletos (en la app y en taquilla) y la captura de tarjetas.
-  Las reglas de donaciones y eventos existen, pero todavía nada las otorga.
+- **Hoy dan puntos:**
+  - la **captura de tarjetas** (la regla elegida para cada rareza; ver
+    [card-points-app.md](card-points-app.md));
+  - la **compra de boletos** en la app y en taquilla (regla `ticket_purchase`, una vez por
+    orden sin importar cuántos boletos tenga);
+  - las **donaciones** desde la app y el panel (regla `donation`, una vez por donación y solo
+    desde 50 MXN; el mínimo se configura en el servidor).
+
+  Boletos y donaciones devuelven sus puntos en `data.points`, igual que el duelo (ver
+  [purchase-points-app.md](purchase-points-app.md)). La regla de asistencia a eventos existe,
+  pero todavía nada la otorga. Una regla nueva del panel solo da puntos si se asigna a una
+  rareza o si el servidor la conecta a una acción; el panel marca las demás como "Sin uso".
 
 ## Temporadas de puntos (modos)
 
@@ -89,7 +100,7 @@ Requiere sesión (`auth:sanctum`), `throttle:60,1`. Documentado también en Scra
         "points": 150                // puntos en la temporada; 0 = no da puntos (la tarjeta se captura igual)
       }
     ],
-    "other": [                       // otras acciones que cambian (boletos, donaciones, eventos…), por nombre
+    "other": [                       // otras acciones que cambian (boletos, donaciones…), por nombre
       {
         "type": "ticket_purchase",   // clave única de la fila (name puede repetirse); no la uses para textos ni íconos
         "name": "Compra de boleto",  // muéstralo tal cual
@@ -105,6 +116,10 @@ Requiere sesión (`auth:sanctum`), `throttle:60,1`. Documentado también en Scra
 - Lo que no aparece en ninguna lista da sus puntos normales.
 - Las rarezas que comparten regla aparecen cada una con su entrada. Una regla que usa alguna
   rareza aparece solo en `cards`, nunca repetida en `other`.
+- `other` solo trae reglas que **alguna acción otorga** (hoy, compra de boleto y donación).
+  Una regla que nada otorga ("Sin uso" en el panel, como la asistencia a eventos o una regla
+  nueva que no está asignada a una rareza) nunca aparece, aunque la temporada cambie sus
+  puntos: la app no debe anunciar cambios en acciones que no dan puntos.
 - **No calcules puntos con esto.** Es para avisar y explicar; los puntos reales siempre
   llegan en la respuesta de la acción.
 

@@ -164,11 +164,45 @@ class PointSeasonTest extends TestCase
 
         Sanctum::actingAs(User::factory()->create());
 
-        // La regla rara ya no la usa ninguna rareza: queda como otra acción.
+        // La regla rara ya no la usa ninguna rareza ni la otorga otra acción:
+        // no tiene uso y no se anuncia.
         $this->getJson(route('api.points.season'))
             ->assertOk()
             ->assertJsonPath('data.cards', [])
-            ->assertJsonPath('data.other.*.type', ['card_capture_rara']);
+            ->assertJsonPath('data.other', []);
+    }
+
+    public function test_other_lists_only_rules_that_some_action_awards(): void
+    {
+        $donation = PointRule::create(['type' => 'donation', 'name' => 'Donación', 'points' => 5, 'is_active' => true]);
+        $event = PointRule::create(['type' => 'event_attendance', 'name' => 'Asistencia a evento', 'points' => 20, 'is_active' => true]);
+        $custom = PointRule::create(['type' => 'regla_nueva', 'name' => 'Regla nueva', 'points' => 1, 'is_active' => true]);
+
+        $this->mode(
+            ['is_public' => true, 'public_title' => 'Evento'],
+            [$donation->id => 10, $event->id => 40, $custom->id => 9]
+        );
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson(route('api.points.season'))
+            ->assertOk()
+            ->assertJsonPath('data.other.*.type', ['donation']);
+    }
+
+    public function test_new_rule_assigned_to_a_rarity_is_announced_as_a_card_change(): void
+    {
+        $custom = PointRule::create(['type' => 'regla_nueva', 'name' => 'Regla nueva', 'points' => 30, 'is_active' => true]);
+        CardRaritySetting::where('rarity', 'rara')->update(['point_rule_id' => $custom->id]);
+
+        $this->mode(['is_public' => true, 'public_title' => 'Evento'], [$custom->id => 60]);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson(route('api.points.season'))
+            ->assertOk()
+            ->assertJsonPath('data.cards.*.rarity', ['rara'])
+            ->assertJsonPath('data.other', []);
     }
 
     public function test_season_style_comes_from_the_catalog(): void

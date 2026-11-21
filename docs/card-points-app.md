@@ -48,8 +48,8 @@ rareza". Al instalarse, cada rareza usa su propia regla:
 
 ## Contrato: `data.points` en la respuesta de submit
 
-Es un campo **nuevo y aditivo**; el resto de la respuesta no cambió. Solo existe en esta
-respuesta; ningún otro endpoint cambió.
+Es un campo **nuevo y aditivo**; el resto de la respuesta no cambió. La compra de boletos y
+la donación devuelven el mismo `data.points` (ver [purchase-points-app.md](purchase-points-app.md)).
 
 ```jsonc
 // HTTP 201, outcome "won"

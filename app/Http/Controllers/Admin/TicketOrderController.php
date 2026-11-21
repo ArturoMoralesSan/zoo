@@ -7,7 +7,7 @@ use App\Models\PaymentMethod;
 use App\Models\TicketOrder;
 use App\Models\TicketType;
 use App\Models\User;
-use App\Services\PointService;
+use App\Services\Points\PaymentPoints;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,12 +17,9 @@ use Inertia\Response;
 
 class TicketOrderController extends Controller
 {
-    private PointService $pointService;
-
-    public function __construct(PointService $pointService)
-    {
-        $this->pointService = $pointService;
-    }
+    public function __construct(
+        private PaymentPoints $paymentPoints
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -523,18 +520,8 @@ class TicketOrderController extends Controller
                 |
                 */
 
-                if (! empty($validated['user_id'])) {
-                    $user = User::findOrFail(
-                        $validated['user_id']
-                    );
-
-                    $this->pointService->add(
-                        $user,
-                        'ticket_purchase',
-                        'Compra de boleto',
-                        $order
-                    );
-                }
+                // Una regla desactivada o en 0 no da puntos, pero nunca impide la venta.
+                $this->paymentPoints->awardTicketOrder($order);
 
                 return $order;
             }

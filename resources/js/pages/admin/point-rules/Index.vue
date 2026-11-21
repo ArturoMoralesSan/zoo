@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
@@ -6,16 +5,17 @@ import {
     Coins,
     FilterX,
     Plus,
+    TriangleAlert,
     ToggleLeft,
     ToggleRight,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
 
-import admin from '@/routes/admin';
-import PageHeader from '@/components/admin/PageHeader.vue';
 import DataTable from '@/components/admin/DataTable.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
 import TableActions from '@/components/admin/TableActions.vue';
+import admin from '@/routes/admin';
 
 interface PointRule {
     id: number;
@@ -24,6 +24,12 @@ interface PointRule {
     points: number;
     description: string | null;
     is_active: boolean;
+    // Dónde tiene efecto: acciones del código que la otorgan y rarezas que la usan.
+    usage: {
+        actions: string[];
+        rarities: string[];
+        in_use: boolean;
+    };
 }
 
 interface PaginationLink {
@@ -162,10 +168,14 @@ defineOptions({
             "
         >
             <p class="flex items-center gap-2">
-                <CalendarRange class="h-4 w-4 shrink-0 text-[#187744]" aria-hidden="true" />
+                <CalendarRange
+                    class="h-4 w-4 shrink-0 text-[#187744]"
+                    aria-hidden="true"
+                />
                 <span v-if="activeMode">
-                    Modo activo: <strong>{{ activeMode.name }}</strong>. Los puntos de esta
-                    tabla son los base; el modo puede cambiarlos.
+                    Modo activo: <strong>{{ activeMode.name }}</strong
+                    >. Los puntos de esta tabla son los base; el modo puede
+                    cambiarlos.
                 </span>
                 <span v-else>
                     Sin modo activo: cada regla da los puntos de esta tabla.
@@ -183,7 +193,7 @@ defineOptions({
         <DataTable
             :pagination="rules"
             :is-empty="rules.data.length === 0"
-            :empty-colspan="5"
+            :empty-colspan="6"
             :search="search"
             search-placeholder="Buscar regla..."
             :has-filters="hasFilters()"
@@ -203,21 +213,19 @@ defineOptions({
 
             <template #table-head>
                 <tr>
-                    <th class="px-5 py-4 font-semibold sm:px-6">
-                        Regla
-                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">Regla</th>
 
-                    <th class="px-5 py-4 font-semibold sm:px-6">
-                        Tipo
-                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">Tipo</th>
 
-                    <th class="whitespace-nowrap px-5 py-4 font-semibold sm:px-6">
+                    <th
+                        class="px-5 py-4 font-semibold whitespace-nowrap sm:px-6"
+                    >
                         Puntos
                     </th>
 
-                    <th class="px-5 py-4 font-semibold sm:px-6">
-                        Estado
-                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">Uso</th>
+
+                    <th class="px-5 py-4 font-semibold sm:px-6">Estado</th>
 
                     <th class="px-5 py-4 text-right font-semibold sm:px-6">
                         Acciones
@@ -266,7 +274,7 @@ defineOptions({
                         </code>
                     </td>
 
-                    <td class="whitespace-nowrap px-5 py-4 sm:px-6">
+                    <td class="px-5 py-4 whitespace-nowrap sm:px-6">
                         <span
                             v-if="rule.points > 0"
                             class="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700"
@@ -279,6 +287,39 @@ defineOptions({
                             class="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700"
                         >
                             {{ rule.points }}
+                        </span>
+                    </td>
+
+                    <td class="px-5 py-4 text-xs sm:px-6">
+                        <div
+                            v-if="rule.usage.in_use"
+                            class="max-w-xs space-y-1 text-[#435D4C]"
+                        >
+                            <p v-if="rule.usage.actions.length > 0">
+                                <span class="font-semibold text-[#244334]"
+                                    >Lo otorga:</span
+                                >
+                                {{ rule.usage.actions.join(', ') }}
+                            </p>
+
+                            <p v-if="rule.usage.rarities.length > 0">
+                                <span class="font-semibold text-[#244334]"
+                                    >Asignada a:</span
+                                >
+                                {{ rule.usage.rarities.join(', ') }}
+                            </p>
+                        </div>
+
+                        <span
+                            v-else
+                            class="inline-flex max-w-xs items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 font-medium text-amber-800"
+                            title='Asígnala a una rareza en "Configuración por rareza" o pide al equipo de desarrollo que la conecte a una acción.'
+                        >
+                            <TriangleAlert
+                                class="mt-px h-3.5 w-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            Sin uso: ninguna acción otorga esta regla
                         </span>
                     </td>
 
@@ -309,7 +350,9 @@ defineOptions({
             </template>
 
             <template #empty>
-                <div class="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+                <div
+                    class="flex min-h-[260px] flex-col items-center justify-center p-8 text-center"
+                >
                     <div
                         class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF2EC] text-[#66816F]"
                     >

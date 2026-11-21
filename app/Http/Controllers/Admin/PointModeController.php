@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\PointMode\StorePointModeRequest;
 use App\Http\Requests\Admin\PointMode\UpdatePointModeRequest;
 use App\Models\PointMode;
 use App\Models\PointRule;
+use App\Services\PointService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,10 @@ use Inertia\Response;
 class PointModeController extends Controller
 {
     private const FIELDS = ['name', 'description', 'is_public', 'public_title', 'public_message', 'icon', 'color'];
+
+    public function __construct(
+        private PointService $points
+    ) {}
 
     public function index(): Response
     {
@@ -186,13 +191,22 @@ class PointModeController extends Controller
     }
 
     /**
+     * Con `in_use`: cambiar los puntos de una regla que ninguna acción otorga
+     * ni ninguna rareza usa no tiene efecto, y el formulario lo avisa.
+     *
      * @return Collection<int, PointRule>
      */
     private function rules(): Collection
     {
-        return PointRule::query()
+        $rules = PointRule::query()
             ->orderBy('name')
             ->get(['id', 'name', 'type', 'points', 'is_active']);
+
+        $usage = $this->points->ruleUsage($rules);
+
+        return $rules->each(
+            fn (PointRule $rule) => $rule->setAttribute('in_use', $usage[$rule->id]['in_use'])
+        );
     }
 
     private function copyName(string $name): string
