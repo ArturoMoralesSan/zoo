@@ -21,11 +21,12 @@ class PointRuleController extends Controller
             ->withQueryString();
 
         // Una regla solo da puntos si una acción del código la otorga o si
-        // está asignada a una rareza; el panel lo muestra por regla.
-        $usage = $points->ruleUsage($rules->items());
+        // está asignada a una rareza; el panel lo muestra por regla, salvo
+        // en modo anterior (APP_POINTS_RULES_LEGACY=1), donde usage es null.
+        $usage = $points->tracksRuleUsage() ? $points->ruleUsage($rules->items()) : [];
         $rules->through(fn (PointRule $rule) => [
             ...$rule->toArray(),
-            'usage' => $usage[$rule->id],
+            'usage' => $usage[$rule->id] ?? null,
         ]);
 
         return Inertia::render(
@@ -39,10 +40,14 @@ class PointRuleController extends Controller
         );
     }
 
-    public function create(): Response
+    public function create(PointService $points): Response
     {
         return Inertia::render(
-            'admin/point-rules/Create'
+            'admin/point-rules/Create',
+            [
+                // Aviso de que una regla nueva no da puntos por sí sola.
+                'showUsageNotice' => $points->tracksRuleUsage(),
+            ]
         );
     }
 

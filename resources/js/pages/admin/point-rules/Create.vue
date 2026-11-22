@@ -16,6 +16,11 @@ import CancelButton from '@/components/admin/CancelButton.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import admin from '@/routes/admin';
 
+defineProps<{
+    // false en modo anterior (APP_POINTS_RULES_LEGACY=1).
+    showUsageNotice: boolean;
+}>();
+
 const form = useForm({
     type: '',
     name: '',
@@ -67,6 +72,7 @@ defineOptions({
         <form class="space-y-5" @submit.prevent="submit">
             <!-- Una regla nueva no tiene efecto por sí sola -->
             <div
+                v-if="showUsageNotice"
                 class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
             >
                 <Info class="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />

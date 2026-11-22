@@ -119,7 +119,9 @@ Requiere sesión (`auth:sanctum`), `throttle:60,1`. Documentado también en Scra
 - `other` solo trae reglas que **alguna acción otorga** (hoy, compra de boleto y donación).
   Una regla que nada otorga ("Sin uso" en el panel, como la asistencia a eventos o una regla
   nueva que no está asignada a una rareza) nunca aparece, aunque la temporada cambie sus
-  puntos: la app no debe anunciar cambios en acciones que no dan puntos.
+  puntos: la app no debe anunciar cambios en acciones que no dan puntos. Excepción: si el
+  servidor corre en modo anterior (`APP_POINTS_RULES_LEGACY=1`), `other` trae todas las reglas
+  activas que cambia la temporada, como antes. La forma de la respuesta es la misma.
 - **No calcules puntos con esto.** Es para avisar y explicar; los puntos reales siempre
   llegan en la respuesta de la acción.
 

@@ -146,6 +146,58 @@ class PointsUsageAdminTest extends TestCase
             });
     }
 
+    public function test_legacy_mode_hides_rule_usage_in_the_panel(): void
+    {
+        config(['points.rules_legacy' => true]);
+        $mode = PointMode::create(['name' => 'Interno', 'is_active' => false]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.point-rules.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('rules.data.0.usage', null));
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.point-rules.create'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('showUsageNotice', false));
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.point-modes.edit', $mode))
+            ->assertOk()
+            ->assertInertia(function (Assert $page) {
+                $this->assertSame([null], collect($page->toArray()['props']['rules'])->pluck('in_use')->unique()->values()->all());
+            });
+    }
+
+    public function test_create_form_shows_the_usage_notice_by_default(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.point-rules.create'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('showUsageNotice', true));
+    }
+
+    public function test_legacy_mode_does_not_change_how_points_are_awarded(): void
+    {
+        config(['points.rules_legacy' => true]);
+        $this->ticketRule->update(['is_active' => false]);
+
+        $this->sellTickets($this->visitor->id);
+
+        $this->assertDatabaseCount('ticket_orders', 1);
+        $this->assertDatabaseCount('point_movements', 0);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.donations.store'), [
+                'user_id' => $this->visitor->id,
+                'payment_method_id' => $this->cash->id,
+                'amount' => 100,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(5, $this->visitor->fresh()->points);
+    }
+
     public function test_mode_form_marks_rules_without_use(): void
     {
         PointRule::create(['type' => 'event_attendance', 'name' => 'Asistencia a evento', 'points' => 20, 'is_active' => true]);
