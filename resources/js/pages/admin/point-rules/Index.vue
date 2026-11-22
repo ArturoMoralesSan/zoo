@@ -10,7 +10,7 @@ import {
     ToggleRight,
 } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 import DataTable from '@/components/admin/DataTable.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
@@ -25,11 +25,12 @@ interface PointRule {
     description: string | null;
     is_active: boolean;
     // Dónde tiene efecto: acciones del código que la otorgan y rarezas que la usan.
+    // null en modo anterior (APP_POINTS_RULES_LEGACY=1): no se muestra la columna.
     usage: {
         actions: string[];
         rarities: string[];
         in_use: boolean;
-    };
+    } | null;
 }
 
 interface PaginationLink {
@@ -57,6 +58,10 @@ const props = defineProps<{
 }>();
 
 const search = ref(props.filters?.search ?? '');
+
+const showUsage = computed(() =>
+    props.rules.data.some((rule) => rule.usage !== null),
+);
 
 const hasFilters = (): boolean => {
     return Boolean(search.value.trim());
@@ -193,7 +198,7 @@ defineOptions({
         <DataTable
             :pagination="rules"
             :is-empty="rules.data.length === 0"
-            :empty-colspan="6"
+            :empty-colspan="showUsage ? 6 : 5"
             :search="search"
             search-placeholder="Buscar regla..."
             :has-filters="hasFilters()"
@@ -223,7 +228,12 @@ defineOptions({
                         Puntos
                     </th>
 
-                    <th class="px-5 py-4 font-semibold sm:px-6">Uso</th>
+                    <th
+                        v-if="showUsage"
+                        class="px-5 py-4 font-semibold sm:px-6"
+                    >
+                        Uso
+                    </th>
 
                     <th class="px-5 py-4 font-semibold sm:px-6">Estado</th>
 
@@ -290,7 +300,7 @@ defineOptions({
                         </span>
                     </td>
 
-                    <td class="px-5 py-4 text-xs sm:px-6">
+                    <td v-if="rule.usage" class="px-5 py-4 text-xs sm:px-6">
                         <div
                             v-if="rule.usage.in_use"
                             class="max-w-xs space-y-1 text-[#435D4C]"

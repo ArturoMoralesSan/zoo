@@ -190,6 +190,27 @@ class PointSeasonTest extends TestCase
             ->assertJsonPath('data.other.*.type', ['donation']);
     }
 
+    public function test_legacy_mode_lists_every_changed_rule_in_other(): void
+    {
+        config(['points.rules_legacy' => true]);
+
+        $donation = PointRule::create(['type' => 'donation', 'name' => 'Donación', 'points' => 5, 'is_active' => true]);
+        $event = PointRule::create(['type' => 'event_attendance', 'name' => 'Asistencia a evento', 'points' => 20, 'is_active' => true]);
+
+        $this->mode(
+            ['is_public' => true, 'public_title' => 'Evento'],
+            [$donation->id => 10, $event->id => 40, $this->epic->id => 150]
+        );
+
+        Sanctum::actingAs(User::factory()->create());
+
+        // Las reglas de rareza siguen solo en cards.
+        $this->getJson(route('api.points.season'))
+            ->assertOk()
+            ->assertJsonPath('data.cards.*.rarity', ['epica'])
+            ->assertJsonPath('data.other.*.type', ['event_attendance', 'donation']);
+    }
+
     public function test_new_rule_assigned_to_a_rarity_is_announced_as_a_card_change(): void
     {
         $custom = PointRule::create(['type' => 'regla_nueva', 'name' => 'Regla nueva', 'points' => 30, 'is_active' => true]);

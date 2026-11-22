@@ -7,7 +7,8 @@ export interface PointRuleRow {
     points: number;
     is_active: boolean;
     // false = ninguna acción la otorga ni la usa una rareza: cambiar sus puntos no tiene efecto.
-    in_use: boolean;
+    // null en modo anterior (APP_POINTS_RULES_LEGACY=1): no se marca.
+    in_use: boolean | null;
 }
 
 export interface PointModeOverride {

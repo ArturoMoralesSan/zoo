@@ -68,7 +68,7 @@ php artisan cards:export | cards:import x.zip --dry-run   # card+species .zip pa
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 460 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-20) |
+| `php artisan test` | 464 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-22) |
 | `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
@@ -275,7 +275,9 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   label) and is awarded with `addIfRuleActive()` (or `awardOnce()`) inside its transaction, never
   `add()`, so a disabled rule never blocks the action. `PointService::ruleUsage()` uses that enum
   plus the rarity settings to mark rules "Sin uso" in the panel, and `visibleSeason()` leaves
-  unused rules out of `other`.
+  unused rules out of `other`. With `APP_POINTS_RULES_LEGACY=1` (`config('points.rules_legacy')`,
+  checked only through `PointService::tracksRuleUsage()`) the panel hides that usage info and
+  `other` lists every changed rule again, as before; awarding does not change.
   **Point modes** (seasons/events, admin "Modos de puntos"): at most one `PointMode` is
   active and overrides some rules' points; rules it doesn't override keep their base points.
   `PointService::pointsFor()` resolves them, and every award goes through it. A mode can set a

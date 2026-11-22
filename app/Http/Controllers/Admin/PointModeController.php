@@ -192,7 +192,8 @@ class PointModeController extends Controller
 
     /**
      * Con `in_use`: cambiar los puntos de una regla que ninguna acción otorga
-     * ni ninguna rareza usa no tiene efecto, y el formulario lo avisa.
+     * ni ninguna rareza usa no tiene efecto, y el formulario lo avisa. En modo
+     * anterior (APP_POINTS_RULES_LEGACY=1) es null y no se marca nada.
      *
      * @return Collection<int, PointRule>
      */
@@ -202,10 +203,10 @@ class PointModeController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'type', 'points', 'is_active']);
 
-        $usage = $this->points->ruleUsage($rules);
+        $usage = $this->points->tracksRuleUsage() ? $this->points->ruleUsage($rules) : [];
 
         return $rules->each(
-            fn (PointRule $rule) => $rule->setAttribute('in_use', $usage[$rule->id]['in_use'])
+            fn (PointRule $rule) => $rule->setAttribute('in_use', $usage[$rule->id]['in_use'] ?? null)
         );
     }
 

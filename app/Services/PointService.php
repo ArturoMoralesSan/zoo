@@ -143,6 +143,15 @@ class PointService
     }
 
     /**
+     * false con APP_POINTS_RULES_LEGACY=1: el panel no marca qué reglas
+     * tienen efecto y la temporada anuncia todas las reglas que cambia.
+     */
+    public function tracksRuleUsage(): bool
+    {
+        return ! config('points.rules_legacy');
+    }
+
+    /**
      * Dónde tiene efecto cada regla: las acciones del código que la otorgan
      * por su tipo (PointAction) y las rarezas que la usan al capturar.
      * Una regla sin ninguna de las dos no da puntos aunque esté activa.
@@ -183,7 +192,8 @@ class PointService
      *   por rareza") cambia; así la app no tiene que cruzar reglas y rarezas.
      * - other: las demás reglas activas que cambian y que alguna acción del
      *   código otorga (PointAction: boletos, donaciones…). Las reglas sin uso
-     *   no aparecen: la app no debe anunciar acciones que no dan puntos.
+     *   no aparecen: la app no debe anunciar acciones que no dan puntos. En
+     *   modo anterior (tracksRuleUsage() false) aparecen todas.
      * Una regla usada por alguna rareza solo aparece en cards.
      */
     public function visibleSeason(): ?PointSeason
@@ -235,7 +245,11 @@ class PointService
         $other = [];
 
         foreach ($changed as $ruleId => $rule) {
-            if (isset($usedByRarity[$ruleId]) || PointAction::tryFrom((string) $rule->type) === null) {
+            if (isset($usedByRarity[$ruleId])) {
+                continue;
+            }
+
+            if ($this->tracksRuleUsage() && PointAction::tryFrom((string) $rule->type) === null) {
                 continue;
             }
 
