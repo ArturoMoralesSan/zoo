@@ -29,6 +29,11 @@ const count = computed({
     set: (value: number) => emit('update:modelValue', value),
 });
 
+// Atajos que nunca caben en un guardado (p. ej. 100 en el generador con IA) no se muestran.
+const presets = computed(() =>
+    QUESTION_PRESETS.filter((preset) => preset <= props.max),
+);
+
 const isValid = computed(() =>
     isValidQuestionCount(props.modelValue, props.limit),
 );
@@ -40,7 +45,7 @@ const isValid = computed(() =>
 
         <div class="mt-2 flex flex-wrap items-center gap-2">
             <button
-                v-for="preset in QUESTION_PRESETS"
+                v-for="preset in presets"
                 :key="preset"
                 type="button"
                 class="min-w-12 rounded-lg border px-3.5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40"

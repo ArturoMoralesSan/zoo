@@ -172,7 +172,7 @@ class QuizQuestionController extends Controller
             [
                 'card' => $card->load('species'),
                 'existingQuestions' => $card->quizQuestions()->pluck('question'),
-                'maxQuestions' => ImportQuizQuestionsRequest::MAX_QUESTIONS,
+                'maxQuestions' => QuizGeneratorService::MAX_QUESTIONS,
                 'aiEnabled' => $generator->isConfigured(),
                 'topics' => collect(QuizGeneratorService::TOPICS)
                     ->map(fn (array $topic, string $value) => ['value' => $value, 'label' => $topic['label']])
