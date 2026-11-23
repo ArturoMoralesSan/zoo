@@ -124,7 +124,7 @@ class QuizQuestionGenerateTest extends TestCase
 
     public function test_validates_count_and_topic(): void
     {
-        $this->generate(['count' => 101, 'topic' => 'otro'])
+        $this->generate(['count' => 51, 'topic' => 'otro'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['count', 'topic']);
 
@@ -140,7 +140,7 @@ class QuizQuestionGenerateTest extends TestCase
 
         $this->generate(['count' => 1])->assertOk();
         $this->generate(['count' => 37])->assertOk();
-        $this->generate(['count' => 100])->assertOk();
+        $this->generate(['count' => 50])->assertOk();
 
         Http::assertSentCount(3);
     }

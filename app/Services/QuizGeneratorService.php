@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Exceptions\QuizGenerationException;
-use App\Http\Requests\Admin\Card\ImportQuizQuestionsRequest;
 use App\Models\Card;
 use App\Models\Species;
 use Illuminate\Http\Client\ConnectionException;
@@ -22,8 +21,9 @@ class QuizGeneratorService
 {
     public const MIN_QUESTIONS = 1;
 
-    // Lo que se puede guardar de una vez. Medido: 100 preguntas tardan unos 17 s.
-    public const MAX_QUESTIONS = ImportQuizQuestionsRequest::MAX_QUESTIONS;
+    // Tope de la revisión con IA, menor que el de la importación manual para
+    // acotar el costo y el tiempo de cada llamada a Gemini.
+    public const MAX_QUESTIONS = 50;
 
     public const TOPICS = [
         'general' => ['label' => 'Todo', 'focus' => null],

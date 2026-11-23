@@ -35,7 +35,7 @@ class GenerateQuizQuestionsRequest extends FormRequest
             'exclude' => [
                 'nullable',
                 'array',
-                'max:'.ImportQuizQuestionsRequest::MAX_QUESTIONS,
+                'max:'.QuizGeneratorService::MAX_QUESTIONS,
             ],
 
             'exclude.*' => [
