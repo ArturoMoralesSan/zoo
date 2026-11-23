@@ -81,7 +81,7 @@ class QuizQuestionAdminTest extends TestCase
             ->post(route('admin.cards.quiz.store', $this->card), $payload)
             ->assertRedirect(route('admin.cards.quiz.index', $this->card));
 
-        return $this->card->quizQuestions()->latest('id')->firstOrFail();
+        return $this->card->quizQuestions()->reorder()->latest('id')->firstOrFail();
     }
 
     public function test_index_lists_the_card_questions(): void
@@ -257,5 +257,97 @@ class QuizQuestionAdminTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame(1, $this->card->quizQuestions()->count());
+    }
+
+    public function test_admin_can_delete_selected_questions_and_their_answers(): void
+    {
+        $first = $this->storeQuestion($this->questionPayload('¿Uno?'));
+        $second = $this->storeQuestion($this->questionPayload('¿Dos?'));
+        $kept = $this->storeQuestion($this->questionPayload('¿Tres?'));
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.quiz.destroy-many', $this->card), [
+                'ids' => [$first->id, $second->id],
+            ])
+            ->assertRedirect(route('admin.cards.quiz.index', $this->card));
+
+        $this->assertModelMissing($first);
+        $this->assertModelMissing($second);
+        $this->assertModelExists($kept);
+        $this->assertDatabaseMissing('quiz_answers', ['quiz_question_id' => $first->id]);
+    }
+
+    public function test_bulk_delete_ignores_questions_of_another_card(): void
+    {
+        $own = $this->storeQuestion($this->questionPayload());
+
+        $otherCard = $this->createCard();
+        $foreign = QuizQuestion::create([
+            'card_id' => $otherCard->id,
+            'question' => '¿Ajena?',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.quiz.destroy-many', $this->card), [
+                'ids' => [$own->id, $foreign->id],
+            ]);
+
+        $this->assertModelMissing($own);
+        $this->assertModelExists($foreign);
+    }
+
+    public function test_admin_can_delete_all_questions_matching_the_filters(): void
+    {
+        $this->storeQuestion($this->questionPayload('¿Qué come el ocelote?'));
+        $this->storeQuestion($this->questionPayload('¿Dónde vive el ocelote?'));
+        $inactive = $this->storeQuestion([...$this->questionPayload('¿Qué come de noche?'), 'is_active' => false]);
+        $other = $this->storeQuestion($this->questionPayload('¿Cuánto pesa?'));
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.quiz.destroy-many', $this->card), [
+                'all' => true,
+                'search' => 'come',
+                'is_active' => '1',
+            ])
+            ->assertRedirect(route('admin.cards.quiz.index', [
+                'card' => $this->card,
+                'search' => 'come',
+                'is_active' => '1',
+            ]));
+
+        $this->assertSame(
+            ['¿Dónde vive el ocelote?', '¿Qué come de noche?', '¿Cuánto pesa?'],
+            $this->card->quizQuestions()->orderBy('id')->pluck('question')->all()
+        );
+        $this->assertModelExists($inactive);
+        $this->assertModelExists($other);
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.quiz.destroy-many', $this->card), ['all' => true]);
+
+        $this->assertSame(0, $this->card->quizQuestions()->count());
+    }
+
+    public function test_bulk_delete_requires_a_selection_and_the_delete_permission(): void
+    {
+        $question = $this->storeQuestion($this->questionPayload());
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.quiz.destroy-many', $this->card), [])
+            ->assertSessionHasErrors('ids');
+
+        $editor = User::factory()->create();
+        $editor->givePermissionTo(['cards.view', 'cards.edit']);
+
+        $this->actingAs($editor)
+            ->get(route('admin.cards.quiz.index', $this->card))
+            ->assertInertia(fn ($page) => $page->where('canDelete', false));
+
+        $this->actingAs($editor)
+            ->delete(route('admin.cards.quiz.destroy-many', $this->card), ['all' => true])
+            ->assertForbidden();
+
+        $this->assertModelExists($question);
     }
 }

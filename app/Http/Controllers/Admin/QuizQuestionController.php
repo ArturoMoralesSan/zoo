@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Card\DestroyQuizQuestionsRequest;
 use App\Http\Requests\Admin\Card\GenerateQuizQuestionsRequest;
 use App\Http\Requests\Admin\Card\ImportQuizQuestionsRequest;
 use App\Models\Card;
 use App\Models\QuizQuestion;
 use App\Services\QuizGeneratorService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,45 +25,14 @@ class QuizQuestionController extends Controller
      */
     public function index(Card $card): Response
     {
-        $questions = QuizQuestion::query()
-            ->where('card_id', $card->id)
+        $questions = $this->filteredQuestions(
+            $card,
+            request('search'),
+            request('is_active')
+        )
             ->with([
                 'answers',
             ])
-            ->when(
-                request('search'),
-                function ($query, $search) {
-                    $query->where(function ($query) use ($search) {
-                        $query
-                            ->where(
-                                'question',
-                                'like',
-                                "%{$search}%"
-                            )
-                            ->orWhereHas(
-                                'answers',
-                                function ($query) use ($search) {
-                                    $query->where(
-                                        'answer',
-                                        'like',
-                                        "%{$search}%"
-                                    );
-                                }
-                            );
-                    });
-                }
-            )
-            ->when(
-                request('is_active') !== null &&
-                request('is_active') !== '',
-                fn ($query) => $query->where(
-                    'is_active',
-                    filter_var(
-                        request('is_active'),
-                        FILTER_VALIDATE_BOOLEAN
-                    )
-                )
-            )
             ->orderBy('id')
             ->paginate(10)
             ->withQueryString();
@@ -72,6 +43,9 @@ class QuizQuestionController extends Controller
                 'card' => $card->load('species'),
 
                 'questions' => $questions,
+
+                // El borrado en lote solo se ofrece a quien puede borrar.
+                'canDelete' => (bool) request()->user()?->can('cards.delete'),
 
                 'filters' => [
                     'search' => request('search'),
@@ -473,6 +447,92 @@ class QuizQuestionController extends Controller
         ]);
 
         return redirect()->route('admin.cards.quiz.index', $card);
+    }
+
+    /**
+     * Eliminar varias preguntas a la vez: las seleccionadas o todas las que
+     * coinciden con los filtros del listado.
+     */
+    public function destroyMany(
+        DestroyQuizQuestionsRequest $request,
+        Card $card
+    ): RedirectResponse {
+        $query = $request->boolean('all')
+            ? $this->filteredQuestions(
+                $card,
+                $request->input('search'),
+                $request->input('is_active')
+            )
+            // where card_id: ids de otra tarjeta se ignoran.
+            : QuizQuestion::query()
+                ->where('card_id', $card->id)
+                ->whereIn('id', $request->input('ids', []));
+
+        // Las respuestas se borran en cascada por la llave foránea.
+        $deleted = DB::transaction(fn () => $query->delete());
+
+        Inertia::flash('toast', [
+            'type' => $deleted > 0 ? 'success' : 'info',
+            'message' => match ($deleted) {
+                0 => 'No había preguntas que eliminar.',
+                1 => 'Se eliminó 1 pregunta.',
+                default => "Se eliminaron {$deleted} preguntas.",
+            },
+        ]);
+
+        return redirect()->route('admin.cards.quiz.index', [
+            'card' => $card,
+            'search' => $request->input('search') ?: null,
+            'is_active' => $request->input('is_active') ?? null,
+        ]);
+    }
+
+    /**
+     * Preguntas de la tarjeta según los filtros del listado. La usan el
+     * índice y el borrado de "todas las que coinciden".
+     *
+     * @return Builder<QuizQuestion>
+     */
+    private function filteredQuestions(
+        Card $card,
+        ?string $search,
+        mixed $isActive
+    ): Builder {
+        return QuizQuestion::query()
+            ->where('card_id', $card->id)
+            ->when(
+                $search,
+                function ($query, $search) {
+                    $query->where(function ($query) use ($search) {
+                        $query
+                            ->where(
+                                'question',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhereHas(
+                                'answers',
+                                function ($query) use ($search) {
+                                    $query->where(
+                                        'answer',
+                                        'like',
+                                        "%{$search}%"
+                                    );
+                                }
+                            );
+                    });
+                }
+            )
+            ->when(
+                $isActive !== null && $isActive !== '',
+                fn ($query) => $query->where(
+                    'is_active',
+                    filter_var(
+                        $isActive,
+                        FILTER_VALIDATE_BOOLEAN
+                    )
+                )
+            );
     }
 
     /**
