@@ -509,6 +509,11 @@ Route::middleware(['auth', 'verified'])
                     ->middleware(['permission:cards.edit', 'throttle:10,1'])
                     ->name('quiz.generate.store');
 
+                // Borrado en lote: seleccionadas o todas las que coinciden con los filtros.
+                Route::delete('quiz', [QuizQuestionController::class, 'destroyMany'])
+                    ->middleware('permission:cards.delete')
+                    ->name('quiz.destroy-many');
+
                 Route::resource('quiz', QuizQuestionController::class)
                     ->parameters([
                         'quiz' => 'quizQuestion',
