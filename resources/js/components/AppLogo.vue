@@ -6,10 +6,11 @@ const name = usePage().props.name;
 
 <template>
     <div class="flex w-full items-center justify-center">
+        <!-- El logo es blanco con fondo transparente; invert lo vuelve negro para el sidebar blanco. -->
         <img
-            src="/images/sonrie-corriendo.png"
-            alt="Zoo"
-            class="h-auto w-[175px] object-contain"
+            src="/images/zooapp-logo.png"
+            alt="ZooApp"
+            class="h-auto w-[140px] object-contain invert"
         />
     </div>
 </template>
