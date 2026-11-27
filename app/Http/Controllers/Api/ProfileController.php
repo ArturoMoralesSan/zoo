@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Level;
 use App\Models\User;
+use App\Support\UploadExtension;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -185,7 +186,7 @@ class ProfileController extends Controller
         $filename =
             uniqid().
             '.'.
-            $avatar->getClientOriginalExtension();
+            UploadExtension::for($avatar, attribute: 'avatar');
 
         /**
          * -------------------------------------------------------------

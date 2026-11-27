@@ -22,6 +22,7 @@ interface Reward {
     description: string | null;
     points: number;
     stock: number;
+    max_per_user: number | null;
     image: string | null;
     is_active: boolean;
 }
@@ -34,6 +35,7 @@ const form = useForm({
     name: props.reward.name,
     points: props.reward.points,
     stock: props.reward.stock,
+    max_per_user: props.reward.max_per_user,
     description: props.reward.description ?? '',
     image: props.reward.image ?? '',
     is_active: props.reward.is_active,
@@ -61,10 +63,7 @@ const submit = (): void => {
             :action-href="admin.rewards.index().url"
         />
 
-        <form
-            class="flex flex-col gap-5"
-            @submit.prevent="submit"
-        >
+        <form class="flex flex-col gap-5" @submit.prevent="submit">
             <!-- Información general -->
             <AdminCard
                 title="Información de la recompensa"
@@ -116,7 +115,8 @@ const submit = (): void => {
                         />
 
                         <p class="form-help">
-                            Cantidad de puntos necesarios para canjear la recompensa.
+                            Cantidad de puntos necesarios para canjear la
+                            recompensa.
                         </p>
 
                         <p v-if="form.errors.points" class="form-error">
@@ -144,12 +144,38 @@ const submit = (): void => {
                             }"
                         />
 
-                        <p class="form-help">
-                            Cantidad disponible para canje.
-                        </p>
+                        <p class="form-help">Cantidad disponible para canje.</p>
 
                         <p v-if="form.errors.stock" class="form-error">
                             {{ form.errors.stock }}
+                        </p>
+                    </div>
+
+                    <!-- Canjes por usuario -->
+                    <div class="form-field">
+                        <label for="max_per_user" class="form-label">
+                            Canjes por usuario
+                        </label>
+
+                        <input
+                            id="max_per_user"
+                            v-model.number="form.max_per_user"
+                            type="number"
+                            min="1"
+                            step="1"
+                            class="form-input"
+                            :class="{
+                                'form-input-error': form.errors.max_per_user,
+                            }"
+                        />
+
+                        <p v-if="form.errors.max_per_user" class="form-error">
+                            {{ form.errors.max_per_user }}
+                        </p>
+
+                        <p v-else class="form-help">
+                            Veces que un mismo usuario puede canjearla. Déjalo
+                            vacío para no limitar.
                         </p>
                     </div>
 
@@ -165,15 +191,11 @@ const submit = (): void => {
                             rows="4"
                             class="form-textarea"
                             :class="{
-                                'form-textarea-error':
-                                    form.errors.description,
+                                'form-textarea-error': form.errors.description,
                             }"
                         />
 
-                        <p
-                            v-if="form.errors.description"
-                            class="form-error"
-                        >
+                        <p v-if="form.errors.description" class="form-error">
                             {{ form.errors.description }}
                         </p>
                     </div>
@@ -204,7 +226,8 @@ const submit = (): void => {
                         />
 
                         <p class="form-help">
-                            Introduce la ruta de la imagen asociada a la recompensa.
+                            Introduce la ruta de la imagen asociada a la
+                            recompensa.
                         </p>
 
                         <p v-if="form.errors.image" class="form-error">

@@ -61,6 +61,17 @@ class User extends Authenticatable implements PasskeyUser
         });
     }
 
+    /**
+     * Usuario de la app móvil: su único rol es visitor. No entra al panel.
+     */
+    public function isAppOnly(): bool
+    {
+        $roles = $this->getRoleNames();
+
+        return $roles->isNotEmpty()
+            && $roles->every(fn (string $role) => $role === 'visitor');
+    }
+
     public function level(): BelongsTo
     {
         return $this->belongsTo(Level::class);

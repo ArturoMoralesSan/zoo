@@ -50,7 +50,8 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Los tokens de la app vencen a los 30 días; sanctum:prune-expired los borra.
+    'expiration' => (int) env('SANCTUM_EXPIRATION', 60 * 24 * 30) ?: null,
 
     /*
     |--------------------------------------------------------------------------

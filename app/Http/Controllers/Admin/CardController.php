@@ -18,6 +18,7 @@ use App\Models\Species;
 use App\Services\CardImageOptimizer;
 use App\Services\GlbInspection;
 use App\Services\GlbInspector;
+use App\Support\UploadExtension;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\RedirectResponse;
@@ -1097,9 +1098,7 @@ class CardController extends Controller
             $destination
         );
 
-        $extension = strtolower(
-            $file->getClientOriginalExtension()
-        );
+        $extension = UploadExtension::for($file);
 
         $filename =
             uniqid('', true).'.'.$extension;

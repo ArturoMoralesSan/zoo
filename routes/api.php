@@ -3,26 +3,25 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CardController;
 use App\Http\Controllers\Api\CreditController;
-use App\Http\Controllers\Api\DuelController;
 use App\Http\Controllers\Api\DonationController;
+use App\Http\Controllers\Api\DuelController;
 use App\Http\Controllers\Api\ExploreController;
 use App\Http\Controllers\Api\MapController;
 use App\Http\Controllers\Api\PointSeasonController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SpeciesController;
 use App\Http\Controllers\Api\TicketController;
-
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [
     AuthController::class,
     'register',
-]);
+])->middleware('throttle:5,1');
 
 Route::post('/login', [
     AuthController::class,
     'login',
-]);
+])->middleware('throttle:6,1');
 
 /*
 |--------------------------------------------------------------------------
@@ -41,8 +40,6 @@ Route::prefix('v1')->group(function () {
     ])->middleware('throttle:credits')
         ->name('api.v1.credits.index');
 });
-
-
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -214,7 +211,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tickets/orders', [
         TicketController::class,
         'storeOrder',
-    ])->name('api.tickets.orders.store');
+    ])->middleware('throttle:10,1')
+        ->name('api.tickets.orders.store');
 
     Route::get('/tickets/orders/{ticketOrder}', [
         TicketController::class,
@@ -240,7 +238,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/donations', [
         DonationController::class,
         'store',
-    ]);
+    ])->middleware('throttle:10,1');
 
     Route::get('/donations/{donation}', [
         DonationController::class,

@@ -13,6 +13,7 @@ use App\Models\SpeciesModel;
 use App\Models\SpeciesTag;
 use App\Models\ZooZone;
 use App\Services\SpeciesImageOptimizer;
+use App\Support\UploadExtension;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -362,7 +363,8 @@ class SpeciesController extends Controller
                         $request->file('model_file'),
                         'species/'.
                             $species->id.
-                            '/models'
+                            '/models',
+                        'glb'
                     );
                 }
 
@@ -816,7 +818,8 @@ class SpeciesController extends Controller
                         $request->file('model_file'),
                         'species/'.
                             $species->id.
-                            '/models'
+                            '/models',
+                        'glb'
                     );
 
                     /*
@@ -1177,7 +1180,8 @@ class SpeciesController extends Controller
 
     private function moveUploadedFile(
         UploadedFile $file,
-        string $directory
+        string $directory,
+        ?string $extension = null
     ): string {
         $directory = trim(
             $directory,
@@ -1192,8 +1196,8 @@ class SpeciesController extends Controller
             $destination
         );
 
-        $extension =
-            $file->getClientOriginalExtension();
+        // Solo los GLB ya validados por GlbFile pasan su extensión.
+        $extension ??= UploadExtension::for($file);
 
         $filename =
             uniqid('', true).'.'.$extension;

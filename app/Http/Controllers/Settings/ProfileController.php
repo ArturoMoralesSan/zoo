@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\Level;
+use App\Support\UploadExtension;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -235,7 +236,7 @@ class ProfileController extends Controller
                 $filename =
                     uniqid().
                     '.'.
-                    $avatar->getClientOriginalExtension();
+                    UploadExtension::for($avatar, attribute: 'avatar');
 
                 /*
                  * ----------------------------------------------------------------------

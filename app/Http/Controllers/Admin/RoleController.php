@@ -10,6 +10,12 @@ use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
+    /**
+     * El rol SuperAdmin se salta todos los permisos (Gate::before): solo otro
+     * SuperAdmin puede editarlo o borrarlo.
+     */
+    private const SUPER_ADMIN = 'SuperAdmin';
+
     public function index(Request $request)
     {
         $roles = Role::withCount('users')
@@ -65,6 +71,8 @@ class RoleController extends Controller
 
     public function edit(Role $role)
     {
+        $this->ensureCanManage($role);
+
         $role->load('permissions');
 
         return Inertia::render('admin/roles/Edit', [
@@ -77,6 +85,8 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
+        $this->ensureCanManage($role);
+
         $validated = $request->validate([
             'name' => [
                 'required',
@@ -101,6 +111,8 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
+        $this->ensureCanManage($role);
+
         if ($role->name === 'admin') {
             return back()->with(
                 'error',
@@ -113,5 +125,15 @@ class RoleController extends Controller
         return redirect()
             ->route('admin.roles.index')
             ->with('success', 'Rol eliminado correctamente.');
+    }
+
+    private function ensureCanManage(Role $role): void
+    {
+        abort_if(
+            $role->name === self::SUPER_ADMIN
+                && ! auth()->user()?->hasRole(self::SUPER_ADMIN),
+            403,
+            'Solo un SuperAdmin puede modificar este rol.'
+        );
     }
 }

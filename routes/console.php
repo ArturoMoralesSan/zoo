@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 
 // Borra los paquetes de tarjetas (.zip) con más de CardTransfer::KEEP_DAYS días.
 Schedule::command('model:prune', ['--model' => [CardTransfer::class]])->daily();
+
+// Borra los tokens de la API vencidos hace más de un día (config/sanctum.php).
+Schedule::command('sanctum:prune-expired', ['--hours' => 24])->daily();

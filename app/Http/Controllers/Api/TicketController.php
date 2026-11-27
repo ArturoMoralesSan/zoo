@@ -54,15 +54,23 @@ class TicketController extends Controller
      * con el mismo formato que al ganar un duelo. Si la regla está desactivada o la temporada la
      * pone en 0, la compra se completa igual con `awarded: 0`. Después de mostrarlos, la app
      * debe revalidar `GET /profile`.
+     *
+     * Mientras no haya pasarela de pago solo funciona con `APP_PAYMENTS_SIMULATED`; sin él
+     * responde 503. Acepta hasta 10 tipos de boleto distintos por orden.
      */
     public function storeOrder(Request $request): JsonResponse
     {
+        if (! config('app.payments_simulated')) {
+            return $this->paymentsUnavailable();
+        }
+
         $validated = $request->validate([
-            'items' => ['required', 'array', 'min:1'],
+            'items' => ['required', 'array', 'min:1', 'max:10'],
 
             'items.*.ticket_type_id' => [
                 'required',
                 'integer',
+                'distinct',
                 'exists:ticket_types,id',
             ],
 
@@ -485,6 +493,17 @@ class TicketController extends Controller
     /**
      * Generar folio único.
      */
+    /**
+     * Respuesta cuando los pagos simulados están apagados.
+     */
+    private function paymentsUnavailable(): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'La compra de boletos desde la app aún no está disponible.',
+        ], 503);
+    }
+
     private function generateFolio(): string
     {
         do {

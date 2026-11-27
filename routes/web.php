@@ -58,7 +58,7 @@ Route::get('/map/zone/{zooZone}', [MapController::class, 'zone'])
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified'])
+Route::middleware(['auth', 'verified', 'panel'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -201,7 +201,8 @@ Route::middleware(['auth', 'verified'])
         Route::delete(
             '/species/{species}/images/{image}',
             [SpeciesController::class, 'destroyImage']
-        )->name('species.images.destroy');
+        )->middleware('permission:species.edit')
+            ->name('species.images.destroy');
 
         /*
          * Créditos de las imágenes de la especie (principal, miniatura y

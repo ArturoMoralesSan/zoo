@@ -21,6 +21,7 @@ const form = useForm({
     description: '',
     points: 50,
     stock: 0,
+    max_per_user: 1 as number | null,
     image: '',
     is_active: true,
 });
@@ -66,10 +67,7 @@ defineOptions({
             :action-href="admin.rewards.index().url"
         />
 
-        <form
-            class="flex flex-col gap-5"
-            @submit.prevent="submit"
-        >
+        <form class="flex flex-col gap-5" @submit.prevent="submit">
             <!-- Información general -->
             <AdminCard
                 title="Información de la recompensa"
@@ -100,7 +98,8 @@ defineOptions({
                         </p>
 
                         <p v-else class="form-help">
-                            Nombre con el que se identificará la recompensa en el sistema.
+                            Nombre con el que se identificará la recompensa en
+                            el sistema.
                         </p>
                     </div>
 
@@ -127,7 +126,8 @@ defineOptions({
                         </p>
 
                         <p v-else class="form-help">
-                            Cantidad de puntos que debe tener el usuario para canjear la recompensa.
+                            Cantidad de puntos que debe tener el usuario para
+                            canjear la recompensa.
                         </p>
                     </div>
 
@@ -154,7 +154,36 @@ defineOptions({
                         </p>
 
                         <p v-else class="form-help">
-                            Cantidad disponible para canje. Usa 0 si no hay existencias.
+                            Cantidad disponible para canje. Usa 0 si no hay
+                            existencias.
+                        </p>
+                    </div>
+
+                    <!-- Canjes por usuario -->
+                    <div class="form-field">
+                        <label for="max_per_user" class="form-label">
+                            Canjes por usuario
+                        </label>
+
+                        <input
+                            id="max_per_user"
+                            v-model.number="form.max_per_user"
+                            type="number"
+                            min="1"
+                            step="1"
+                            class="form-input"
+                            :class="{
+                                'form-input-error': form.errors.max_per_user,
+                            }"
+                        />
+
+                        <p v-if="form.errors.max_per_user" class="form-error">
+                            {{ form.errors.max_per_user }}
+                        </p>
+
+                        <p v-else class="form-help">
+                            Veces que un mismo usuario puede canjearla. Déjalo
+                            vacío para no limitar.
                         </p>
                     </div>
 
@@ -180,7 +209,8 @@ defineOptions({
                         </p>
 
                         <p v-else class="form-help">
-                            Agrega información adicional sobre lo que recibirá el usuario al canjearla.
+                            Agrega información adicional sobre lo que recibirá
+                            el usuario al canjearla.
                         </p>
                     </div>
                 </div>
@@ -213,7 +243,8 @@ defineOptions({
                         </p>
 
                         <p v-else class="form-help">
-                            Introduce la ruta de la imagen asociada a la recompensa.
+                            Introduce la ruta de la imagen asociada a la
+                            recompensa.
                         </p>
                     </div>
                 </div>
@@ -244,8 +275,9 @@ defineOptions({
                 </div>
 
                 <p class="form-info-text">
-                    Verifica el nombre, los puntos necesarios y las existencias antes de guardar.
-                    Solo las recompensas activas estarán disponibles para nuevos canjes.
+                    Verifica el nombre, los puntos necesarios y las existencias
+                    antes de guardar. Solo las recompensas activas estarán
+                    disponibles para nuevos canjes.
                 </p>
             </div>
 

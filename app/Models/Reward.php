@@ -15,6 +15,7 @@ class Reward extends Model
         'description',
         'points',
         'stock',
+        'max_per_user',
         'image',
         'is_active',
     ];
@@ -24,6 +25,7 @@ class Reward extends Model
         return [
             'points' => 'integer',
             'stock' => 'integer',
+            'max_per_user' => 'integer',
             'is_active' => 'boolean',
         ];
     }

@@ -161,7 +161,7 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Sin registro web: el panel es solo para personal; la app se registra por /api/register.
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::twoFactorAuthentication([

@@ -187,13 +187,13 @@ class RewardRedemptionController extends Controller
                     $user = User::query()
                         ->lockForUpdate()
                         ->findOrFail(
-                            $validated['user_id']
+                            (int) $validated['user_id']
                         );
 
                     $reward = Reward::query()
                         ->lockForUpdate()
                         ->findOrFail(
-                            $validated['reward_id']
+                            (int) $validated['reward_id']
                         );
 
                     if (! $reward->is_active) {
@@ -214,6 +214,18 @@ class RewardRedemptionController extends Controller
                     ) {
                         throw new RuntimeException(
                             'El usuario no tiene suficientes puntos para esta recompensa.'
+                        );
+                    }
+
+                    if (
+                        $reward->max_per_user !== null &&
+                        RewardRedemption::query()
+                            ->where('user_id', $user->id)
+                            ->where('reward_id', $reward->id)
+                            ->count() >= $reward->max_per_user
+                    ) {
+                        throw new RuntimeException(
+                            'El usuario ya alcanzó el límite de canjes de esta recompensa.'
                         );
                     }
 

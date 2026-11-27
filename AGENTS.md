@@ -68,7 +68,7 @@ php artisan cards:export | cards:import x.zip --dry-run   # card+species .zip pa
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 491 tests, all passing |
+| `php artisan test` | 511 tests, all passing (28 skipped) |
 | `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 483 errors, all in `phpstan-baseline.neon` / 37 errors |
@@ -192,6 +192,12 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 - **Uploads:** public files go to `storage/app/public/<dir>` and the database stores the
   relative path. Remove them with `Storage::disk('public')->delete()`. Private
   files use the `local` disk.
+  Name stored files with `Support/UploadExtension::for($file)` (extension guessed from the
+  content), never `getClientOriginalExtension()`: a valid image named x.html or x.php would be
+  served as a page or script. Every upload field needs a rule; a field with none is not checked.
+  `storage/app/public/.htaccess` refuses PHP and HTML as a backstop (nginx needs its own rule).
+- **Leaflet HTML:** `divIcon`/popup `html` is inserted raw, so escape every value with
+  `escapeHtml()` and only allow `#hex` colors.
 - **Concurrency:** wrap multi-step writes in `DB::transaction` and use `lockForUpdate`
   for counters and limits. See `CardDuelService::lockState`.
 
@@ -275,6 +281,16 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   GD (`IMAGE_ENCODER`). `generated_image` is 2× (1144×2032), not the 3× download. Older
   images are converted from Recursos → Optimización or with `cards:images:optimize`, which
   **deletes each original**. See `docs/image-optimization.md`.
+- **Security** (report of 2026-11-26): app users (only role `visitor`) never enter the panel:
+  `Fortify::authenticateUsing` rejects them and the `panel` middleware (`EnsurePanelAccess`) logs
+  them out of `admin/*` and settings. There is no web sign-up; the app registers through
+  `/api/register` (`Password::defaults()`). Only a SuperAdmin can grant that role, edit its
+  accounts or edit the role. `/api/login`, `/register`, ticket orders and donations are throttled,
+  so set `TRUSTED_PROXIES` (`config/trustedproxy.php`) behind a proxy. API tokens expire after
+  30 days (`SANCTUM_EXPIRATION`, pruned daily). There is no payment gateway yet: app ticket
+  orders and donations are approved without charging only with `APP_PAYMENTS_SIMULATED`
+  (default: on only with `APP_ENV=local`), otherwise they return 503. Rewards have
+  `max_per_user` (null = unlimited), checked inside the redemption transaction.
 - **Points:** `PointService::add()` applies a `PointRule` by type and throws if it is missing or
   inactive; `addIfRuleActive()` skips it instead. Levels never go down, and redeeming a reward
   does not deduct points. Points are awarded inside the action's own request and transaction and
@@ -328,7 +344,6 @@ them, see `docs/points-app.md`).
   resources have this bug. Use `middlewareFor`.
 - **Do not copy `->with('success', '…')`.** Older controllers use it, but no frontend
   code reads it, so the message never appears. Use the toast above.
-- `DELETE admin/species/{species}/images/{image}` has no permission middleware.
 - `Welcome.vue` and `routes/settings.php` come from the starter kit; login lands on
   `/admin/dashboard` (`admin.dashboard`). There is no `dashboard` route.
 - `card.html` and `Card.glb` in the root are design references, not app code.

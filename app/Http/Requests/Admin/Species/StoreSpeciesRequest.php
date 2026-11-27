@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Species;
 
+use App\Concerns\SpeciesModelValidationRules;
 use App\Enums\ConservationStatus;
 use App\Enums\Diet;
 use App\Enums\Habitat;
@@ -10,6 +11,8 @@ use Illuminate\Validation\Rule;
 
 class StoreSpeciesRequest extends FormRequest
 {
+    use SpeciesModelValidationRules;
+
     public function authorize(): bool
     {
         return $this->user()?->can('species.create') ?? false;
@@ -218,6 +221,8 @@ class StoreSpeciesRequest extends FormRequest
                 'nullable',
                 'string',
             ],
+
+            ...$this->modelAndCardImageRules(),
         ];
     }
 

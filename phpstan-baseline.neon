@@ -349,42 +349,6 @@ parameters:
 			path: app/Http/Controllers/Admin/QuizQuestionController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Reward\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Reward\>\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/RewardRedemptionController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Reward\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Reward\>\:\:\$is_active\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/RewardRedemptionController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Reward\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Reward\>\:\:\$points\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/RewardRedemptionController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Reward\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Reward\>\:\:\$stock\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/RewardRedemptionController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/RewardRedemptionController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$points\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/RewardRedemptionController.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -393,12 +357,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/RewardRedemptionController.php
-
-		-
-			message: '#^Call to an undefined method App\\Models\\Reward\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Reward\>\:\:decrement\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Http/Controllers/Admin/RewardRedemptionController.php
 

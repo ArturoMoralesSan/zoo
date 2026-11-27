@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import L from 'leaflet';
 
-import {
-    onBeforeUnmount,
-    onMounted,
-    ref,
-    watch,
-} from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -68,10 +63,7 @@ let imageOverlay: L.ImageOverlay | null = null;
 let currentImageUrl: string | null = null;
 let imageUrlIsObjectUrl = false;
 
-const defaultCenter: L.LatLngExpression = [
-    24.0277,
-    -104.6532,
-];
+const defaultCenter: L.LatLngExpression = [24.0277, -104.6532];
 
 /**
  * --------------------------------------------------------------------------
@@ -153,11 +145,28 @@ const createMapPanes = (): void => {
  * Si markerImage existe, se utiliza esa imagen en lugar del SVG.
  *
  */
-const createMarkerIcon = (): L.DivIcon => {
-    const icon = props.icon || 'poi.svg';
-    const color = props.color || '#22c55e';
+const escapeHtml = (value: string): string =>
+    value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
 
-    const markerImage = props.markerImage;
+const createMarkerIcon = (): L.DivIcon => {
+    // Leaflet inserta este HTML tal cual; Vue no lo escapa.
+    const icon = /^[A-Za-z0-9][A-Za-z0-9_-]*\.(svg|png|webp)$/.test(
+        props.icon ?? '',
+    )
+        ? props.icon
+        : 'poi.svg';
+    const color = /^#[0-9a-fA-F]{3,8}$/.test(props.color ?? '')
+        ? props.color
+        : '#22c55e';
+
+    const markerImage = props.markerImage
+        ? escapeHtml(props.markerImage)
+        : null;
 
     const iconUrl = `/storage/markers/${icon}`;
 
@@ -220,25 +229,19 @@ const pointInPolygon = (
     let inside = false;
 
     for (
-        let i = 0,
-            j = coordinates.length - 1;
+        let i = 0, j = coordinates.length - 1;
         i < coordinates.length;
         j = i++
     ) {
-        const longitudeI =
-            Number(coordinates[i][0]);
+        const longitudeI = Number(coordinates[i][0]);
 
-        const latitudeI =
-            Number(coordinates[i][1]);
+        const latitudeI = Number(coordinates[i][1]);
 
-        const longitudeJ =
-            Number(coordinates[j][0]);
+        const longitudeJ = Number(coordinates[j][0]);
 
-        const latitudeJ =
-            Number(coordinates[j][1]);
+        const latitudeJ = Number(coordinates[j][1]);
 
-        const denominator =
-            latitudeJ - latitudeI;
+        const denominator = latitudeJ - latitudeI;
 
         /**
          * Segmento horizontal.
@@ -248,13 +251,9 @@ const pointInPolygon = (
         }
 
         const intersects =
-            latitudeI > latitude !==
-                latitudeJ > latitude &&
+            latitudeI > latitude !== latitudeJ > latitude &&
             longitude <
-                ((longitudeJ -
-                    longitudeI) *
-                    (latitude -
-                        latitudeI)) /
+                ((longitudeJ - longitudeI) * (latitude - latitudeI)) /
                     denominator +
                     longitudeI;
 
@@ -274,29 +273,18 @@ const pointInPolygon = (
  *
  * mapImageBounds NO se utiliza aquí.
  */
-const isInsideZone = (
-    latitude: number,
-    longitude: number,
-): boolean => {
-    const ring =
-        props.geometry?.coordinates?.[0];
+const isInsideZone = (latitude: number, longitude: number): boolean => {
+    const ring = props.geometry?.coordinates?.[0];
 
     /**
      * Si todavía no existe geometría,
      * no podemos restringir el punto.
      */
-    if (
-        !ring ||
-        ring.length < 3
-    ) {
+    if (!ring || ring.length < 3) {
         return true;
     }
 
-    return pointInPolygon(
-        latitude,
-        longitude,
-        ring,
-    );
+    return pointInPolygon(latitude, longitude, ring);
 };
 
 /**
@@ -312,24 +300,19 @@ const isInsideZone = (
  *
  */
 const getImageBounds = (): L.LatLngBounds | null => {
-    const bounds =
-        props.mapImageBounds;
+    const bounds = props.mapImageBounds;
 
     if (!bounds) {
         return null;
     }
 
-    const north =
-        Number(bounds.north);
+    const north = Number(bounds.north);
 
-    const south =
-        Number(bounds.south);
+    const south = Number(bounds.south);
 
-    const east =
-        Number(bounds.east);
+    const east = Number(bounds.east);
 
-    const west =
-        Number(bounds.west);
+    const west = Number(bounds.west);
 
     if (
         !Number.isFinite(north) ||
@@ -340,23 +323,11 @@ const getImageBounds = (): L.LatLngBounds | null => {
         return null;
     }
 
-    if (
-        north <= south ||
-        east <= west
-    ) {
+    if (north <= south || east <= west) {
         return null;
     }
 
-    return L.latLngBounds(
-        [
-            south,
-            west,
-        ],
-        [
-            north,
-            east,
-        ],
-    );
+    return L.latLngBounds([south, west], [north, east]);
 };
 
 /**
@@ -365,22 +336,10 @@ const getImageBounds = (): L.LatLngBounds | null => {
  * --------------------------------------------------------------------------
  */
 
-const updateCoordinates = (
-    latLng: L.LatLng,
-): void => {
-    emit(
-        'update:latitude',
-        Number(
-            latLng.lat.toFixed(7),
-        ),
-    );
+const updateCoordinates = (latLng: L.LatLng): void => {
+    emit('update:latitude', Number(latLng.lat.toFixed(7)));
 
-    emit(
-        'update:longitude',
-        Number(
-            latLng.lng.toFixed(7),
-        ),
-    );
+    emit('update:longitude', Number(latLng.lng.toFixed(7)));
 };
 
 /**
@@ -389,29 +348,17 @@ const updateCoordinates = (
  * --------------------------------------------------------------------------
  */
 
-const resolveImageUrl = (
-    image: File | string,
-): string => {
+const resolveImageUrl = (image: File | string): string => {
     /**
      * Imagen existente almacenada
      * en la base de datos.
      */
-    if (
-        typeof image === 'string'
-    ) {
+    if (typeof image === 'string') {
         if (
-            image.startsWith(
-                'http://',
-            ) ||
-            image.startsWith(
-                'https://',
-            ) ||
-            image.startsWith(
-                'blob:',
-            ) ||
-            image.startsWith(
-                'data:',
-            ) ||
+            image.startsWith('http://') ||
+            image.startsWith('https://') ||
+            image.startsWith('blob:') ||
+            image.startsWith('data:') ||
             image.startsWith('/')
         ) {
             return image;
@@ -424,28 +371,18 @@ const resolveImageUrl = (
      * Imagen nueva seleccionada
      * desde el formulario.
      */
-    return URL.createObjectURL(
-        image,
-    );
+    return URL.createObjectURL(image);
 };
 
 const clearImage = (): void => {
-    if (
-        imageOverlay &&
-        map
-    ) {
+    if (imageOverlay && map) {
         imageOverlay.removeFrom(map);
     }
 
     imageOverlay = null;
 
-    if (
-        currentImageUrl &&
-        imageUrlIsObjectUrl
-    ) {
-        URL.revokeObjectURL(
-            currentImageUrl,
-        );
+    if (currentImageUrl && imageUrlIsObjectUrl) {
+        URL.revokeObjectURL(currentImageUrl);
     }
 
     currentImageUrl = null;
@@ -467,47 +404,34 @@ const renderImage = (): void => {
      * Los bounds solamente indican
      * dónde debe aparecer el plano.
      */
-    const bounds =
-        getImageBounds();
+    const bounds = getImageBounds();
 
     if (!bounds) {
         return;
     }
 
-    const imageUrl =
-        resolveImageUrl(
-            props.mapImage,
-        );
+    const imageUrl = resolveImageUrl(props.mapImage);
 
-    currentImageUrl =
-        imageUrl;
+    currentImageUrl = imageUrl;
 
-    imageUrlIsObjectUrl =
-        typeof props.mapImage !==
-        'string';
+    imageUrlIsObjectUrl = typeof props.mapImage !== 'string';
 
-    imageOverlay =
-        L.imageOverlay(
-            imageUrl,
-            bounds,
-            {
-                opacity: 0.9,
+    imageOverlay = L.imageOverlay(imageUrl, bounds, {
+        opacity: 0.9,
 
-                /**
-                 * La imagen jamás captura
-                 * eventos del mouse.
-                 */
-                interactive: false,
+        /**
+         * La imagen jamás captura
+         * eventos del mouse.
+         */
+        interactive: false,
 
-                /**
-                 * Debajo del marker.
-                 */
-                pane: 'zooImagePane',
+        /**
+         * Debajo del marker.
+         */
+        pane: 'zooImagePane',
 
-                className:
-                    'map-marker-image-overlay',
-            },
-        ).addTo(map);
+        className: 'map-marker-image-overlay',
+    }).addTo(map);
 };
 
 /**
@@ -523,114 +447,80 @@ const clearMarker = (): void => {
     }
 };
 
-const createMarker = (
-    latitude: number,
-    longitude: number,
-): void => {
+const createMarker = (latitude: number, longitude: number): void => {
     if (!map) {
         return;
     }
 
     clearMarker();
 
-    marker =
-        L.marker(
-            [
-                latitude,
-                longitude,
-            ],
-            {
-                icon:
-                    createMarkerIcon(),
+    marker = L.marker([latitude, longitude], {
+        icon: createMarkerIcon(),
 
-                /**
-                 * Marker encima de todo.
-                 */
-                pane: 'zooMarkerPane',
+        /**
+         * Marker encima de todo.
+         */
+        pane: 'zooMarkerPane',
 
-                zIndexOffset: 10000,
+        zIndexOffset: 10000,
 
-                draggable:
-                    !props.readonly,
+        draggable: !props.readonly,
 
-                bubblingMouseEvents:
-                    false,
-            },
-        ).addTo(map);
+        bubblingMouseEvents: false,
+    }).addTo(map);
 
     /**
      * Al comenzar a arrastrar,
      * bloqueamos el movimiento del mapa.
      */
-    marker.on(
-        'dragstart',
-        () => {
-            if (!map) {
-                return;
-            }
+    marker.on('dragstart', () => {
+        if (!map) {
+            return;
+        }
 
-            map.dragging.disable();
-        },
-    );
+        map.dragging.disable();
+    });
 
     /**
      * Al terminar de arrastrar,
      * comprobamos la ZONA.
      */
-    marker.on(
-        'dragend',
-        () => {
-            if (!marker || !map) {
-                return;
-            }
+    marker.on('dragend', () => {
+        if (!marker || !map) {
+            return;
+        }
 
-            map.dragging.enable();
+        map.dragging.enable();
 
-            const position =
-                marker.getLatLng();
+        const position = marker.getLatLng();
 
+        /**
+         * Solamente validamos contra
+         * la geometría de la ZONA.
+         */
+        if (!isInsideZone(position.lat, position.lng)) {
             /**
-             * Solamente validamos contra
-             * la geometría de la ZONA.
+             * Si intentó salir de la zona,
+             * regresamos a la última posición
+             * válida.
              */
             if (
-                !isInsideZone(
-                    position.lat,
-                    position.lng,
-                )
+                props.latitude !== null &&
+                props.latitude !== undefined &&
+                props.longitude !== null &&
+                props.longitude !== undefined
             ) {
-                /**
-                 * Si intentó salir de la zona,
-                 * regresamos a la última posición
-                 * válida.
-                 */
-                if (
-                    props.latitude !==
-                        null &&
-                    props.latitude !==
-                        undefined &&
-                    props.longitude !==
-                        null &&
-                    props.longitude !==
-                        undefined
-                ) {
-                    marker.setLatLng([
-                        props.latitude,
-                        props.longitude,
-                    ]);
-                }
-
-                return;
+                marker.setLatLng([props.latitude, props.longitude]);
             }
 
-            /**
-             * Nueva posición válida.
-             */
-            updateCoordinates(
-                position,
-            );
-        },
-    );
+            return;
+        }
+
+        /**
+         * Nueva posición válida.
+         */
+        updateCoordinates(position);
+    });
 };
 
 /**
@@ -647,9 +537,7 @@ const updateMarkerIcon = (): void => {
         return;
     }
 
-    marker.setIcon(
-        createMarkerIcon(),
-    );
+    marker.setIcon(createMarkerIcon());
 };
 
 /**
@@ -680,24 +568,20 @@ const renderZone = (): void => {
      * Dibujar la geometría de la zona.
      */
     if (props.geometry) {
-        zoneLayer =
-            L.geoJSON(
-                props.geometry as GeoJSON.GeoJsonObject,
-                {
-                    pane: 'zooZonePane',
+        zoneLayer = L.geoJSON(props.geometry as GeoJSON.GeoJsonObject, {
+            pane: 'zooZonePane',
 
-                    /**
-                     * La geometría no captura clicks.
-                     */
-                    interactive: false,
+            /**
+             * La geometría no captura clicks.
+             */
+            interactive: false,
 
-                    style: {
-                        color: '#2563eb',
-                        weight: 3,
-                        fillOpacity: 0.08,
-                    },
-                },
-            ).addTo(map);
+            style: {
+                color: '#2563eb',
+                weight: 3,
+                fillOpacity: 0.08,
+            },
+        }).addTo(map);
     }
 
     /**
@@ -707,8 +591,7 @@ const renderZone = (): void => {
      */
     renderImage();
 
-    const zoneBounds =
-        zoneLayer?.getBounds();
+    const zoneBounds = zoneLayer?.getBounds();
 
     /**
      * IMPORTANTE:
@@ -716,46 +599,24 @@ const renderZone = (): void => {
      * Centramos el mapa en la ZONA,
      * no en la imagen.
      */
-    if (
-        zoneBounds &&
-        zoneBounds.isValid()
-    ) {
-        map.fitBounds(
-            zoneBounds,
-            {
-                padding: [
-                    30,
-                    30,
-                ],
-            },
-        );
+    if (zoneBounds && zoneBounds.isValid()) {
+        map.fitBounds(zoneBounds, {
+            padding: [30, 30],
+        });
     } else {
         /**
          * Si no hay zona pero sí imagen,
          * usamos la imagen solamente para
          * posicionar el mapa.
          */
-        const imageBounds =
-            getImageBounds();
+        const imageBounds = getImageBounds();
 
-        if (
-            imageBounds &&
-            imageBounds.isValid()
-        ) {
-            map.fitBounds(
-                imageBounds,
-                {
-                    padding: [
-                        30,
-                        30,
-                    ],
-                },
-            );
+        if (imageBounds && imageBounds.isValid()) {
+            map.fitBounds(imageBounds, {
+                padding: [30, 30],
+            });
         } else {
-            map.setView(
-                defaultCenter,
-                15,
-            );
+            map.setView(defaultCenter, 15);
         }
     }
 
@@ -763,29 +624,17 @@ const renderZone = (): void => {
      * Restaurar marker existente.
      */
     if (
-        props.latitude !==
-            null &&
-        props.latitude !==
-            undefined &&
-        props.longitude !==
-            null &&
-        props.longitude !==
-            undefined
+        props.latitude !== null &&
+        props.latitude !== undefined &&
+        props.longitude !== null &&
+        props.longitude !== undefined
     ) {
         /**
          * El marker existente solamente
          * debe estar dentro de la ZONA.
          */
-        if (
-            isInsideZone(
-                props.latitude,
-                props.longitude,
-            )
-        ) {
-            createMarker(
-                props.latitude,
-                props.longitude,
-            );
+        if (isInsideZone(props.latitude, props.longitude)) {
+            createMarker(props.latitude, props.longitude);
         }
     }
 };
@@ -796,18 +645,14 @@ const renderZone = (): void => {
  * --------------------------------------------------------------------------
  */
 
-const handleMapClick = (
-    event: L.LeafletMouseEvent,
-): void => {
+const handleMapClick = (event: L.LeafletMouseEvent): void => {
     if (props.readonly) {
         return;
     }
 
-    const latitude =
-        event.latlng.lat;
+    const latitude = event.latlng.lat;
 
-    const longitude =
-        event.latlng.lng;
+    const longitude = event.latlng.lng;
 
     /**
      * NO usamos mapImageBounds
@@ -815,29 +660,19 @@ const handleMapClick = (
      *
      * Solamente usamos geometry.
      */
-    if (
-        !isInsideZone(
-            latitude,
-            longitude,
-        )
-    ) {
+    if (!isInsideZone(latitude, longitude)) {
         return;
     }
 
     /**
      * Crear marker.
      */
-    createMarker(
-        latitude,
-        longitude,
-    );
+    createMarker(latitude, longitude);
 
     /**
      * Actualizar coordenadas del formulario.
      */
-    updateCoordinates(
-        event.latlng,
-    );
+    updateCoordinates(event.latlng);
 };
 
 /**
@@ -851,16 +686,9 @@ onMounted(() => {
         return;
     }
 
-    map =
-        L.map(
-            mapElement.value,
-            {
-                zoomControl: true,
-            },
-        ).setView(
-            defaultCenter,
-            15,
-        );
+    map = L.map(mapElement.value, {
+        zoomControl: true,
+    }).setView(defaultCenter, 15);
 
     /**
      * Crear panes antes de
@@ -871,13 +699,9 @@ onMounted(() => {
     /**
      * Mapa base.
      */
-    L.tileLayer(
-        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-            attribution:
-                '&copy; OpenStreetMap contributors',
-        },
-    ).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
 
     /**
      * Evento click.
@@ -886,10 +710,7 @@ onMounted(() => {
      * pointer-events: none, el click
      * llega directamente al mapa.
      */
-    map.on(
-        'click',
-        handleMapClick,
-    );
+    map.on('click', handleMapClick);
 
     /**
      * Dibujar zona, imagen y marker.
@@ -965,10 +786,7 @@ watch(
  */
 
 watch(
-    () => [
-        props.latitude,
-        props.longitude,
-    ],
+    () => [props.latitude, props.longitude],
     ([latitude, longitude]) => {
         if (!map) {
             return;
@@ -979,14 +797,10 @@ watch(
          * quitar marker.
          */
         if (
-            latitude ===
-                null ||
-            latitude ===
-                undefined ||
-            longitude ===
-                null ||
-            longitude ===
-                undefined
+            latitude === null ||
+            latitude === undefined ||
+            longitude === null ||
+            longitude === undefined
         ) {
             clearMarker();
 
@@ -997,25 +811,14 @@ watch(
          * Las coordenadas también deben
          * respetar la ZONA.
          */
-        if (
-            !isInsideZone(
-                latitude,
-                longitude,
-            )
-        ) {
+        if (!isInsideZone(latitude, longitude)) {
             return;
         }
 
         if (marker) {
-            marker.setLatLng([
-                latitude,
-                longitude,
-            ]);
+            marker.setLatLng([latitude, longitude]);
         } else {
-            createMarker(
-                latitude,
-                longitude,
-            );
+            createMarker(latitude, longitude);
         }
     },
 );
@@ -1109,8 +912,7 @@ onBeforeUnmount(() => {
 
     border: 3px solid white;
 
-    box-shadow:
-        0 2px 5px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
 
     overflow: hidden;
 

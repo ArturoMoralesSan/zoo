@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { Mail, LockKeyhole } from 'lucide-vue-next';
@@ -14,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 
-import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
@@ -51,19 +49,15 @@ defineProps<{
         class="flex flex-col gap-6"
     >
         <div class="grid gap-6">
-
             <!-- Correo electrónico -->
             <div class="grid gap-2">
-                <Label
-                    for="email"
-                    class="font-medium text-[#023f1d]"
-                >
+                <Label for="email" class="font-medium text-[#023f1d]">
                     Correo electrónico
                 </Label>
 
                 <div class="relative">
                     <Mail
-                        class="pointer-events-none absolute left-3.5 top-1/2 z-10 h-[18px] w-[18px] -translate-y-1/2 text-[#668b75]"
+                        class="pointer-events-none absolute top-1/2 left-3.5 z-10 h-[18px] w-[18px] -translate-y-1/2 text-[#668b75]"
                         :stroke-width="1.8"
                     />
 
@@ -86,10 +80,7 @@ defineProps<{
             <!-- Contraseña -->
             <div class="grid gap-2">
                 <div class="flex items-center justify-between gap-2">
-                    <Label
-                        for="password"
-                        class="font-medium text-[#023f1d]"
-                    >
+                    <Label for="password" class="font-medium text-[#023f1d]">
                         Contraseña
                     </Label>
 
@@ -105,7 +96,7 @@ defineProps<{
 
                 <div class="relative">
                     <LockKeyhole
-                        class="pointer-events-none absolute left-3.5 top-1/2 z-10 h-[18px] w-[18px] -translate-y-1/2 text-[#668b75]"
+                        class="pointer-events-none absolute top-1/2 left-3.5 z-10 h-[18px] w-[18px] -translate-y-1/2 text-[#668b75]"
                         :stroke-width="1.8"
                     />
 
@@ -154,19 +145,6 @@ defineProps<{
                     {{ processing ? 'Ingresando...' : 'Iniciar sesión' }}
                 </span>
             </Button>
-        </div>
-
-        <!-- Registro -->
-        <div class="text-center text-sm text-[#668071]">
-            ¿No tienes una cuenta?
-
-            <TextLink
-                :href="register()"
-                :tabindex="5"
-                class="font-semibold text-[#06733a] hover:text-[#055d30]"
-            >
-                Regístrate
-            </TextLink>
         </div>
     </Form>
 </template>

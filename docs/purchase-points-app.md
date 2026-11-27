@@ -13,6 +13,12 @@
 > (estilo, componentes, dónde van los hooks de datos, commits). Ahí manda ese archivo
 > sobre este.
 
+> **Pagos simulados (2026-11-27):** mientras no haya pasarela de pago, `POST /api/tickets/orders`
+> y `POST /api/donations` solo aprueban sin cobrar con `APP_PAYMENTS_SIMULATED` (por defecto,
+> solo en local). Si no, responden **503** con `{ success: false, message }`: la app debe
+> mostrar ese `message` y no ofrecer reintentar. Ambos tienen límite de 10 peticiones por
+> minuto (429), y una orden acepta hasta 10 tipos de boleto distintos.
+
 ## Qué hace el servidor
 
 Al **confirmarse el pago** de una compra de boletos o de una donación, el servidor le suma al

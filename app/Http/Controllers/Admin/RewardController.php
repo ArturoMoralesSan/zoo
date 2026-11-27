@@ -75,6 +75,14 @@ class RewardController extends Controller
                 'min:0',
             ],
 
+            // Canjes por usuario; vacío = sin límite.
+            'max_per_user' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:1000',
+            ],
+
             'image' => [
                 'nullable',
                 'string',
@@ -133,6 +141,14 @@ class RewardController extends Controller
                 'required',
                 'integer',
                 'min:0',
+            ],
+
+            // Canjes por usuario; vacío = sin límite.
+            'max_per_user' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:1000',
             ],
 
             'image' => [

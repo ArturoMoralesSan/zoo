@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\Event\StoreEventRequest;
 use App\Http\Requests\Admin\Event\UpdateEventRequest;
 use App\Models\Event;
 use App\Models\ZooZone;
+use App\Support\UploadExtension;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
@@ -295,8 +296,7 @@ class EventController extends Controller
             $destination
         );
 
-        $extension =
-            $file->getClientOriginalExtension();
+        $extension = UploadExtension::for($file, attribute: 'image');
 
         $filename =
             uniqid('', true).'.'.$extension;

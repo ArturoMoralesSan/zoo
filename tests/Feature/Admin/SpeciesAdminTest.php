@@ -145,6 +145,42 @@ class SpeciesAdminTest extends TestCase
             ->assertSessionHasErrors(['habitats.0', 'diet', 'conservation_status']);
     }
 
+    public function test_rejects_a_php_file_as_card_image_or_3d_model(): void
+    {
+        $php = UploadedFile::fake()->createWithContent('shell.php', '<?php echo "x";');
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'card_image' => $php,
+                'model_file' => $php,
+            ]))
+            ->assertSessionHasErrors(['card_image', 'model_file']);
+
+        $this->assertSame(0, Species::count());
+    }
+
+    public function test_card_image_is_saved_with_the_extension_of_its_content(): void
+    {
+        /*
+         * Una imagen real con nombre .html pasa la regla image, pero no se sirve como
+         * página. Archivo real: UploadedFile::fake() deduce el tipo por el nombre.
+         */
+        $path = $this->storagePath.'/avatar-upload';
+        File::ensureDirectoryExists($this->storagePath);
+        imagepng(imagecreatetruecolor(4, 4), $path);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'card_image' => new UploadedFile($path, 'avatar.html', null, null, true),
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $path = SpeciesImage::where('type', 'card')->value('path');
+
+        $this->assertNotNull($path);
+        $this->assertStringEndsWith('.png', $path);
+    }
+
     public function test_store_orders_new_gallery_images_and_keeps_alt_text(): void
     {
         $this->actingAs($this->admin())

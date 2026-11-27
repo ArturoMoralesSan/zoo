@@ -1,0 +1,9 @@
+# Archivos subidos por usuarios: nunca se ejecutan ni se sirven como página.
+# Respaldo por si una subida se guardara con una extensión peligrosa.
+<FilesMatch "(?i)\.(php\d?|phtml|phar|phps|html?|xhtml|shtml|htaccess)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>

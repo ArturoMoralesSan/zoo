@@ -86,9 +86,19 @@ class DonationController extends Controller
      * `data.points` con el mismo formato que al ganar un duelo. Bajo el mínimo, con la regla
      * desactivada o puesta en 0 por la temporada, la donación se registra igual con
      * `awarded: 0`. Después de mostrarlos, la app debe revalidar `GET /profile`.
+     *
+     * Mientras no haya pasarela de pago solo funciona con `APP_PAYMENTS_SIMULATED`; sin él
+     * responde 503.
      */
     public function store(Request $request, PaymentPoints $paymentPoints): JsonResponse
     {
+        if (! config('app.payments_simulated')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Las donaciones desde la app aún no están disponibles.',
+            ], 503);
+        }
+
         $validated = $request->validate([
             'amount' => [
                 'required',

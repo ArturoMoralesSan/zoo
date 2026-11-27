@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ZooZone\StoreZooZoneRequest;
 use App\Http\Requests\Admin\ZooZone\UpdateZooZoneRequest;
 use App\Models\ZooZone;
+use App\Support\UploadExtension;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -119,7 +120,7 @@ class ZooZoneController extends Controller
                 $filename =
                     uniqid().
                     '.'.
-                    $mapImage->getClientOriginalExtension();
+                    UploadExtension::for($mapImage, attribute: 'map_image');
 
                 $directory = storage_path(
                     'app/public/zones'
@@ -225,7 +226,7 @@ class ZooZoneController extends Controller
                 $filename =
                     uniqid().
                     '.'.
-                    $mapImage->getClientOriginalExtension();
+                    UploadExtension::for($mapImage, attribute: 'map_image');
 
                 /**
                  * Asegurar directorio.

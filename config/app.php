@@ -155,4 +155,21 @@ return [
 
     'zoodeck_location_tolerance_meters' => (int) env('APP_ZOODECK_LOCATION_TOLERANCE', 30),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Pagos simulados desde la app
+    |--------------------------------------------------------------------------
+    |
+    | Todavía no hay pasarela de pago: las compras de boletos y donaciones de
+    | la app se aprueban sin cobrar. Encendido regala puntos y boletos
+    | "pagados", así que fuera de local queda apagado y esos endpoints
+    | responden 503 hasta conectar la pasarela.
+    |
+    */
+
+    'payments_simulated' => (bool) env(
+        'APP_PAYMENTS_SIMULATED',
+        env('APP_ENV', 'production') === 'local'
+    ),
+
 ];

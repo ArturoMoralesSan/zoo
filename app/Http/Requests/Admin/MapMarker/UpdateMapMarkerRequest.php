@@ -51,16 +51,20 @@ class UpdateMapMarkerRequest extends FormRequest
                 'between:-180,180',
             ],
 
+            // Nombre de un archivo de storage/markers, nunca una URL: se inserta en
+            // el HTML del mapa público y una URL externa rastrearía a los visitantes.
             'icon' => [
                 'nullable',
                 'string',
                 'max:100',
+                'regex:/^[A-Za-z0-9][A-Za-z0-9_-]*\.(svg|png|webp)$/',
             ],
 
             'color' => [
                 'nullable',
                 'string',
                 'max:50',
+                'regex:/^#[0-9a-fA-F]{3,8}$/',
             ],
 
             'zone_id' => [
