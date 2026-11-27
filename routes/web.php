@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\RewardRedemptionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SpeciesCategoryController;
 use App\Http\Controllers\Admin\SpeciesController;
+use App\Http\Controllers\Admin\SpeciesCreditController;
 use App\Http\Controllers\Admin\SpeciesImageOptimizationController;
 use App\Http\Controllers\Admin\SpeciesTagController;
 use App\Http\Controllers\Admin\TicketOrderController;
@@ -201,6 +202,25 @@ Route::middleware(['auth', 'verified'])
             '/species/{species}/images/{image}',
             [SpeciesController::class, 'destroyImage']
         )->name('species.images.destroy');
+
+        /*
+         * Créditos de las imágenes de la especie (principal, miniatura y
+         * galería). scopeBindings: la imagen debe ser de la especie y el
+         * crédito, de la imagen.
+         */
+        Route::get('species/{species}/credits', [SpeciesCreditController::class, 'index'])
+            ->middleware('permission:species.view')
+            ->name('species.credits.index');
+
+        Route::prefix('species/{species}/images/{image}')
+            ->name('species.images.')
+            ->scopeBindings()
+            ->group(function () {
+                Route::resource('credits', SpeciesCreditController::class)
+                    ->except(['index', 'show'])
+                    ->middlewareFor(['create', 'store', 'edit', 'update'], 'permission:species.edit')
+                    ->middlewareFor('destroy', 'permission:species.delete');
+            });
 
         Route::resource('species-tags', SpeciesTagController::class)
             ->except(['show'])
@@ -461,7 +481,7 @@ Route::middleware(['auth', 'verified'])
 
         /*
         |--------------------------------------------------------------------------
-        | Créditos y licencias de los recursos de las tarjetas
+        | Créditos y licencias de las tarjetas y de las imágenes de especies
         |--------------------------------------------------------------------------
         */
 
@@ -473,7 +493,7 @@ Route::middleware(['auth', 'verified'])
          * Autocompletar desde Wikimedia Commons (no guarda nada).
          */
         Route::post('credits/commons-lookup', [CreditController::class, 'commonsLookup'])
-            ->middleware(['permission:cards.edit', 'throttle:20,1'])
+            ->middleware(['permission:cards.edit|species.edit', 'throttle:20,1'])
             ->name('credits.commons-lookup');
 
         /*

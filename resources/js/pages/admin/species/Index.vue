@@ -1,7 +1,8 @@
 
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
+    CircleAlert,
     FilterX,
     Leaf,
     Plus,
@@ -36,6 +37,8 @@ interface Species {
     conservation_status: string | null;
     is_active: boolean;
     category: Category;
+    // Imágenes sin crédito de origen.
+    images_missing_credits_count: number;
 }
 
 interface PaginationLink {
@@ -334,6 +337,17 @@ defineOptions({
                             <span class="h-1.5 w-1.5 rounded-full bg-red-500" />
                             Inactiva
                         </span>
+
+                        <Link
+                            v-if="item.images_missing_credits_count > 0"
+                            :href="admin.species.credits.index(item.id).url"
+                            class="mt-1.5 flex w-fit items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                        >
+                            <CircleAlert class="h-3.5 w-3.5" />
+                            {{ item.images_missing_credits_count }}
+                            {{ item.images_missing_credits_count === 1 ? 'imagen' : 'imágenes' }}
+                            sin licencia
+                        </Link>
                     </td>
 
                     <TableActions

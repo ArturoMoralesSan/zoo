@@ -5,12 +5,14 @@ namespace Tests\Feature\Admin;
 use App\Enums\ConservationStatus;
 use App\Enums\Diet;
 use App\Enums\Habitat;
+use App\Models\License;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
 use App\Models\SpeciesImage;
 use App\Models\User;
 use App\Services\ImageEncoding\NullWebpEncoder;
 use App\Services\ImageEncoding\WebpEncoder;
+use Database\Seeders\LicenseSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -217,6 +219,40 @@ class SpeciesAdminTest extends TestCase
             [$second->id, $first->id],
             $species->images()->where('type', 'gallery')->pluck('id')->all(),
         );
+    }
+
+    public function test_replacing_an_image_keeps_its_credits_and_asks_to_review_them(): void
+    {
+        $this->seed(LicenseSeeder::class);
+
+        $species = $this->species();
+        $main = SpeciesImage::create([
+            'species_id' => $species->id,
+            'type' => 'main',
+            'path' => "species/{$species->id}/main.jpg",
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        $gallery = $this->galleryImage($species, 0);
+
+        $credit = $main->credits()->create([
+            'asset' => 'image',
+            'role' => 'origin',
+            'source_name' => 'own',
+            'license_id' => License::where('slug', 'proprietary')->value('id'),
+        ]);
+
+        $response = $this->actingAs($this->admin())
+            ->put(route('admin.species.update', $species), $this->payload([
+                'main_image' => UploadedFile::fake()->image('nueva.png', 40, 40),
+                'gallery' => [['id' => $gallery->id, 'alt_text' => 'Galería']],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotSame("species/{$species->id}/main.jpg", $main->fresh()->path);
+        $this->assertNotNull($credit->fresh());
+        $response->assertInertiaFlash('toast.type', 'warning');
+        $response->assertInertiaFlash('toast.message', 'Especie actualizada. La imagen principal cambió: revisa sus créditos.');
     }
 
     public function test_update_cannot_touch_another_species_gallery(): void

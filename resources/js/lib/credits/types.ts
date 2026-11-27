@@ -1,8 +1,9 @@
 /*
- * Créditos de los recursos de las tarjetas (ver app/Models/Credit.php).
+ * Créditos de los recursos de las tarjetas y de las imágenes de las especies
+ * (ver app/Models/Credit.php). "image" es una imagen de especie.
  */
 
-export type CreditAsset = 'artwork' | 'thumbnail' | 'model';
+export type CreditAsset = 'artwork' | 'thumbnail' | 'model' | 'image';
 
 /*
  * Papel del crédito: de dónde salió el recurso, obra en que se basa o
@@ -153,13 +154,14 @@ export const creditRole = (role: CreditRole) =>
     CREDIT_ROLES.find((item) => item.value === role)!;
 
 /*
- * Valores por defecto: las imágenes se recortan para la tarjeta y el modelo
- * se escala para la realidad aumentada.
+ * Valores por defecto: las imágenes se recortan para la tarjeta o la app y el
+ * modelo se escala para la realidad aumentada.
  */
 export const DEFAULT_MODIFICATION_NOTES: Record<CreditAsset, string> = {
     artwork: 'Recortada/adaptada para la tarjeta',
     thumbnail: 'Recortada/adaptada para la tarjeta',
     model: 'Escalado para RA',
+    image: 'Recortada/redimensionada para la app',
 };
 
 export function emptyCredit(

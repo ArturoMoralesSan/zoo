@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 
 import {
     ArrowLeft,
+    Copyright,
     Edit,
     ExternalLink,
     Image,
@@ -213,6 +214,15 @@ const thumbnailMarkerUrl = thumbnailImage
                         <ArrowLeft class="h-4 w-4" />
 
                         Volver
+                    </Link>
+
+                    <Link
+                        :href="admin.species.credits.index(species.id).url"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                    >
+                        <Copyright class="h-4 w-4" />
+
+                        Créditos
                     </Link>
 
                     <Link

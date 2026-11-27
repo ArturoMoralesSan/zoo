@@ -77,12 +77,19 @@ const props = defineProps<{
     appPreview: AppPreviewRow[];
 }>();
 
-const ASSET_ICONS = { artwork: FileImage, thumbnail: Image, model: Box };
+const ASSET_ICONS = {
+    artwork: FileImage,
+    thumbnail: Image,
+    model: Box,
+    image: Image,
+};
 
 const ASSET_DESCRIPTIONS: Record<CreditAsset, string> = {
     artwork: 'Fondo de la plantilla de la tarjeta.',
     thumbnail: 'Imagen de los listados de la colección.',
     model: 'Modelo 3D que se muestra en realidad aumentada.',
+    // Solo especies; la tarjeta no tiene este recurso.
+    image: 'Imagen de una especie.',
 };
 
 const EXTRA_ROLES = CREDIT_ROLES.filter((item) => item.value !== 'origin');
