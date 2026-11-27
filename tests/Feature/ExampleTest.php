@@ -2,17 +2,26 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\User;
+use Spatie\Permission\Models\Permission;
+use Tests\Concerns\RefreshesInMemoryDatabase;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshesInMemoryDatabase;
 
-    public function test_returns_a_successful_response()
+    public function test_home_sends_guests_to_the_login(): void
     {
-        $response = $this->get(route('home'));
+        $this->get(route('home'))->assertRedirect(route('login'));
+    }
 
-        $response->assertOk();
+    public function test_home_sends_users_to_the_panel(): void
+    {
+        Permission::findOrCreate('dashboard.view');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('home'))
+            ->assertRedirect(route('admin.dashboard'));
     }
 }

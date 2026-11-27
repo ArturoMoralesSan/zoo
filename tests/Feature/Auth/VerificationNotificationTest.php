@@ -4,14 +4,14 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
+use Tests\Concerns\RefreshesInMemoryDatabase;
 use Tests\TestCase;
 
 class VerificationNotificationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshesInMemoryDatabase;
 
     protected function setUp(): void
     {
@@ -41,7 +41,7 @@ class VerificationNotificationTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('verification.send'))
-            ->assertRedirect(route('dashboard', absolute: false));
+            ->assertRedirect(route('admin.dashboard', absolute: false));
 
         Notification::assertNothingSent();
     }
