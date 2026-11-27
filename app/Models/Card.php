@@ -2,23 +2,23 @@
 
 namespace App\Models;
 
+use App\Contracts\Creditable;
 use App\Enums\CreditAsset;
-use App\Enums\CreditRole;
+use App\Models\Concerns\HasCredits;
 use App\Observers\CardPackObserver;
 use App\Observers\CreditsCacheObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 
 #[ObservedBy([CreditsCacheObserver::class, CardPackObserver::class])]
-class Card extends Model
+class Card extends Model implements Creditable
 {
+    use HasCredits;
     use HasFactory;
 
     protected $fillable = [
@@ -194,63 +194,9 @@ class Card extends Model
         return $this->hasMany(QuizQuestion::class)->orderBy('id');
     }
 
-    /**
-     * Créditos de los recursos de la tarjeta (ilustración, miniatura, modelo).
-     */
-    public function credits(): MorphMany
-    {
-        return $this->morphMany(Credit::class, 'creditable');
-    }
-
-    /**
-     * Crédito de origen de un recurso, si lo tiene.
-     */
-    public function credit(CreditAsset|string $asset): ?Credit
-    {
-        return $this->creditsFor($asset)->first(
-            fn (Credit $credit) => $credit->role === CreditRole::Origin
-        );
-    }
-
-    /**
-     * Todos los créditos de un recurso, en orden.
-     *
-     * @return Collection<int, Credit>
-     */
-    public function creditsFor(CreditAsset|string $asset): Collection
-    {
-        $asset = CreditAsset::from($asset instanceof CreditAsset ? $asset->value : $asset);
-
-        return $this->credits
-            ->filter(fn (Credit $credit) => $credit->asset === $asset)
-            ->sortBy(fn (Credit $credit) => $credit->sortKey())
-            ->values();
-    }
-
     public function hasAsset(CreditAsset $asset): bool
     {
-        return filled($this->{$asset->column()});
-    }
-
-    /**
-     * El recurso tiene su crédito de origen y, si se hizo a partir de otro
-     * recurso de la tarjeta (render del modelo…), ese también lo tiene.
-     */
-    public function hasCompleteCredits(CreditAsset $asset, array $visited = []): bool
-    {
-        $origin = $this->credit($asset);
-
-        if (! $origin) {
-            return false;
-        }
-
-        $basis = $origin->based_on_asset;
-
-        if (! $basis || in_array($basis, $visited, true) || $basis === $asset) {
-            return true;
-        }
-
-        return $this->hasAsset($basis) && $this->hasCompleteCredits($basis, [...$visited, $asset]);
+        return $asset->isCardAsset() && filled($this->{$asset->column()});
     }
 
     /**
@@ -261,7 +207,7 @@ class Card extends Model
     public function missingCredits(): array
     {
         return array_values(array_filter(
-            CreditAsset::cases(),
+            CreditAsset::forCards(),
             fn (CreditAsset $asset) => $this->hasAsset($asset) && ! $this->hasCompleteCredits($asset)
         ));
     }

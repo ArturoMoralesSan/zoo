@@ -45,7 +45,7 @@ class CardCreditController extends Controller
 
                 'assets' => array_map(
                     fn (CreditAsset $asset) => $this->assetSummary($card, $asset),
-                    CreditAsset::cases()
+                    CreditAsset::forCards()
                 ),
 
                 /*
@@ -217,7 +217,7 @@ class CardCreditController extends Controller
                     'license_short_name' => $credit->license->short_name,
                     'attribution' => $credit->attribution,
                 ]),
-            ], CreditAsset::cases()),
+            ], CreditAsset::forCards()),
         ];
     }
 

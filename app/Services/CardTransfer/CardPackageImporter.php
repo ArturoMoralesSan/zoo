@@ -2,6 +2,7 @@
 
 namespace App\Services\CardTransfer;
 
+use App\Contracts\Creditable;
 use App\Models\Card;
 use App\Models\CardQrCode;
 use App\Models\CardRaritySetting;
@@ -14,6 +15,7 @@ use App\Models\SpeciesCategory;
 use App\Models\SpeciesImage;
 use App\Models\SpeciesTag;
 use App\Models\ZooZone;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -104,7 +106,7 @@ class CardPackageImporter
         foreach ($species as $slug => $item) {
             $progress && $progress(++$done, $total);
 
-            $this->importOneSpecies($reader, $slug, $item, $mode, $references, $result);
+            $this->importOneSpecies($reader, $slug, $item, $mode, $references, $result, $packageLicenses);
         }
 
         // Después de las especies, para que las tarjetas encuentren las nuevas.
@@ -166,6 +168,7 @@ class CardPackageImporter
      * @param  array{data: array<string, mixed>, errors: list<string>}  $item
      * @param  array<string, mixed>  $references
      * @param  array<string, mixed>  $result
+     * @param  array<string, array<string, mixed>>  $packageLicenses
      */
     private function importOneSpecies(
         CardPackageReader $reader,
@@ -173,7 +176,8 @@ class CardPackageImporter
         array $item,
         string $mode,
         array $references,
-        array &$result
+        array &$result,
+        array $packageLicenses
     ): void {
         $data = $item['data'];
         $name = (string) ($data['common_name'] ?? $slug);
@@ -194,7 +198,7 @@ class CardPackageImporter
         }
 
         try {
-            $result['locations_skipped'] += $this->importSpecies($reader, $slug, $data, $existing, $references);
+            $result['locations_skipped'] += $this->importSpecies($reader, $slug, $data, $existing, $references, $packageLicenses);
             $result['species'][$existing ? 'updated' : 'created']++;
         } catch (Throwable $exception) {
             report($exception);
@@ -215,6 +219,7 @@ class CardPackageImporter
      *
      * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $references
+     * @param  array<string, array<string, mixed>>  $packageLicenses
      * @return int Ubicaciones omitidas por estar en una zona que no existe aquí.
      */
     private function importSpecies(
@@ -222,7 +227,8 @@ class CardPackageImporter
         string $slug,
         array $data,
         ?Species $existing,
-        array $references
+        array $references,
+        array $packageLicenses
     ): int {
         // Fuera de la transacción: si esta especie falla, la categoría o
         // etiqueta creada sigue sirviendo a las demás.
@@ -235,7 +241,7 @@ class CardPackageImporter
 
         try {
             DB::transaction(function () use (
-                $reader, $slug, $data, $existing, $references, $categoryId, $tagIds,
+                $reader, $slug, $data, $existing, $references, $categoryId, $tagIds, $packageLicenses,
                 &$written, &$obsolete, &$skippedLocations
             ) {
                 // Al sobrescribir se conserva el slug local (lo usan enlaces y la app).
@@ -294,7 +300,7 @@ class CardPackageImporter
 
                     $written[] = ['public', $path];
 
-                    $species->images()->create([
+                    $created = $species->images()->create([
                         'type' => $type,
                         'path' => $path,
                         'original_bytes' => $image['original_bytes'] ?? null,
@@ -302,6 +308,9 @@ class CardPackageImporter
                         'is_active' => (bool) ($image['is_active'] ?? true),
                         'sort_order' => $sortOrder,
                     ]);
+
+                    // Formato 3. Los créditos anteriores se borraron con su imagen.
+                    $this->createCredits($created, (array) ($image['credits'] ?? []), $packageLicenses);
                 }
 
                 if ($reader->includesLocations()) {
@@ -690,14 +699,25 @@ class CardPackageImporter
     {
         $card->credits()->get()->each->delete();
 
+        $this->createCredits($card, $credits, $packageLicenses);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $credits
+     * @param  array<string, array<string, mixed>>  $packageLicenses
+     */
+    private function createCredits(Creditable $owner, array $credits, array $packageLicenses): void
+    {
         foreach ($credits as $item) {
-            $values = array_intersect_key($item, array_flip(CardPackage::CREDIT_FIELDS));
+            $values = array_intersect_key((array) $item, array_flip(CardPackage::CREDIT_FIELDS));
             $values['license_id'] = $this->licenseId($item['license_slug'] ?? null, $packageLicenses);
 
-            $card->credits()->create($values);
+            $owner->credits()->create($values);
         }
 
-        $card->unsetRelation('credits');
+        if ($owner instanceof Model) {
+            $owner->unsetRelation('credits');
+        }
     }
 
     /**

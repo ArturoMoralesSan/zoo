@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import {
+    Copyright,
     FilterX,
     Leaf,
     Plus,
@@ -36,6 +37,8 @@ interface Species {
     conservation_status: string | null;
     is_active: boolean;
     category: Category;
+    // Imágenes sin crédito de origen.
+    images_missing_credits_count: number;
 }
 
 interface PaginationLink {
@@ -266,6 +269,15 @@ defineOptions({
                                 <p class="mt-0.5 text-xs text-[#718477]">
                                     ID: {{ item.id }}
                                 </p>
+
+                                <span
+                                    v-if="item.images_missing_credits_count > 0"
+                                    class="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                                    title="Hay imágenes sin licencia"
+                                >
+                                    <Copyright :size="12" />
+                                    Falta licencia
+                                </span>
                             </div>
                         </div>
                     </td>
@@ -337,9 +349,12 @@ defineOptions({
                     </td>
 
                     <TableActions
+                        :credits-url="admin.species.credits.index(item.id).url"
+                        :credits-warning="item.images_missing_credits_count > 0"
                         :view-url="admin.species.show(item.id).url"
                         :edit-url="admin.species.edit(item.id).url"
                         item-name="especie"
+                        show-credits
                         @delete="deleteSpecies(item)"
                     />
                 </tr>

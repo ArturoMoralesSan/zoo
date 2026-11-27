@@ -384,7 +384,7 @@ class CardController extends Controller
          * conservan, pero hay que revisarlos.
          */
         $replaced = array_filter(
-            CreditAsset::cases(),
+            CreditAsset::forCards(),
             fn (CreditAsset $asset) => $card->credits()->where('asset', $asset->value)->exists()
                 && $request->hasFile($asset === CreditAsset::Model ? 'model_original_file' : $asset->column())
         );
@@ -757,7 +757,7 @@ class CardController extends Controller
     {
         $card->load('credits.license');
 
-        $summary = collect(CreditAsset::cases())
+        $summary = collect(CreditAsset::forCards())
             ->filter(fn (CreditAsset $asset) => $card->hasAsset($asset))
             ->map(fn (CreditAsset $asset) => [
                 'asset' => $asset->value,

@@ -20,7 +20,14 @@ import admin from '@/routes/admin';
 
 interface CreditRow {
     key: string;
-    card: { id: number; name: string; is_active: boolean };
+    // Tarjeta o especie a la que pertenece el recurso.
+    owner: {
+        type: 'card' | 'species';
+        id: number;
+        name: string;
+        is_active: boolean;
+        url: string;
+    };
     asset: CreditAsset;
     asset_label: string;
     preview_url: string | null;
@@ -62,6 +69,7 @@ const props = defineProps<{
         license?: string | null;
         asset?: string | null;
         role?: string | null;
+        owner?: 'card' | 'species' | null;
         missing?: string | null;
     };
     licenses: { id: number; slug: string; short_name: string }[];
@@ -76,6 +84,7 @@ const source = ref(props.filters.source ?? '');
 const license = ref(props.filters.license ?? '');
 const asset = ref(props.filters.asset ?? '');
 const role = ref(props.filters.role ?? '');
+const owner = ref(props.filters.owner ?? '');
 const missing = ref(Boolean(props.filters.missing));
 
 const hasFilters = (): boolean =>
@@ -85,6 +94,7 @@ const hasFilters = (): boolean =>
         license.value ||
         asset.value ||
         role.value ||
+        owner.value ||
         missing.value,
     );
 
@@ -97,6 +107,7 @@ const applyFilters = (): void => {
             license: license.value || undefined,
             asset: asset.value || undefined,
             role: role.value || undefined,
+            owner: owner.value || undefined,
             missing: missing.value ? 1 : undefined,
         },
         {
@@ -113,6 +124,7 @@ const clearFilters = (): void => {
     license.value = '';
     asset.value = '';
     role.value = '';
+    owner.value = '';
     missing.value = false;
     applyFilters();
 };
@@ -141,8 +153,13 @@ const selectClass =
 const headClass =
     'border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-[#435d4c] sm:px-6';
 
+const OWNER_LABELS: Record<string, string> = {
+    card: 'Tarjetas',
+    species: 'Especies',
+};
+
 const columns = [
-    'Tarjeta',
+    'Tarjeta o especie',
     'Recurso',
     'Rol',
     'Origen',
@@ -173,7 +190,7 @@ defineOptions({
     <div class="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader
             title="Créditos y licencias"
-            description="Licencia y atribución de cada imagen y modelo 3D de las tarjetas. Los créditos de las tarjetas activas se publican en la pantalla de créditos de la app."
+            description="Licencia y atribución de cada imagen y modelo 3D de las tarjetas y de cada imagen de las especies. Los créditos de las tarjetas y especies activas se publican en la pantalla de créditos de la app."
             section="Colección"
             :icon="Copyright"
         >
@@ -203,13 +220,24 @@ defineOptions({
             :pagination="credits"
             :is-empty="credits.data.length === 0"
             :empty-colspan="columns.length"
-            search-placeholder="Buscar por tarjeta..."
+            search-placeholder="Buscar por tarjeta o especie..."
             :has-filters="hasFilters()"
             @search="applyFilters"
             @clear-filters="clearFilters"
         >
             <template #filters>
                 <div class="flex flex-wrap gap-3">
+                    <select
+                        v-model="owner"
+                        aria-label="Filtrar por tarjetas o especies"
+                        :class="selectClass"
+                        @change="applyFilters"
+                    >
+                        <option value="">Tarjetas y especies</option>
+                        <option value="card">Solo tarjetas</option>
+                        <option value="species">Solo especies</option>
+                    </select>
+
                     <select
                         v-model="source"
                         aria-label="Filtrar por origen"
@@ -296,6 +324,12 @@ defineOptions({
                     Búsqueda: "{{ search.trim() }}"
                 </span>
                 <span
+                    v-if="owner"
+                    class="rounded-full border border-[#dce7df] bg-[#f2f7f4] px-3 py-1.5 text-xs text-[#244334]"
+                >
+                    {{ OWNER_LABELS[owner] }}
+                </span>
+                <span
                     v-if="source"
                     class="rounded-full border border-[#dce7df] bg-[#f2f7f4] px-3 py-1.5 text-xs text-[#244334]"
                 >
@@ -345,19 +379,20 @@ defineOptions({
                     :key="row.key"
                     class="transition-colors hover:bg-[#f7faf8]"
                 >
-                    <!-- Tarjeta -->
+                    <!-- Tarjeta o especie -->
                     <td class="px-5 py-4 sm:px-6">
                         <div class="flex min-w-48 items-center gap-3">
                             <div
                                 class="h-12 w-12 shrink-0 overflow-hidden rounded-md border border-[#e1e9e3] bg-[#f2f7f4]"
                                 :class="{
-                                    'opacity-50 grayscale': !row.card.is_active,
+                                    'opacity-50 grayscale':
+                                        !row.owner.is_active,
                                 }"
                             >
                                 <img
                                     v-if="row.preview_url"
                                     :src="row.preview_url"
-                                    :alt="row.card.name"
+                                    :alt="row.owner.name"
                                     loading="lazy"
                                     class="h-full w-full object-cover"
                                 />
@@ -371,16 +406,19 @@ defineOptions({
 
                             <div class="min-w-0">
                                 <Link
-                                    :href="admin.cards.show(row.card.id).url"
+                                    :href="row.owner.url"
                                     class="text-sm font-semibold text-[#244334] hover:text-[#187744]"
                                 >
-                                    {{ row.card.name }}
+                                    {{ row.owner.name }}
                                 </Link>
-                                <p
-                                    v-if="!row.card.is_active"
-                                    class="text-xs text-[#84958a]"
-                                >
-                                    Inactiva
+                                <p class="text-xs text-[#84958a]">
+                                    {{
+                                        row.owner.type === 'card'
+                                            ? 'Tarjeta'
+                                            : 'Especie'
+                                    }}<template v-if="!row.owner.is_active">
+                                        · Inactiva</template
+                                    >
                                 </p>
                             </div>
                         </div>

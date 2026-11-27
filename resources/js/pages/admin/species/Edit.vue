@@ -3,6 +3,7 @@ import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     ArrowRight,
+    Copyright,
     Image as ImageIcon,
     Info,
     Leaf,
@@ -19,6 +20,7 @@ import CancelButton from '@/components/admin/CancelButton.vue';
 import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
+import PageHeaderLink from '@/components/admin/PageHeaderLink.vue';
 import SpeciesClassificationFields from '@/components/admin/species/SpeciesClassificationFields.vue';
 import SpeciesGalleryField from '@/components/admin/species/SpeciesGalleryField.vue';
 import type { GalleryLayoutItem } from '@/components/admin/species/SpeciesGalleryField.vue';
@@ -360,7 +362,15 @@ onBeforeUnmount(() => {
             :action-icon="ArrowLeft"
             action-label="Volver a especies"
             :action-href="admin.species.index().url"
-        />
+        >
+            <template #actions>
+                <PageHeaderLink
+                    :href="admin.species.credits.index(species.id).url"
+                    label="Créditos de imágenes"
+                    :icon="Copyright"
+                />
+            </template>
+        </PageHeader>
 
         <div
             class="overflow-hidden rounded-2xl border border-[#DCE7DF] bg-white"

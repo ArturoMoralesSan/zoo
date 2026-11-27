@@ -32,6 +32,8 @@ class CreditSectionResource extends JsonResource
     public function toArray(?Request $request = null): array
     {
         return [
+            'type' => 'card',
+
             'card' => [
                 'id' => $this->id,
                 'name' => $this->name,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\CreditRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Species\StoreSpeciesRequest;
 use App\Http\Requests\Admin\Species\UpdateSpeciesRequest;
@@ -42,6 +43,11 @@ class SpeciesController extends Controller
                 'models',
                 'locations',
                 'tags',
+                // Imágenes con archivo y sin crédito de origen (sección Créditos).
+                'images as images_missing_credits_count' => fn ($query) => $query
+                    ->credited()
+                    ->where('path', '!=', '')
+                    ->whereDoesntHave('credits', fn ($query) => $query->where('role', CreditRole::Origin->value)),
             ])
             ->when(request('search'), function ($query, $search) {
                 $query->where(function ($query) use ($search) {
@@ -503,11 +509,15 @@ class SpeciesController extends Controller
 
         $deletedPaths = [];
 
+        // Imágenes reemplazadas que ya tenían créditos (se conservan, pero hay que revisarlos).
+        $replacedWithCredits = [];
+
         DB::transaction(function () use (
             $request,
             $species,
             $validated,
-            &$deletedPaths
+            &$deletedPaths,
+            &$replacedWithCredits
         ) {
             /*
             |--------------------------------------------------------------------------
@@ -563,6 +573,10 @@ class SpeciesController extends Controller
                     ->images()
                     ->where('type', 'main')
                     ->first();
+
+                if ($currentImage?->credits()->exists()) {
+                    $replacedWithCredits[] = mb_strtolower($currentImage->typeLabel());
+                }
 
                 [$path, $originalBytes] = $this->storeOptimizedImage(
                     $request,
@@ -625,6 +639,10 @@ class SpeciesController extends Controller
                     ->images()
                     ->where('type', 'thumbnail')
                     ->first();
+
+                if ($currentImage?->credits()->exists()) {
+                    $replacedWithCredits[] = mb_strtolower($currentImage->typeLabel());
+                }
 
                 [$path, $originalBytes] = $this->storeOptimizedImage(
                     $request,
@@ -882,12 +900,22 @@ class SpeciesController extends Controller
         // la transacción falla.
         Storage::disk('public')->delete($deletedPaths);
 
-        return redirect()
-            ->route('admin.species.index')
-            ->with(
-                'success',
-                'Especie actualizada correctamente.'
-            );
+        /*
+         * Como en la tarjeta, los créditos de una imagen reemplazada se
+         * conservan (suele ser la misma foto recortada), pero hay que revisarlos.
+         */
+        Inertia::flash('toast', $replacedWithCredits
+            ? [
+                'type' => 'warning',
+                'message' => 'Especie actualizada. La '.implode(' y la ', $replacedWithCredits)
+                    .(count($replacedWithCredits) > 1 ? ' cambiaron' : ' cambió').': revisa sus créditos.',
+            ]
+            : [
+                'type' => 'success',
+                'message' => 'Especie actualizada correctamente.',
+            ]);
+
+        return redirect()->route('admin.species.index');
     }
 
     /*

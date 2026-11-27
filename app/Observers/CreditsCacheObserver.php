@@ -5,12 +5,13 @@ namespace App\Observers;
 use App\Enums\CreditAsset;
 use App\Models\Card;
 use App\Models\Species;
+use App\Models\SpeciesImage;
 use App\Services\Licensing\CreditsCatalog;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * Invalida la respuesta en caché de GET /api/v1/credits cuando cambia algo
- * que aparece en ella (créditos, licencias, tarjetas y nombre de la especie).
+ * que aparece en ella (créditos, licencias, tarjetas, especies y sus imágenes).
  */
 class CreditsCacheObserver
 {
@@ -46,9 +47,10 @@ class CreditsCacheObserver
         return match (true) {
             $model instanceof Card => $model->wasChanged([
                 ...self::CARD_COLUMNS,
-                ...array_map(fn (CreditAsset $asset) => $asset->column(), CreditAsset::cases()),
+                ...array_map(fn (CreditAsset $asset) => $asset->column(), CreditAsset::forCards()),
             ]),
-            $model instanceof Species => $model->wasChanged('common_name'),
+            $model instanceof Species => $model->wasChanged(['common_name', 'scientific_name', 'slug', 'is_active']),
+            $model instanceof SpeciesImage => $model->wasChanged(['path', 'type', 'is_active', 'sort_order', 'alt_text']),
             default => true,
         };
     }

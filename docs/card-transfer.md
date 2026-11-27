@@ -21,15 +21,16 @@ cada rol y usuario que tenía el viejo.
 | Créditos y las licencias que usan | |
 | Configuración por rareza (regla de puntos por `type`) y mensajes de duelo | |
 | Imágenes, modelo 3D escalado y original | Modelos 3D de especies |
-| Especies: datos, catálogos, categoría, etiquetas e imágenes (principal, miniatura, galería) | |
+| Especies: datos, catálogos, categoría, etiquetas e imágenes (principal, miniatura, galería) con sus créditos | |
 
 **Ubicación:** casilla "Incluir la ubicación de las especies" (`include_locations`, apagada por
 omisión). El archivo dice dónde está exactamente cada animal: el panel lo advierte al marcarla.
 
-## Formato (versión 2)
+## Formato (versión 3)
 
-La versión 1 (solo tarjetas, sin `species/`) se sigue leyendo; sus tarjetas solo se asignan a
-especies que ya existen.
+La versión 3 agrega `credits` a cada imagen de especie. Las versiones 1 (solo tarjetas, sin
+`species/`; sus tarjetas solo se asignan a especies que ya existen) y 2 (especies sin créditos de
+imágenes) se siguen leyendo.
 
 ```
 manifest.json                format, version, exported_at, include_qr_tokens, counts, files{ruta: {sha256, bytes}}
@@ -38,7 +39,7 @@ settings/rarity.json
 settings/duel-messages.json
 cards/<uuid>/card.json       uuid, species{slug, scientific_name, common_name}, attributes, files, questions, qr_codes, credits
 species/<slug>/species.json  CardPackage::SPECIES_FIELDS, category{name, description}, tags[{name, slug}],
-                             images{main, thumbnail, gallery[]} ({file, alt_text, original_bytes, is_active}),
+                             images{main, thumbnail, gallery[]} ({file, alt_text, original_bytes, is_active, credits}),
                              locations[{name, latitude, longitude, description, is_active, zone}] (solo con include_locations)
 species/<slug>/main.<ext>, thumbnail.<ext>, gallery/NN.<ext>
 cards/<uuid>/<campo>.<ext>   thumbnail_image, artwork_image, generated_image (webp/png/jpg), model_file, model_original_file (glb)
@@ -78,7 +79,9 @@ php artisan cards:import ruta.zip [--overwrite] [--settings] [--dry-run]
   `slug`; si no, por nombre científico (sin distinguir mayúsculas ni espacios) solo si coincide
   exactamente una. Las que no existen se crean; las existentes se omiten o se sobrescriben con la
   misma opción que las tarjetas (al sobrescribir se conserva el slug local, se reemplazan datos,
-  etiquetas e imágenes, y la ubicación solo si el paquete la trae).
+  etiquetas e imágenes con sus créditos, y la ubicación solo si el paquete la trae). Los créditos
+  de imagen usan los mismos campos que los de tarjeta (`CardPackage::CREDIT_FIELDS` y
+  `license_slug`), siempre con `asset: "image"` y sin `based_on_asset`.
 - **Tarjetas:** van a la especie del paquete. Solo si no está en él (paquete versión 1) ni en este
   servidor, la persona elige una especie o las omite.
 - **Lo que falta en este servidor** (por nombre, sin distinguir mayúsculas), lo decide la persona

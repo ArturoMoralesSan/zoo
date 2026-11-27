@@ -9,6 +9,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Card;
 use App\Models\Credit;
 use App\Models\License;
+use App\Models\Species;
+use App\Models\SpeciesImage;
 use App\Services\Licensing\CommonsMetadataFetcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,6 +36,7 @@ class CreditController extends Controller
             'license' => $request->input('license'),
             'asset' => $request->input('asset'),
             'role' => $request->input('role'),
+            'owner' => in_array($request->input('owner'), ['card', 'species'], true) ? $request->input('owner') : null,
             'missing' => $request->boolean('missing') ? '1' : null,
         ];
 
@@ -103,12 +106,20 @@ class CreditController extends Controller
     }
 
     /**
-     * Créditos de los recursos con archivo de todas las tarjetas, y los
-     * recursos sin licencia completa.
+     * Créditos de los recursos con archivo de todas las tarjetas y de las
+     * imágenes de todas las especies, y los recursos sin licencia completa.
      *
      * @return Collection<int, array<string, mixed>>
      */
     private function rows(): Collection
+    {
+        return $this->cardRows()->concat($this->speciesRows());
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function cardRows(): Collection
     {
         return Card::query()
             ->select(['id', 'name', 'is_active', 'sort_order', 'thumbnail_image', 'artwork_image', 'model_file'])
@@ -116,12 +127,41 @@ class CreditController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
-            ->flatMap(fn (Card $card) => collect(CreditAsset::cases())
+            ->flatMap(fn (Card $card) => collect(CreditAsset::forCards())
                 ->filter(fn (CreditAsset $asset) => $card->hasAsset($asset))
                 ->flatMap(fn (CreditAsset $asset) => [
                     ...($card->hasCompleteCredits($asset) ? [] : [$this->row($card, $asset, null)]),
                     ...$card->creditsFor($asset)->map(fn (Credit $credit) => $this->row($card, $asset, $credit)),
                 ]));
+    }
+
+    /**
+     * Imágenes de las especies (principal, miniatura, galería).
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function speciesRows(): Collection
+    {
+        return Species::query()
+            ->select(['id', 'common_name', 'is_active'])
+            ->with(['images' => fn ($query) => $query->credited()->with('credits.license')])
+            ->orderBy('common_name')
+            ->get()
+            ->flatMap(function (Species $species) {
+                $gallery = 0;
+
+                return $species->images
+                    ->sortBy(fn (SpeciesImage $image) => $image->creditOrderKey())
+                    ->filter(fn (SpeciesImage $image) => $image->hasAsset(CreditAsset::Image))
+                    ->flatMap(function (SpeciesImage $image) use ($species, &$gallery) {
+                        $label = $image->type === 'gallery' ? 'Galería '.(++$gallery) : $image->typeLabel();
+
+                        return [
+                            ...($image->hasCompleteCredits(CreditAsset::Image) ? [] : [$this->speciesRow($species, $image, $label, null)]),
+                            ...$image->creditsFor(CreditAsset::Image)->map(fn (Credit $credit) => $this->speciesRow($species, $image, $label, $credit)),
+                        ];
+                    });
+            });
     }
 
     /**
@@ -136,15 +176,56 @@ class CreditController extends Controller
             : $card->{$asset->column()};
 
         return [
-            'key' => $card->id.'-'.$asset->value.'-'.($credit?->id ?? 'missing'),
-            'card' => [
+            'key' => 'card-'.$card->id.'-'.$asset->value.'-'.($credit?->id ?? 'missing'),
+            'owner' => [
+                'type' => 'card',
                 'id' => $card->id,
                 'name' => $card->name,
                 'is_active' => $card->is_active,
+                'url' => route('admin.cards.show', $card),
             ],
             'asset' => $asset->value,
             'asset_label' => $asset->label(),
             'preview_url' => $preview ? Storage::disk('public')->url($preview) : null,
+            ...$this->creditColumns($credit),
+            'edit_url' => $credit
+                ? route('admin.cards.credits.edit', [$card, $credit])
+                : route('admin.cards.credits.index', $card).'#credit-'.$asset->value,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function speciesRow(Species $species, SpeciesImage $image, string $label, ?Credit $credit): array
+    {
+        return [
+            'key' => 'species-image-'.$image->id.'-'.($credit?->id ?? 'missing'),
+            'owner' => [
+                'type' => 'species',
+                'id' => $species->id,
+                'name' => $species->common_name,
+                'is_active' => $species->is_active,
+                'url' => route('admin.species.show', $species),
+            ],
+            'asset' => CreditAsset::Image->value,
+            'asset_label' => $label,
+            'preview_url' => Storage::disk('public')->url($image->path),
+            ...$this->creditColumns($credit),
+            'edit_url' => $credit
+                ? route('admin.species.images.credits.edit', [$species, $image, $credit])
+                : route('admin.species.credits.index', $species).'#image-'.$image->id,
+        ];
+    }
+
+    /**
+     * Columnas del crédito (vacías si falta la licencia).
+     *
+     * @return array<string, mixed>
+     */
+    private function creditColumns(?Credit $credit): array
+    {
+        return [
             'missing' => $credit === null,
             'role' => $credit?->role->value,
             'role_label' => $credit?->role->label(),
@@ -156,9 +237,6 @@ class CreditController extends Controller
             'license_url' => $credit?->license?->url,
             'is_proprietary' => (bool) $credit?->license?->is_proprietary,
             'attribution' => $credit?->attribution,
-            'edit_url' => $credit
-                ? route('admin.cards.credits.edit', [$card, $credit])
-                : route('admin.cards.credits.index', $card).'#credit-'.$asset->value,
         ];
     }
 
@@ -170,7 +248,8 @@ class CreditController extends Controller
     {
         $search = mb_strtolower(trim((string) $filters['search']));
 
-        return ($search === '' || str_contains(mb_strtolower($row['card']['name']), $search))
+        return ($search === '' || str_contains(mb_strtolower($row['owner']['name']), $search))
+            && (! $filters['owner'] || $row['owner']['type'] === $filters['owner'])
             && (! $filters['source'] || $row['source'] === $filters['source'])
             && (! $filters['license'] || $row['license'] === $filters['license'])
             && (! $filters['asset'] || $row['asset'] === $filters['asset'])

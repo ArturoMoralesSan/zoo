@@ -14,6 +14,7 @@ use App\Models\Species;
 use App\Models\SpeciesImage;
 use App\Models\SpeciesLocation;
 use App\Models\SpeciesTag;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use ZipArchive;
@@ -96,9 +97,9 @@ class CardPackageExporter
                 });
 
             Species::query()
-                ->with(['category:id,name,description', 'tags:id,name,slug', 'images', 'locations.zone:id,name'])
+                ->with(['category:id,name,description', 'tags:id,name,slug', 'images.credits.license:id,slug', 'locations.zone:id,name'])
                 ->orderBy('id')
-                ->chunkById(50, function ($allSpecies) use ($zip, $includeLocations, $addString, &$files, &$counts, &$missing) {
+                ->chunkById(50, function ($allSpecies) use ($zip, $includeLocations, $addString, &$files, &$counts, &$missing, &$licenseIds) {
                     foreach ($allSpecies as $species) {
                         /** @var Species $species */
                         if (! preg_match(CardPackage::SPECIES_SLUG_PATTERN, $species->slug)) {
@@ -117,6 +118,17 @@ class CardPackageExporter
                         $counts['species_images'] += (int) ($images['main'] !== null)
                             + (int) ($images['thumbnail'] !== null)
                             + count($images['gallery']);
+
+                        // Créditos de las imágenes (formato 3): cuentan junto con los de las tarjetas.
+                        foreach ([$images['main'], $images['thumbnail'], ...$images['gallery']] as $image) {
+                            $counts['credits'] += count($image['credits'] ?? []);
+                        }
+
+                        foreach ($species->images as $image) {
+                            foreach ($image->credits as $credit) {
+                                $licenseIds[$credit->license_id] = true;
+                            }
+                        }
                     }
                 });
 
@@ -269,6 +281,7 @@ class CardPackageExporter
                 'alt_text' => $image->alt_text,
                 'original_bytes' => $image->original_bytes,
                 'is_active' => (bool) $image->is_active,
+                'credits' => $this->creditItems($image->credits),
             ];
 
             if ($image->type === 'gallery') {
@@ -421,17 +434,28 @@ class CardPackageExporter
                 ])
                 ->values()
                 ->all(),
-            'credits' => $card->credits
-                ->sortBy(fn (Credit $credit) => $credit->sortKey())
-                ->map(fn (Credit $credit) => [
-                    ...collect(CardPackage::CREDIT_FIELDS)
-                        ->mapWithKeys(fn (string $field) => [$field => $this->creditValue($credit, $field)])
-                        ->all(),
-                    'license_slug' => $credit->license?->slug,
-                ])
-                ->values()
-                ->all(),
+            'credits' => $this->creditItems($card->credits),
         ];
+    }
+
+    /**
+     * Créditos de una tarjeta o de una imagen de especie, en orden.
+     *
+     * @param  Collection<int, Credit>  $credits
+     * @return list<array<string, mixed>>
+     */
+    private function creditItems($credits): array
+    {
+        return $credits
+            ->sortBy(fn (Credit $credit) => $credit->sortKey())
+            ->map(fn (Credit $credit) => [
+                ...collect(CardPackage::CREDIT_FIELDS)
+                    ->mapWithKeys(fn (string $field) => [$field => $this->creditValue($credit, $field)])
+                    ->all(),
+                'license_slug' => $credit->license?->slug,
+            ])
+            ->values()
+            ->all();
     }
 
     private function creditValue(Credit $credit, string $field): mixed

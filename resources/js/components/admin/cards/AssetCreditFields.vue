@@ -502,10 +502,15 @@ watch(
                     <AlertTitle>Licencia CompartirIgual</AlertTitle>
                     <AlertDescription class="text-sky-800">
                         <p>
-                            El recurso de la tarjeta hecho con esta obra es una
-                            obra derivada: debe compartirse con la misma
-                            licencia ({{ license.short_name }}) y con
-                            atribución.
+                            {{
+                                asset === 'image'
+                                    ? 'La imagen de la especie hecha'
+                                    : 'El recurso de la tarjeta hecho'
+                            }}
+                            con esta obra es una obra derivada: debe
+                            compartirse con la misma licencia ({{
+                                license.short_name
+                            }}) y con atribución.
                         </p>
 
                         <label
@@ -517,8 +522,13 @@ watch(
                                 class="mt-0.5 accent-[#187744]"
                             />
                             <span class="font-medium">
-                                Entiendo que la tarjeta resultante debe
-                                compartirse con la misma licencia
+                                Entiendo que
+                                {{
+                                    asset === 'image'
+                                        ? 'la imagen resultante'
+                                        : 'la tarjeta resultante'
+                                }}
+                                debe compartirse con la misma licencia
                             </span>
                         </label>
 

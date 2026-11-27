@@ -68,7 +68,7 @@ php artisan cards:export | cards:import x.zip --dry-run   # card+species .zip pa
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 464 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-22) |
+| `php artisan test` | 489 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-26) |
 | `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
@@ -114,7 +114,7 @@ Page folders match the route resource, except `quizquestions`, `card-qr-codes` a
 - **Species:** `Species` → `SpeciesCategory`, `SpeciesImage`, `SpeciesModel`,
   `SpeciesLocation` (→ `ZooZone`), `SpeciesTag` (many-to-many).
 - **Cards:** `Card` → `Species`, `CardRaritySetting`, `QuizQuestion` → `QuizAnswer`,
-  `CardQrCode`, `QuizAttempt`, `Credit` (polymorphic, alias `card`). Per user:
+  `CardQrCode`, `QuizAttempt`, `Credit` (polymorphic, aliases `card` and `species_image`). Per user:
   `CardCapture` (owned), `CardQuizState` (retries and lockout).
   Singleton: `DuelMessageSetting::current()`. `Card.uuid` is the stable id across servers;
   `CardTransfer` tracks queued .zip exports/imports.
@@ -231,14 +231,15 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   See `docs/offline-packs-backend.md`.
 - **Card and species packages** (`CardTransfer/*`, Recursos → Descargas, routes
   `admin.assets.transfers.*`, permissions `assets.export`/`assets.import`): queued jobs build or
-  import a `.zip` (format v2, v1 still read) with every card, its questions, QRs, credits, global
+  import a `.zip` (format v3, v1/v2 still read) with every card, its questions, QRs, credits, global
   duel settings and files, plus every species with category, tags and images. Needs PHP `zip`;
   without it every action returns 503. Species are imported first (matched by slug, then a unique
   scientific name) and created if missing; the preview lets the admin create or map missing
   categories/tags and map or drop unknown zones. Species locations travel only if the exporter
   ticks the box. Import never deletes questions and copies files as-is. QR tokens travel only if
   the exporter ticks the box. Adding a card or species column means adding it to
-  `CardPackage::CARD_FIELDS`/`SPECIES_FIELDS` and the reader's rules. See `docs/card-transfer.md`.
+  `CardPackage::CARD_FIELDS`/`SPECIES_FIELDS` and the reader's rules. Since v3 each species image
+  carries its `credits`. See `docs/card-transfer.md`.
 - **Species catalogs:** `conservation_status` (IUCN code), `diet` and `habitats` (JSON, several)
   store enum codes, never free text. The API keeps the old Spanish strings in `habitat`, `diet`
   and `conservation_status` and adds `habitats`, `diet_code`, `conservation_status_code`. The
@@ -246,7 +247,13 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   deletes in one request); `SpeciesGalleryField.vue` builds that payload.
 - **Credits:** licences and attribution are legally relevant, and restricted licences
   are off by default. `CreditsCacheObserver` invalidates the public `/api/v1/credits`
-  cache. See `docs/api-credits.md`.
+  cache. Owners implement `Contracts/Creditable` through `Models/Concerns/HasCredits`: `Card`
+  (assets `CreditAsset::forCards()`) and each `SpeciesImage` of type main/thumbnail/gallery (asset
+  `image`, never `based_on_asset`; panel `admin/species/{species}/credits`). Never loop
+  `CreditAsset::cases()` for card code, since `image` has no card column. The API sends card
+  sections then species sections, told apart by `type`. Deleting a `SpeciesImage` deletes its
+  credits (model hook, so use Eloquent deletes); replacing a file keeps them with a review toast.
+  See `docs/api-credits.md`.
 - **Species images** (main, thumbnail, gallery) follow the same WebP flow with their own profiles
   (`resources/data/species-image-profiles.json`, `SpeciesImageOptimizer`, `species:images:*`).
   See the "Especies" section of `docs/image-optimization.md`.

@@ -1,9 +1,15 @@
 # API de créditos (`GET /api/v1/credits`)
 
 La pantalla de créditos de la app muestra quién creó cada imagen y modelo 3D
-de las tarjetas y con qué licencia. **Una sola llamada a este endpoint
-devuelve todos los créditos de todas las tarjetas activas**, listos para
-mostrar.
+de las tarjetas, y cada foto de las especies, y con qué licencia. **Una sola
+llamada a este endpoint devuelve todos los créditos de todas las tarjetas
+activas y de todas las especies activas**, listos para mostrar.
+
+> **Cambios (noviembre 2026).** Además de las tarjetas, la respuesta trae
+> secciones de especies (créditos de la imagen principal, la miniatura y la
+> galería). Cada sección tiene ahora `type` (`"card"` o `"species"`), y
+> `meta` tiene `species`. Las secciones de tarjeta no cambiaron, solo
+> ganaron `type`. Ver [Secciones de especies](#secciones-de-especies).
 
 ## En resumen
 
@@ -12,7 +18,7 @@ mostrar.
 | Método y URL | `GET /api/v1/credits` |
 | Autenticación | Ninguna (público). Funciona antes de iniciar sesión. |
 | Parámetros | Ninguno. No hay filtros ni paginación. |
-| Respuesta | Un JSON con **todos** los créditos de **todas** las tarjetas activas, agrupados por tarjeta. |
+| Respuesta | Un JSON con **todos** los créditos de **todas** las tarjetas activas y **todas** las especies activas, en secciones: primero una por tarjeta, después una por especie. |
 | Igual para todos | Sí. No depende del usuario ni de las tarjetas que haya capturado. |
 | Límite | 60 peticiones por minuto por IP (`config/licensing.php` → `api.rate_limit`). |
 | Caché | `ETag` / `Last-Modified`, responde `304` si nada cambió (ver [Caché](#caché)). |
@@ -21,19 +27,28 @@ mostrar.
 curl https://zoo.example.com/api/v1/credits -H 'Accept: application/json'
 ```
 
-No hay un endpoint por tarjeta: la app hace **una** llamada y recibe todo.
+No hay un endpoint por tarjeta ni por especie: la app hace **una** llamada y
+recibe todo.
 
 ## Estructura de la respuesta
 
-`data` es un **array con una entrada por tarjeta activa** que tenga al menos
-un crédito. Cada entrada trae la tarjeta (`card`) y **todos** sus créditos
-(`credits`).
+`data` es un **array de secciones**. Hay dos tipos, que se distinguen por
+`type`:
+
+- `"card"`: una por **tarjeta activa** con al menos un crédito. Trae la
+  tarjeta (`card`) y **todos** sus créditos (`credits`).
+- `"species"`: una por **especie activa** con al menos una imagen con
+  créditos. Trae la especie (`species`) y **todos** los créditos de sus
+  imágenes (`credits`); cada crédito dice de qué imagen es (`image`).
+
+Primero van todas las tarjetas y después todas las especies.
 
 ```
 {
   "success": true,
-  "data": [                          ← todas las tarjetas activas con créditos
-    {
+  "data": [
+    {                                ← tarjetas activas con créditos
+      "type":    "card",
       "card":    { id, name, species_name },
       "credits": [                   ← todos los créditos de esa tarjeta
         { "asset": "artwork",   "role": "origin",    … },
@@ -43,14 +58,43 @@ un crédito. Cada entrada trae la tarjeta (`card`) y **todos** sus créditos
         { "asset": "model",     "role": "based_on",  … }
       ]
     },
-    { "card": { … }, "credits": [ … ] },   ← siguiente tarjeta
+    { "type": "card", "card": { … }, "credits": [ … ] },   ← siguiente tarjeta
+    {                                ← después, especies activas con créditos
+      "type":    "species",
+      "species": { id, slug, common_name, scientific_name },
+      "credits": [                   ← créditos de todas sus imágenes
+        { "asset": "image", "role": "origin", "image": { "type": "main", … }, … },
+        { "asset": "image", "role": "origin", "image": { "type": "gallery", … }, … }
+      ]
+    },
     …
   ],
   "meta": {
     "generated_at": "…",
-    "cards":   2,                    ← = data.length
-    "credits": 7                     ← total de créditos de todas las tarjetas
+    "cards":   2,                    ← secciones "card"
+    "species": 1,                    ← secciones "species"
+    "credits": 9                     ← total de créditos de todas las secciones
   }
+}
+```
+
+En TypeScript:
+
+```ts
+type CreditSection =
+  | { type: 'card'; card: { id: number; name: string; species_name: string | null }; credits: Credit[] }
+  | {
+      type: 'species';
+      species: { id: number; slug: string; common_name: string; scientific_name: string | null };
+      credits: (Credit & { image: SpeciesCreditImage })[];
+    };
+
+interface SpeciesCreditImage {
+  id: number;
+  type: 'main' | 'thumbnail' | 'gallery';
+  type_label: string;        // "Imagen principal", "Miniatura" o "Galería"
+  url: string;               // URL pública de la foto
+  alt_text: string | null;
 }
 ```
 
@@ -58,15 +102,102 @@ un crédito. Cada entrada trae la tarjeta (`card`) y **todos** sus créditos
 - **Orden dentro de cada tarjeta:** por recurso (ilustración → miniatura →
   modelo 3D) y, dentro de cada recurso, por papel (origen → basado en →
   incluye).
-- **Agrupado por tarjeta** porque la pantalla de créditos es un `SectionList`
-  (una sección por tarjeta). Si necesitas una lista plana con todos los
-  créditos:
+- **Orden de las especies:** por nombre común (`common_name`), luego `id`.
+- **Orden dentro de cada especie:** por imagen (principal → miniatura →
+  galería en su orden) y, dentro de cada imagen, por papel.
+- **Agrupado por tarjeta y por especie** porque la pantalla de créditos es un
+  `SectionList` (una sección por tarjeta o especie). Si necesitas una lista
+  plana con todos los créditos:
 
 ```ts
 const all = data.flatMap((section) =>
-  section.credits.map((credit) => ({ ...credit, card: section.card })),
+  section.credits.map((credit) => ({
+    ...credit,
+    owner: section.type === 'card' ? section.card.name : section.species.common_name,
+  })),
 );
 // all.length === meta.credits
+```
+
+## Secciones de especies
+
+Cada imagen de la especie que la app muestra (la **principal**, la
+**miniatura** y cada foto de la **galería**) tiene sus propios créditos, con
+las mismas reglas que un recurso de tarjeta: exactamente un crédito de
+**origen** y, si hace falta, créditos "Basado en" e "Incluye".
+
+- `asset` siempre es `"image"` (`asset_label`: `"Imagen"`).
+- `image` dice de qué foto es el crédito. Usa `image.url` para mostrar una
+  miniatura junto al crédito, o `image.type_label` como subtítulo.
+- `based_on_asset` siempre es `null`: una foto de especie no se hace a partir
+  de otra.
+- Solo aparecen imágenes **activas** de especies **activas**. Una imagen sin
+  crédito de origen no aparece (aún no tiene licencia registrada).
+
+```json
+{
+  "type": "species",
+  "species": {
+    "id": 4,
+    "slug": "jaguar",
+    "common_name": "Jaguar",
+    "scientific_name": "Panthera onca"
+  },
+  "credits": [
+    {
+      "id": 31,
+      "asset": "image",
+      "asset_label": "Imagen",
+      "role": "origin",
+      "role_label": "Origen",
+      "title": "Jaguar en el agua",
+      "author": { "name": "Jane Doe", "url": null },
+      "source": {
+        "name": "wikimedia_commons",
+        "label": "Wikimedia Commons",
+        "url": "https://commons.wikimedia.org/wiki/File:Jaguar.jpg"
+      },
+      "license": {
+        "short_name": "CC BY 4.0",
+        "name": "Creative Commons Atribución 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "modified": true,
+      "modification_note": "Recortada/redimensionada para la app",
+      "attribution": "“Jaguar en el agua” de Jane Doe, vía Wikimedia Commons, CC BY 4.0, con cambios: Recortada/redimensionada para la app",
+      "based_on_asset": null,
+      "image": {
+        "id": 12,
+        "type": "main",
+        "type_label": "Imagen principal",
+        "url": "https://zoo.example.com/storage/species/4/main.webp",
+        "alt_text": "Jaguar"
+      }
+    },
+    {
+      "id": 32,
+      "asset": "image",
+      "asset_label": "Imagen",
+      "role": "origin",
+      "role_label": "Origen",
+      "title": null,
+      "author": null,
+      "source": { "name": "own", "label": "Propio", "url": null },
+      "license": { "short_name": "Propia", "name": "Obra propia", "url": null },
+      "modified": false,
+      "modification_note": null,
+      "attribution": "Obra propia",
+      "based_on_asset": null,
+      "image": {
+        "id": 15,
+        "type": "gallery",
+        "type_label": "Galería",
+        "url": "https://zoo.example.com/storage/species/4/foto-1.webp",
+        "alt_text": "Jaguar descansando"
+      }
+    }
+  ]
+}
 ```
 
 ## Varios créditos por recurso
@@ -112,13 +243,19 @@ probablemente no tiene derechos de autor, por eso no se atribuye a un autor.
 | Tarjeta **inactiva** | **No**: su nombre puede no ser público todavía |
 | Recurso eliminado de la tarjeta (sin archivo) | No |
 | Tarjeta activa sin ningún crédito | No (no tiene sección) |
+| Imagen principal, miniatura o foto de galería **activa** de una especie **activa**, con créditos | Sí, en la sección de la especie |
+| Imagen de especie inactiva, o especie inactiva | **No** |
+| Especie activa sin ninguna imagen con créditos | No (no tiene sección) |
+| Modelos 3D de la especie e imagen "card" de la especie | No (la app no los muestra; el modelo de la tarjeta sí tiene créditos) |
 
 La app no tiene que filtrar nada: todo lo que llega se muestra.
 
 ## Ejemplo completo
 
 Respuesta real del endpoint con dos tarjetas activas y una inactiva
-("Tarjeta secreta", que no aparece). En total: 2 tarjetas, 7 créditos.
+("Tarjeta secreta", que no aparece), sin especies con créditos. En total: 2
+tarjetas, 7 créditos. Una sección de especie se ve como en
+[Secciones de especies](#secciones-de-especies) y va después de las tarjetas.
 
 - **Jaguar:** ilustración generada con IA; miniatura que es un render del
   modelo 3D, con un HDRI de Poly Haven en la escena ("Incluye"); modelo de
@@ -131,6 +268,7 @@ Respuesta real del endpoint con dos tarjetas activas y una inactiva
   "success": true,
   "data": [
     {
+      "type": "card",
       "card": {
         "id": 1,
         "name": "Jaguar",
@@ -235,6 +373,7 @@ Respuesta real del endpoint con dos tarjetas activas y una inactiva
       ]
     },
     {
+      "type": "card",
       "card": {
         "id": 2,
         "name": "Hipopótamo",
@@ -325,6 +464,7 @@ Respuesta real del endpoint con dos tarjetas activas y una inactiva
   "meta": {
     "generated_at": "2026-10-31T18:00:00-06:00",
     "cards": 2,
+    "species": 0,
     "credits": 7
   }
 }
@@ -338,14 +478,19 @@ sin nombre ni URL), el objeto completo vale `null`.
 | Campo | Tipo | Nulo | Descripción |
 | --- | --- | --- | --- |
 | `success` | boolean | no | Siempre `true` en una respuesta 200. |
-| `data` | array | no | Una entrada por tarjeta activa con créditos. Vacío (`[]`) si no hay ninguno. |
-| `data[].card.id` | integer | no | ID de la tarjeta (el mismo de `GET /api/cards`). |
-| `data[].card.name` | string | no | Nombre de la tarjeta. Encabezado de la sección. |
-| `data[].card.species_name` | string | sí | Nombre común de la especie. |
-| `data[].credits` | array | no | Todos los créditos de la tarjeta, en orden (recurso, luego papel). |
+| `data` | array | no | Una sección por tarjeta activa con créditos y después una por especie activa con créditos. Vacío (`[]`) si no hay ninguno. |
+| `data[].type` | string | no | `card` o `species`: dice cuál de los dos objetos siguientes trae la sección. |
+| `data[].card.id` | integer | no | Solo `type: "card"`. ID de la tarjeta (el mismo de `GET /api/cards`). |
+| `data[].card.name` | string | no | Solo `type: "card"`. Nombre de la tarjeta. Encabezado de la sección. |
+| `data[].card.species_name` | string | sí | Solo `type: "card"`. Nombre común de la especie. |
+| `data[].species.id` | integer | no | Solo `type: "species"`. ID de la especie (el mismo de `GET /api/species`). |
+| `data[].species.slug` | string | no | Solo `type: "species"`. Slug de la especie. |
+| `data[].species.common_name` | string | no | Solo `type: "species"`. Nombre común. Encabezado de la sección. |
+| `data[].species.scientific_name` | string | sí | Solo `type: "species"`. Nombre científico. |
+| `data[].credits` | array | no | Todos los créditos de la sección, en orden (recurso o imagen, luego papel). |
 | `credits[].id` | integer | no | ID del crédito (único en toda la respuesta). |
-| `credits[].asset` | string | no | `artwork` (ilustración de la tarjeta), `thumbnail` (miniatura) o `model` (modelo 3D). |
-| `credits[].asset_label` | string | no | `Ilustración`, `Miniatura` o `Modelo 3D`. |
+| `credits[].asset` | string | no | Tarjeta: `artwork` (ilustración), `thumbnail` (miniatura) o `model` (modelo 3D). Especie: siempre `image`. |
+| `credits[].asset_label` | string | no | `Ilustración`, `Miniatura`, `Modelo 3D` o `Imagen`. |
 | `credits[].role` | string | no | `origin` (de dónde salió el recurso; uno por recurso), `based_on` (obra en que se basa) o `component` (material que incluye). |
 | `credits[].role_label` | string | no | `Origen`, `Basado en` o `Incluye`. |
 | `credits[].title` | string | sí | Título de la obra. |
@@ -360,14 +505,23 @@ sin nombre ni URL), el objeto completo vale `null`.
 | `credits[].modified` | boolean | no | La obra se modificó (recorte, escalado…). |
 | `credits[].modification_note` | string | sí | Qué se cambió (solo si `modified`). |
 | `credits[].attribution` | string | no | **Línea lista para mostrar**, tal cual. |
-| `credits[].based_on_asset` | string | sí | Otro recurso de la misma tarjeta del que se hizo este: `artwork`, `thumbnail` o `model` (solo en el origen). Ese recurso tiene sus propias filas; la línea `attribution` ya lo dice. |
+| `credits[].based_on_asset` | string | sí | Otro recurso de la misma tarjeta del que se hizo este: `artwork`, `thumbnail` o `model` (solo en el origen). Ese recurso tiene sus propias filas; la línea `attribution` ya lo dice. En especies, siempre `null`. |
+| `credits[].image` | object | no | Solo en secciones `species`: la foto a la que pertenece el crédito. |
+| `credits[].image.id` | integer | no | ID de la imagen. Varios créditos de la misma foto comparten `id`. |
+| `credits[].image.type` | string | no | `main` (imagen principal), `thumbnail` (miniatura) o `gallery` (galería). |
+| `credits[].image.type_label` | string | no | `Imagen principal`, `Miniatura` o `Galería`. |
+| `credits[].image.url` | string | no | URL pública de la foto (la misma que usa la ficha de la especie). |
+| `credits[].image.alt_text` | string | sí | Texto alternativo de la foto. |
 | `meta.generated_at` | string (ISO 8601) | no | Cuándo se armó la respuesta. |
-| `meta.cards` | integer | no | Número de tarjetas en `data` (`data.length`). |
-| `meta.credits` | integer | no | Número total de créditos de todas las tarjetas. |
+| `meta.cards` | integer | no | Número de secciones `card`. |
+| `meta.species` | integer | no | Número de secciones `species`. `meta.cards + meta.species === data.length`. |
+| `meta.credits` | integer | no | Número total de créditos de todas las secciones. |
 
 **Nunca se envían:** notas internas, la fecha de obtención, la indicación
-(prompt) y la revisión de las imágenes de IA, rutas o URLs de archivos, el
-tipo del recurso dueño, otras fechas ni nada de tarjetas inactivas.
+(prompt) y la revisión de las imágenes de IA, rutas de archivos, URLs de los
+archivos de la tarjeta, otras fechas ni nada de tarjetas o especies
+inactivas. La única URL de archivo es `image.url` de las especies, que ya es
+pública en la ficha de la especie.
 
 ### La línea `attribution`
 
@@ -386,7 +540,9 @@ personalizado, se usa ese. El contenido propio termina en "– obra propia" o
 
 El servidor arma la respuesta una vez y la guarda en caché. Se vuelve a armar
 cuando cambia un crédito, una licencia, una tarjeta (activación, nombre, orden,
-especie, archivos o eliminación) o el nombre de una especie.
+especie, archivos o eliminación), una especie (nombre común o científico,
+slug, activación) o una imagen de especie (archivo, tipo, orden, texto
+alternativo, activación o eliminación).
 
 Cabeceras de la respuesta:
 
@@ -425,7 +581,10 @@ curl -i https://zoo.example.com/api/v1/credits \
 ## Cómo mostrarlo en la app
 
 - Usa un `SectionList`: cada elemento de `data` es una sección, con
-  `card.name` como encabezado y `credits` como filas.
+  `card.name` (o `species.common_name` si `type` es `"species"`) como
+  encabezado y `credits` como filas. Si quieres separar tarjetas y especies
+  en dos bloques, filtra por `type`: ya vienen en ese orden.
+- En las especies, `image.url` sirve para mostrar la foto junto a su crédito.
 - Muestra `attribution` **tal cual**, sin reconstruirla: el servidor ya decide
   el formato y omite lo que falta.
 - Haz tocables los enlaces que existan: `license.url` (licencia), `author.url`
@@ -441,7 +600,10 @@ curl -i https://zoo.example.com/api/v1/credits \
 
 ```tsx
 <SectionList
-  sections={data.map((section) => ({ title: section.card.name, data: section.credits }))}
+  sections={data.map((section) => ({
+    title: section.type === 'card' ? section.card.name : section.species.common_name,
+    data: section.credits,
+  }))}
   keyExtractor={(credit) => String(credit.id)}
   renderSectionHeader={({ section }) => <Text style={styles.header}>{section.title}</Text>}
   renderItem={({ item }) => <CreditRow credit={item} />}
@@ -488,13 +650,33 @@ Otros puntos:
   también los conserva, pero el aviso al guardar pide revisarlos.
 - Eliminar una imagen, el modelo o la tarjeta elimina sus créditos.
 - **Créditos y licencias** (`/admin/credits`) lista todos los créditos de
-  todas las tarjetas, con filtros por origen, licencia, recurso, papel y
-  "Falta licencia".
+  todas las tarjetas y de todas las imágenes de especies, con filtros por
+  tarjetas o especies, origen, licencia, recurso, papel y "Falta licencia".
 - **Obtener datos** (Wikimedia Commons) consulta la API de Commons y solo llena
   el formulario. El administrador revisa antes de guardar.
 - El catálogo de licencias lo administra `LicenseSeeder` (no hay pantalla para
   editarlo). Las licencias NC/ND y GFDL no se pueden elegir salvo con
   `LICENSING_ALLOW_RESTRICTED=true`.
+
+### Créditos de las imágenes de una especie
+
+Se gestionan en la sección **Créditos** de cada especie
+(`/admin/species/{species}/credits`), a la que se llega con "Créditos" en el
+detalle o "Créditos de imágenes" en el formulario de la especie. La lista de
+especies marca las que tienen imágenes sin licencia.
+
+- La sección agrupa las imágenes en principal, miniatura y galería, cada una
+  con su estado, sus créditos y la vista previa en la app.
+- El formulario es el mismo de la tarjeta, sin el paso "¿Cómo se obtuvo
+  este archivo?": una foto de especie no se hace a partir de otra.
+- Una especie se puede activar aunque falten licencias (a diferencia de la
+  tarjeta); sus imágenes sin licencia simplemente no aparecen en la pantalla
+  de créditos.
+- Reemplazar la imagen principal o la miniatura conserva sus créditos, pero el
+  aviso al guardar pide revisarlos. Eliminar una foto de la galería elimina
+  sus créditos.
+- Permisos: `species.view` para ver, `species.edit` para crear y editar,
+  `species.delete` para eliminar.
 
 ### Orígenes y licencias permitidas
 
@@ -564,11 +746,12 @@ Código principal:
 | --- | --- |
 | Endpoint | `app/Http/Controllers/Api/CreditController.php` |
 | Sección Créditos de la tarjeta | `app/Http/Controllers/Admin/CardCreditController.php`, `resources/js/pages/admin/card-credits/`, `resources/js/components/admin/cards/CardCreditForm.vue` |
-| Modelo | `app/Models/Credit.php`, `app/Enums/CreditRole.php` |
+| Sección Créditos de la especie | `app/Http/Controllers/Admin/SpeciesCreditController.php`, `resources/js/pages/admin/species-credits/`, `resources/js/components/admin/species/SpeciesImageCreditForm.vue` |
+| Modelo | `app/Models/Credit.php`, `app/Enums/CreditRole.php`, `app/Enums/CreditAsset.php`, `app/Contracts/Creditable.php`, `app/Models/Concerns/HasCredits.php` (lo usan `Card` y `SpeciesImage`) |
 | Consulta y caché | `app/Services/Licensing/CreditsCatalog.php`, `app/Observers/CreditsCacheObserver.php` |
 | Recursos JSON | `app/Http/Resources/Credits/` |
 | Línea de atribución | `app/Services/Licensing/AttributionBuilder.php`, `resources/js/lib/credits/attribution.ts` |
 | Validación | `app/Concerns/AssetCreditValidationRules.php`, `app/Rules/` |
 | Catálogo | `database/seeders/LicenseSeeder.php` |
 | Configuración | `config/licensing.php` |
-| Pruebas | `tests/Feature/Api/CreditTest.php`, `tests/Feature/Admin/CardCreditSectionTest.php` |
+| Pruebas | `tests/Feature/Api/CreditTest.php`, `tests/Feature/Admin/CardCreditSectionTest.php`, `tests/Feature/Admin/SpeciesCreditTest.php` |

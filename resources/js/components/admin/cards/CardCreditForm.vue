@@ -62,7 +62,12 @@ const credit = defineModel<CreditForm>({ required: true });
 // "add_based_on_model": después de guardar, registrar el modelo de otro sitio.
 const then = defineModel<string | null>('then', { default: null });
 
-const ASSET_ICONS = { artwork: FileImage, thumbnail: Image, model: Box };
+const ASSET_ICONS = {
+    artwork: FileImage,
+    thumbnail: Image,
+    model: Box,
+    image: Image,
+};
 
 // Los errores de archivo o tipo obligan a mostrar los selectores.
 const showSelectors = ref(

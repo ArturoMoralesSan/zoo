@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Card;
+use App\Models\SpeciesImage;
 use App\Services\ImageEncoding\GdWebpEncoder;
 use App\Services\ImageEncoding\ImagickWebpEncoder;
 use App\Services\ImageEncoding\NullWebpEncoder;
@@ -92,6 +93,7 @@ class AppServiceProvider extends ServiceProvider
 
         Relation::morphMap([
             'card' => Card::class,
+            'species_image' => SpeciesImage::class,
         ]);
 
         // API pública de créditos: límite por IP.

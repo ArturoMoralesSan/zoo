@@ -467,6 +467,14 @@ class CardPackageReader
             ];
         }
 
+        foreach ($this->species() as $species) {
+            foreach (self::speciesImageCredits($species['data']) as $credit) {
+                if (is_string($credit['license_slug'] ?? null)) {
+                    $licenseSlugs[$credit['license_slug']] = true;
+                }
+            }
+        }
+
         $packageLicenses = $this->licenses();
         $knownLicenses = License::query()
             ->whereIn('slug', array_keys($licenseSlugs))
@@ -660,6 +668,10 @@ class CardPackageReader
             'images.gallery.*.alt_text' => ['nullable', 'string', 'max:255'],
             'images.gallery.*.original_bytes' => ['nullable', 'integer', 'min:1'],
             'images.gallery.*.is_active' => ['nullable', 'boolean'],
+            // Formato 3: créditos de cada imagen (recurso "image", sin based_on_asset).
+            ...self::imageCreditRules('images.main.credits'),
+            ...self::imageCreditRules('images.thumbnail.credits'),
+            ...self::imageCreditRules('images.gallery.*.credits'),
             'locations' => ['array'],
             'locations.*.name' => ['nullable', 'string', 'max:255'],
             'locations.*.latitude' => ['required', 'numeric', 'between:-90,90'],
@@ -692,6 +704,47 @@ class CardPackageReader
         }
 
         return array_values(array_unique($errors));
+    }
+
+    /**
+     * Reglas de los créditos de una imagen de especie.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    private static function imageCreditRules(string $prefix): array
+    {
+        return [
+            $prefix => ['array'],
+            $prefix.'.*.asset' => ['required', Rule::in([CreditAsset::Image->value])],
+            $prefix.'.*.role' => ['required', Rule::enum(CreditRole::class)],
+            $prefix.'.*.source_name' => ['nullable', Rule::enum(AssetSource::class)],
+            $prefix.'.*.based_on_asset' => ['prohibited'],
+            $prefix.'.*.license_slug' => ['nullable', 'string', 'max:255'],
+            $prefix.'.*.acquired_at' => ['nullable', 'date'],
+            $prefix.'.*.ai_checked_at' => ['nullable', 'date'],
+            $prefix.'.*.modified' => ['nullable', 'boolean'],
+            $prefix.'.*.sort_order' => ['nullable', 'integer'],
+        ];
+    }
+
+    /**
+     * Créditos de las imágenes de una especie del paquete (formato 3).
+     *
+     * @param  array<string, mixed>  $data  species.json
+     * @return list<array<string, mixed>>
+     */
+    private static function speciesImageCredits(array $data): array
+    {
+        $images = (array) ($data['images'] ?? []);
+        $credits = [];
+
+        foreach ([$images['main'] ?? null, $images['thumbnail'] ?? null, ...array_values((array) ($images['gallery'] ?? []))] as $image) {
+            foreach ((array) ($image['credits'] ?? []) as $credit) {
+                $credits[] = (array) $credit;
+            }
+        }
+
+        return $credits;
     }
 
     /**
@@ -747,10 +800,10 @@ class CardPackageReader
             'qr_codes.*.expires_at' => ['nullable', 'date'],
             'qr_codes.*.token' => ['nullable', 'string', 'alpha_num', 'size:64'],
             'credits' => ['array'],
-            'credits.*.asset' => ['required', Rule::enum(CreditAsset::class)],
+            'credits.*.asset' => ['required', Rule::enum(CreditAsset::class)->only(CreditAsset::forCards())],
             'credits.*.role' => ['required', Rule::enum(CreditRole::class)],
             'credits.*.source_name' => ['nullable', Rule::enum(AssetSource::class)],
-            'credits.*.based_on_asset' => ['nullable', Rule::enum(CreditAsset::class)],
+            'credits.*.based_on_asset' => ['nullable', Rule::enum(CreditAsset::class)->only(CreditAsset::forCards())],
             'credits.*.license_slug' => ['nullable', 'string', 'max:255'],
             'credits.*.acquired_at' => ['nullable', 'date'],
             'credits.*.ai_checked_at' => ['nullable', 'date'],
