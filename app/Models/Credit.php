@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Crédito de un recurso (ilustración, miniatura o modelo 3D) de una tarjeta.
@@ -20,6 +21,25 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * Un recurso tiene un crédito de origen y, si hace falta, créditos de las
  * obras en que se basa y del material de terceros que incluye.
  *
+ * @property int $id
+ * @property CreditAsset $asset
+ * @property CreditRole $role
+ * @property int $sort_order
+ * @property int|null $license_id
+ * @property string|null $title
+ * @property string|null $author_name
+ * @property string|null $author_url
+ * @property AssetSource|null $source_name
+ * @property string|null $source_url
+ * @property Carbon|null $acquired_at
+ * @property bool $modified
+ * @property string|null $modification_note
+ * @property string|null $attribution_override
+ * @property CreditAsset|null $based_on_asset
+ * @property string|null $ai_prompt
+ * @property Carbon|null $ai_checked_at
+ * @property string|null $notes
+ * @property-read License|null $license
  * @property-read string $attribution
  */
 #[ObservedBy(CreditsCacheObserver::class)]
@@ -97,7 +117,7 @@ class Credit extends Model
     protected function attribution(): Attribute
     {
         return Attribute::get(fn (): string => AttributionBuilder::build([
-            'role' => $this->role?->value,
+            'role' => $this->role->value,
             'title' => $this->title,
             'author_name' => $this->author_name,
             'source' => $this->source_name?->creditName(),
