@@ -1,8 +1,8 @@
 
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
-    CircleAlert,
+    Copyright,
     FilterX,
     Leaf,
     Plus,
@@ -269,6 +269,15 @@ defineOptions({
                                 <p class="mt-0.5 text-xs text-[#718477]">
                                     ID: {{ item.id }}
                                 </p>
+
+                                <span
+                                    v-if="item.images_missing_credits_count > 0"
+                                    class="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                                    title="Hay imágenes sin licencia"
+                                >
+                                    <Copyright :size="12" />
+                                    Falta licencia
+                                </span>
                             </div>
                         </div>
                     </td>
@@ -337,23 +346,15 @@ defineOptions({
                             <span class="h-1.5 w-1.5 rounded-full bg-red-500" />
                             Inactiva
                         </span>
-
-                        <Link
-                            v-if="item.images_missing_credits_count > 0"
-                            :href="admin.species.credits.index(item.id).url"
-                            class="mt-1.5 flex w-fit items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
-                        >
-                            <CircleAlert class="h-3.5 w-3.5" />
-                            {{ item.images_missing_credits_count }}
-                            {{ item.images_missing_credits_count === 1 ? 'imagen' : 'imágenes' }}
-                            sin licencia
-                        </Link>
                     </td>
 
                     <TableActions
+                        :credits-url="admin.species.credits.index(item.id).url"
+                        :credits-warning="item.images_missing_credits_count > 0"
                         :view-url="admin.species.show(item.id).url"
                         :edit-url="admin.species.edit(item.id).url"
                         item-name="especie"
+                        show-credits
                         @delete="deleteSpecies(item)"
                     />
                 </tr>
