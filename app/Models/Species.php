@@ -65,7 +65,7 @@ class Species extends Model
     }
 
     /**
-     * Hábitats como texto ("Selva tropical, Manglar"). Es lo que la API
+     * Hábitats como texto ("Desierto, Matorral"). Es lo que la API
      * entregaba antes en `habitat`.
      */
     public function habitatLabel(): ?string

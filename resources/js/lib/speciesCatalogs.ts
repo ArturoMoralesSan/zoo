@@ -121,10 +121,12 @@ export type HabitatCode =
     | 'scrubland'
     | 'desert'
     | 'mountain'
+    | 'rocky'
     | 'polar'
     | 'wetland'
     | 'mangrove'
     | 'freshwater'
+    | 'estuary'
     | 'coast'
     | 'ocean'
     | 'coral_reef'
@@ -140,8 +142,11 @@ export const habitatGroups: {
     {
         name: 'Bosques y selvas',
         options: [
-            { value: 'tropical_rainforest', label: 'Selva tropical' },
-            { value: 'dry_forest', label: 'Selva seca' },
+            {
+                value: 'tropical_rainforest',
+                label: 'Selva o bosque tropical húmedo',
+            },
+            { value: 'dry_forest', label: 'Selva o bosque tropical seco' },
             { value: 'temperate_forest', label: 'Bosque templado' },
             { value: 'coniferous_forest', label: 'Bosque de coníferas' },
             { value: 'cloud_forest', label: 'Bosque de niebla' },
@@ -155,6 +160,7 @@ export const habitatGroups: {
             { value: 'scrubland', label: 'Matorral' },
             { value: 'desert', label: 'Desierto' },
             { value: 'mountain', label: 'Montaña' },
+            { value: 'rocky', label: 'Zonas rocosas y acantilados' },
             { value: 'polar', label: 'Tundra y regiones polares' },
         ],
     },
@@ -164,6 +170,7 @@ export const habitatGroups: {
             { value: 'wetland', label: 'Humedal' },
             { value: 'mangrove', label: 'Manglar' },
             { value: 'freshwater', label: 'Ríos y lagos' },
+            { value: 'estuary', label: 'Estuarios y lagunas costeras' },
             { value: 'coast', label: 'Costa' },
             { value: 'ocean', label: 'Océano' },
             { value: 'coral_reef', label: 'Arrecife de coral' },

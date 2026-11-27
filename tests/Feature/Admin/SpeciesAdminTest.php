@@ -131,7 +131,7 @@ class SpeciesAdminTest extends TestCase
 
         $this->assertSame(Diet::Carnivore, $species->diet);
         $this->assertSame(ConservationStatus::NearThreatened, $species->conservation_status);
-        $this->assertSame('Selva tropical, Humedal', $species->habitatLabel());
+        $this->assertSame('Selva o bosque tropical húmedo, Humedal', $species->habitatLabel());
     }
 
     public function test_rejects_values_outside_the_catalogs(): void
@@ -404,7 +404,7 @@ class SpeciesAdminTest extends TestCase
 
         $this->getJson("/api/species/{$species->id}")
             ->assertOk()
-            ->assertJsonPath('data.species.habitat', 'Selva tropical, Manglar')
+            ->assertJsonPath('data.species.habitat', 'Selva o bosque tropical húmedo, Manglar')
             ->assertJsonPath('data.species.diet', 'Herbívoro')
             ->assertJsonPath('data.species.conservation_status', 'Preocupación menor')
             ->assertJsonPath('data.species.habitats.0.code', 'tropical_rainforest')

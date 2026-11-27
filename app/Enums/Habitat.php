@@ -20,10 +20,12 @@ enum Habitat: string
     case Scrubland = 'scrubland';
     case Desert = 'desert';
     case Mountain = 'mountain';
+    case Rocky = 'rocky';
     case Polar = 'polar';
     case Wetland = 'wetland';
     case Mangrove = 'mangrove';
     case Freshwater = 'freshwater';
+    case Estuary = 'estuary';
     case Coast = 'coast';
     case Ocean = 'ocean';
     case CoralReef = 'coral_reef';
@@ -34,8 +36,8 @@ enum Habitat: string
     public function label(): string
     {
         return match ($this) {
-            self::TropicalRainforest => 'Selva tropical',
-            self::DryForest => 'Selva seca',
+            self::TropicalRainforest => 'Selva o bosque tropical húmedo',
+            self::DryForest => 'Selva o bosque tropical seco',
             self::TemperateForest => 'Bosque templado',
             self::ConiferousForest => 'Bosque de coníferas',
             self::CloudForest => 'Bosque de niebla',
@@ -44,10 +46,12 @@ enum Habitat: string
             self::Scrubland => 'Matorral',
             self::Desert => 'Desierto',
             self::Mountain => 'Montaña',
+            self::Rocky => 'Zonas rocosas y acantilados',
             self::Polar => 'Tundra y regiones polares',
             self::Wetland => 'Humedal',
             self::Mangrove => 'Manglar',
             self::Freshwater => 'Ríos y lagos',
+            self::Estuary => 'Estuarios y lagunas costeras',
             self::Coast => 'Costa',
             self::Ocean => 'Océano',
             self::CoralReef => 'Arrecife de coral',
