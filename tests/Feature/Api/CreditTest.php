@@ -8,6 +8,7 @@ use App\Models\Credit;
 use App\Models\License;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
+use App\Models\SpeciesImage;
 use App\Models\User;
 use Database\Seeders\LicenseSeeder;
 use Illuminate\Support\Facades\RateLimiter;
@@ -103,6 +104,7 @@ class CreditTest extends TestCase
             ->assertExactJson([
                 'success' => true,
                 'data' => [[
+                    'type' => 'card',
                     'card' => ['id' => $card->id, 'name' => 'Jaguar', 'species_name' => 'Jaguar'],
                     'credits' => [
                         [
@@ -141,6 +143,7 @@ class CreditTest extends TestCase
                 'meta' => [
                     'generated_at' => $this->credits()->json('meta.generated_at'),
                     'cards' => 1,
+                    'species' => 0,
                     'credits' => 2,
                 ],
             ]);
@@ -352,6 +355,137 @@ class CreditTest extends TestCase
         $card->update(['astucia' => 99]);
 
         $this->assertSame($generatedAt, $this->credits()->json('meta.generated_at'));
+    }
+
+    private function speciesImage(Species $species, string $type, array $attributes = []): SpeciesImage
+    {
+        return $species->images()->create(array_merge([
+            'type' => $type,
+            'path' => 'species/'.$species->id.'/'.$type.'-'.uniqid().'.webp',
+            'alt_text' => $species->common_name,
+            'is_active' => true,
+            'sort_order' => 0,
+        ], $attributes));
+    }
+
+    private function imageCredit(SpeciesImage $image, array $attributes = []): Credit
+    {
+        return $image->credits()->create(array_merge([
+            'asset' => 'image',
+            'role' => 'origin',
+            'license_id' => License::where('slug', 'cc-by-4.0')->value('id'),
+            'title' => 'Foto',
+            'author_name' => 'Jane Doe',
+            'source_name' => 'wikimedia_commons',
+            'source_url' => 'https://commons.wikimedia.org/wiki/File:Jaguar.jpg',
+        ], $attributes));
+    }
+
+    public function test_species_sections_come_after_cards_with_their_image(): void
+    {
+        $card = $this->createCard(['name' => 'Jaguar']);
+        $this->credit($card, 'artwork', 'cc-by-4.0');
+
+        $main = $this->speciesImage($this->species, 'main');
+        $credit = $this->imageCredit($main, ['title' => 'Jaguar en el agua']);
+
+        $response = $this->credits()->assertOk();
+
+        $response
+            ->assertJsonPath('data.0.type', 'card')
+            ->assertJsonPath('data.1.type', 'species')
+            ->assertJsonPath('data.1.species', [
+                'id' => $this->species->id,
+                'slug' => 'jaguar',
+                'common_name' => 'Jaguar',
+                'scientific_name' => 'Panthera onca',
+            ])
+            ->assertJsonPath('data.1.credits.0.id', $credit->id)
+            ->assertJsonPath('data.1.credits.0.asset', 'image')
+            ->assertJsonPath('data.1.credits.0.asset_label', 'Imagen')
+            ->assertJsonPath('data.1.credits.0.attribution', '“Jaguar en el agua” de Jane Doe, vía Wikimedia Commons, CC BY 4.0')
+            ->assertJsonPath('data.1.credits.0.image.id', $main->id)
+            ->assertJsonPath('data.1.credits.0.image.type', 'main')
+            ->assertJsonPath('data.1.credits.0.image.type_label', 'Imagen principal')
+            ->assertJsonPath('data.1.credits.0.image.alt_text', 'Jaguar')
+            ->assertJsonPath('meta.cards', 1)
+            ->assertJsonPath('meta.species', 1)
+            ->assertJsonPath('meta.credits', 2);
+
+        $this->assertStringEndsWith($main->path, $response->json('data.1.credits.0.image.url'));
+    }
+
+    public function test_species_are_ordered_by_name_and_images_by_type_and_position(): void
+    {
+        $ocelot = Species::create([
+            'species_category_id' => $this->species->species_category_id,
+            'common_name' => 'Ocelote',
+            'scientific_name' => 'Leopardus pardalis',
+            'slug' => 'ocelote',
+            'is_active' => true,
+        ]);
+
+        $ocelotCredit = $this->imageCredit($this->speciesImage($ocelot, 'main'));
+
+        $second = $this->imageCredit($this->speciesImage($this->species, 'gallery', ['sort_order' => 2]));
+        $first = $this->imageCredit($this->speciesImage($this->species, 'gallery', ['sort_order' => 1]));
+        $thumbnail = $this->imageCredit($this->speciesImage($this->species, 'thumbnail'));
+        $main = $this->imageCredit($this->speciesImage($this->species, 'main'));
+        $mainBasedOn = $this->imageCredit(Credit::find($main->id)->creditable, ['role' => 'based_on']);
+
+        $response = $this->credits()->assertOk();
+
+        $this->assertSame(['Jaguar', 'Ocelote'], array_column(array_column($response->json('data'), 'species'), 'common_name'));
+        $this->assertSame(
+            [$main->id, $mainBasedOn->id, $thumbnail->id, $first->id, $second->id],
+            array_column($response->json('data.0.credits'), 'id')
+        );
+        $this->assertSame([$ocelotCredit->id], array_column($response->json('data.1.credits'), 'id'));
+    }
+
+    public function test_inactive_species_inactive_images_and_card_images_are_left_out(): void
+    {
+        $this->imageCredit($this->speciesImage($this->species, 'gallery', ['is_active' => false]));
+        $this->imageCredit($this->speciesImage($this->species, 'card'));
+        $this->imageCredit($this->speciesImage($this->species, 'main', ['path' => '']));
+
+        $this->credits()->assertOk()->assertJsonPath('data', [])->assertJsonPath('meta.species', 0);
+
+        $this->imageCredit($this->speciesImage($this->species, 'main'));
+        $this->assertCount(1, $this->credits()->json('data'));
+
+        $this->species->update(['is_active' => false]);
+        $this->assertSame([], $this->credits()->json('data'));
+    }
+
+    public function test_deleting_a_species_image_removes_its_credits_and_refreshes_the_cache(): void
+    {
+        $image = $this->speciesImage($this->species, 'gallery');
+        $credit = $this->imageCredit($image);
+
+        $this->assertCount(1, $this->credits()->json('data'));
+
+        $image->delete();
+
+        $this->assertNull(Credit::find($credit->id));
+        $this->assertSame([], $this->credits()->json('data'));
+    }
+
+    public function test_species_and_image_changes_refresh_the_cache(): void
+    {
+        $image = $this->speciesImage($this->species, 'main');
+        $this->imageCredit($image);
+
+        $this->assertSame('Jaguar', $this->credits()->json('data.0.species.common_name'));
+
+        $this->species->update(['scientific_name' => 'Panthera onca onca']);
+        $this->assertSame('Panthera onca onca', $this->credits()->json('data.0.species.scientific_name'));
+
+        $image->update(['alt_text' => 'Jaguar de frente']);
+        $this->assertSame('Jaguar de frente', $this->credits()->json('data.0.credits.0.image.alt_text'));
+
+        $image->update(['is_active' => false]);
+        $this->assertSame([], $this->credits()->json('data'));
     }
 
     public function test_rate_limit_returns_429(): void

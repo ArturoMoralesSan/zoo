@@ -69,7 +69,7 @@ enum AssetSource: string
             return CreditAsset::cases();
         }
 
-        $images = [CreditAsset::Artwork, CreditAsset::Thumbnail];
+        $images = [CreditAsset::Artwork, CreditAsset::Thumbnail, CreditAsset::Image];
 
         return match ($this) {
             self::Own, self::Other => [...$images, CreditAsset::Model],
@@ -117,21 +117,27 @@ enum AssetSource: string
 
     /**
      * Opciones para los formularios: etiqueta, recursos por papel y
-     * licencias permitidas.
+     * licencias permitidas. Solo se listan los recursos del dueño
+     * (los de la tarjeta, o la imagen de una especie).
      *
      * @param  iterable<License>  $licenses
+     * @param  array<int, CreditAsset>|null  $ownerAssets  Por defecto, los de la tarjeta.
      * @return array<int, array{value: string, label: string, assets: array<string, array<int, string>>, licenses: array<int, string>}>
      */
-    public static function formOptions(iterable $licenses): array
+    public static function formOptions(iterable $licenses, ?array $ownerAssets = null): array
     {
         $licenses = collect($licenses);
+        $ownerAssets ??= CreditAsset::forCards();
 
         return array_map(fn (self $source) => [
             'value' => $source->value,
             'label' => $source->label(),
             'assets' => collect(CreditRole::cases())
                 ->mapWithKeys(fn (CreditRole $role) => [
-                    $role->value => array_map(fn (CreditAsset $asset) => $asset->value, $source->assets($role)),
+                    $role->value => array_values(array_map(
+                        fn (CreditAsset $asset) => $asset->value,
+                        array_filter($source->assets($role), fn (CreditAsset $asset) => in_array($asset, $ownerAssets, true))
+                    )),
                 ])
                 ->all(),
             'licenses' => $licenses

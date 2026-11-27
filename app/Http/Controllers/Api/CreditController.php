@@ -11,8 +11,13 @@ use Illuminate\Support\Carbon;
 class CreditController extends Controller
 {
     /**
-     * Créditos de las imágenes y modelos 3D de las tarjetas activas, agrupados
-     * por tarjeta. Público (sin token) e igual para todos los usuarios.
+     * Créditos de las imágenes y modelos 3D de las tarjetas activas y de las
+     * imágenes de las especies activas (principal, miniatura y galería), en
+     * secciones. Público (sin token) e igual para todos los usuarios.
+     *
+     * Cada sección tiene `type`: `card` (con `card`) o `species` (con
+     * `species`; cada crédito trae además `image`, la foto a la que
+     * pertenece). Primero van las tarjetas y después las especies.
      *
      * El contenido propio o con licencia privada y los créditos ocultos nunca
      * se envían. Responde 304 si el ETag o la fecha no cambiaron.

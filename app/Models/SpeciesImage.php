@@ -2,11 +2,30 @@
 
 namespace App\Models;
 
+use App\Contracts\Creditable;
+use App\Enums\CreditAsset;
+use App\Models\Concerns\HasCredits;
+use App\Observers\CreditsCacheObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class SpeciesImage extends Model
+/**
+ * Imagen de una especie. Las de tipo principal, miniatura y galería llevan
+ * créditos propios (recurso CreditAsset::Image); las de tipo "card" no, porque
+ * la app no las muestra.
+ */
+#[ObservedBy(CreditsCacheObserver::class)]
+class SpeciesImage extends Model implements Creditable
 {
+    use HasCredits;
+
+    /**
+     * Tipos de imagen que la app muestra y que llevan créditos, en orden.
+     */
+    public const CREDITED_TYPES = ['main', 'thumbnail', 'gallery'];
+
     protected $fillable = [
         'species_id',
         'type',
@@ -26,11 +45,69 @@ class SpeciesImage extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        /*
+         * La relación polimórfica no tiene llave foránea: los créditos se
+         * borran aquí, uno por uno, para que CreditsCacheObserver se entere.
+         */
+        static::deleting(function (SpeciesImage $image) {
+            $image->credits()->get()->each->delete();
+        });
+    }
+
     /**
      * @return BelongsTo<Species, $this>
      */
     public function species(): BelongsTo
     {
         return $this->belongsTo(Species::class);
+    }
+
+    /**
+     * @param  Builder<SpeciesImage>  $query
+     * @return Builder<SpeciesImage>
+     */
+    public function scopeCredited(Builder $query): Builder
+    {
+        return $query->whereIn('type', self::CREDITED_TYPES);
+    }
+
+    public function isCredited(): bool
+    {
+        return in_array($this->type, self::CREDITED_TYPES, true);
+    }
+
+    public function hasAsset(CreditAsset $asset): bool
+    {
+        return $asset === CreditAsset::Image && $this->isCredited() && filled($this->path);
+    }
+
+    public function typeLabel(): string
+    {
+        return match ($this->type) {
+            'main' => 'Imagen principal',
+            'thumbnail' => 'Miniatura',
+            'gallery' => 'Galería',
+            default => ucfirst((string) $this->type),
+        };
+    }
+
+    /**
+     * Orden en los listados: principal, miniatura y galería por posición.
+     */
+    public function creditOrderKey(): string
+    {
+        $type = array_search($this->type, self::CREDITED_TYPES, true);
+
+        return sprintf('%d-%05d-%010d', $type === false ? 9 : $type, $this->sort_order, $this->id);
+    }
+
+    /**
+     * Le falta el crédito de origen.
+     */
+    public function missingCredits(): bool
+    {
+        return $this->hasAsset(CreditAsset::Image) && ! $this->hasCompleteCredits(CreditAsset::Image);
     }
 }

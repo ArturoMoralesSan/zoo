@@ -4,8 +4,11 @@ namespace App\Services\Licensing;
 
 use App\Enums\CreditAsset;
 use App\Http\Resources\Credits\CreditSectionResource;
+use App\Http\Resources\Credits\SpeciesCreditSectionResource;
 use App\Models\Card;
 use App\Models\Credit;
+use App\Models\Species;
+use App\Models\SpeciesImage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Carbon;
@@ -14,14 +17,15 @@ use Illuminate\Support\Facades\Cache;
 
 /**
  * Créditos públicos para la pantalla de créditos de la app
- * (GET /api/v1/credits). Ver docs/api-credits.md.
+ * (GET /api/v1/credits): primero las tarjetas y después las imágenes de
+ * las especies. Ver docs/api-credits.md.
  *
  * La respuesta se arma una vez y se guarda en caché; CreditsCacheObserver
  * la invalida cuando cambia un crédito, una licencia, una tarjeta o una especie.
  */
 class CreditsCatalog
 {
-    public const CACHE_KEY = 'licensing.credits.v1';
+    public const CACHE_KEY = 'licensing.credits.v2';
 
     /**
      * Respaldo por si un cambio no pasa por Eloquent (p. ej. SQL manual).
@@ -56,7 +60,7 @@ class CreditsCatalog
             ->orderBy('id')
             ->get();
 
-        $data = $cards
+        $cardSections = $cards
             ->map(fn (Card $card) => (new CreditSectionResource(
                 $card,
                 $credits->get($card->id)
@@ -66,15 +70,72 @@ class CreditsCatalog
             ->values()
             ->all();
 
+        $speciesSections = $this->speciesSections();
+
+        $data = [...$cardSections, ...$speciesSections];
+
         return [
             'data' => $data,
             'meta' => [
                 'generated_at' => Carbon::now()->toIso8601String(),
-                'cards' => count($data),
+                'cards' => count($cardSections),
+                'species' => count($speciesSections),
                 'credits' => array_sum(array_map(fn ($section) => count($section['credits']), $data)),
             ],
             'etag' => sha1(json_encode($data)),
         ];
+    }
+
+    /**
+     * Una sección por especie activa con créditos, por nombre común.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function speciesSections(): array
+    {
+        $credits = $this->activeSpeciesImageCredits()->groupBy('owner_species_id');
+
+        return Species::query()
+            ->select(['id', 'slug', 'common_name', 'scientific_name'])
+            ->whereIn('id', $credits->keys())
+            ->orderBy('common_name')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Species $species) => (new SpeciesCreditSectionResource(
+                $species,
+                $credits->get($species->id)
+                    ->sortBy(fn (Credit $credit) => ($credit->creditable instanceof SpeciesImage
+                        ? $credit->creditable->creditOrderKey()
+                        : '').'-'.$credit->sortKey())
+                    ->values()
+            ))->resolve())
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Créditos de las imágenes activas (principal, miniatura y galería) de
+     * las especies activas. Una especie inactiva nunca se incluye.
+     *
+     * @return Collection<int, Credit>
+     */
+    private function activeSpeciesImageCredits(): Collection
+    {
+        return Credit::query()
+            ->select(['credits.*', 'species_images.species_id as owner_species_id'])
+            ->join('species_images', function (JoinClause $join) {
+                $join->on('species_images.id', '=', 'credits.creditable_id')
+                    ->where('credits.creditable_type', (new SpeciesImage)->getMorphClass());
+            })
+            ->join('species', 'species.id', '=', 'species_images.species_id')
+            ->where('species.is_active', true)
+            ->where('species_images.is_active', true)
+            ->whereIn('species_images.type', SpeciesImage::CREDITED_TYPES)
+            ->whereNotNull('species_images.path')
+            ->where('species_images.path', '!=', '')
+            ->where('credits.asset', CreditAsset::Image->value)
+            ->with(['license', 'creditable'])
+            ->get();
     }
 
     /**
@@ -94,7 +155,7 @@ class CreditsCatalog
             })
             ->where('cards.is_active', true)
             ->where(function (Builder $query) {
-                foreach (CreditAsset::cases() as $asset) {
+                foreach (CreditAsset::forCards() as $asset) {
                     $query->orWhere(fn (Builder $query) => $query
                         ->where('credits.asset', $asset->value)
                         ->whereNotNull('cards.'.$asset->column())

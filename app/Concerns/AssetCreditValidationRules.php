@@ -2,6 +2,7 @@
 
 namespace App\Concerns;
 
+use App\Contracts\Creditable;
 use App\Enums\AssetSource;
 use App\Enums\CreditAsset;
 use App\Enums\CreditRole;
@@ -16,9 +17,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * Reglas de los créditos de los recursos de la tarjeta.
+ * Reglas de los créditos de los recursos de una tarjeta o de una imagen de
+ * especie (App\Contracts\Creditable).
  *
- * - Un crédito (sección "Créditos" de la tarjeta): creditRules() y creditChecks().
+ * - Un crédito (sección "Créditos" de la tarjeta o de la especie):
+ *   creditRules() y creditChecks(). Una imagen de especie solo tiene el
+ *   recurso "image" y no se hace a partir de otro recurso.
  * - Formulario de la tarjeta: assetCreditsCheck(), que no deja activar una
  *   tarjeta con recursos sin licencia.
  */
@@ -27,8 +31,11 @@ trait AssetCreditValidationRules
     /**
      * @return array<string, array<int, mixed>>
      */
-    protected function creditRules(Card $card, ?Credit $current = null): array
+    protected function creditRules(Creditable $owner, ?Credit $current = null): array
     {
+        $isCard = $owner instanceof Card;
+        $ownerAssets = $isCard ? CreditAsset::forCards() : [CreditAsset::Image];
+
         $asset = CreditAsset::tryFrom((string) $this->input('asset'));
         $role = CreditRole::tryFrom((string) $this->input('role'));
         $source = AssetSource::tryFrom((string) $this->input('source_name'));
@@ -43,10 +50,12 @@ trait AssetCreditValidationRules
         $rules = [
             'asset' => [
                 'required',
-                Rule::enum(CreditAsset::class),
-                function (string $attribute, mixed $value, Closure $fail) use ($card, $asset) {
-                    if ($asset && ! $card->hasAsset($asset)) {
-                        $fail("La tarjeta no tiene {$asset->withArticle()}: súbela primero en el formulario de la tarjeta.");
+                Rule::enum(CreditAsset::class)->only($ownerAssets),
+                function (string $attribute, mixed $value, Closure $fail) use ($owner, $asset, $isCard) {
+                    if ($asset && ! $owner->hasAsset($asset)) {
+                        $fail($isCard
+                            ? "La tarjeta no tiene {$asset->withArticle()}: súbela primero en el formulario de la tarjeta."
+                            : 'La imagen no tiene archivo: súbela primero en el formulario de la especie.');
                     }
                 },
             ],
@@ -107,17 +116,18 @@ trait AssetCreditValidationRules
 
             /*
              * Solo el origen se hace a partir de otro recurso de la tarjeta
-             * (render del modelo, modelo de la ilustración).
+             * (render del modelo, modelo de la ilustración). Una imagen de
+             * especie no tiene otros recursos: se ignora.
              */
-            'based_on_asset' => $role === CreditRole::Origin
+            'based_on_asset' => $isCard && $role === CreditRole::Origin
                 ? [
                     'nullable',
-                    Rule::enum(CreditAsset::class),
+                    Rule::enum(CreditAsset::class)->only($ownerAssets),
                     'different:asset',
-                    function (string $attribute, mixed $value, Closure $fail) use ($card) {
+                    function (string $attribute, mixed $value, Closure $fail) use ($owner) {
                         $basis = CreditAsset::tryFrom((string) $value);
 
-                        if ($basis && ! $card->hasAsset($basis)) {
+                        if ($basis && ! $owner->hasAsset($basis)) {
                             $fail("La tarjeta no tiene {$basis->withArticle()}.");
                         }
                     },
@@ -147,9 +157,9 @@ trait AssetCreditValidationRules
     /**
      * Comprobaciones con los demás créditos de la tarjeta.
      */
-    protected function creditChecks(Card $card, ?Credit $current = null): Closure
+    protected function creditChecks(Creditable $owner, ?Credit $current = null): Closure
     {
-        return function (Validator $validator) use ($card, $current) {
+        return function (Validator $validator) use ($owner, $current) {
             $asset = CreditAsset::tryFrom((string) $this->input('asset'));
             $role = CreditRole::tryFrom((string) $this->input('role'));
 
@@ -157,7 +167,7 @@ trait AssetCreditValidationRules
                 return;
             }
 
-            $origin = $card->credit($asset);
+            $origin = $owner->credit($asset);
 
             if ($origin && $origin->id !== $current?->id) {
                 $validator->errors()->add(
@@ -171,7 +181,7 @@ trait AssetCreditValidationRules
              */
             $basis = CreditAsset::tryFrom((string) $this->input('based_on_asset'));
 
-            if ($basis && $card->credit($basis)?->based_on_asset === $asset) {
+            if ($basis && $owner->credit($basis)?->based_on_asset === $asset) {
                 $validator->errors()->add(
                     'based_on_asset',
                     ucfirst($basis->withArticle())." ya se hizo a partir {$asset->fromPhrase()}."
@@ -192,7 +202,7 @@ trait AssetCreditValidationRules
             }
 
             $missing = array_filter(
-                CreditAsset::cases(),
+                CreditAsset::forCards(),
                 fn (CreditAsset $asset) => $this->creditAssetWillExist($asset, $card)
                     && ! $card?->hasCompleteCredits($asset)
             );
