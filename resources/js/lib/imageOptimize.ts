@@ -15,6 +15,8 @@ export interface ImageProfile {
     maxWidth: number;
     maxHeight: number;
     quality: number;
+    // Proporción obligatoria [ancho, alto]; sin ella se recorta libre (lib/imageCrop.ts).
+    aspect?: number[];
 }
 
 /**

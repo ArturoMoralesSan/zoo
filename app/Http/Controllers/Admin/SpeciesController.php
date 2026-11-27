@@ -12,6 +12,7 @@ use App\Models\SpeciesLocation;
 use App\Models\SpeciesModel;
 use App\Models\SpeciesTag;
 use App\Models\ZooZone;
+use App\Services\ImageCropSource;
 use App\Services\SpeciesImageOptimizer;
 use App\Support\UploadExtension;
 use Illuminate\Http\RedirectResponse;
@@ -249,6 +250,13 @@ class SpeciesController extends Controller
                     $species
                 );
 
+                [$source, $crop] = ImageCropSource::store(
+                    $request,
+                    'main',
+                    null,
+                    'species/'.$species->id
+                );
+
                 SpeciesImage::create([
                     'species_id' => $species->id,
 
@@ -256,9 +264,15 @@ class SpeciesController extends Controller
 
                     'path' => $path,
 
+                    'source_path' => $source,
+
+                    'crop' => $crop,
+
                     'original_bytes' => $originalBytes,
 
                     'alt_text' => $species->common_name,
+
+                    ...$this->mainFocal($validated, true),
 
                     'is_active' => true,
 
@@ -609,6 +623,13 @@ class SpeciesController extends Controller
                     $species
                 );
 
+                [$source, $crop] = ImageCropSource::store(
+                    $request,
+                    'main',
+                    $currentImage?->source_path,
+                    'species/'.$species->id
+                );
+
                 if ($currentImage) {
                     if (
                         $currentImage->path &&
@@ -624,9 +645,15 @@ class SpeciesController extends Controller
                     $currentImage->update([
                         'path' => $path,
 
+                        'source_path' => $source,
+
+                        'crop' => $crop,
+
                         'original_bytes' => $originalBytes,
 
                         'alt_text' => $species->common_name,
+
+                        ...$this->mainFocal($validated, true),
 
                         'is_active' => true,
                     ]);
@@ -638,15 +665,26 @@ class SpeciesController extends Controller
 
                         'path' => $path,
 
+                        'source_path' => $source,
+
+                        'crop' => $crop,
+
                         'original_bytes' => $originalBytes,
 
                         'alt_text' => $species->common_name,
+
+                        ...$this->mainFocal($validated, true),
 
                         'is_active' => true,
 
                         'sort_order' => 0,
                     ]);
                 }
+            } elseif ($focal = $this->mainFocal($validated, false)) {
+                $species->images()
+                    ->where('type', 'main')
+                    ->first()
+                    ?->update($focal);
             }
 
             /*
@@ -780,7 +818,8 @@ class SpeciesController extends Controller
             $deletedPaths = $this->syncGallery(
                 $request,
                 $species,
-                $validated
+                $validated,
+                $replacedWithCredits
             );
 
             /*
@@ -931,6 +970,8 @@ class SpeciesController extends Controller
          */
         $missing = $species->is_active ? $species->missingCreditsText() : null;
 
+        $replacedWithCredits = array_values(array_unique($replacedWithCredits));
+
         $message = $replacedWithCredits
             ? 'Especie actualizada. La '.implode(' y la ', $replacedWithCredits)
                 .(count($replacedWithCredits) > 1 ? ' cambiaron' : ' cambió').': revisa sus créditos.'
@@ -1043,12 +1084,14 @@ class SpeciesController extends Controller
      * su orden relativo al final.
      *
      * @param  array<string, mixed>  $validated
+     * @param  list<string>  $replacedWithCredits  Recibe la galería si una foto con créditos se reemplazó.
      * @return list<string> Rutas a borrar del disco después del commit.
      */
     private function syncGallery(
         Request $request,
         Species $species,
-        array $validated
+        array $validated,
+        array &$replacedWithCredits = []
     ): array {
         $deletedPaths = [];
 
@@ -1075,11 +1118,49 @@ class SpeciesController extends Controller
             ->get()
             ->keyBy('id');
 
+        /*
+         * Un elemento con id y file_index es una foto guardada que se volvió a
+         * recortar: el archivo nuevo reemplaza el suyo y conserva sus créditos.
+         */
+        $replacing = [];
+
+        foreach ($validated['gallery'] ?? [] as $item) {
+            if (isset($item['id'], $item['file_index']) && $existing->has($item['id'])) {
+                $replacing[(int) $item['file_index']] ??= $existing->get($item['id']);
+            }
+        }
+
         // Archivos nuevos, por su índice en gallery_images.
         $uploaded = [];
 
         foreach ($request->file('gallery_images', []) as $index => $file) {
             if (! $file->isValid()) {
+                continue;
+            }
+
+            if ($image = $replacing[$index] ?? null) {
+                if ($image->path) {
+                    $deletedPaths[] = $image->path;
+                }
+
+                if ($image->credits()->exists()) {
+                    $replacedWithCredits[] = mb_strtolower($image->typeLabel());
+                }
+
+                $image->update([
+                    'original_bytes' => $this->imageOptimizer->originalBytes(
+                        $request,
+                        'gallery_original_bytes.'.$index,
+                        $file
+                    ),
+                    'path' => $this->moveUploadedFile(
+                        $this->imageOptimizer->prepareUpload($file, 'gallery'),
+                        'species/'.$species->id
+                    ),
+                ]);
+
+                $uploaded[$index] = $image;
+
                 continue;
             }
 
@@ -1101,7 +1182,7 @@ class SpeciesController extends Controller
             ]);
         }
 
-        /** @var array<int, array{0: SpeciesImage, 1: string|null}> $ordered */
+        /** @var array<int, array{0: SpeciesImage, 1: string|null, 2: array{focal_x?: mixed, focal_y?: mixed}}> $ordered */
         $ordered = [];
 
         // validated() arma los elementos anidados regla por regla, así que
@@ -1118,22 +1199,50 @@ class SpeciesController extends Controller
                 $ordered[$image->id] = [
                     $image,
                     trim((string) ($item['alt_text'] ?? '')) ?: $species->common_name,
+                    // Sin las claves (clientes anteriores) se conserva el guardado.
+                    array_key_exists('focal_x', $item)
+                        ? ['focal_x' => $item['focal_x'], 'focal_y' => $item['focal_y'] ?? null]
+                        : [],
                 ];
             }
         }
 
         foreach ([...$existing->values(), ...array_values($uploaded)] as $image) {
-            $ordered[$image->id] ??= [$image, $image->alt_text];
+            $ordered[$image->id] ??= [$image, $image->alt_text, []];
         }
 
-        foreach (array_values($ordered) as $position => [$image, $altText]) {
+        foreach (array_values($ordered) as $position => [$image, $altText, $focal]) {
             $image->update([
                 'sort_order' => $position,
                 'alt_text' => $altText,
+                ...$focal,
             ]);
         }
 
         return $deletedPaths;
+    }
+
+    /**
+     * Punto focal enviado para la imagen principal. Una imagen nueva sin él
+     * vuelve al centro, porque el punto anterior era de otra foto; sin
+     * imagen nueva solo cambia si el formulario lo envía.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array{focal_x?: float|null, focal_y?: float|null}
+     */
+    private function mainFocal(array $validated, bool $newImage): array
+    {
+        if (! array_key_exists('main_focal_x', $validated) && ! $newImage) {
+            return [];
+        }
+
+        $x = $validated['main_focal_x'] ?? null;
+        $y = $validated['main_focal_y'] ?? null;
+
+        return [
+            'focal_x' => $x === null ? null : (float) $x,
+            'focal_y' => $y === null ? null : (float) $y,
+        ];
     }
 
     /**

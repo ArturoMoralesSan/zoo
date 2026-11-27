@@ -30,16 +30,16 @@ class CardTest extends TestCase
         $this->user = User::factory()->create();
 
         $this->category = SpeciesCategory::create([
-            'name' => 'Mamíferos ' . uniqid(),
+            'name' => 'Mamíferos '.uniqid(),
             'description' => 'Categoría de prueba',
             'is_active' => true,
         ]);
 
         $this->species = Species::create([
             'species_category_id' => $this->category->id,
-            'common_name' => 'Jaguar ' . uniqid(),
-            'scientific_name' => 'Panthera onca ' . uniqid(),
-            'slug' => 'jaguar-' . uniqid(),
+            'common_name' => 'Jaguar '.uniqid(),
+            'scientific_name' => 'Panthera onca '.uniqid(),
+            'slug' => 'jaguar-'.uniqid(),
             'description' => 'Especie de prueba',
             'is_active' => true,
         ]);
@@ -49,7 +49,7 @@ class CardTest extends TestCase
     {
         return Card::create(array_merge([
             'species_id' => $this->species->id,
-            'name' => 'Carta ' . uniqid(),
+            'name' => 'Carta '.uniqid(),
             'rarity' => 'comun',
             'model_file' => 'cards/1/models/jaguar.glb',
             'generated_image' => 'cards/1/jaguar.png',
@@ -100,6 +100,17 @@ class CardTest extends TestCase
         $this->assertSame(['max' => 3, 'left' => 3, 'locked_until' => null], $data['attempts']);
     }
 
+    public function test_owned_card_sends_the_thumbnail_focal_point(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $card = $this->createCard();
+        $card->update(['thumbnail_focal_x' => 0.25, 'thumbnail_focal_y' => 0.1]);
+        $this->capture($card);
+
+        $this->assertSame(['x' => 0.25, 'y' => 0.1], $this->cardFromIndex($card)['thumbnail_focal']);
+    }
+
     public function test_owned_card_returns_its_data_and_model(): void
     {
         Sanctum::actingAs($this->user);
@@ -111,8 +122,9 @@ class CardTest extends TestCase
 
         $this->assertSame([
             'id', 'encountered', 'name', 'rarity', 'category_name', 'thumbnail_image',
-            'card_image_url', 'stats', 'model_url', 'pack',
+            'thumbnail_focal', 'card_image_url', 'stats', 'model_url', 'pack',
         ], array_keys($data));
+        $this->assertNull($data['thumbnail_focal']);
 
         $this->assertTrue($data['encountered']);
         $this->assertSame($card->name, $data['name']);

@@ -305,6 +305,8 @@ class CardPackageImporter
                         'path' => $path,
                         'original_bytes' => $image['original_bytes'] ?? null,
                         'alt_text' => $image['alt_text'] ?? $species->common_name,
+                        'focal_x' => isset($image['focal_x'], $image['focal_y']) ? (float) $image['focal_x'] : null,
+                        'focal_y' => isset($image['focal_x'], $image['focal_y']) ? (float) $image['focal_y'] : null,
                         'is_active' => (bool) ($image['is_active'] ?? true),
                         'sort_order' => $sortOrder,
                     ]);
@@ -537,6 +539,13 @@ class CardPackageImporter
                     }
                 }
 
+                // La copia para volver a recortar era de la ilustración anterior (no viaja en el paquete).
+                if ($card->isDirty('artwork_image') && $card->artwork_source) {
+                    $obsolete[] = ['public', $card->artwork_source];
+                    $card->artwork_source = null;
+                    $card->artwork_crop = null;
+                }
+
                 $card->save();
 
                 $this->syncQuestions($card, (array) ($data['questions'] ?? []));
@@ -565,6 +574,9 @@ class CardPackageImporter
         // Sin especificar, como al crear la tarjeta en el panel.
         $values['is_active'] = (bool) ($values['is_active'] ?? false);
         $values['sort_order'] = (int) ($values['sort_order'] ?? 0);
+        // Paquetes sin punto focal: centro, no el de la miniatura que se reemplaza.
+        $values['thumbnail_focal_x'] ??= null;
+        $values['thumbnail_focal_y'] ??= null;
 
         return $values;
     }

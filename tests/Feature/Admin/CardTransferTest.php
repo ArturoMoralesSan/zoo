@@ -75,6 +75,28 @@ class CardTransferTest extends TestCase
     // Ayudas
     // ---------------------------------------------------------------------
 
+    public function test_overwriting_the_artwork_drops_its_crop_source(): void
+    {
+        $card = $this->createCard();
+        $zip = $this->export();
+
+        // Ilustración local que el paquete no trae: se quita junto con su copia.
+        Storage::disk('public')->put("cards/{$card->id}/fondo.webp", 'x');
+        Storage::disk('public')->put("cards/{$card->id}/sources/fondo.webp", 'x');
+        $card->update([
+            'artwork_image' => "cards/{$card->id}/fondo.webp",
+            'artwork_source' => "cards/{$card->id}/sources/fondo.webp",
+            'artwork_crop' => ['x' => 0, 'y' => 0, 'width' => 10, 'height' => 10],
+        ]);
+
+        $this->confirm($this->upload($zip), ['mode' => 'overwrite']);
+
+        $card->refresh();
+        $this->assertNull($card->artwork_source);
+        $this->assertNull($card->artwork_crop);
+        Storage::disk('public')->assertMissing("cards/{$card->id}/sources/fondo.webp");
+    }
+
     private function createCard(): Card
     {
         $card = Card::create([
@@ -693,6 +715,33 @@ class CardTransferTest extends TestCase
         $this->assertSame('Jane Doe', $newMain->credits->first()->author_name);
         $this->assertSame('image', $newMain->credits->first()->asset->value);
         $this->assertSame('proprietary', $newGallery->credits->first()->license->slug);
+    }
+
+    public function test_species_image_focal_points_travel_with_their_images(): void
+    {
+        $this->dressSpecies();
+        $this->species->images()->where('type', 'main')->update(['focal_x' => 0.25, 'focal_y' => 0.75]);
+
+        $zip = $this->export();
+        $this->deleteSpecies($this->species);
+        $this->confirm($this->upload($zip));
+
+        $species = Species::where('slug', 'jaguar')->with('images')->firstOrFail();
+
+        $this->assertSame(['x' => 0.25, 'y' => 0.75], $species->images->firstWhere('type', 'main')?->focal());
+        $this->assertNull($species->images->firstWhere('type', 'gallery')?->focal());
+    }
+
+    public function test_card_thumbnail_focal_point_travels_with_the_card(): void
+    {
+        $card = $this->createCard();
+        $card->update(['thumbnail_focal_x' => 0.3, 'thumbnail_focal_y' => 0.6]);
+
+        $zip = $this->export();
+        $this->deleteCard($card);
+        $this->confirm($this->upload($zip));
+
+        $this->assertSame(['x' => 0.3, 'y' => 0.6], Card::where('uuid', $card->uuid)->firstOrFail()->thumbnailFocal());
     }
 
     public function test_overwriting_a_species_replaces_its_image_credits(): void

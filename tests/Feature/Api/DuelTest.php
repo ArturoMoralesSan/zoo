@@ -155,7 +155,8 @@ class DuelTest extends TestCase
         $this->assertSame(['id', 'answer'], array_keys($duel->json('data.questions.0.answers.0')));
         $this->assertSame(['max' => 2, 'left' => 2, 'locked_until' => null], $duel->json('data.attempts'));
         $this->assertSame(['attempt_id', 'attempts', 'card', 'questions'], array_keys($duel->json('data')));
-        $this->assertSame(['name', 'rarity', 'category_name', 'thumbnail_image', 'stats', 'model_url', 'pack'], array_keys($duel->json('data.card')));
+        $this->assertSame(['name', 'rarity', 'category_name', 'thumbnail_image', 'thumbnail_focal', 'stats', 'model_url', 'pack'], array_keys($duel->json('data.card')));
+        $this->assertNull($duel->json('data.card.thumbnail_focal'));
         $this->assertStringEndsWith('cards/9/models/quetzal.glb', $duel->json('data.card.model_url'));
         $this->assertSame($this->species->category->name, $duel->json('data.card.category_name'));
         $this->assertStringNotContainsString('is_correct', $duel->getContent());

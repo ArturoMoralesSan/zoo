@@ -44,16 +44,16 @@ class CardAdminTest extends TestCase
         $this->admin->givePermissionTo(['cards.view', 'cards.create', 'cards.edit', 'cards.delete']);
 
         $this->category = SpeciesCategory::create([
-            'name' => 'Aves ' . uniqid(),
+            'name' => 'Aves '.uniqid(),
             'description' => 'Categoría de aves',
             'is_active' => true,
         ]);
 
         $this->species = Species::create([
             'species_category_id' => $this->category->id,
-            'common_name' => 'Águila Real ' . uniqid(),
-            'scientific_name' => 'Aquila chrysaetos ' . uniqid(),
-            'slug' => 'aguila-real-' . uniqid(),
+            'common_name' => 'Águila Real '.uniqid(),
+            'scientific_name' => 'Aquila chrysaetos '.uniqid(),
+            'slug' => 'aguila-real-'.uniqid(),
             'description' => 'Especie de prueba',
             'is_active' => true,
         ]);
@@ -363,7 +363,7 @@ class CardAdminTest extends TestCase
         return array_merge([
             ...$this->designPayload(),
             'species_id' => $this->species->id,
-            'name' => 'Águila Modelo ' . uniqid(),
+            'name' => 'Águila Modelo '.uniqid(),
             'rarity' => 'comun',
             'astucia' => 50,
             'rapidez' => 50,
@@ -426,7 +426,7 @@ class CardAdminTest extends TestCase
 
         foreach (['thumbnail_image', 'artwork_image', 'generated_image'] as $field) {
             $this->assertNotNull($card->{$field});
-            $paths[] = storage_path('app/public/' . $card->{$field});
+            $paths[] = storage_path('app/public/'.$card->{$field});
         }
 
         // Al actualizar, la imagen generada reemplaza a la anterior.
@@ -441,7 +441,7 @@ class CardAdminTest extends TestCase
         $card->refresh();
 
         $this->assertFileDoesNotExist($paths[2]);
-        $paths[2] = storage_path('app/public/' . $card->generated_image);
+        $paths[2] = storage_path('app/public/'.$card->generated_image);
 
         foreach ($paths as $path) {
             $this->assertFileExists($path);
@@ -457,6 +457,140 @@ class CardAdminTest extends TestCase
 
         File::delete($paths);
         @rmdir(dirname($paths[1]));
+    }
+
+    public function test_artwork_and_thumbnail_must_have_their_aspect_ratio(): void
+    {
+        // Rareza inválida a propósito: la validación falla antes de escribir archivos.
+        $post = fn (int $artworkWidth, int $artworkHeight, int $thumbWidth, int $thumbHeight) => $this
+            ->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload([
+                'rarity' => 'no-existe',
+                'artwork_image' => UploadedFile::fake()->image('fondo.png', $artworkWidth, $artworkHeight),
+                'thumbnail_image' => UploadedFile::fake()->image('mini.png', $thumbWidth, $thumbHeight),
+            ]));
+
+        $post(1000, 1000, 80, 60)->assertSessionHasErrors([
+            'artwork_image' => 'La ilustración debe tener proporción 572:1016. Usa "Recortar" antes de guardar.',
+            'thumbnail_image' => 'La miniatura debe tener proporción 1:1. Usa "Recortar" antes de guardar.',
+        ]);
+
+        $post(572, 1016, 80, 80)->assertSessionDoesntHaveErrors(['artwork_image', 'thumbnail_image']);
+        // Tamaño redondeado por el navegador al reducir (2048 de alto).
+        $post(1153, 2048, 800, 800)->assertSessionDoesntHaveErrors(['artwork_image', 'thumbnail_image']);
+    }
+
+    public function test_artwork_keeps_its_crop_source_for_recropping(): void
+    {
+        Storage::fake('public');
+
+        $crop = ['x' => 100, 'y' => 0, 'width' => 900, 'height' => 1599, 'rotate' => 0, 'scaleX' => 1, 'scaleY' => 1, 'aspectRatio' => null];
+        $artwork = fn () => UploadedFile::fake()->image('fondo.png', 572, 1016);
+
+        $payload = $this->cardPayload([
+            'is_active' => false,
+            'artwork_image' => $artwork(),
+            'artwork_source' => UploadedFile::fake()->image('foto.webp', 1200, 1600),
+            'artwork_crop' => $crop,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors();
+
+        $card = Card::where('name', $payload['name'])->firstOrFail();
+        $source = $card->artwork_source;
+        $files = [];
+
+        $this->assertStringStartsWith("cards/{$card->id}/sources/", $source);
+        Storage::disk('public')->assertExists($source);
+        $this->assertEquals($crop, $card->artwork_crop);
+
+        // Recortada de nuevo desde la copia guardada: solo cambia el recuadro.
+        $files[] = storage_path('app/public/'.$card->artwork_image);
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->updatePayload($card, [
+                'is_active' => false,
+                'artwork_image' => $artwork(),
+                'artwork_crop' => [...$crop, 'y' => 1],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $card->refresh();
+        $this->assertSame($source, $card->artwork_source);
+        $this->assertEquals(1, $card->artwork_crop['y']);
+
+        // Al eliminar la ilustración se elimina su copia.
+        $files[] = storage_path('app/public/'.$card->artwork_image);
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.image.destroy', [$card, 'artwork']))
+            ->assertSessionHasNoErrors();
+
+        $card->refresh();
+        $this->assertNull($card->artwork_source);
+        $this->assertNull($card->artwork_crop);
+        Storage::disk('public')->assertMissing($source);
+
+        // CardController mueve las imágenes a storage/app/public real.
+        File::delete($files);
+        @rmdir(dirname($files[0]));
+    }
+
+    public function test_thumbnail_focal_point_is_saved_kept_or_reset(): void
+    {
+        Storage::fake('public');
+
+        $payload = $this->cardPayload([
+            'is_active' => false,
+            'thumbnail_image' => UploadedFile::fake()->image('mini.png', 80, 80),
+            'thumbnail_focal_x' => 0.2,
+            'thumbnail_focal_y' => 0.7,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors();
+
+        $card = Card::where('name', $payload['name'])->firstOrFail();
+        $files = [storage_path('app/public/'.$card->thumbnail_image)];
+        $this->assertSame(['x' => 0.2, 'y' => 0.7], $card->thumbnailFocal());
+
+        $update = function (array $data) use ($card, &$files) {
+            $this->actingAs($this->admin)
+                ->put(route('admin.cards.update', $card), $this->updatePayload($card, ['is_active' => false, ...$data]))
+                ->assertSessionHasNoErrors();
+            $files[] = storage_path('app/public/'.$card->refresh()->thumbnail_image);
+        };
+
+        // Sin las claves (cliente anterior): se conserva.
+        $update([]);
+        $this->assertSame(['x' => 0.2, 'y' => 0.7], $card->thumbnailFocal());
+
+        // Se mueve sin cambiar de foto.
+        $update(['thumbnail_focal_x' => 0.9, 'thumbnail_focal_y' => 0.1]);
+        $this->assertSame(['x' => 0.9, 'y' => 0.1], $card->thumbnailFocal());
+
+        // Foto nueva sin punto: el anterior era de otra foto.
+        $update(['thumbnail_image' => UploadedFile::fake()->image('otra.png', 80, 80)]);
+        $this->assertNull($card->thumbnailFocal());
+
+        // Al eliminar la miniatura se olvida.
+        $card->update(['thumbnail_focal_x' => 0.5, 'thumbnail_focal_y' => 0.5]);
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.image.destroy', [$card, 'thumbnail']))
+            ->assertSessionHasNoErrors();
+        $this->assertNull($card->refresh()->thumbnailFocal());
+
+        // CardController mueve las imágenes a storage/app/public real.
+        File::delete($files);
+        @rmdir(dirname($files[0]));
+    }
+
+    public function test_thumbnail_focal_point_needs_both_coordinates_between_0_and_1(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload(['thumbnail_focal_x' => 1.5]))
+            ->assertSessionHasErrors(['thumbnail_focal_x', 'thumbnail_focal_y']);
     }
 
     public function test_generated_card_image_must_be_webp_or_png(): void

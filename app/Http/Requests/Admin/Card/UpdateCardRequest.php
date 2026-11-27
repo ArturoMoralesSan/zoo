@@ -5,8 +5,10 @@ namespace App\Http\Requests\Admin\Card;
 use App\Concerns\CardDesignValidationRules;
 use App\Concerns\CardMessagesValidationRules;
 use App\Concerns\CardModelValidationRules;
+use App\Concerns\ImageAspectRules;
 use App\Enums\CardRarity;
 use App\Models\Card;
+use App\Services\ImageCropSource;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,6 +17,7 @@ class UpdateCardRequest extends FormRequest
     use CardDesignValidationRules;
     use CardMessagesValidationRules;
     use CardModelValidationRules;
+    use ImageAspectRules;
 
     public function authorize(): bool
     {
@@ -51,6 +54,7 @@ class UpdateCardRequest extends FormRequest
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
+                $this->aspectRule('cards', 'thumbnail'),
             ],
 
             'artwork_image' => [
@@ -58,7 +62,18 @@ class UpdateCardRequest extends FormRequest
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
+                $this->aspectRule('cards', 'artwork'),
             ],
+
+            // Copia de la foto completa y recuadro, para volver a recortar.
+            ...ImageCropSource::rules('artwork'),
+
+            /*
+             * Punto focal de la miniatura (0 a 1, desde la esquina superior
+             * izquierda). Sin enviarlo se conserva el guardado.
+             */
+            'thumbnail_focal_x' => ['nullable', 'numeric', 'between:0,1', 'required_with:thumbnail_focal_y'],
+            'thumbnail_focal_y' => ['nullable', 'numeric', 'between:0,1', 'required_with:thumbnail_focal_x'],
 
             /*
              * Imagen final generada en el navegador a partir de la plantilla.
@@ -156,6 +171,21 @@ class UpdateCardRequest extends FormRequest
 
     public function attributes(): array
     {
-        return $this->cardModelAttributes();
+        return [
+            ...$this->cardModelAttributes(),
+            'thumbnail_image' => 'miniatura',
+            'thumbnail_focal_x' => 'punto focal de la miniatura (horizontal)',
+            'thumbnail_focal_y' => 'punto focal de la miniatura (vertical)',
+            'artwork_image' => 'ilustración',
+            ...ImageCropSource::attributes('artwork', 'ilustración'),
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            ...$this->aspectMessages('cards', 'thumbnail_image', 'thumbnail'),
+            ...$this->aspectMessages('cards', 'artwork_image', 'artwork'),
+        ];
     }
 }

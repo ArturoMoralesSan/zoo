@@ -35,4 +35,14 @@ return [
         flags: JSON_THROW_ON_ERROR
     ),
 
+    /*
+     * Copia de la foto completa que se guarda para volver a recortar la
+     * ilustración de la tarjeta y la imagen principal de la especie. La reduce
+     * el navegador (lib/imageCrop.ts, CROP_SOURCE_PROFILE) al mismo lado máximo.
+     */
+    'crop_source' => [
+        'max_side' => 2400,
+        'max_kb' => 8192,
+    ],
+
 ];

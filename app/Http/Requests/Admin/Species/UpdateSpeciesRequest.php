@@ -2,17 +2,20 @@
 
 namespace App\Http\Requests\Admin\Species;
 
+use App\Concerns\ImageAspectRules;
 use App\Concerns\SpeciesModelValidationRules;
 use App\Enums\ConservationStatus;
 use App\Enums\Diet;
 use App\Enums\Habitat;
 use App\Models\Species;
+use App\Services\ImageCropSource;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Exists;
 
 class UpdateSpeciesRequest extends FormRequest
 {
+    use ImageAspectRules;
     use SpeciesModelValidationRules;
 
     public function authorize(): bool
@@ -125,6 +128,29 @@ class UpdateSpeciesRequest extends FormRequest
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
+                $this->aspectRule('species', 'thumbnail'),
+            ],
+
+            // Copia de la foto completa y recuadro, para volver a recortar.
+            ...ImageCropSource::rules('main'),
+
+            /*
+             * Punto focal de la imagen principal (0 a 1, desde la esquina
+             * superior izquierda). La app recorta con cover y lo mantiene a la
+             * vista. Sin enviarlo se conserva el guardado.
+             */
+            'main_focal_x' => [
+                'nullable',
+                'numeric',
+                'between:0,1',
+                'required_with:main_focal_y',
+            ],
+
+            'main_focal_y' => [
+                'nullable',
+                'numeric',
+                'between:0,1',
+                'required_with:main_focal_x',
             ],
 
             'gallery_images' => [
@@ -197,6 +223,20 @@ class UpdateSpeciesRequest extends FormRequest
                 'max:255',
             ],
 
+            'gallery.*.focal_x' => [
+                'nullable',
+                'numeric',
+                'between:0,1',
+                'required_with:gallery.*.focal_y',
+            ],
+
+            'gallery.*.focal_y' => [
+                'nullable',
+                'numeric',
+                'between:0,1',
+                'required_with:gallery.*.focal_x',
+            ],
+
             'deleted_gallery_ids' => [
                 'nullable',
                 'array',
@@ -247,6 +287,11 @@ class UpdateSpeciesRequest extends FormRequest
         ];
     }
 
+    public function messages(): array
+    {
+        return $this->aspectMessages('species', 'thumbnail_image', 'thumbnail');
+    }
+
     public function attributes(): array
     {
         return [
@@ -264,11 +309,16 @@ class UpdateSpeciesRequest extends FormRequest
             'tags' => 'etiquetas',
 
             'main_image' => 'imagen principal',
+            ...ImageCropSource::attributes('main', 'imagen principal'),
             'thumbnail_image' => 'miniatura',
             'card_image' => 'imagen de tarjeta',
             'gallery_images' => 'imágenes de galería',
             'gallery_images.*' => 'imagen de galería',
             'gallery.*.alt_text' => 'texto alternativo',
+            'main_focal_x' => 'punto focal (horizontal)',
+            'main_focal_y' => 'punto focal (vertical)',
+            'gallery.*.focal_x' => 'punto focal (horizontal)',
+            'gallery.*.focal_y' => 'punto focal (vertical)',
 
             'model_name' => 'nombre del modelo 3D',
             'model_file' => 'archivo del modelo 3D',

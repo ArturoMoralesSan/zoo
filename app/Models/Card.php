@@ -27,6 +27,8 @@ class Card extends Model implements Creditable
         'name',
         'rarity',
         'thumbnail_image',
+        'thumbnail_focal_x',
+        'thumbnail_focal_y',
         'artwork_image',
         'generated_image',
         'fade_color',
@@ -55,6 +57,8 @@ class Card extends Model implements Creditable
         'retry_message',
         'locked_message',
         'image_original_bytes',
+        'artwork_source',
+        'artwork_crop',
     ];
 
     protected $casts = [
@@ -77,7 +81,27 @@ class Card extends Model implements Creditable
 
         // Peso de cada imagen antes de comprimirla: { generated, thumbnail, artwork }.
         'image_original_bytes' => 'array',
+        'artwork_crop' => 'array',
+
+        // Punto focal de la miniatura (0 a 1); null = centro.
+        'thumbnail_focal_x' => 'float',
+        'thumbnail_focal_y' => 'float',
     ];
+
+    /**
+     * Punto focal de la miniatura: la app la recorta con cover en marcos de
+     * 0.7:1 a 2:1 y mantiene este punto a la vista. null = centro.
+     *
+     * @return array{x: float, y: float}|null
+     */
+    public function thumbnailFocal(): ?array
+    {
+        if ($this->thumbnail_focal_x === null || $this->thumbnail_focal_y === null) {
+            return null;
+        }
+
+        return ['x' => $this->thumbnail_focal_x, 'y' => $this->thumbnail_focal_y];
+    }
 
     /**
      * Identificador estable entre servidores (exportar/importar paquetes).

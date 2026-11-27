@@ -90,6 +90,8 @@ final class CardPackage
         'retry_message',
         'locked_message',
         'image_original_bytes',
+        'thumbnail_focal_x',
+        'thumbnail_focal_y',
     ];
 
     /**

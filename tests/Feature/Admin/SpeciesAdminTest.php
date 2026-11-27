@@ -307,6 +307,47 @@ class SpeciesAdminTest extends TestCase
         );
     }
 
+    public function test_recropping_a_saved_gallery_photo_replaces_its_file_and_keeps_credits(): void
+    {
+        $this->seed(LicenseSeeder::class);
+
+        $species = $this->species(['is_active' => false]);
+        $first = $this->galleryImage($species, 0);
+        $second = $this->galleryImage($species, 1);
+        $oldPath = $second->path;
+        $credit = $second->credits()->create([
+            'asset' => 'image',
+            'role' => 'origin',
+            'source_name' => 'own',
+            'license_id' => License::where('slug', 'proprietary')->value('id'),
+        ]);
+
+        $response = $this->actingAs($this->admin())
+            ->put(route('admin.species.update', $species), $this->payload([
+                'common_name' => $species->common_name,
+                'is_active' => false,
+                'gallery_images' => [UploadedFile::fake()->image('recorte.png', 60, 40)],
+                'gallery' => [
+                    ['id' => $second->id, 'file_index' => 0, 'alt_text' => 'Recortada', 'focal_x' => 0.4, 'focal_y' => 0.5],
+                    ['id' => $first->id, 'alt_text' => 'Primera'],
+                ],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $second->refresh();
+
+        // Misma foto (mismo id y créditos), archivo nuevo y primera en el orden.
+        $this->assertSame(2, $species->images()->where('type', 'gallery')->count());
+        $this->assertNotSame($oldPath, $second->path);
+        Storage::disk('public')->assertMissing($oldPath);
+        $this->assertSame(0, $second->sort_order);
+        $this->assertSame('Recortada', $second->alt_text);
+        $this->assertSame(['x' => 0.4, 'y' => 0.5], $second->focal());
+        $this->assertNotNull($credit->fresh());
+        $response->assertInertiaFlash('toast.type', 'warning');
+        $response->assertInertiaFlash('toast.message', 'Especie actualizada. La galería cambió: revisa sus créditos.');
+    }
+
     public function test_inactive_species_without_credits_saves_without_warning(): void
     {
         $species = $this->species(['is_active' => false]);
@@ -369,6 +410,210 @@ class SpeciesAdminTest extends TestCase
             ->assertJsonPath('data.species.habitats.0.code', 'tropical_rainforest')
             ->assertJsonPath('data.species.diet_code', 'herbivore')
             ->assertJsonPath('data.species.conservation_status_code', 'LC');
+    }
+
+    public function test_thumbnail_must_be_square(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'thumbnail_image' => UploadedFile::fake()->image('t.jpg', 80, 60),
+            ]))
+            ->assertSessionHasErrors([
+                'thumbnail_image' => 'La miniatura debe tener proporción 1:1. Usa "Recortar" antes de guardar.',
+            ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'thumbnail_image' => UploadedFile::fake()->image('t.jpg', 80, 80),
+                // La principal admite cualquier proporción.
+                'main_image' => UploadedFile::fake()->image('m.jpg', 120, 40),
+            ]))
+            ->assertSessionHasNoErrors();
+    }
+
+    public function test_store_saves_the_focal_point_of_main_and_gallery_images(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'main_image' => UploadedFile::fake()->image('m.jpg', 60, 40),
+                'main_focal_x' => 0.25,
+                'main_focal_y' => 0.8,
+                'gallery_images' => [UploadedFile::fake()->image('a.jpg')],
+                'gallery' => [['file_index' => 0, 'alt_text' => '', 'focal_x' => 0.1, 'focal_y' => 0.2]],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $main = SpeciesImage::where('type', 'main')->firstOrFail();
+        $gallery = SpeciesImage::where('type', 'gallery')->firstOrFail();
+
+        $this->assertSame(['x' => 0.25, 'y' => 0.8], $main->focal());
+        $this->assertSame(['x' => 0.1, 'y' => 0.2], $gallery->focal());
+    }
+
+    public function test_focal_point_needs_both_coordinates_between_0_and_1(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'main_focal_x' => 0.5,
+                'gallery_images' => [UploadedFile::fake()->image('a.jpg')],
+                'gallery' => [['file_index' => 0, 'alt_text' => '', 'focal_x' => 1.5, 'focal_y' => 0.2]],
+            ]))
+            ->assertSessionHasErrors(['main_focal_y', 'gallery.0.focal_x']);
+    }
+
+    public function test_update_keeps_moves_or_resets_the_main_focal_point(): void
+    {
+        $species = $this->species();
+        $main = SpeciesImage::create([
+            'species_id' => $species->id,
+            'type' => 'main',
+            'path' => "species/{$species->id}/main.jpg",
+            'focal_x' => 0.3,
+            'focal_y' => 0.4,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        $gallery = $this->galleryImage($species, 0);
+        $gallery->update(['focal_x' => 0.6, 'focal_y' => 0.7]);
+
+        $update = fn (array $data) => $this->actingAs($this->admin())
+            ->put(route('admin.species.update', $species), $this->payload([
+                'common_name' => $species->common_name,
+                ...$data,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        // Sin las claves (cliente anterior): se conserva.
+        $update(['gallery' => [['id' => $gallery->id, 'alt_text' => 'Foto']]]);
+        $this->assertSame(['x' => 0.3, 'y' => 0.4], $main->refresh()->focal());
+        $this->assertSame(['x' => 0.6, 'y' => 0.7], $gallery->refresh()->focal());
+
+        // Se mueve sin cambiar de foto, o se vuelve al centro.
+        $update([
+            'main_focal_x' => 0.9,
+            'main_focal_y' => 0.1,
+            'gallery' => [['id' => $gallery->id, 'alt_text' => 'Foto', 'focal_x' => null, 'focal_y' => null]],
+        ]);
+        $this->assertSame(['x' => 0.9, 'y' => 0.1], $main->refresh()->focal());
+        $this->assertNull($gallery->refresh()->focal());
+
+        // Foto nueva sin punto: el anterior era de otra foto.
+        $update([
+            'main_image' => UploadedFile::fake()->image('nueva.jpg', 40, 40),
+            'gallery' => [['id' => $gallery->id, 'alt_text' => 'Foto']],
+        ]);
+        $this->assertNull($main->refresh()->focal());
+    }
+
+    public function test_main_image_keeps_its_crop_source_for_recropping(): void
+    {
+        $crop = ['x' => 10, 'y' => 20, 'width' => 600, 'height' => 400, 'rotate' => 90, 'scaleX' => 1, 'scaleY' => 1, 'aspectRatio' => 1.5];
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'main_image' => UploadedFile::fake()->image('m.png', 60, 40),
+                'main_source' => UploadedFile::fake()->image('foto.webp', 1200, 800),
+                'main_crop' => $crop,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $main = SpeciesImage::where('type', 'main')->firstOrFail();
+        $source = $main->source_path;
+        $species = $main->species;
+
+        $this->assertStringStartsWith("species/{$species->id}/sources/", $source);
+        Storage::disk('public')->assertExists($source);
+        $this->assertEquals($crop, $main->crop);
+
+        $update = fn (array $data) => $this->actingAs($this->admin())
+            ->put(route('admin.species.update', $species), $this->payload([
+                'common_name' => $species->common_name,
+                'main_image' => UploadedFile::fake()->image('m2.png', 60, 40),
+                ...$data,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        // Recortada de nuevo desde la copia guardada: solo cambia el recuadro.
+        $update(['main_crop' => [...$crop, 'x' => 50, 'aspectRatio' => null]]);
+        $this->assertSame($source, $main->refresh()->source_path);
+        $this->assertEquals(50, $main->crop['x']);
+        $this->assertNull($main->crop['aspectRatio']);
+
+        // Foto usada sin recortar: la copia ya no corresponde.
+        $update([]);
+        $this->assertNull($main->refresh()->source_path);
+        $this->assertNull($main->crop);
+        Storage::disk('public')->assertMissing($source);
+    }
+
+    public function test_crop_source_needs_its_crop_and_a_limited_size(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'main_image' => UploadedFile::fake()->image('m.png', 60, 40),
+                'main_source' => UploadedFile::fake()->image('foto.webp', 2401, 800),
+            ]))
+            ->assertSessionHasErrors(['main_source', 'main_crop']);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'main_crop' => ['x' => 0, 'y' => 0, 'width' => 0, 'height' => 10, 'scaleX' => 2],
+            ]))
+            ->assertSessionHasErrors(['main_crop.width', 'main_crop.scaleX']);
+    }
+
+    public function test_deleting_an_image_deletes_its_crop_source(): void
+    {
+        $species = $this->species();
+        Storage::disk('public')->put("species/{$species->id}/sources/a.webp", 'x');
+
+        $image = $this->galleryImage($species, 0);
+        $image->update(['source_path' => "species/{$species->id}/sources/a.webp"]);
+        $image->delete();
+
+        Storage::disk('public')->assertMissing("species/{$species->id}/sources/a.webp");
+    }
+
+    public function test_api_list_prefers_the_main_image_and_sends_its_focal_point(): void
+    {
+        $species = $this->species();
+        $this->galleryImage($species, 0);
+        SpeciesImage::create([
+            'species_id' => $species->id,
+            'type' => 'main',
+            'path' => "species/{$species->id}/main.jpg",
+            'focal_x' => 0.25,
+            'focal_y' => 0.75,
+            'is_active' => true,
+            'sort_order' => 5,
+        ]);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/species')
+            ->assertOk()
+            ->assertJsonPath('data.species.0.image', url(Storage::url("species/{$species->id}/main.jpg")))
+            ->assertJsonPath('data.species.0.image_focal', ['x' => 0.25, 'y' => 0.75]);
+
+        $this->getJson("/api/species/{$species->id}")
+            ->assertOk()
+            ->assertJsonPath('data.species.images.0.type', 'gallery')
+            ->assertJsonPath('data.species.images.0.focal_x', null)
+            ->assertJsonPath('data.species.images.1.focal_x', 0.25)
+            ->assertJsonPath('data.species.images.1.focal_y', 0.75);
+    }
+
+    public function test_api_list_without_main_image_falls_back_and_sends_null_focal(): void
+    {
+        $species = $this->species();
+        $this->galleryImage($species, 0);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/species')
+            ->assertOk()
+            ->assertJsonPath('data.species.0.image', url(Storage::url("species/{$species->id}/gallery-0.jpg")))
+            ->assertJsonPath('data.species.0.image_focal', null);
     }
 
     public function test_migration_converts_free_text_to_codes(): void

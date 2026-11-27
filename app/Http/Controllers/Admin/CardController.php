@@ -18,6 +18,7 @@ use App\Models\Species;
 use App\Services\CardImageOptimizer;
 use App\Services\GlbInspection;
 use App\Services\GlbInspector;
+use App\Services\ImageCropSource;
 use App\Support\UploadExtension;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
@@ -518,6 +519,10 @@ class CardController extends Controller
 
         $this->deletePublicFile($card->{$field});
 
+        if ($image === 'artwork') {
+            ImageCropSource::delete($card->artwork_source);
+        }
+
         DB::transaction(function () use ($card, $field, $image) {
             $originals = $card->image_original_bytes ?? [];
             unset($originals[$image]);
@@ -525,6 +530,8 @@ class CardController extends Controller
             $card->update([
                 $field => null,
                 'image_original_bytes' => $originals ?: null,
+                ...($image === 'artwork' ? ['artwork_source' => null, 'artwork_crop' => null] : []),
+                ...($image === 'thumbnail' ? ['thumbnail_focal_x' => null, 'thumbnail_focal_y' => null] : []),
             ]);
 
             $this->deleteAssetCredits($card, CreditAsset::from($image));
@@ -742,6 +749,27 @@ class CardController extends Controller
                     ...($card->image_original_bytes ?? []),
                     $image => $originalBytes,
                 ],
+            ]);
+
+            if ($image === 'artwork') {
+                [$source, $crop] = ImageCropSource::store($request, 'artwork', $card->artwork_source, $directory);
+
+                $card->update(['artwork_source' => $source, 'artwork_crop' => $crop]);
+            }
+        }
+
+        /*
+         * Punto focal de la miniatura: una imagen nueva sin él vuelve al
+         * centro (el anterior era de otra foto); sin imagen nueva solo cambia
+         * si el formulario lo envía.
+         */
+        if ($request->hasFile('thumbnail_image') || $request->exists('thumbnail_focal_x')) {
+            $x = $request->input('thumbnail_focal_x');
+            $y = $request->input('thumbnail_focal_y');
+
+            $card->update([
+                'thumbnail_focal_x' => is_numeric($x) && is_numeric($y) ? (float) $x : null,
+                'thumbnail_focal_y' => is_numeric($x) && is_numeric($y) ? (float) $y : null,
             ]);
         }
     }

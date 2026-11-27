@@ -1,10 +1,21 @@
 <script setup lang="ts">
-import { FileImage, Trash2, Upload } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { Crop, FileImage, Lock, Trash2, Upload } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
 import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
+import ImageCropDialog from '@/components/admin/ImageCropDialog.vue';
+import FocalPointPicker from '@/components/admin/species/FocalPointPicker.vue';
 import { useObjectUrl } from '@/composables/useObjectUrl';
-import { optimizeUpload } from '@/lib/imageOptimize';
+import { CARD_THUMBNAIL_FRAMES } from '@/lib/focalPoint';
+import {
+    aspectLabel,
+    cropMemory,
+    cropOrigin,
+    cropSource,
+    rememberCrop,
+} from '@/lib/imageCrop';
+import type { SavedCrop } from '@/lib/imageCrop';
+import { CARD_IMAGE_PROFILES, optimizeUpload } from '@/lib/imageOptimize';
 import type { CardImageKind } from '@/lib/imageOptimize';
 import { storageUrl } from '@/lib/modelPreview';
 
@@ -18,6 +29,9 @@ const props = withDefaults(
         label: string;
         help: string;
         currentPath?: string | null;
+        // Copia de la foto completa y último recuadro (solo la ilustración).
+        currentSource?: string | null;
+        currentCrop?: SavedCrop | null;
         alt?: string;
         error?: string;
         disabled?: boolean;
@@ -29,6 +43,8 @@ const props = withDefaults(
     }>(),
     {
         currentPath: null,
+        currentSource: null,
+        currentCrop: null,
         alt: '',
         error: '',
         disabled: false,
@@ -39,11 +55,29 @@ const props = withDefaults(
 
 const file = defineModel<File | null>('file', { required: true });
 
+// Punto focal (solo la miniatura): undefined = el campo no lo usa.
+const focalX = defineModel<number | null | undefined>('focalX');
+const focalY = defineModel<number | null | undefined>('focalY');
+const usesFocal = computed(() => focalX.value !== undefined);
+const focalSrc = computed(
+    () =>
+        filePreviewUrl.value ??
+        (props.currentPath ? storageUrl(props.currentPath) : null),
+);
+
 const emit = defineEmits<{
     delete: [];
 }>();
 
 const filePreviewUrl = useObjectUrl(() => file.value);
+
+// Foto nueva: el punto anterior era de otra imagen.
+watch(file, (value) => {
+    if (value && usesFocal.value) {
+        focalX.value = null;
+        focalY.value = null;
+    }
+});
 
 /*
  * Peso que tendrá la imagen elegida. optimizeUpload guarda el resultado,
@@ -70,8 +104,68 @@ watch(file, async (value) => {
 
 const handleFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
-    file.value = target.files?.[0] ?? null;
+    const picked = target.files?.[0] ?? null;
+
+    // Permite volver a elegir el mismo archivo tras cancelar.
+    target.value = '';
+
+    if (picked) {
+        openCrop(picked);
+    }
 };
+
+/*
+ * Recorte antes de comprimir. La miniatura (1:1) y la ilustración (572:1016)
+ * tienen proporción fija: el archivo solo entra al formulario recortado.
+ */
+const profile = computed(() => CARD_IMAGE_PROFILES[props.kind]);
+const lockLabel = computed(() => aspectLabel(profile.value));
+
+const CROP_TEXTS: Partial<
+    Record<CardImageKind, { reason: string; guide: 'card' | 'circle' }>
+> = {
+    artwork: {
+        reason: 'La tarjeta usa esta proporción; lo que quede fuera del marco no se verá. Mantén al animal fuera de las zonas marcadas.',
+        guide: 'card',
+    },
+    thumbnail: {
+        reason: 'La miniatura se muestra en cuadros y círculos de la app.',
+        guide: 'circle',
+    },
+};
+
+const cropOpen = ref(false);
+const cropFrom = ref<File | string | null>(null);
+
+const openCrop = (source: File | string) => {
+    cropFrom.value = source;
+    cropOpen.value = true;
+};
+
+// Solo sin proporción fija: el archivo elegido, tal cual.
+const useUncropped = () => {
+    if (cropFrom.value instanceof File) {
+        file.value = cropFrom.value;
+    }
+};
+
+// Desde la foto completa guardada si la hay; si no, desde la imagen actual.
+const recropCurrent = () => {
+    const sourceUrl = props.currentSource
+        ? (storageUrl(props.currentSource) ?? props.currentSource)
+        : null;
+
+    if (sourceUrl && props.currentCrop) {
+        rememberCrop(sourceUrl, cropMemory(props.currentCrop));
+        openCrop(sourceUrl);
+    } else if (props.currentPath) {
+        openCrop(storageUrl(props.currentPath) ?? props.currentPath);
+    }
+};
+
+const currentFilename = computed(
+    () => props.currentPath?.split('/').pop() ?? 'imagen.png',
+);
 </script>
 
 <template>
@@ -106,6 +200,17 @@ const handleFile = (event: Event) => {
                         :optimized="currentBytes"
                     />
                 </div>
+
+                <button
+                    v-if="!file"
+                    type="button"
+                    :disabled="props.disabled"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-[#c8dccf] bg-white px-4 py-2.5 text-sm font-semibold text-[#244334] transition hover:bg-[#F2F7F4] disabled:cursor-not-allowed disabled:opacity-50"
+                    @click="recropCurrent"
+                >
+                    <Crop :size="16" />
+                    Recortar imagen actual
+                </button>
 
                 <button
                     type="button"
@@ -149,6 +254,14 @@ const handleFile = (event: Event) => {
                     JPG, JPEG, PNG o WEBP · Máximo 5 MB
                 </span>
 
+                <span
+                    v-if="lockLabel"
+                    class="inline-flex items-center gap-1 text-xs font-semibold text-[#187744]"
+                >
+                    <Lock :size="12" />
+                    Se recorta a proporción {{ lockLabel }}
+                </span>
+
                 <input
                     :id="id"
                     type="file"
@@ -158,9 +271,20 @@ const handleFile = (event: Event) => {
                 />
             </label>
 
+            <button
+                v-if="file"
+                type="button"
+                :disabled="props.disabled"
+                class="inline-flex items-center gap-2 text-sm font-semibold text-[#187744] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                @click="openCrop(cropOrigin(file))"
+            >
+                <Crop :size="16" />
+                Recortar de nuevo
+            </button>
+
             <SizeSavings
                 v-if="file"
-                :original="file.size"
+                :original="cropSource(file).size"
                 :optimized="estimatedBytes"
                 :estimating="estimating"
                 :previous="currentPath ? currentBytes : null"
@@ -170,5 +294,32 @@ const handleFile = (event: Event) => {
                 {{ error }}
             </p>
         </div>
+
+        <div
+            v-if="usesFocal && focalSrc"
+            class="rounded-xl border border-[#DCE7DF] bg-white p-4"
+        >
+            <FocalPointPicker
+                :src="focalSrc"
+                :alt="alt"
+                :frames="CARD_THUMBNAIL_FRAMES"
+                :x="focalX ?? null"
+                :y="focalY ?? null"
+                @update:x="focalX = $event"
+                @update:y="focalY = $event"
+            />
+        </div>
+
+        <ImageCropDialog
+            v-model:open="cropOpen"
+            :source="cropFrom"
+            :profile="profile"
+            :title="`Recortar ${label.toLowerCase()}`"
+            :reason="CROP_TEXTS[kind]?.reason"
+            :guide="CROP_TEXTS[kind]?.guide"
+            :filename="currentFilename"
+            @cropped="file = $event"
+            @skip="useUncropped"
+        />
     </div>
 </template>

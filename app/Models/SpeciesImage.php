@@ -6,10 +6,12 @@ use App\Contracts\Creditable;
 use App\Enums\CreditAsset;
 use App\Models\Concerns\HasCredits;
 use App\Observers\CreditsCacheObserver;
+use App\Services\ImageCropSource;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Imagen de una especie. Las de tipo principal, miniatura y galería llevan
@@ -26,12 +28,22 @@ class SpeciesImage extends Model implements Creditable
      */
     public const CREDITED_TYPES = ['main', 'thumbnail', 'gallery'];
 
+    /**
+     * Tipos con punto focal: la app los recorta en marcos de distinta
+     * proporción. La miniatura ya se recorta 1:1 al subirla.
+     */
+    public const FOCAL_TYPES = ['main', 'gallery'];
+
     protected $fillable = [
         'species_id',
         'type',
         'path',
+        'source_path',
+        'crop',
         'original_bytes',
         'alt_text',
+        'focal_x',
+        'focal_y',
         'is_active',
         'sort_order',
     ];
@@ -42,6 +54,9 @@ class SpeciesImage extends Model implements Creditable
             'is_active' => 'boolean',
             'sort_order' => 'integer',
             'original_bytes' => 'integer',
+            'focal_x' => 'float',
+            'focal_y' => 'float',
+            'crop' => 'array',
         ];
     }
 
@@ -54,6 +69,12 @@ class SpeciesImage extends Model implements Creditable
         static::deleting(function (SpeciesImage $image) {
             $image->credits()->get()->each->delete();
         });
+
+        // El original para volver a recortar no sirve sin su imagen. Tras el
+        // commit: si la transacción se deshace, la fila vuelve con su archivo.
+        static::deleted(fn (SpeciesImage $image) => DB::afterCommit(
+            fn () => ImageCropSource::delete($image->source_path)
+        ));
     }
 
     /**
@@ -71,6 +92,20 @@ class SpeciesImage extends Model implements Creditable
     public function scopeCredited(Builder $query): Builder
     {
         return $query->whereIn('type', self::CREDITED_TYPES);
+    }
+
+    /**
+     * Punto focal como { x, y } (0 a 1), o null si se usa el centro.
+     *
+     * @return array{x: float, y: float}|null
+     */
+    public function focal(): ?array
+    {
+        if ($this->focal_x === null || $this->focal_y === null) {
+            return null;
+        }
+
+        return ['x' => $this->focal_x, 'y' => $this->focal_y];
     }
 
     public function isCredited(): bool

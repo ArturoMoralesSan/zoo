@@ -52,6 +52,8 @@ import type { CreditAsset, CreditSummaryItem } from '@/lib/credits/types';
 import type { DuelMessages } from '@/lib/duelMessages';
 import type { GlbSizeConfig } from '@/lib/glb/modelSize';
 import { formatMeters } from '@/lib/glb/modelSize';
+import { cropPayload, cropSource } from '@/lib/imageCrop';
+import type { SavedCrop } from '@/lib/imageCrop';
 import { optimizeUpload } from '@/lib/imageOptimize';
 import { storageUrl } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
@@ -70,7 +72,11 @@ interface Card {
     name: string;
     rarity: string;
     thumbnail_image: string | null;
+    thumbnail_focal_x: number | null;
+    thumbnail_focal_y: number | null;
     artwork_image: string | null;
+    artwork_source: string | null;
+    artwork_crop: SavedCrop | null;
     generated_image: string | null;
     fade_color: string;
     accent_color: AccentColor | null;
@@ -120,6 +126,9 @@ const form = useForm({
     name: props.card.name ?? '',
     rarity: props.card.rarity ?? 'comun',
     thumbnail_image: null as File | null,
+    // Punto focal de la miniatura (0 a 1); null = centro.
+    thumbnail_focal_x: props.card.thumbnail_focal_x as number | null,
+    thumbnail_focal_y: props.card.thumbnail_focal_y as number | null,
     artwork_image: null as File | null,
     generated_image: null as File | null,
     fade_color: props.card.fade_color ?? DEFAULT_FADE_COLOR,
@@ -196,21 +205,23 @@ const submit = async () => {
     }
 
     if (form.thumbnail_image) {
-        originalBytes.thumbnail = form.thumbnail_image.size;
+        originalBytes.thumbnail = cropSource(form.thumbnail_image).size;
     }
 
     if (form.artwork_image) {
-        originalBytes.artwork = form.artwork_image.size;
+        originalBytes.artwork = cropSource(form.artwork_image).size;
     }
 
     /*
      * Las imágenes subidas se envían en WebP si así pesan menos; el
      * formulario conserva los originales por si hay que reenviarlo.
      */
-    const [thumbnail, artwork] = await Promise.all([
+    const [thumbnail, artwork, artworkCrop] = await Promise.all([
         form.thumbnail_image &&
             optimizeUpload(form.thumbnail_image, 'thumbnail'),
         form.artwork_image && optimizeUpload(form.artwork_image, 'artwork'),
+        // Foto completa reducida y recuadro, para volver a recortar después.
+        cropPayload(form.artwork_image),
     ]);
 
     generatingImage.value = false;
@@ -220,6 +231,8 @@ const submit = async () => {
         ...modelFields,
         thumbnail_image: thumbnail,
         artwork_image: artwork,
+        artwork_source: artworkCrop.source,
+        artwork_crop: artworkCrop.crop,
         image_original_bytes: originalBytes,
         _method: 'PUT',
     })).post(admin.cards.update(props.card.id).url, {
@@ -668,6 +681,8 @@ defineOptions({
                         label="Imagen de la tarjeta"
                         help="Fondo de la plantilla de la tarjeta."
                         :current-path="card.artwork_image"
+                        :current-source="card.artwork_source"
+                        :current-crop="card.artwork_crop"
                         :current-bytes="fileSizes.artwork.current"
                         :original-bytes="fileSizes.artwork.original"
                         :alt="card.name"
@@ -788,13 +803,19 @@ defineOptions({
                             id="thumbnail_image"
                             kind="thumbnail"
                             v-model:file="form.thumbnail_image"
+                            v-model:focal-x="form.thumbnail_focal_x"
+                            v-model:focal-y="form.thumbnail_focal_y"
                             label="Miniatura"
                             help="Se muestra en los listados de la colección."
                             :current-path="card.thumbnail_image"
                             :current-bytes="fileSizes.thumbnail.current"
                             :original-bytes="fileSizes.thumbnail.original"
                             :alt="card.name"
-                            :error="form.errors.thumbnail_image"
+                            :error="
+                                form.errors.thumbnail_image ||
+                                form.errors.thumbnail_focal_x ||
+                                form.errors.thumbnail_focal_y
+                            "
                             :disabled="form.processing"
                             @delete="deleteImage('thumbnail')"
                         />

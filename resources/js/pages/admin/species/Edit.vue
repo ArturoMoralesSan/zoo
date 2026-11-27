@@ -3,10 +3,12 @@ import { Head, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     ArrowRight,
+    Crop,
     Copyright,
     Image as ImageIcon,
     Info,
     Leaf,
+    Lock,
     MapPin,
     Save,
     Tags,
@@ -18,18 +20,23 @@ import AdminButton from '@/components/admin/AdminButton.vue';
 import AdminCard from '@/components/admin/AdminCard.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
+import ImageCropDialog from '@/components/admin/ImageCropDialog.vue';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
 import MissingCreditsAlert from '@/components/admin/MissingCreditsAlert.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import PageHeaderLink from '@/components/admin/PageHeaderLink.vue';
+import FocalPointPicker from '@/components/admin/species/FocalPointPicker.vue';
 import SpeciesClassificationFields from '@/components/admin/species/SpeciesClassificationFields.vue';
 import SpeciesGalleryField from '@/components/admin/species/SpeciesGalleryField.vue';
 import type { GalleryLayoutItem } from '@/components/admin/species/SpeciesGalleryField.vue';
+import { useSpeciesImageCrop } from '@/composables/useSpeciesImageCrop';
 import {
     optimizeSpeciesUploads,
     useEstimatedSize,
 } from '@/composables/useSpeciesImageUploads';
 import { missingImagesText } from '@/lib/credits/missing';
+import { cropMemory, cropSource, rememberCrop } from '@/lib/imageCrop';
+import type { SavedCrop } from '@/lib/imageCrop';
 import type { HabitatCode } from '@/lib/speciesCatalogs';
 import admin from '@/routes/admin';
 
@@ -83,6 +90,12 @@ interface SpeciesImage {
     type: 'main' | 'thumbnail' | 'gallery' | string;
     path: string;
     alt_text: string | null;
+    // Punto focal (0 a 1); null = centro.
+    focal_x?: number | null;
+    focal_y?: number | null;
+    // Copia de la foto completa y último recuadro (solo la principal).
+    source_path?: string | null;
+    crop?: SavedCrop | null;
     is_active: boolean;
     sort_order: number;
     // Peso actual en disco y antes de comprimir (null si se desconoce).
@@ -210,6 +223,8 @@ const savedGallery = existingGalleryImages.value.map((image) => ({
     id: image.id,
     url: imageUrl(image.path) ?? '',
     alt_text: image.alt_text,
+    focal_x: image.focal_x ?? null,
+    focal_y: image.focal_y ?? null,
     bytes: image.bytes,
     original_bytes: image.original_bytes,
 }));
@@ -217,6 +232,25 @@ const savedGallery = existingGalleryImages.value.map((image) => ({
 const existingMainImageUrl = computed(() =>
     imageUrl(existingMainImage.value?.path),
 );
+
+// Recorta desde la foto completa guardada si la hay; si no, desde la actual.
+const recropMain = () => {
+    if (form.main_image) {
+        openCrop('main', form.main_image);
+
+        return;
+    }
+
+    const image = existingMainImage.value;
+    const sourceUrl = imageUrl(image?.source_path);
+
+    if (sourceUrl && image?.crop) {
+        rememberCrop(sourceUrl, cropMemory(image.crop));
+        openCrop('main', sourceUrl);
+    } else {
+        openCrop('main', existingMainImageUrl.value ?? null);
+    }
+};
 
 const existingThumbnailUrl = computed(() =>
     imageUrl(existingThumbnailImage.value?.path),
@@ -237,6 +271,9 @@ const form = useForm({
     is_active: props.species.is_active,
     tags: props.species.tags?.map((tag) => tag.id) ?? [],
     main_image: null as File | null,
+    // Punto focal de la imagen principal (0 a 1); null = centro.
+    main_focal_x: (existingMainImage.value?.focal_x ?? null) as number | null,
+    main_focal_y: (existingMainImage.value?.focal_y ?? null) as number | null,
     thumbnail_image: null as File | null,
     gallery_images: [] as File[],
     gallery: [] as GalleryLayoutItem[],
@@ -268,11 +305,6 @@ watch(
     },
 );
 
-const setMainImage = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    applyMainImage(target.files?.[0] ?? null);
-};
-
 const applyMainImage = (file: File | null) => {
     if (mainObjectUrl.value) {
         URL.revokeObjectURL(mainObjectUrl.value);
@@ -280,6 +312,13 @@ const applyMainImage = (file: File | null) => {
     }
 
     form.main_image = file;
+    // El punto focal anterior era de otra foto.
+    form.main_focal_x = file
+        ? null
+        : (existingMainImage.value?.focal_x ?? null);
+    form.main_focal_y = file
+        ? null
+        : (existingMainImage.value?.focal_y ?? null);
 
     if (file) {
         const objectUrl = URL.createObjectURL(file);
@@ -288,11 +327,6 @@ const applyMainImage = (file: File | null) => {
     } else {
         mainPreviewUrl.value = existingMainImageUrl.value;
     }
-};
-
-const setThumbnailImage = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    applyThumbnailImage(target.files?.[0] ?? null);
 };
 
 const applyThumbnailImage = (file: File | null) => {
@@ -331,6 +365,12 @@ const previousTab = () => {
 const goToTab = (tabId: string) => {
     activeTab.value = tabId;
 };
+
+const { cropOpen, cropDialog, openCrop, pickFor, onCropped, onSkip } =
+    useSpeciesImageCrop({
+        main: applyMainImage,
+        thumbnail: applyThumbnailImage,
+    });
 
 const { bytes: mainBytes, estimating: mainEstimating } = useEstimatedSize(
     () => form.main_image,
@@ -666,11 +706,13 @@ onBeforeUnmount(() => {
                                 <div
                                     class="my-4 overflow-hidden rounded-xl border border-[#DCE7DF] bg-[#F7FAF8]"
                                 >
-                                    <img
+                                    <FocalPointPicker
                                         v-if="mainPreviewUrl"
+                                        v-model:x="form.main_focal_x"
+                                        v-model:y="form.main_focal_y"
+                                        class="p-3"
                                         :src="mainPreviewUrl"
                                         alt="Imagen principal"
-                                        class="h-48 w-full object-cover"
                                     />
                                     <div
                                         v-else
@@ -690,7 +732,7 @@ onBeforeUnmount(() => {
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
                                     class="form-input text-sm"
-                                    @change="setMainImage"
+                                    @change="pickFor('main')($event)"
                                 />
 
                                 <p class="form-help">
@@ -706,7 +748,7 @@ onBeforeUnmount(() => {
                                     class="mt-2"
                                     :original="
                                         form.main_image
-                                            ? form.main_image.size
+                                            ? cropSource(form.main_image).size
                                             : (existingMainImage?.original_bytes ??
                                               null)
                                     "
@@ -729,6 +771,35 @@ onBeforeUnmount(() => {
                                 >
                                     {{ form.errors.main_image }}
                                 </p>
+
+                                <p
+                                    v-if="
+                                        form.errors.main_focal_x ||
+                                        form.errors.main_focal_y
+                                    "
+                                    class="form-error"
+                                >
+                                    {{
+                                        form.errors.main_focal_x ||
+                                        form.errors.main_focal_y
+                                    }}
+                                </p>
+
+                                <button
+                                    v-if="
+                                        form.main_image || existingMainImageUrl
+                                    "
+                                    type="button"
+                                    class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#187744] hover:underline"
+                                    @click="recropMain"
+                                >
+                                    <Crop :size="16" />
+                                    {{
+                                        form.main_image
+                                            ? 'Recortar de nuevo'
+                                            : 'Recortar imagen actual'
+                                    }}
+                                </button>
                             </div>
 
                             <!-- Miniatura -->
@@ -779,7 +850,7 @@ onBeforeUnmount(() => {
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
                                     class="form-input text-sm"
-                                    @change="setThumbnailImage"
+                                    @change="pickFor('thumbnail')($event)"
                                 />
 
                                 <p class="form-help">
@@ -791,7 +862,8 @@ onBeforeUnmount(() => {
                                     class="mt-2"
                                     :original="
                                         form.thumbnail_image
-                                            ? form.thumbnail_image.size
+                                            ? cropSource(form.thumbnail_image)
+                                                  .size
                                             : (existingThumbnailImage?.original_bytes ??
                                               null)
                                     "
@@ -816,6 +888,37 @@ onBeforeUnmount(() => {
                                 >
                                     {{ form.errors.thumbnail_image }}
                                 </p>
+
+                                <p
+                                    class="mt-2 flex items-center gap-1 text-xs font-semibold text-[#187744]"
+                                >
+                                    <Lock :size="12" />
+                                    Se recorta a proporción 1:1
+                                </p>
+
+                                <button
+                                    v-if="
+                                        form.thumbnail_image ||
+                                        existingThumbnailUrl
+                                    "
+                                    type="button"
+                                    class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#187744] hover:underline"
+                                    @click="
+                                        openCrop(
+                                            'thumbnail',
+                                            form.thumbnail_image ??
+                                                existingThumbnailUrl ??
+                                                '',
+                                        )
+                                    "
+                                >
+                                    <Crop :size="16" />
+                                    {{
+                                        form.thumbnail_image
+                                            ? 'Recortar de nuevo'
+                                            : 'Recortar miniatura actual'
+                                    }}
+                                </button>
                             </div>
 
                             <!-- Galería -->
@@ -830,8 +933,17 @@ onBeforeUnmount(() => {
                                     "
                                     :existing="savedGallery"
                                     :errors="form.errors"
-                                    @use-as-main="applyMainImage"
-                                    @use-as-thumbnail="applyThumbnailImage"
+                                    @use-as-main="openCrop('main', $event)"
+                                    @use-as-thumbnail="
+                                        openCrop('thumbnail', $event)
+                                    "
+                                />
+
+                                <ImageCropDialog
+                                    v-model:open="cropOpen"
+                                    v-bind="cropDialog"
+                                    @cropped="onCropped"
+                                    @skip="onSkip"
                                 />
                             </div>
                         </div>

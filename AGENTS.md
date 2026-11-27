@@ -68,8 +68,8 @@ php artisan cards:export | cards:import x.zip --dry-run   # card+species .zip pa
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 511 tests, all passing (28 skipped) |
-| `npx vitest run` | 131 passing |
+| `php artisan test` | 529 tests, all passing (28 skipped) |
+| `npx vitest run` | 156 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 483 errors, all in `phpstan-baseline.neon` / 37 errors |
 
@@ -109,6 +109,7 @@ docs/points-app.md        Points for the app: rules, levels, seasons (GET /api/p
 docs/card-points-app.md   Card capture points (data.points on duel wins, incl. season); points done in the app
 docs/purchase-points-app.md  Same data.points on ticket purchases and donations; app side pending
 docs/card-transfer.md     Export/import all cards and species as a .zip (Recursos → Descargas)
+docs/focal-points-app.md   Focal points for the app (species image_focal, focal_x/y; card thumbnail_focal); app side pending
 ```
 
 Page folders match the route resource, except `quizquestions`, `card-qr-codes` and
@@ -254,8 +255,9 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 - **Species catalogs:** `conservation_status` (IUCN code), `diet` and `habitats` (JSON, several)
   store enum codes, never free text. The API keeps the old Spanish strings in `habitat`, `diet`
   and `conservation_status` and adds `habitats`, `diet_code`, `conservation_status_code`. The
-  species gallery is saved with the form (`SpeciesController::syncGallery`: order, alt text and
-  deletes in one request); `SpeciesGalleryField.vue` builds that payload.
+  species gallery is saved with the form (`SpeciesController::syncGallery`: order, alt text, focal
+  points, deletes and re-cropped saved photos in one request; an item with both `id` and
+  `file_index` replaces that photo's file and keeps its credits); `SpeciesGalleryField.vue` builds that payload.
 - **Credits:** licences and attribution are legally relevant, and restricted licences
   are off by default. `CreditsCacheObserver` invalidates the public `/api/v1/credits`
   cache. Owners implement `Contracts/Creditable` through `Models/Concerns/HasCredits`: `Card`
@@ -271,6 +273,17 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 - **Species images** (main, thumbnail, gallery) follow the same WebP flow with their own profiles
   (`resources/data/species-image-profiles.json`, `SpeciesImageOptimizer`, `species:images:*`).
   See the "Especies" section of `docs/image-optimization.md`.
+- **Crop and focal point:** every image picked in the panel goes through `ImageCropDialog`
+  before the WebP step. Ratios come from `aspect` in the image profiles: card artwork 572:1016,
+  both thumbnails 1:1 (locked, re-checked by `Concerns/ImageAspectRules` only on new uploads,
+  not on .zip imports); species main and gallery are free and carry `focal_x`/`focal_y`
+  (0–1, null = centre), applied like CSS `object-position`. The card thumbnail also has one
+  (`thumbnail_focal_x/y`, API `thumbnail_focal`), because the app crops it from 0.7:1 to 2.3:1. Build the output size with
+  `cropOutputSize()`: Laravel's ratio check fails at one pixel off on large images. See
+  "Recorte y punto focal" in `docs/image-optimization.md`. Card artwork and species main also
+  keep a ≤2400 px copy of the full photo plus the last crop box (`ImageCropSource`,
+  `artwork_source`/`artwork_crop`, `species_images.source_path`/`crop`) so "Recortar imagen
+  actual" starts from it; copies never travel in .zip packages.
 - **Recursos page** (`admin/assets`, `AssetController`, `AssetInventory`): tab "Optimización"
   shows sizes, savings and pending conversions for card images, species images and card 3D
   models, plus both conversion panels (`assets.view`, `assets.optimize`); tab "Descargas" is the
@@ -330,6 +343,7 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 | `Enums/CardRarity` | `lib/cardRarity.ts` | none |
 | `Enums/{ConservationStatus,Diet,Habitat}` | `lib/speciesCatalogs.ts` | `SpeciesAdminTest` (catalog parity) |
 | `GlbInspector`, `config/glb.php` | `lib/glb/resizeGlb.ts` | `tests/Fixtures/glb` |
+| `ImageAspectRules` (`dimensions:ratio`) | `lib/imageCrop.ts` `matchesAspect`/`cropOutputSize` | none |
 
 Card fonts are shared through `resources/data/card-fonts.json`, card and species image profiles
 (size and quality) through `resources/data/{card,species}-image-profiles.json`, and season icons and
