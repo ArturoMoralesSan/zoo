@@ -52,7 +52,8 @@ import type { CreditAsset, CreditSummaryItem } from '@/lib/credits/types';
 import type { DuelMessages } from '@/lib/duelMessages';
 import type { GlbSizeConfig } from '@/lib/glb/modelSize';
 import { formatMeters } from '@/lib/glb/modelSize';
-import { cropSource } from '@/lib/imageCrop';
+import { cropPayload, cropSource } from '@/lib/imageCrop';
+import type { SavedCrop } from '@/lib/imageCrop';
 import { optimizeUpload } from '@/lib/imageOptimize';
 import { storageUrl } from '@/lib/modelPreview';
 import admin from '@/routes/admin';
@@ -72,6 +73,8 @@ interface Card {
     rarity: string;
     thumbnail_image: string | null;
     artwork_image: string | null;
+    artwork_source: string | null;
+    artwork_crop: SavedCrop | null;
     generated_image: string | null;
     fade_color: string;
     accent_color: AccentColor | null;
@@ -208,10 +211,12 @@ const submit = async () => {
      * Las imágenes subidas se envían en WebP si así pesan menos; el
      * formulario conserva los originales por si hay que reenviarlo.
      */
-    const [thumbnail, artwork] = await Promise.all([
+    const [thumbnail, artwork, artworkCrop] = await Promise.all([
         form.thumbnail_image &&
             optimizeUpload(form.thumbnail_image, 'thumbnail'),
         form.artwork_image && optimizeUpload(form.artwork_image, 'artwork'),
+        // Foto completa reducida y recuadro, para volver a recortar después.
+        cropPayload(form.artwork_image),
     ]);
 
     generatingImage.value = false;
@@ -221,6 +226,8 @@ const submit = async () => {
         ...modelFields,
         thumbnail_image: thumbnail,
         artwork_image: artwork,
+        artwork_source: artworkCrop.source,
+        artwork_crop: artworkCrop.crop,
         image_original_bytes: originalBytes,
         _method: 'PUT',
     })).post(admin.cards.update(props.card.id).url, {
@@ -669,6 +676,8 @@ defineOptions({
                         label="Imagen de la tarjeta"
                         help="Fondo de la plantilla de la tarjeta."
                         :current-path="card.artwork_image"
+                        :current-source="card.artwork_source"
+                        :current-crop="card.artwork_crop"
                         :current-bytes="fileSizes.artwork.current"
                         :original-bytes="fileSizes.artwork.original"
                         :alt="card.name"

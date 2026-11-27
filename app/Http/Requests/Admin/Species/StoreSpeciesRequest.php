@@ -7,6 +7,7 @@ use App\Concerns\SpeciesModelValidationRules;
 use App\Enums\ConservationStatus;
 use App\Enums\Diet;
 use App\Enums\Habitat;
+use App\Services\ImageCropSource;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -127,6 +128,9 @@ class StoreSpeciesRequest extends FormRequest
                 'max:5120',
                 $this->aspectRule('species', 'thumbnail'),
             ],
+
+            // Copia de la foto completa y recuadro, para volver a recortar.
+            ...ImageCropSource::rules('main'),
 
             /*
              * Punto focal de la imagen principal (0 a 1, desde la esquina
@@ -284,6 +288,7 @@ class StoreSpeciesRequest extends FormRequest
             'tags' => 'etiquetas',
 
             'main_image' => 'imagen principal',
+            ...ImageCropSource::attributes('main', 'imagen principal'),
             'thumbnail_image' => 'miniatura',
             'card_image' => 'imagen de tarjeta',
             'gallery_images' => 'imágenes de galería',

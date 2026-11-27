@@ -539,6 +539,13 @@ class CardPackageImporter
                     }
                 }
 
+                // La copia para volver a recortar era de la ilustración anterior (no viaja en el paquete).
+                if ($card->isDirty('artwork_image') && $card->artwork_source) {
+                    $obsolete[] = ['public', $card->artwork_source];
+                    $card->artwork_source = null;
+                    $card->artwork_crop = null;
+                }
+
                 $card->save();
 
                 $this->syncQuestions($card, (array) ($data['questions'] ?? []));

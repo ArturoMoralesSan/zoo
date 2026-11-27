@@ -12,6 +12,7 @@ use App\Models\SpeciesLocation;
 use App\Models\SpeciesModel;
 use App\Models\SpeciesTag;
 use App\Models\ZooZone;
+use App\Services\ImageCropSource;
 use App\Services\SpeciesImageOptimizer;
 use App\Support\UploadExtension;
 use Illuminate\Http\RedirectResponse;
@@ -249,12 +250,23 @@ class SpeciesController extends Controller
                     $species
                 );
 
+                [$source, $crop] = ImageCropSource::store(
+                    $request,
+                    'main',
+                    null,
+                    'species/'.$species->id
+                );
+
                 SpeciesImage::create([
                     'species_id' => $species->id,
 
                     'type' => 'main',
 
                     'path' => $path,
+
+                    'source_path' => $source,
+
+                    'crop' => $crop,
 
                     'original_bytes' => $originalBytes,
 
@@ -611,6 +623,13 @@ class SpeciesController extends Controller
                     $species
                 );
 
+                [$source, $crop] = ImageCropSource::store(
+                    $request,
+                    'main',
+                    $currentImage?->source_path,
+                    'species/'.$species->id
+                );
+
                 if ($currentImage) {
                     if (
                         $currentImage->path &&
@@ -625,6 +644,10 @@ class SpeciesController extends Controller
 
                     $currentImage->update([
                         'path' => $path,
+
+                        'source_path' => $source,
+
+                        'crop' => $crop,
 
                         'original_bytes' => $originalBytes,
 
@@ -641,6 +664,10 @@ class SpeciesController extends Controller
                         'type' => 'main',
 
                         'path' => $path,
+
+                        'source_path' => $source,
+
+                        'crop' => $crop,
 
                         'original_bytes' => $originalBytes,
 

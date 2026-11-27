@@ -8,6 +8,7 @@ use App\Concerns\CardModelValidationRules;
 use App\Concerns\ImageAspectRules;
 use App\Enums\CardRarity;
 use App\Models\Card;
+use App\Services\ImageCropSource;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -63,6 +64,9 @@ class StoreCardRequest extends FormRequest
                 'max:5120',
                 $this->aspectRule('cards', 'artwork'),
             ],
+
+            // Copia de la foto completa y recuadro, para volver a recortar.
+            ...ImageCropSource::rules('artwork'),
 
             /*
              * Imagen final generada en el navegador a partir de la plantilla.
@@ -164,6 +168,7 @@ class StoreCardRequest extends FormRequest
             ...$this->cardModelAttributes(),
             'thumbnail_image' => 'miniatura',
             'artwork_image' => 'ilustración',
+            ...ImageCropSource::attributes('artwork', 'ilustración'),
         ];
     }
 

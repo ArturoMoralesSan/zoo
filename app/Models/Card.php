@@ -55,6 +55,8 @@ class Card extends Model implements Creditable
         'retry_message',
         'locked_message',
         'image_original_bytes',
+        'artwork_source',
+        'artwork_crop',
     ];
 
     protected $casts = [
@@ -77,6 +79,7 @@ class Card extends Model implements Creditable
 
         // Peso de cada imagen antes de comprimirla: { generated, thumbnail, artwork }.
         'image_original_bytes' => 'array',
+        'artwork_crop' => 'array',
     ];
 
     /**

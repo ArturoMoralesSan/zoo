@@ -5,6 +5,7 @@
  * con la regla dimensions:ratio (App\Concerns\ImageAspectRules).
  */
 
+import { encodeWebp, targetSize } from '@/lib/imageOptimize';
 import type { ImageProfile } from '@/lib/imageOptimize';
 
 /**
@@ -166,3 +167,91 @@ export const rememberCrop = (source: File | string, memory: CropMemory) => {
 export const recalledCrop = (source: File | string): CropMemory | null =>
     (source instanceof File ? fileCrops.get(source) : urlCrops.get(source)) ??
     null;
+
+/**
+ * Copia de la foto completa que se guarda para volver a recortar. Mismo lado
+ * máximo que config('images.crop_source').
+ */
+export const CROP_SOURCE_PROFILE: ImageProfile = {
+    maxWidth: 2400,
+    maxHeight: 2400,
+    quality: 90,
+};
+
+export type SavedCrop = CropMemory['data'] & { aspectRatio: number | null };
+
+/**
+ * Recuadro guardado en el servidor, listo para rememberCrop().
+ */
+export const cropMemory = (saved: SavedCrop): CropMemory => {
+    const { aspectRatio, ...data } = saved;
+
+    return {
+        data: {
+            ...data,
+            rotate: data.rotate ?? 0,
+            scaleX: data.scaleX ?? 1,
+            scaleY: data.scaleY ?? 1,
+        },
+        aspectRatio: aspectRatio ?? NaN,
+    };
+};
+
+/**
+ * Recuadro de `memory` en una copia `scale` veces el tamaño de la foto.
+ */
+export const scaleCrop = (memory: CropMemory, scale: number): SavedCrop => ({
+    ...memory.data,
+    x: memory.data.x * scale,
+    y: memory.data.y * scale,
+    width: memory.data.width * scale,
+    height: memory.data.height * scale,
+    aspectRatio: Number.isNaN(memory.aspectRatio) ? null : memory.aspectRatio,
+});
+
+const sourceCopies = new WeakMap<File, Promise<File | null>>();
+
+/**
+ * Lo que el formulario envía junto con una imagen recortada:
+ * - foto nueva: su copia reducida (`source`) y el recuadro en píxeles de la copia;
+ * - recortada de nuevo desde el original guardado: solo el recuadro;
+ * - sin recortar: nada (el servidor borra el original anterior).
+ */
+export const cropPayload = async (
+    file: File | null,
+): Promise<{ source: File | null; crop: SavedCrop | null }> => {
+    const origin = file ? cropOrigin(file) : null;
+    const memory = origin && origin !== file ? recalledCrop(origin) : null;
+
+    if (!origin || !memory) {
+        return { source: null, crop: null };
+    }
+
+    if (typeof origin === 'string') {
+        return { source: null, crop: scaleCrop(memory, 1) };
+    }
+
+    const bitmap = await createImageBitmap(origin).catch(() => null);
+
+    if (!bitmap) {
+        return { source: null, crop: null };
+    }
+
+    const scale =
+        targetSize(bitmap.width, bitmap.height, CROP_SOURCE_PROFILE)[0] /
+        bitmap.width;
+
+    bitmap.close();
+
+    const copy =
+        sourceCopies.get(origin) ??
+        encodeWebp(origin, CROP_SOURCE_PROFILE, origin.name);
+
+    sourceCopies.set(origin, copy);
+
+    const source = await copy;
+
+    return source
+        ? { source, crop: scaleCrop(memory, scale) }
+        : { source: null, crop: null };
+};

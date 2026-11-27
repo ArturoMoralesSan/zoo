@@ -154,7 +154,19 @@ Antes de comprimir, cada imagen elegida en el panel pasa por un diálogo de reco
 - **Original:** el recorte es un PNG; `cropOrigin()` recuerda la foto completa (archivo o URL
   guardada) para volver a recortar desde ella, y `cropSource()` el archivo elegido para guardar su
   peso en `original_bytes`. «Recortar de nuevo» abre el último recuadro aplicado (posición, giro y
-  proporción), guardado en memoria con `rememberCrop()`; se pierde al recargar la página.
+  proporción), guardado en memoria con `rememberCrop()`.
+- **Original para volver a recortar** (solo ilustración de tarjeta e imagen principal de especie):
+  al guardar, `cropPayload()` envía una copia de la foto completa reducida a 2400 px (WebP q90,
+  `CROP_SOURCE_PROFILE`, igual que `config('images.crop_source')`) como `artwork_source`/`main_source`
+  y el recuadro en píxeles de esa copia como `artwork_crop`/`main_crop` (`x`, `y`, `width`,
+  `height`, `rotate`, `scaleX`, `scaleY`, `aspectRatio`). `App\Services\ImageCropSource` guarda la
+  copia en `<carpeta>/sources/` del disco público (`cards.artwork_source`/`artwork_crop`,
+  `species_images.source_path`/`crop`). «Recortar imagen actual» abre esa copia con el último
+  recuadro; sin copia, parte de la imagen guardada. Volver a recortar desde la copia envía solo el
+  recuadro; una foto nueva usada sin recortar borra la copia. También se borra al eliminar la
+  imagen (y la tarjeta), y la importación de paquetes la quita si reemplaza la ilustración: las
+  copias **no viajan** en los paquetes. El recorte no lee la orientación EXIF (`checkOrientation:
+  false`): el navegador ya la aplica, igual que `createImageBitmap` al hacer la copia.
 - **Sin comprobar:** la importación de paquetes y la conversión de Recursos → Optimización copian
   o recodifican sin mirar la proporción.
 

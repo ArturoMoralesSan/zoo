@@ -101,5 +101,8 @@ php artisan cards:import ruta.zip [--overwrite] [--settings] [--dry-run]
   versión 3: los paquetes anteriores se importan con null (centro).
 - **Proporción:** la importación no comprueba la proporción fija de miniaturas e ilustraciones
   (ver "Recorte y punto focal" en [image-optimization.md](image-optimization.md)).
+- **Original para volver a recortar:** las copias `artwork_source` y la de la imagen principal
+  de especie no viajan. Si la importación reemplaza la ilustración de una tarjeta, se borra su
+  copia; las imágenes de especie importadas llegan sin ella.
 - **Archivos:** se copian tal cual (ya vienen optimizados y escalados). Cada tarjeta va en
   su propia transacción: si falla, se borran sus archivos nuevos y las demás siguen.

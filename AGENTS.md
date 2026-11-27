@@ -68,8 +68,8 @@ php artisan cards:export | cards:import x.zip --dry-run   # card+species .zip pa
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 519 tests, all passing (28 skipped) |
-| `npx vitest run` | 149 passing |
+| `php artisan test` | 524 tests, all passing (28 skipped) |
+| `npx vitest run` | 156 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 483 errors, all in `phpstan-baseline.neon` / 37 errors |
 
@@ -278,7 +278,10 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   not on .zip imports); species main and gallery are free and carry `focal_x`/`focal_y`
   (0–1, null = centre), applied like CSS `object-position`. Build the output size with
   `cropOutputSize()`: Laravel's ratio check fails at one pixel off on large images. See
-  "Recorte y punto focal" in `docs/image-optimization.md`.
+  "Recorte y punto focal" in `docs/image-optimization.md`. Card artwork and species main also
+  keep a ≤2400 px copy of the full photo plus the last crop box (`ImageCropSource`,
+  `artwork_source`/`artwork_crop`, `species_images.source_path`/`crop`) so "Recortar imagen
+  actual" starts from it; copies never travel in .zip packages.
 - **Recursos page** (`admin/assets`, `AssetController`, `AssetInventory`): tab "Optimización"
   shows sizes, savings and pending conversions for card images, species images and card 3D
   models, plus both conversion panels (`assets.view`, `assets.optimize`); tab "Descargas" is the

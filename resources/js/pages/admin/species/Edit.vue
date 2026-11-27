@@ -35,7 +35,8 @@ import {
     useEstimatedSize,
 } from '@/composables/useSpeciesImageUploads';
 import { missingImagesText } from '@/lib/credits/missing';
-import { cropSource } from '@/lib/imageCrop';
+import { cropMemory, cropSource, rememberCrop } from '@/lib/imageCrop';
+import type { SavedCrop } from '@/lib/imageCrop';
 import type { HabitatCode } from '@/lib/speciesCatalogs';
 import admin from '@/routes/admin';
 
@@ -92,6 +93,9 @@ interface SpeciesImage {
     // Punto focal (0 a 1); null = centro.
     focal_x?: number | null;
     focal_y?: number | null;
+    // Copia de la foto completa y último recuadro (solo la principal).
+    source_path?: string | null;
+    crop?: SavedCrop | null;
     is_active: boolean;
     sort_order: number;
     // Peso actual en disco y antes de comprimir (null si se desconoce).
@@ -228,6 +232,25 @@ const savedGallery = existingGalleryImages.value.map((image) => ({
 const existingMainImageUrl = computed(() =>
     imageUrl(existingMainImage.value?.path),
 );
+
+// Recorta desde la foto completa guardada si la hay; si no, desde la actual.
+const recropMain = () => {
+    if (form.main_image) {
+        openCrop('main', form.main_image);
+
+        return;
+    }
+
+    const image = existingMainImage.value;
+    const sourceUrl = imageUrl(image?.source_path);
+
+    if (sourceUrl && image?.crop) {
+        rememberCrop(sourceUrl, cropMemory(image.crop));
+        openCrop('main', sourceUrl);
+    } else {
+        openCrop('main', existingMainImageUrl.value ?? null);
+    }
+};
 
 const existingThumbnailUrl = computed(() =>
     imageUrl(existingThumbnailImage.value?.path),
@@ -768,14 +791,7 @@ onBeforeUnmount(() => {
                                     "
                                     type="button"
                                     class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#187744] hover:underline"
-                                    @click="
-                                        openCrop(
-                                            'main',
-                                            form.main_image ??
-                                                existingMainImageUrl ??
-                                                '',
-                                        )
-                                    "
+                                    @click="recropMain"
                                 >
                                     <Crop :size="16" />
                                     {{

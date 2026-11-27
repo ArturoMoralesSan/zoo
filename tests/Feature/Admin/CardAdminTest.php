@@ -480,6 +480,62 @@ class CardAdminTest extends TestCase
         $post(1153, 2048, 800, 800)->assertSessionDoesntHaveErrors(['artwork_image', 'thumbnail_image']);
     }
 
+    public function test_artwork_keeps_its_crop_source_for_recropping(): void
+    {
+        Storage::fake('public');
+
+        $crop = ['x' => 100, 'y' => 0, 'width' => 900, 'height' => 1599, 'rotate' => 0, 'scaleX' => 1, 'scaleY' => 1, 'aspectRatio' => null];
+        $artwork = fn () => UploadedFile::fake()->image('fondo.png', 572, 1016);
+
+        $payload = $this->cardPayload([
+            'is_active' => false,
+            'artwork_image' => $artwork(),
+            'artwork_source' => UploadedFile::fake()->image('foto.webp', 1200, 1600),
+            'artwork_crop' => $crop,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors();
+
+        $card = Card::where('name', $payload['name'])->firstOrFail();
+        $source = $card->artwork_source;
+        $files = [];
+
+        $this->assertStringStartsWith("cards/{$card->id}/sources/", $source);
+        Storage::disk('public')->assertExists($source);
+        $this->assertEquals($crop, $card->artwork_crop);
+
+        // Recortada de nuevo desde la copia guardada: solo cambia el recuadro.
+        $files[] = storage_path('app/public/'.$card->artwork_image);
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->updatePayload($card, [
+                'is_active' => false,
+                'artwork_image' => $artwork(),
+                'artwork_crop' => [...$crop, 'y' => 1],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $card->refresh();
+        $this->assertSame($source, $card->artwork_source);
+        $this->assertEquals(1, $card->artwork_crop['y']);
+
+        // Al eliminar la ilustración se elimina su copia.
+        $files[] = storage_path('app/public/'.$card->artwork_image);
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.image.destroy', [$card, 'artwork']))
+            ->assertSessionHasNoErrors();
+
+        $card->refresh();
+        $this->assertNull($card->artwork_source);
+        $this->assertNull($card->artwork_crop);
+        Storage::disk('public')->assertMissing($source);
+
+        // CardController mueve las imágenes a storage/app/public real.
+        File::delete($files);
+        @rmdir(dirname($files[0]));
+    }
+
     public function test_generated_card_image_must_be_webp_or_png(): void
     {
         $this->actingAs($this->admin)

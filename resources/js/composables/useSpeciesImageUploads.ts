@@ -1,7 +1,7 @@
 import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
 
-import { cropSource } from '@/lib/imageCrop';
+import { cropPayload, cropSource } from '@/lib/imageCrop';
 import { optimizeImage, SPECIES_IMAGE_PROFILES } from '@/lib/imageOptimize';
 import type { SpeciesImageKind } from '@/lib/imageOptimize';
 
@@ -61,7 +61,7 @@ interface SpeciesUploads {
  * reenviarlo.
  */
 export async function optimizeSpeciesUploads(data: SpeciesUploads) {
-    const [main, thumbnail, gallery] = await Promise.all([
+    const [main, thumbnail, gallery, mainCrop] = await Promise.all([
         data.main_image
             ? optimizeImage(data.main_image, SPECIES_IMAGE_PROFILES.main)
             : null,
@@ -76,6 +76,8 @@ export async function optimizeSpeciesUploads(data: SpeciesUploads) {
                 optimizeImage(file, SPECIES_IMAGE_PROFILES.gallery),
             ),
         ),
+        // Foto completa reducida y recuadro, para volver a recortar después.
+        cropPayload(data.main_image),
     ]);
 
     const originalBytes: Partial<Record<'main' | 'thumbnail', number>> = {};
@@ -90,6 +92,8 @@ export async function optimizeSpeciesUploads(data: SpeciesUploads) {
 
     return {
         main_image: main,
+        main_source: mainCrop.source,
+        main_crop: mainCrop.crop,
         thumbnail_image: thumbnail,
         gallery_images: gallery,
         image_original_bytes: originalBytes,

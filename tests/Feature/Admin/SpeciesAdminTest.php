@@ -464,6 +464,75 @@ class SpeciesAdminTest extends TestCase
         $this->assertNull($main->refresh()->focal());
     }
 
+    public function test_main_image_keeps_its_crop_source_for_recropping(): void
+    {
+        $crop = ['x' => 10, 'y' => 20, 'width' => 600, 'height' => 400, 'rotate' => 90, 'scaleX' => 1, 'scaleY' => 1, 'aspectRatio' => 1.5];
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'main_image' => UploadedFile::fake()->image('m.png', 60, 40),
+                'main_source' => UploadedFile::fake()->image('foto.webp', 1200, 800),
+                'main_crop' => $crop,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $main = SpeciesImage::where('type', 'main')->firstOrFail();
+        $source = $main->source_path;
+        $species = $main->species;
+
+        $this->assertStringStartsWith("species/{$species->id}/sources/", $source);
+        Storage::disk('public')->assertExists($source);
+        $this->assertEquals($crop, $main->crop);
+
+        $update = fn (array $data) => $this->actingAs($this->admin())
+            ->put(route('admin.species.update', $species), $this->payload([
+                'common_name' => $species->common_name,
+                'main_image' => UploadedFile::fake()->image('m2.png', 60, 40),
+                ...$data,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        // Recortada de nuevo desde la copia guardada: solo cambia el recuadro.
+        $update(['main_crop' => [...$crop, 'x' => 50, 'aspectRatio' => null]]);
+        $this->assertSame($source, $main->refresh()->source_path);
+        $this->assertEquals(50, $main->crop['x']);
+        $this->assertNull($main->crop['aspectRatio']);
+
+        // Foto usada sin recortar: la copia ya no corresponde.
+        $update([]);
+        $this->assertNull($main->refresh()->source_path);
+        $this->assertNull($main->crop);
+        Storage::disk('public')->assertMissing($source);
+    }
+
+    public function test_crop_source_needs_its_crop_and_a_limited_size(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'main_image' => UploadedFile::fake()->image('m.png', 60, 40),
+                'main_source' => UploadedFile::fake()->image('foto.webp', 2401, 800),
+            ]))
+            ->assertSessionHasErrors(['main_source', 'main_crop']);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'main_crop' => ['x' => 0, 'y' => 0, 'width' => 0, 'height' => 10, 'scaleX' => 2],
+            ]))
+            ->assertSessionHasErrors(['main_crop.width', 'main_crop.scaleX']);
+    }
+
+    public function test_deleting_an_image_deletes_its_crop_source(): void
+    {
+        $species = $this->species();
+        Storage::disk('public')->put("species/{$species->id}/sources/a.webp", 'x');
+
+        $image = $this->galleryImage($species, 0);
+        $image->update(['source_path' => "species/{$species->id}/sources/a.webp"]);
+        $image->delete();
+
+        Storage::disk('public')->assertMissing("species/{$species->id}/sources/a.webp");
+    }
+
     public function test_api_list_prefers_the_main_image_and_sends_its_focal_point(): void
     {
         $species = $this->species();

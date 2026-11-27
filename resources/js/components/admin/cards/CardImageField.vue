@@ -5,7 +5,14 @@ import { computed, ref, watch } from 'vue';
 import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import ImageCropDialog from '@/components/admin/ImageCropDialog.vue';
 import { useObjectUrl } from '@/composables/useObjectUrl';
-import { aspectLabel, cropOrigin, cropSource } from '@/lib/imageCrop';
+import {
+    aspectLabel,
+    cropMemory,
+    cropOrigin,
+    cropSource,
+    rememberCrop,
+} from '@/lib/imageCrop';
+import type { SavedCrop } from '@/lib/imageCrop';
 import { CARD_IMAGE_PROFILES, optimizeUpload } from '@/lib/imageOptimize';
 import type { CardImageKind } from '@/lib/imageOptimize';
 import { storageUrl } from '@/lib/modelPreview';
@@ -20,6 +27,9 @@ const props = withDefaults(
         label: string;
         help: string;
         currentPath?: string | null;
+        // Copia de la foto completa y último recuadro (solo la ilustración).
+        currentSource?: string | null;
+        currentCrop?: SavedCrop | null;
         alt?: string;
         error?: string;
         disabled?: boolean;
@@ -31,6 +41,8 @@ const props = withDefaults(
     }>(),
     {
         currentPath: null,
+        currentSource: null,
+        currentCrop: null,
         alt: '',
         error: '',
         disabled: false,
@@ -117,8 +129,16 @@ const useUncropped = () => {
     }
 };
 
+// Desde la foto completa guardada si la hay; si no, desde la imagen actual.
 const recropCurrent = () => {
-    if (props.currentPath) {
+    const sourceUrl = props.currentSource
+        ? (storageUrl(props.currentSource) ?? props.currentSource)
+        : null;
+
+    if (sourceUrl && props.currentCrop) {
+        rememberCrop(sourceUrl, cropMemory(props.currentCrop));
+        openCrop(sourceUrl);
+    } else if (props.currentPath) {
         openCrop(storageUrl(props.currentPath) ?? props.currentPath);
     }
 };

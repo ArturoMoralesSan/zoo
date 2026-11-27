@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
     aspectLabel,
     croppedFile,
+    cropMemory,
     cropOrigin,
+    cropPayload,
     cropOutputSize,
     cropSource,
     isSmallCrop,
@@ -11,6 +13,7 @@ import {
     profileAspect,
     recalledCrop,
     rememberCrop,
+    scaleCrop,
 } from '@/lib/imageCrop';
 import {
     CARD_IMAGE_PROFILES,
@@ -173,5 +176,60 @@ describe('rememberCrop', () => {
         expect(recalledCrop(file)).toEqual(memory);
         expect(recalledCrop('/storage/a.webp')).toEqual(memory);
         expect(recalledCrop(new File(['x'], 'a.png'))).toBeNull();
+    });
+});
+
+describe('saved crops', () => {
+    const data = {
+        x: 100,
+        y: 50,
+        width: 800,
+        height: 600,
+        rotate: 90,
+        scaleX: 1,
+        scaleY: -1,
+    };
+
+    it('scales the crop box to the reduced copy, not the rotation', () => {
+        expect(scaleCrop({ data, aspectRatio: NaN }, 0.5)).toEqual({
+            ...data,
+            x: 50,
+            y: 25,
+            width: 400,
+            height: 300,
+            aspectRatio: null,
+        });
+    });
+
+    it('round-trips through the server shape', () => {
+        const memory = { data, aspectRatio: 4 / 3 };
+
+        expect(cropMemory(scaleCrop(memory, 1))).toEqual(memory);
+        expect(
+            cropMemory({ ...data, aspectRatio: null }).aspectRatio,
+        ).toBeNaN();
+    });
+
+    it('sends nothing for an image that was not cropped', async () => {
+        await expect(cropPayload(null)).resolves.toEqual({
+            source: null,
+            crop: null,
+        });
+        await expect(cropPayload(new File(['x'], 'a.png'))).resolves.toEqual({
+            source: null,
+            crop: null,
+        });
+    });
+
+    it('sends only the crop when re-cropped from the saved copy', async () => {
+        const url = '/storage/cards/1/sources/a.webp';
+
+        rememberCrop(url, { data, aspectRatio: NaN });
+        const file = croppedFile(new Blob(['a']), 'a.webp', url);
+
+        await expect(cropPayload(file)).resolves.toEqual({
+            source: null,
+            crop: { ...data, aspectRatio: null },
+        });
     });
 });

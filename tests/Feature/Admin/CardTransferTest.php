@@ -75,6 +75,28 @@ class CardTransferTest extends TestCase
     // Ayudas
     // ---------------------------------------------------------------------
 
+    public function test_overwriting_the_artwork_drops_its_crop_source(): void
+    {
+        $card = $this->createCard();
+        $zip = $this->export();
+
+        // Ilustración local que el paquete no trae: se quita junto con su copia.
+        Storage::disk('public')->put("cards/{$card->id}/fondo.webp", 'x');
+        Storage::disk('public')->put("cards/{$card->id}/sources/fondo.webp", 'x');
+        $card->update([
+            'artwork_image' => "cards/{$card->id}/fondo.webp",
+            'artwork_source' => "cards/{$card->id}/sources/fondo.webp",
+            'artwork_crop' => ['x' => 0, 'y' => 0, 'width' => 10, 'height' => 10],
+        ]);
+
+        $this->confirm($this->upload($zip), ['mode' => 'overwrite']);
+
+        $card->refresh();
+        $this->assertNull($card->artwork_source);
+        $this->assertNull($card->artwork_crop);
+        Storage::disk('public')->assertMissing("cards/{$card->id}/sources/fondo.webp");
+    }
+
     private function createCard(): Card
     {
         $card = Card::create([

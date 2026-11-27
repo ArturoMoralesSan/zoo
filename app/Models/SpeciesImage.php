@@ -6,10 +6,12 @@ use App\Contracts\Creditable;
 use App\Enums\CreditAsset;
 use App\Models\Concerns\HasCredits;
 use App\Observers\CreditsCacheObserver;
+use App\Services\ImageCropSource;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Imagen de una especie. Las de tipo principal, miniatura y galería llevan
@@ -36,6 +38,8 @@ class SpeciesImage extends Model implements Creditable
         'species_id',
         'type',
         'path',
+        'source_path',
+        'crop',
         'original_bytes',
         'alt_text',
         'focal_x',
@@ -52,6 +56,7 @@ class SpeciesImage extends Model implements Creditable
             'original_bytes' => 'integer',
             'focal_x' => 'float',
             'focal_y' => 'float',
+            'crop' => 'array',
         ];
     }
 
@@ -64,6 +69,12 @@ class SpeciesImage extends Model implements Creditable
         static::deleting(function (SpeciesImage $image) {
             $image->credits()->get()->each->delete();
         });
+
+        // El original para volver a recortar no sirve sin su imagen. Tras el
+        // commit: si la transacción se deshace, la fila vuelve con su archivo.
+        static::deleted(fn (SpeciesImage $image) => DB::afterCommit(
+            fn () => ImageCropSource::delete($image->source_path)
+        ));
     }
 
     /**

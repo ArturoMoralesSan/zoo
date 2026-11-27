@@ -197,6 +197,11 @@ const onImageLoad = async () => {
         aspectRatio: aspect.value ?? NaN,
         background: false,
         toggleDragModeOnDblclick: false,
+        /*
+         * El navegador ya orienta la foto según su EXIF (como createImageBitmap
+         * al comprimir). Así el recuadro guardado vale para la copia sin EXIF.
+         */
+        checkOrientation: false,
         ready: () => {
             fitWithMargin();
             restoreCrop();

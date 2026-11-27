@@ -45,7 +45,7 @@ import { missingAssetsText } from '@/lib/credits/missing';
 import type { CreditAsset } from '@/lib/credits/types';
 import type { DuelMessages } from '@/lib/duelMessages';
 import type { GlbSizeConfig } from '@/lib/glb/modelSize';
-import { cropSource } from '@/lib/imageCrop';
+import { cropPayload, cropSource } from '@/lib/imageCrop';
 import { optimizeUpload } from '@/lib/imageOptimize';
 import admin from '@/routes/admin';
 
@@ -149,10 +149,12 @@ const submit = async () => {
      * Las imágenes subidas se envían en WebP si así pesan menos; el
      * formulario conserva los originales por si hay que reenviarlo.
      */
-    const [thumbnail, artwork] = await Promise.all([
+    const [thumbnail, artwork, artworkCrop] = await Promise.all([
         form.thumbnail_image &&
             optimizeUpload(form.thumbnail_image, 'thumbnail'),
         form.artwork_image && optimizeUpload(form.artwork_image, 'artwork'),
+        // Foto completa reducida y recuadro, para volver a recortar después.
+        cropPayload(form.artwork_image),
     ]);
 
     generatingImage.value = false;
@@ -162,6 +164,8 @@ const submit = async () => {
         ...modelFields,
         thumbnail_image: thumbnail,
         artwork_image: artwork,
+        artwork_source: artworkCrop.source,
+        artwork_crop: artworkCrop.crop,
         image_original_bytes: originalBytes,
     })).post(admin.cards.store().url, {
         forceFormData: true,
