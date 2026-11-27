@@ -9,9 +9,10 @@ export interface CatalogOption<T extends string> {
 /*
  * Lista Roja de la UICN, de mayor a menor riesgo. Los colores siguen la
  * escala oficial; el texto oscuro sobre los tonos claros mantiene el contraste.
+ * DOM no es de la UICN: la UICN no evalúa animales domésticos.
  */
 export type ConservationStatusCode =
-    'EX' | 'EW' | 'CR' | 'EN' | 'VU' | 'NT' | 'LC' | 'DD' | 'NE';
+    'EX' | 'EW' | 'CR' | 'EN' | 'VU' | 'NT' | 'LC' | 'DD' | 'NE' | 'DOM';
 
 export interface ConservationStatusOption extends CatalogOption<ConservationStatusCode> {
     // Categorías "amenazadas" según la UICN (CR, EN, VU).
@@ -74,6 +75,12 @@ export const conservationStatusOptions: ConservationStatusOption[] = [
         threatened: false,
         badgeClass: 'border-[#c8dccf] bg-white text-[#52685a]',
     },
+    {
+        value: 'DOM',
+        label: 'Domesticado',
+        threatened: false,
+        badgeClass: 'border-[#c8a97e] bg-[#f3e9da] text-[#5a4325]',
+    },
 ];
 
 export type DietCode =
@@ -122,7 +129,8 @@ export type HabitatCode =
     | 'ocean'
     | 'coral_reef'
     | 'cave'
-    | 'urban';
+    | 'urban'
+    | 'rural';
 
 // Agrupados para que el selector sea fácil de recorrer.
 export const habitatGroups: {
@@ -166,6 +174,7 @@ export const habitatGroups: {
         options: [
             { value: 'cave', label: 'Cuevas' },
             { value: 'urban', label: 'Zonas urbanas' },
+            { value: 'rural', label: 'Zonas rurales y de pastoreo' },
         ],
     },
 ];

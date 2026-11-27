@@ -29,9 +29,9 @@ const selectedStatus = computed(() =>
     conservationStatusOption(conservationStatus.value),
 );
 
-// La escala UICN de mayor a menor riesgo, sin DD ni NE.
+// La escala UICN de mayor a menor riesgo, sin DD, NE ni DOM (no es de la UICN).
 const scale = conservationStatusOptions.filter(
-    (option) => option.value !== 'DD' && option.value !== 'NE',
+    (option) => !['DD', 'NE', 'DOM'].includes(option.value),
 );
 
 const toggleHabitat = (code: HabitatCode) => {
@@ -130,6 +130,11 @@ const toggleHabitat = (code: HabitatCode) => {
 
             <p v-if="selectedStatus?.threatened" class="form-help">
                 Especie amenazada según la UICN.
+            </p>
+
+            <p v-else-if="selectedStatus?.value === 'DOM'" class="form-help">
+                La UICN no evalúa animales domésticos. Si tiene un pariente
+                silvestre, puedes mencionar su estado en la descripción.
             </p>
 
             <p v-if="errors.conservation_status" class="form-error">

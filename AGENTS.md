@@ -252,7 +252,7 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   the exporter ticks the box. Adding a card or species column means adding it to
   `CardPackage::CARD_FIELDS`/`SPECIES_FIELDS` and the reader's rules. Since v3 each species image
   carries its `credits`. See `docs/card-transfer.md`.
-- **Species catalogs:** `conservation_status` (IUCN code), `diet` and `habitats` (JSON, several)
+- **Species catalogs:** `conservation_status` (IUCN code, plus `DOM` "Domesticado", which is not IUCN), `diet` and `habitats` (JSON, several)
   store enum codes, never free text. The API keeps the old Spanish strings in `habitat`, `diet`
   and `conservation_status` and adds `habitats`, `diet_code`, `conservation_status_code`. The
   species gallery is saved with the form (`SpeciesController::syncGallery`: order, alt text, focal

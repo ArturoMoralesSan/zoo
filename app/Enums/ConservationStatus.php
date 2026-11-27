@@ -4,7 +4,8 @@ namespace App\Enums;
 
 /*
  * Categorías de la Lista Roja de la UICN. El valor es el código oficial,
- * así no depende de cómo se traduzca la etiqueta.
+ * así no depende de cómo se traduzca la etiqueta. DOM no es de la UICN:
+ * la UICN no evalúa animales domésticos (cerdo, llama, dromedario).
  * Espejo en resources/js/lib/speciesCatalogs.ts.
  */
 enum ConservationStatus: string
@@ -18,6 +19,7 @@ enum ConservationStatus: string
     case LeastConcern = 'LC';
     case DataDeficient = 'DD';
     case NotEvaluated = 'NE';
+    case Domesticated = 'DOM';
 
     public function label(): string
     {
@@ -31,6 +33,7 @@ enum ConservationStatus: string
             self::LeastConcern => 'Preocupación menor',
             self::DataDeficient => 'Datos insuficientes',
             self::NotEvaluated => 'No evaluado',
+            self::Domesticated => 'Domesticado',
         };
     }
 }

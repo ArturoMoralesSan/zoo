@@ -4,7 +4,8 @@ namespace App\Enums;
 
 /*
  * Hábitats naturales. Una especie puede tener varios.
- * Incluye ecosistemas propios de México (selva seca, bosque de niebla).
+ * Incluye ecosistemas propios de México (selva seca, bosque de niebla) y
+ * zonas rurales para especies domésticas sin hábitat silvestre (llama, dromedario).
  * Espejo en resources/js/lib/speciesCatalogs.ts.
  */
 enum Habitat: string
@@ -28,6 +29,7 @@ enum Habitat: string
     case CoralReef = 'coral_reef';
     case Cave = 'cave';
     case Urban = 'urban';
+    case Rural = 'rural';
 
     public function label(): string
     {
@@ -51,6 +53,7 @@ enum Habitat: string
             self::CoralReef => 'Arrecife de coral',
             self::Cave => 'Cuevas',
             self::Urban => 'Zonas urbanas',
+            self::Rural => 'Zonas rurales y de pastoreo',
         };
     }
 }
