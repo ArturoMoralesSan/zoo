@@ -732,6 +732,18 @@ class CardTransferTest extends TestCase
         $this->assertNull($species->images->firstWhere('type', 'gallery')?->focal());
     }
 
+    public function test_card_thumbnail_focal_point_travels_with_the_card(): void
+    {
+        $card = $this->createCard();
+        $card->update(['thumbnail_focal_x' => 0.3, 'thumbnail_focal_y' => 0.6]);
+
+        $zip = $this->export();
+        $this->deleteCard($card);
+        $this->confirm($this->upload($zip));
+
+        $this->assertSame(['x' => 0.3, 'y' => 0.6], Card::where('uuid', $card->uuid)->firstOrFail()->thumbnailFocal());
+    }
+
     public function test_overwriting_a_species_replaces_its_image_credits(): void
     {
         $this->dressSpecies();

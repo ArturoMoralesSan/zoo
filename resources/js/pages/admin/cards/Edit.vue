@@ -72,6 +72,8 @@ interface Card {
     name: string;
     rarity: string;
     thumbnail_image: string | null;
+    thumbnail_focal_x: number | null;
+    thumbnail_focal_y: number | null;
     artwork_image: string | null;
     artwork_source: string | null;
     artwork_crop: SavedCrop | null;
@@ -124,6 +126,9 @@ const form = useForm({
     name: props.card.name ?? '',
     rarity: props.card.rarity ?? 'comun',
     thumbnail_image: null as File | null,
+    // Punto focal de la miniatura (0 a 1); null = centro.
+    thumbnail_focal_x: props.card.thumbnail_focal_x as number | null,
+    thumbnail_focal_y: props.card.thumbnail_focal_y as number | null,
     artwork_image: null as File | null,
     generated_image: null as File | null,
     fade_color: props.card.fade_color ?? DEFAULT_FADE_COLOR,
@@ -798,13 +803,19 @@ defineOptions({
                             id="thumbnail_image"
                             kind="thumbnail"
                             v-model:file="form.thumbnail_image"
+                            v-model:focal-x="form.thumbnail_focal_x"
+                            v-model:focal-y="form.thumbnail_focal_y"
                             label="Miniatura"
                             help="Se muestra en los listados de la colección."
                             :current-path="card.thumbnail_image"
                             :current-bytes="fileSizes.thumbnail.current"
                             :original-bytes="fileSizes.thumbnail.original"
                             :alt="card.name"
-                            :error="form.errors.thumbnail_image"
+                            :error="
+                                form.errors.thumbnail_image ||
+                                form.errors.thumbnail_focal_x ||
+                                form.errors.thumbnail_focal_y
+                            "
                             :disabled="form.processing"
                             @delete="deleteImage('thumbnail')"
                         />

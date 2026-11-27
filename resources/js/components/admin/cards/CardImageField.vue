@@ -4,7 +4,9 @@ import { computed, ref, watch } from 'vue';
 
 import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import ImageCropDialog from '@/components/admin/ImageCropDialog.vue';
+import FocalPointPicker from '@/components/admin/species/FocalPointPicker.vue';
 import { useObjectUrl } from '@/composables/useObjectUrl';
+import { CARD_THUMBNAIL_FRAMES } from '@/lib/focalPoint';
 import {
     aspectLabel,
     cropMemory,
@@ -53,11 +55,29 @@ const props = withDefaults(
 
 const file = defineModel<File | null>('file', { required: true });
 
+// Punto focal (solo la miniatura): undefined = el campo no lo usa.
+const focalX = defineModel<number | null | undefined>('focalX');
+const focalY = defineModel<number | null | undefined>('focalY');
+const usesFocal = computed(() => focalX.value !== undefined);
+const focalSrc = computed(
+    () =>
+        filePreviewUrl.value ??
+        (props.currentPath ? storageUrl(props.currentPath) : null),
+);
+
 const emit = defineEmits<{
     delete: [];
 }>();
 
 const filePreviewUrl = useObjectUrl(() => file.value);
+
+// Foto nueva: el punto anterior era de otra imagen.
+watch(file, (value) => {
+    if (value && usesFocal.value) {
+        focalX.value = null;
+        focalY.value = null;
+    }
+});
 
 /*
  * Peso que tendrá la imagen elegida. optimizeUpload guarda el resultado,
@@ -273,6 +293,21 @@ const currentFilename = computed(
             <p v-if="error" class="form-error">
                 {{ error }}
             </p>
+        </div>
+
+        <div
+            v-if="usesFocal && focalSrc"
+            class="rounded-xl border border-[#DCE7DF] bg-white p-4"
+        >
+            <FocalPointPicker
+                :src="focalSrc"
+                :alt="alt"
+                :frames="CARD_THUMBNAIL_FRAMES"
+                :x="focalX ?? null"
+                :y="focalY ?? null"
+                @update:x="focalX = $event"
+                @update:y="focalY = $event"
+            />
         </div>
 
         <ImageCropDialog

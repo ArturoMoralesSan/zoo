@@ -1,10 +1,11 @@
 /**
- * Punto focal de las imágenes de especies (principal y galería): x e y de 0
+ * Punto focal de las imágenes de especies (principal y galería) y de la
+ * miniatura de la tarjeta: x e y de 0
  * a 1 desde la esquina superior izquierda, o null para el centro. La app lo
  * aplica como contentPosition de expo-image, que funciona igual que
  * object-position de CSS: el punto al x% de la foto queda al x% del marco.
  * Así se mantiene a la vista en cualquier proporción, sin ir al centro.
- * Ver docs/species-focal-app.md.
+ * Ver docs/focal-points-app.md.
  */
 
 export interface FocalPoint {
@@ -22,6 +23,24 @@ export const APP_FRAMES = [
     { key: 'tile', label: 'Mi zoo', width: 152, height: 176 },
     { key: 'gallery', label: 'Galería', width: 248, height: 164 },
 ] as const;
+
+export interface AppFrame {
+    key: string;
+    label: string;
+    width: number;
+    height: number;
+}
+
+/**
+ * Marcos de la miniatura de la tarjeta (se sube 1:1). El marcador del mapa es
+ * un círculo sobre un cuadrado: no recorta, por eso no aparece.
+ */
+export const CARD_THUMBNAIL_FRAMES: readonly AppFrame[] = [
+    { key: 'duel', label: 'Duelo', width: 320, height: 140 },
+    { key: 'deck', label: 'Mazo', width: 174, height: 124 },
+    { key: 'collection', label: 'Colección', width: 115, height: 109 },
+    { key: 'face', label: 'Sin tarjeta final', width: 112, height: 160 },
+];
 
 const clamp = (value: number): number =>
     Math.round(Math.min(1, Math.max(0, value)) * 10000) / 10000;

@@ -3,15 +3,21 @@ import { Crosshair, LocateFixed } from 'lucide-vue-next';
 import { computed, ref, useId } from 'vue';
 
 import { APP_FRAMES, clampFocal, objectPosition } from '@/lib/focalPoint';
+import type { AppFrame } from '@/lib/focalPoint';
 
 /*
- * Punto focal de una imagen de especie: la app recorta la foto en marcos de
- * distinta forma y mantiene este punto a la vista. null = centro.
+ * Punto focal de una imagen: la app recorta la foto en marcos de distinta
+ * forma y mantiene este punto a la vista. null = centro.
  */
-const props = defineProps<{
-    src: string;
-    alt?: string;
-}>();
+const props = withDefaults(
+    defineProps<{
+        src: string;
+        alt?: string;
+        // Marcos de la app que se muestran como vista previa.
+        frames?: readonly AppFrame[];
+    }>(),
+    { alt: '', frames: () => APP_FRAMES },
+);
 
 const x = defineModel<number | null>('x', { required: true });
 const y = defineModel<number | null>('y', { required: true });
@@ -32,13 +38,15 @@ const valueText = computed(() =>
 );
 
 // Vistas previas a 96 px de alto, con la forma real de cada marco de la app.
-const previews = APP_FRAMES.map((frame) => ({
-    ...frame,
-    style: {
-        width: `${Math.round((96 * frame.width) / frame.height)}px`,
-        height: '96px',
-    },
-}));
+const previews = computed(() =>
+    props.frames.map((frame) => ({
+        ...frame,
+        style: {
+            width: `${Math.round((96 * frame.width) / frame.height)}px`,
+            height: '96px',
+        },
+    })),
+);
 
 const setFromPointer = (event: PointerEvent) => {
     const rect = area.value?.getBoundingClientRect();

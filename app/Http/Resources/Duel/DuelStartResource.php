@@ -44,6 +44,8 @@ class DuelStartResource extends JsonResource
                 'rarity' => $this->card->rarity,
                 'category_name' => $this->card->species?->category?->name,
                 'thumbnail_image' => CardResource::publicUrl($this->card->thumbnail_image),
+                // Punto focal de la miniatura (0 a 1); null = centro.
+                'thumbnail_focal' => $this->card->thumbnailFocal(),
                 'stats' => [
                     'astucia' => $this->card->astucia,
                     'rapidez' => $this->card->rapidez,

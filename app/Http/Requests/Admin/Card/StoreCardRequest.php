@@ -69,6 +69,13 @@ class StoreCardRequest extends FormRequest
             ...ImageCropSource::rules('artwork'),
 
             /*
+             * Punto focal de la miniatura (0 a 1, desde la esquina superior
+             * izquierda). Sin enviarlo se conserva el guardado.
+             */
+            'thumbnail_focal_x' => ['nullable', 'numeric', 'between:0,1', 'required_with:thumbnail_focal_y'],
+            'thumbnail_focal_y' => ['nullable', 'numeric', 'between:0,1', 'required_with:thumbnail_focal_x'],
+
+            /*
              * Imagen final generada en el navegador a partir de la plantilla.
              * WebP a 2× (lib/imageOptimize.ts); PNG solo si el navegador no
              * pudo codificar WebP. Nunca mayor que el render a 3×.
@@ -167,6 +174,8 @@ class StoreCardRequest extends FormRequest
         return [
             ...$this->cardModelAttributes(),
             'thumbnail_image' => 'miniatura',
+            'thumbnail_focal_x' => 'punto focal de la miniatura (horizontal)',
+            'thumbnail_focal_y' => 'punto focal de la miniatura (vertical)',
             'artwork_image' => 'ilustración',
             ...ImageCropSource::attributes('artwork', 'ilustración'),
         ];

@@ -771,6 +771,8 @@ class CardPackageReader
             'attributes.duel_settings_source' => ['nullable', Rule::in([Card::DUEL_SETTINGS_RARITY, Card::DUEL_SETTINGS_CARD])],
             'attributes.messages_source' => ['nullable', Rule::in([Card::MESSAGES_DEFAULT, Card::MESSAGES_CARD])],
             'attributes.image_original_bytes' => ['nullable', 'array'],
+            'attributes.thumbnail_focal_x' => ['nullable', 'numeric', 'between:0,1', 'required_with:attributes.thumbnail_focal_y'],
+            'attributes.thumbnail_focal_y' => ['nullable', 'numeric', 'between:0,1', 'required_with:attributes.thumbnail_focal_x'],
             'attributes.sort_order' => ['nullable', 'integer'],
             'attributes.astucia' => ['nullable', 'integer'],
             'attributes.rapidez' => ['nullable', 'integer'],

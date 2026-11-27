@@ -69,6 +69,9 @@ const form = useForm({
     name: '',
     rarity: 'comun',
     thumbnail_image: null as File | null,
+    // Punto focal de la miniatura (0 a 1); null = centro.
+    thumbnail_focal_x: null as number | null,
+    thumbnail_focal_y: null as number | null,
     artwork_image: null as File | null,
     generated_image: null as File | null,
     fade_color: DEFAULT_FADE_COLOR,
@@ -623,9 +626,15 @@ defineOptions({
                             id="thumbnail_image"
                             kind="thumbnail"
                             v-model:file="form.thumbnail_image"
+                            v-model:focal-x="form.thumbnail_focal_x"
+                            v-model:focal-y="form.thumbnail_focal_y"
                             label="Miniatura"
                             help="Se muestra en los listados de la colección."
-                            :error="form.errors.thumbnail_image"
+                            :error="
+                                form.errors.thumbnail_image ||
+                                form.errors.thumbnail_focal_x ||
+                                form.errors.thumbnail_focal_y
+                            "
                         />
                     </div>
                 </AdminCard>

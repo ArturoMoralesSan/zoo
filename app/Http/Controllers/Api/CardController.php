@@ -26,7 +26,7 @@ class CardController extends Controller
      *
      * | `encountered` | Campos | Uso |
      * |---|---|---|
-     * | `true` | `id`, `name`, `rarity`, `category_name`, `thumbnail_image`, `card_image_url`, `stats`, `model_url` | Tarjeta obtenida: cuadrícula, Vista 3D y AR |
+     * | `true` | `id`, `name`, `rarity`, `category_name`, `thumbnail_image`, `thumbnail_focal`, `card_image_url`, `stats`, `model_url` | Tarjeta obtenida: cuadrícula, Vista 3D y AR |
      * | `false` | `id`, `attempts` | "???" / "Sin descubrir": no se revela el animal hasta ganarlo |
      *
      * `attempts` de una tarjeta sin obtener: con `locked_until` en `null` se puede retar
@@ -55,6 +55,8 @@ class CardController extends Controller
                 'name',
                 'rarity',
                 'thumbnail_image',
+                'thumbnail_focal_x',
+                'thumbnail_focal_y',
                 'generated_image',
                 'model_file',
                 'sort_order',

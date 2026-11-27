@@ -62,6 +62,14 @@ class CardResource extends JsonResource
                 'thumbnail_image' => self::publicUrl($this->thumbnail_image),
 
                 /**
+                 * Punto focal de la miniatura (0 a 1 desde la esquina superior izquierda), como
+                 * `object-position` / `contentPosition`. `null` = centro.
+                 *
+                 * @var array{x: float, y: float}|null
+                 */
+                'thumbnail_focal' => $this->thumbnailFocal(),
+
+                /**
                  * Imagen final de la tarjeta, generada en el editor del panel (A-22, A-26).
                  */
                 'card_image_url' => self::publicUrl($this->generated_image),

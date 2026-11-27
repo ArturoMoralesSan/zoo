@@ -574,6 +574,9 @@ class CardPackageImporter
         // Sin especificar, como al crear la tarjeta en el panel.
         $values['is_active'] = (bool) ($values['is_active'] ?? false);
         $values['sort_order'] = (int) ($values['sort_order'] ?? 0);
+        // Paquetes sin punto focal: centro, no el de la miniatura que se reemplaza.
+        $values['thumbnail_focal_x'] ??= null;
+        $values['thumbnail_focal_y'] ??= null;
 
         return $values;
     }

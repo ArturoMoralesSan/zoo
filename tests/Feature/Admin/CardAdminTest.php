@@ -536,6 +536,63 @@ class CardAdminTest extends TestCase
         @rmdir(dirname($files[0]));
     }
 
+    public function test_thumbnail_focal_point_is_saved_kept_or_reset(): void
+    {
+        Storage::fake('public');
+
+        $payload = $this->cardPayload([
+            'is_active' => false,
+            'thumbnail_image' => UploadedFile::fake()->image('mini.png', 80, 80),
+            'thumbnail_focal_x' => 0.2,
+            'thumbnail_focal_y' => 0.7,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $payload)
+            ->assertSessionHasNoErrors();
+
+        $card = Card::where('name', $payload['name'])->firstOrFail();
+        $files = [storage_path('app/public/'.$card->thumbnail_image)];
+        $this->assertSame(['x' => 0.2, 'y' => 0.7], $card->thumbnailFocal());
+
+        $update = function (array $data) use ($card, &$files) {
+            $this->actingAs($this->admin)
+                ->put(route('admin.cards.update', $card), $this->updatePayload($card, ['is_active' => false, ...$data]))
+                ->assertSessionHasNoErrors();
+            $files[] = storage_path('app/public/'.$card->refresh()->thumbnail_image);
+        };
+
+        // Sin las claves (cliente anterior): se conserva.
+        $update([]);
+        $this->assertSame(['x' => 0.2, 'y' => 0.7], $card->thumbnailFocal());
+
+        // Se mueve sin cambiar de foto.
+        $update(['thumbnail_focal_x' => 0.9, 'thumbnail_focal_y' => 0.1]);
+        $this->assertSame(['x' => 0.9, 'y' => 0.1], $card->thumbnailFocal());
+
+        // Foto nueva sin punto: el anterior era de otra foto.
+        $update(['thumbnail_image' => UploadedFile::fake()->image('otra.png', 80, 80)]);
+        $this->assertNull($card->thumbnailFocal());
+
+        // Al eliminar la miniatura se olvida.
+        $card->update(['thumbnail_focal_x' => 0.5, 'thumbnail_focal_y' => 0.5]);
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cards.image.destroy', [$card, 'thumbnail']))
+            ->assertSessionHasNoErrors();
+        $this->assertNull($card->refresh()->thumbnailFocal());
+
+        // CardController mueve las imágenes a storage/app/public real.
+        File::delete($files);
+        @rmdir(dirname($files[0]));
+    }
+
+    public function test_thumbnail_focal_point_needs_both_coordinates_between_0_and_1(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload(['thumbnail_focal_x' => 1.5]))
+            ->assertSessionHasErrors(['thumbnail_focal_x', 'thumbnail_focal_y']);
+    }
+
     public function test_generated_card_image_must_be_webp_or_png(): void
     {
         $this->actingAs($this->admin)

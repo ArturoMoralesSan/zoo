@@ -97,8 +97,9 @@ php artisan cards:import ruta.zip [--overwrite] [--settings] [--dry-run]
 - **QR:** con tokens, el QR impreso sigue sirviendo y, si otra tarjeta ya usa el token, se
   crea con uno nuevo. Sin tokens, solo las tarjetas nuevas reciben QR (con tokens nuevos).
 - **Licencias:** por slug. Una que no existe se crea desactivada (`is_selectable = false`).
-- **Punto focal:** `focal_x`/`focal_y` (0 a 1) de cada imagen son opcionales dentro de la
-  versión 3: los paquetes anteriores se importan con null (centro).
+- **Punto focal:** `focal_x`/`focal_y` (0 a 1) de cada imagen de especie y
+  `thumbnail_focal_x`/`_y` de la tarjeta (en `attributes`) son opcionales dentro de la versión 3:
+  los paquetes anteriores se importan con null (centro).
 - **Proporción:** la importación no comprueba la proporción fija de miniaturas e ilustraciones
   (ver "Recorte y punto focal" en [image-optimization.md](image-optimization.md)).
 - **Original para volver a recortar:** las copias `artwork_source` y la de la imagen principal

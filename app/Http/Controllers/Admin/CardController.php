@@ -531,6 +531,7 @@ class CardController extends Controller
                 $field => null,
                 'image_original_bytes' => $originals ?: null,
                 ...($image === 'artwork' ? ['artwork_source' => null, 'artwork_crop' => null] : []),
+                ...($image === 'thumbnail' ? ['thumbnail_focal_x' => null, 'thumbnail_focal_y' => null] : []),
             ]);
 
             $this->deleteAssetCredits($card, CreditAsset::from($image));
@@ -755,6 +756,21 @@ class CardController extends Controller
 
                 $card->update(['artwork_source' => $source, 'artwork_crop' => $crop]);
             }
+        }
+
+        /*
+         * Punto focal de la miniatura: una imagen nueva sin él vuelve al
+         * centro (el anterior era de otra foto); sin imagen nueva solo cambia
+         * si el formulario lo envía.
+         */
+        if ($request->hasFile('thumbnail_image') || $request->exists('thumbnail_focal_x')) {
+            $x = $request->input('thumbnail_focal_x');
+            $y = $request->input('thumbnail_focal_y');
+
+            $card->update([
+                'thumbnail_focal_x' => is_numeric($x) && is_numeric($y) ? (float) $x : null,
+                'thumbnail_focal_y' => is_numeric($x) && is_numeric($y) ? (float) $y : null,
+            ]);
         }
     }
 

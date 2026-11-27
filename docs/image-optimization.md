@@ -141,7 +141,7 @@ Antes de comprimir, cada imagen elegida en el panel pasa por un diálogo de reco
 | Imagen | Proporción | Por qué |
 | --- | --- | --- |
 | Tarjeta `artwork` | **572:1016, fija** | fondo de la plantilla; la guía marca el logo y los textos |
-| Tarjeta `thumbnail` | **1:1, fija** | cuadros y círculos de la app; guía circular |
+| Tarjeta `thumbnail` | **1:1, fija** + punto focal | círculo del mapa; en el resto la app la recorta de 0.7:1 a 2.3:1 |
 | Especie `thumbnail` | **1:1, fija** | listas y marcadores redondos del mapa |
 | Especie `main`, `gallery` | libre | se usa el punto focal (abajo) |
 
@@ -176,7 +176,14 @@ marcos verticales y horizontales; el punto se aplica como `object-position` (en 
 `contentPosition` de expo-image) y queda a la vista, no centrado. `FocalPointPicker.vue` muestra
 las vistas previas con las medidas de la app (`APP_FRAMES` en `lib/focalPoint.ts`). Una imagen
 principal nueva sin punto vuelve al centro; sin enviar `main_focal_x` se conserva el guardado.
-Contrato para la app: [species-focal-app.md](species-focal-app.md).
+
+La **miniatura de la tarjeta** tiene el suyo (`cards.thumbnail_focal_x`/`_y`, API
+`thumbnail_focal`): se sube 1:1 por el círculo del mapa, pero el mazo (1.4:1), los diálogos del
+duelo (~2.3:1) y la tarjeta sin imagen final (0.7:1) la recortan. `CardImageField` muestra el
+selector con `CARD_THUMBNAIL_FRAMES`. Mismas reglas: miniatura nueva sin punto = centro, sin
+enviar `thumbnail_focal_x` se conserva, y al eliminar la miniatura se borra. Viaja en los
+paquetes como atributo de la tarjeta.
+Contrato para la app: [focal-points-app.md](focal-points-app.md).
 
 ## Página "Recursos"
 
