@@ -258,6 +258,9 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   `CreditAsset::cases()` for card code, since `image` has no card column. The API sends card
   sections then species sections, told apart by `type`. Deleting a `SpeciesImage` deletes its
   credits (model hook, so use Eloquent deletes); replacing a file keeps them with a review toast.
+  Missing credits never block activating a card or species: the panel warns instead
+  (`MissingCreditsAlert` under the switch, a warning toast on save, red "Activa sin licencia" in
+  the lists), with texts from `Card`/`Species::missingCreditsText()` and `lib/credits/missing.ts`.
   See `docs/api-credits.md`.
 - **Species images** (main, thumbnail, gallery) follow the same WebP flow with their own profiles
   (`resources/data/species-image-profiles.json`, `SpeciesImageOptimizer`, `species:images:*`).

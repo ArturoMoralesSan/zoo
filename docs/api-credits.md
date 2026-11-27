@@ -619,8 +619,8 @@ llega desde "Gestionar créditos" en el detalle o el formulario de la tarjeta.
 
 **Flujo:**
 
-1. Crea o edita la tarjeta y sube sus archivos. Una tarjeta nueva con
-   archivos se crea **inactiva** y se abre su sección Créditos.
+1. Crea o edita la tarjeta y sube sus archivos. Al crear una tarjeta con
+   archivos se abre su sección Créditos.
 2. En Créditos, cada recurso (ilustración, miniatura, modelo 3D) muestra su
    estado ("Licencia completa", "Falta licencia" o "Sin archivo"), sus
    créditos y avisos de la cadena de licencias.
@@ -640,9 +640,10 @@ llega desde "Gestionar créditos" en el detalle o el formulario de la tarjeta.
    describen en "La imagen fue modificada".
 5. Al final, "Vista previa en la app" muestra las filas exactas que enviará
    este endpoint para la tarjeta.
-6. Activa la tarjeta. No se puede activar mientras algún recurso no tenga
-   **licencia completa**: su origen y, si se hizo a partir de otro recurso,
-   también el origen de ese recurso.
+6. Activa la tarjeta. Se puede activar aunque algún recurso no tenga
+   **licencia completa** (su origen y, si se hizo a partir de otro recurso,
+   también el origen de ese recurso), pero el panel lo avisa: la app muestra
+   ese archivo sin crédito. Ver [Activar sin licencias](#activar-sin-licencias).
 
 Otros puntos:
 
@@ -669,14 +670,29 @@ especies marca las que tienen imágenes sin licencia.
   con su estado, sus créditos y la vista previa en la app.
 - El formulario es el mismo de la tarjeta, sin el paso "¿Cómo se obtuvo
   este archivo?": una foto de especie no se hace a partir de otra.
-- Una especie se puede activar aunque falten licencias (a diferencia de la
-  tarjeta); sus imágenes sin licencia simplemente no aparecen en la pantalla
-  de créditos.
+- Como la tarjeta, una especie se puede activar aunque falten licencias, con
+  los mismos avisos; sus imágenes sin licencia no aparecen en la pantalla de
+  créditos.
 - Reemplazar la imagen principal o la miniatura conserva sus créditos, pero el
   aviso al guardar pide revisarlos. Eliminar una foto de la galería elimina
   sus créditos.
 - Permisos: `species.view` para ver, `species.edit` para crear y editar,
   `species.delete` para eliminar.
+
+### Activar sin licencias
+
+Tarjetas y especies se pueden activar aunque a algún archivo le falte la
+licencia: la app lo muestra, pero sin su crédito. El panel lo avisa en cuatro
+lugares:
+
+1. **Formulario** (crear y editar): bajo "Activa", un aviso ámbar dice qué
+   archivos no tienen licencia, con un enlace a Créditos.
+2. **Al guardar** activa sin licencias completas: el aviso es de advertencia,
+   no de éxito. Al crear con archivos se abre la sección Créditos.
+3. **Listas** de tarjetas y especies: "Activa sin licencia" en rojo si está
+   activa; "Falta licencia" en ámbar si está inactiva.
+4. **Sección Créditos:** el resumen dice si está activa y muestra archivos sin
+   crédito.
 
 ### Orígenes y licencias permitidas
 
