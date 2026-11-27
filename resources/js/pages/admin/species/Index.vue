@@ -252,11 +252,24 @@ defineOptions({
 
                                 <span
                                     v-if="item.images_missing_credits_count > 0"
-                                    class="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
-                                    title="Hay imágenes sin licencia"
+                                    class="mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
+                                    :class="
+                                        item.is_active
+                                            ? 'border-red-200 bg-red-50 text-red-700'
+                                            : 'border-amber-200 bg-amber-50 text-amber-800'
+                                    "
+                                    :title="
+                                        item.is_active
+                                            ? 'Activa: la app muestra sus imágenes sin licencia'
+                                            : 'Hay imágenes sin licencia'
+                                    "
                                 >
                                     <Copyright :size="12" />
-                                    Falta licencia
+                                    {{
+                                        item.is_active
+                                            ? 'Activa sin licencia'
+                                            : 'Falta licencia'
+                                    }}
                                 </span>
                             </div>
                         </div>

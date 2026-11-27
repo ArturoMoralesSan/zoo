@@ -827,11 +827,24 @@ defineOptions({
 
                                 <span
                                     v-if="card.missing_credits?.length"
-                                    class="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
-                                    title="Hay recursos subidos sin licencia"
+                                    class="mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
+                                    :class="
+                                        card.is_active
+                                            ? 'border-red-200 bg-red-50 text-red-700'
+                                            : 'border-amber-200 bg-amber-50 text-amber-800'
+                                    "
+                                    :title="
+                                        card.is_active
+                                            ? 'Activa: la app muestra sus archivos sin licencia'
+                                            : 'Hay recursos subidos sin licencia'
+                                    "
                                 >
                                     <Copyright :size="12" />
-                                    Falta licencia
+                                    {{
+                                        card.is_active
+                                            ? 'Activa sin licencia'
+                                            : 'Falta licencia'
+                                    }}
                                 </span>
                             </div>
                         </Link>

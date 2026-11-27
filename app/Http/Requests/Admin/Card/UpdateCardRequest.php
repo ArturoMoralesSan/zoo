@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Admin\Card;
 
-use App\Concerns\AssetCreditValidationRules;
 use App\Concerns\CardDesignValidationRules;
 use App\Concerns\CardMessagesValidationRules;
 use App\Concerns\CardModelValidationRules;
@@ -13,7 +12,6 @@ use Illuminate\Validation\Rule;
 
 class UpdateCardRequest extends FormRequest
 {
-    use AssetCreditValidationRules;
     use CardDesignValidationRules;
     use CardMessagesValidationRules;
     use CardModelValidationRules;
@@ -93,7 +91,6 @@ class UpdateCardRequest extends FormRequest
 
             ...$this->cardModelRules($this->route('card')),
 
-
             'is_active' => [
                 'boolean',
             ],
@@ -154,16 +151,6 @@ class UpdateCardRequest extends FormRequest
                 'min:1',
                 'max:43200',
             ],
-        ];
-    }
-
-    /**
-     * Activación de la tarjeta según sus créditos.
-     */
-    public function after(): array
-    {
-        return [
-            $this->assetCreditsCheck($this->route('card')),
         ];
     }
 

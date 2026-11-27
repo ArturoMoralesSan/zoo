@@ -28,6 +28,7 @@ import CardStatField from '@/components/admin/cards/CardStatField.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
+import MissingCreditsAlert from '@/components/admin/MissingCreditsAlert.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import type { ModelFormFields } from '@/composables/useCardModelSize';
 import { useCardModelSize } from '@/composables/useCardModelSize';
@@ -40,6 +41,8 @@ import { DEFAULT_TITLE_FONT } from '@/lib/cardFonts';
 import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
 import { rarityOptions } from '@/lib/cardRarity';
 import { cardStat } from '@/lib/cardStats';
+import { missingAssetsText } from '@/lib/credits/missing';
+import type { CreditAsset } from '@/lib/credits/types';
 import type { DuelMessages } from '@/lib/duelMessages';
 import type { GlbSizeConfig } from '@/lib/glb/modelSize';
 import { optimizeUpload } from '@/lib/imageOptimize';
@@ -170,18 +173,18 @@ const submit = async () => {
 const modelFile = ref<File | null>(null);
 
 /*
- * Con archivos nuevos la tarjeta se crea inactiva: sus créditos se registran
- * después, en la sección Créditos, y entonces se activa.
+ * Los archivos nuevos aún no tienen créditos: se registran al guardar, en la
+ * sección Créditos. Se puede crear activa, pero con aviso.
  */
-const hasUploads = computed(() =>
-    Boolean(form.artwork_image || form.thumbnail_image || modelFile.value),
+const missingCredits = computed(() =>
+    missingAssetsText(
+        [
+            form.artwork_image && 'artwork',
+            form.thumbnail_image && 'thumbnail',
+            modelFile.value && 'model',
+        ].filter(Boolean) as CreditAsset[],
+    ),
 );
-
-watch(hasUploads, (uploads) => {
-    if (uploads) {
-        form.is_active = false;
-    }
-});
 
 const handleModelFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
@@ -763,13 +766,17 @@ defineOptions({
                         label="Tarjeta activa"
                         description="La tarjeta estará disponible para mostrarse y utilizarse en el sistema."
                         :error="form.errors.is_active"
-                        :disabled="hasUploads"
                     />
 
-                    <p v-if="hasUploads" class="form-help mt-3">
-                        La tarjeta se creará inactiva. Al guardar se abrirá su
-                        sección Créditos para indicar de dónde salió cada imagen
-                        y el modelo 3D; después podrás activarla.
+                    <MissingCreditsAlert
+                        v-if="form.is_active && missingCredits"
+                        :missing="missingCredits"
+                        kind="tarjeta"
+                    />
+
+                    <p v-else-if="missingCredits" class="form-help mt-3">
+                        Al guardar se abrirá la sección Créditos para indicar de
+                        dónde salió cada imagen y el modelo 3D.
                     </p>
                 </AdminCard>
 

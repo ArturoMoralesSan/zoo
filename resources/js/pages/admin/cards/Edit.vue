@@ -34,6 +34,7 @@ import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue'
 import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
+import MissingCreditsAlert from '@/components/admin/MissingCreditsAlert.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import type { ModelFormFields } from '@/composables/useCardModelSize';
 import { useCardModelSize } from '@/composables/useCardModelSize';
@@ -41,11 +42,12 @@ import { useObjectUrl } from '@/composables/useObjectUrl';
 import { usePreviewTab } from '@/composables/usePreviewTab';
 import type { AccentColor } from '@/lib/cardColors';
 import { DEFAULT_FADE_COLOR } from '@/lib/cardColors';
-import { DEFAULT_TITLE_FONT } from '@/lib/cardFonts';
 import type { CardFontId, TitleSize } from '@/lib/cardFonts';
-import { rarityOptions } from '@/lib/cardRarity';
+import { DEFAULT_TITLE_FONT } from '@/lib/cardFonts';
 import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
+import { rarityOptions } from '@/lib/cardRarity';
 import { cardStat } from '@/lib/cardStats';
+import { missingAssetsText } from '@/lib/credits/missing';
 import type { CreditAsset, CreditSummaryItem } from '@/lib/credits/types';
 import type { DuelMessages } from '@/lib/duelMessages';
 import type { GlbSizeConfig } from '@/lib/glb/modelSize';
@@ -240,6 +242,27 @@ const creditStatus = computed(
             props.creditSummary.map((item) => [item.asset, item.complete]),
         ) as Partial<Record<CreditAsset, boolean>>,
 );
+
+/*
+ * Recursos sin licencia: los guardados sin crédito completo y los que se suben
+ * ahora por primera vez. Se puede activar, pero con aviso.
+ */
+const missingCredits = computed(() => {
+    const saved = new Set(props.creditSummary.map((item) => item.asset));
+    const uploads = [
+        form.artwork_image && 'artwork',
+        form.thumbnail_image && 'thumbnail',
+        modelFile.value && 'model',
+    ].filter(Boolean) as CreditAsset[];
+
+    return missingAssetsText(
+        (['artwork', 'thumbnail', 'model'] as CreditAsset[]).filter(
+            (asset) =>
+                (saved.has(asset) && !creditStatus.value[asset]) ||
+                (!saved.has(asset) && uploads.includes(asset)),
+        ),
+    );
+});
 
 const creditsUrl = (asset?: CreditAsset) =>
     admin.cards.credits.index(props.card.id).url +
@@ -1002,6 +1025,13 @@ defineOptions({
                         label="Tarjeta activa"
                         description="La tarjeta estará disponible para mostrarse y utilizarse en el sistema."
                         :error="form.errors.is_active"
+                    />
+
+                    <MissingCreditsAlert
+                        v-if="form.is_active && missingCredits"
+                        :missing="missingCredits"
+                        kind="tarjeta"
+                        :href="creditsUrl()"
                     />
                 </AdminCard>
 

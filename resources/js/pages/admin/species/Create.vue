@@ -18,6 +18,7 @@ import AdminCard from '@/components/admin/AdminCard.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
+import MissingCreditsAlert from '@/components/admin/MissingCreditsAlert.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import SpeciesClassificationFields from '@/components/admin/species/SpeciesClassificationFields.vue';
 import SpeciesGalleryField from '@/components/admin/species/SpeciesGalleryField.vue';
@@ -26,6 +27,7 @@ import {
     optimizeSpeciesUploads,
     useEstimatedSize,
 } from '@/composables/useSpeciesImageUploads';
+import { missingImagesText } from '@/lib/credits/missing';
 import type { HabitatCode } from '@/lib/speciesCatalogs';
 import admin from '@/routes/admin';
 
@@ -86,6 +88,18 @@ const form = useForm({
     longitude: null as number | null,
     location_description: '',
 });
+
+/*
+ * Las imágenes nuevas aún no tienen créditos: se registran al guardar, en la
+ * sección Créditos. Se puede crear activa, pero con aviso.
+ */
+const missingCredits = computed(() =>
+    missingImagesText(
+        (form.main_image ? 1 : 0) +
+            (form.thumbnail_image ? 1 : 0) +
+            form.gallery_images.length,
+    ),
+);
 
 const activeTab = ref('information');
 
@@ -433,6 +447,12 @@ onBeforeUnmount(() => {
                                     label="Especie activa"
                                     description="Determina si la especie estará disponible en el sistema."
                                     :error="form.errors.is_active"
+                                />
+
+                                <MissingCreditsAlert
+                                    v-if="form.is_active && missingCredits"
+                                    :missing="missingCredits"
+                                    kind="especie"
                                 />
                             </div>
                         </div>

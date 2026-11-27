@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ConservationStatus;
+use App\Enums\CreditRole;
 use App\Enums\Diet;
 use App\Enums\Habitat;
 use App\Observers\CreditsCacheObserver;
@@ -95,6 +96,35 @@ class Species extends Model
         return $this->hasMany(
             SpeciesImage::class
         )->orderBy('sort_order');
+    }
+
+    /**
+     * Imágenes que la app muestra (principal, miniatura, galería) con archivo
+     * y sin crédito de origen.
+     *
+     * @return HasMany<SpeciesImage, $this>
+     */
+    public function imagesMissingCredits(): HasMany
+    {
+        return $this->images()
+            ->credited()
+            ->where('path', '!=', '')
+            ->whereDoesntHave('credits', fn ($query) => $query->where('role', CreditRole::Origin->value));
+    }
+
+    /**
+     * "1 imagen", "3 imágenes"… o null si no falta nada. Para los avisos del
+     * panel: una especie activa muestra esas imágenes sin sus créditos.
+     */
+    public function missingCreditsText(): ?string
+    {
+        $count = $this->imagesMissingCredits()->count();
+
+        return match ($count) {
+            0 => null,
+            1 => '1 imagen',
+            default => "{$count} imágenes",
+        };
     }
 
     public function models(): HasMany

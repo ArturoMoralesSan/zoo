@@ -19,6 +19,7 @@ import AdminCard from '@/components/admin/AdminCard.vue';
 import CancelButton from '@/components/admin/CancelButton.vue';
 import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
 import MapMarkerMap from '@/components/admin/MapMarkerMap.vue';
+import MissingCreditsAlert from '@/components/admin/MissingCreditsAlert.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import PageHeaderLink from '@/components/admin/PageHeaderLink.vue';
 import SpeciesClassificationFields from '@/components/admin/species/SpeciesClassificationFields.vue';
@@ -28,6 +29,7 @@ import {
     optimizeSpeciesUploads,
     useEstimatedSize,
 } from '@/composables/useSpeciesImageUploads';
+import { missingImagesText } from '@/lib/credits/missing';
 import type { HabitatCode } from '@/lib/speciesCatalogs';
 import admin from '@/routes/admin';
 
@@ -109,6 +111,8 @@ const props = defineProps<{
     categories: Category[];
     tags: Tag[];
     zones: Zone[];
+    // Imágenes guardadas sin crédito de origen.
+    uncreditedImageIds: number[];
 }>();
 
 const activeTab = ref('information');
@@ -180,6 +184,27 @@ const existingGalleryImages = computed<SpeciesImage[]>(() =>
         .filter((image) => image.type === 'gallery' && image.is_active)
         .sort((a, b) => a.sort_order - b.sort_order),
 );
+
+/*
+ * Imágenes que quedarán sin licencia al guardar: las guardadas sin crédito que
+ * no se borran, más las nuevas (una principal o miniatura que no existía, y
+ * las fotos nuevas de la galería). Se puede activar, pero con aviso.
+ */
+const missingCredits = computed(() => {
+    const uncredited = new Set(props.uncreditedImageIds);
+    const deleted = new Set(form.deleted_gallery_ids);
+
+    const saved = existingImages.value.filter(
+        (image) => uncredited.has(image.id) && !deleted.has(image.id),
+    ).length;
+
+    const added =
+        (form.main_image && !existingMainImage.value ? 1 : 0) +
+        (form.thumbnail_image && !existingThumbnailImage.value ? 1 : 0) +
+        form.gallery_images.length;
+
+    return missingImagesText(saved + added);
+});
 
 const savedGallery = existingGalleryImages.value.map((image) => ({
     id: image.id,
@@ -550,6 +575,15 @@ onBeforeUnmount(() => {
                                 label="Especie activa"
                                 description="Determina si la especie estará disponible en el sistema."
                                 :error="form.errors.is_active"
+                            />
+
+                            <MissingCreditsAlert
+                                v-if="form.is_active && missingCredits"
+                                :missing="missingCredits"
+                                kind="especie"
+                                :href="
+                                    admin.species.credits.index(species.id).url
+                                "
                             />
                         </div>
                     </AdminCard>
