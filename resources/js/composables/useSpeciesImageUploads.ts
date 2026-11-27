@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
 
+import { cropSource } from '@/lib/imageCrop';
 import { optimizeImage, SPECIES_IMAGE_PROFILES } from '@/lib/imageOptimize';
 import type { SpeciesImageKind } from '@/lib/imageOptimize';
 
@@ -80,11 +81,11 @@ export async function optimizeSpeciesUploads(data: SpeciesUploads) {
     const originalBytes: Partial<Record<'main' | 'thumbnail', number>> = {};
 
     if (data.main_image) {
-        originalBytes.main = data.main_image.size;
+        originalBytes.main = cropSource(data.main_image).size;
     }
 
     if (data.thumbnail_image) {
-        originalBytes.thumbnail = data.thumbnail_image.size;
+        originalBytes.thumbnail = cropSource(data.thumbnail_image).size;
     }
 
     return {
@@ -93,6 +94,8 @@ export async function optimizeSpeciesUploads(data: SpeciesUploads) {
         gallery_images: gallery,
         image_original_bytes: originalBytes,
         // Por índice de gallery_images.
-        gallery_original_bytes: data.gallery_images.map((file) => file.size),
+        gallery_original_bytes: data.gallery_images.map(
+            (file) => cropSource(file).size,
+        ),
     };
 }

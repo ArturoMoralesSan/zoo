@@ -279,6 +279,8 @@ class CardPackageExporter
             $item = [
                 'file' => $name,
                 'alt_text' => $image->alt_text,
+                'focal_x' => $image->focal_x,
+                'focal_y' => $image->focal_y,
                 'original_bytes' => $image->original_bytes,
                 'is_active' => (bool) $image->is_active,
                 'credits' => $this->creditItems($image->credits),

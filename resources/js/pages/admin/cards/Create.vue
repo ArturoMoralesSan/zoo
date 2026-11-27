@@ -45,6 +45,7 @@ import { missingAssetsText } from '@/lib/credits/missing';
 import type { CreditAsset } from '@/lib/credits/types';
 import type { DuelMessages } from '@/lib/duelMessages';
 import type { GlbSizeConfig } from '@/lib/glb/modelSize';
+import { cropSource } from '@/lib/imageCrop';
 import { optimizeUpload } from '@/lib/imageOptimize';
 import admin from '@/routes/admin';
 
@@ -137,11 +138,11 @@ const submit = async () => {
     }
 
     if (form.thumbnail_image) {
-        originalBytes.thumbnail = form.thumbnail_image.size;
+        originalBytes.thumbnail = cropSource(form.thumbnail_image).size;
     }
 
     if (form.artwork_image) {
-        originalBytes.artwork = form.artwork_image.size;
+        originalBytes.artwork = cropSource(form.artwork_image).size;
     }
 
     /*

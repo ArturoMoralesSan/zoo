@@ -1,5 +1,15 @@
 {
     "generated": { "maxWidth": 1144, "maxHeight": 2032, "quality": 88 },
-    "thumbnail": { "maxWidth": 800, "maxHeight": 800, "quality": 82 },
-    "artwork": { "maxWidth": 2048, "maxHeight": 2048, "quality": 90 }
+    "thumbnail": {
+        "maxWidth": 800,
+        "maxHeight": 800,
+        "quality": 82,
+        "aspect": [1, 1]
+    },
+    "artwork": {
+        "maxWidth": 2048,
+        "maxHeight": 2048,
+        "quality": 90,
+        "aspect": [572, 1016]
+    }
 }

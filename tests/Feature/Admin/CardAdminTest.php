@@ -44,16 +44,16 @@ class CardAdminTest extends TestCase
         $this->admin->givePermissionTo(['cards.view', 'cards.create', 'cards.edit', 'cards.delete']);
 
         $this->category = SpeciesCategory::create([
-            'name' => 'Aves ' . uniqid(),
+            'name' => 'Aves '.uniqid(),
             'description' => 'Categoría de aves',
             'is_active' => true,
         ]);
 
         $this->species = Species::create([
             'species_category_id' => $this->category->id,
-            'common_name' => 'Águila Real ' . uniqid(),
-            'scientific_name' => 'Aquila chrysaetos ' . uniqid(),
-            'slug' => 'aguila-real-' . uniqid(),
+            'common_name' => 'Águila Real '.uniqid(),
+            'scientific_name' => 'Aquila chrysaetos '.uniqid(),
+            'slug' => 'aguila-real-'.uniqid(),
             'description' => 'Especie de prueba',
             'is_active' => true,
         ]);
@@ -363,7 +363,7 @@ class CardAdminTest extends TestCase
         return array_merge([
             ...$this->designPayload(),
             'species_id' => $this->species->id,
-            'name' => 'Águila Modelo ' . uniqid(),
+            'name' => 'Águila Modelo '.uniqid(),
             'rarity' => 'comun',
             'astucia' => 50,
             'rapidez' => 50,
@@ -426,7 +426,7 @@ class CardAdminTest extends TestCase
 
         foreach (['thumbnail_image', 'artwork_image', 'generated_image'] as $field) {
             $this->assertNotNull($card->{$field});
-            $paths[] = storage_path('app/public/' . $card->{$field});
+            $paths[] = storage_path('app/public/'.$card->{$field});
         }
 
         // Al actualizar, la imagen generada reemplaza a la anterior.
@@ -441,7 +441,7 @@ class CardAdminTest extends TestCase
         $card->refresh();
 
         $this->assertFileDoesNotExist($paths[2]);
-        $paths[2] = storage_path('app/public/' . $card->generated_image);
+        $paths[2] = storage_path('app/public/'.$card->generated_image);
 
         foreach ($paths as $path) {
             $this->assertFileExists($path);
@@ -457,6 +457,27 @@ class CardAdminTest extends TestCase
 
         File::delete($paths);
         @rmdir(dirname($paths[1]));
+    }
+
+    public function test_artwork_and_thumbnail_must_have_their_aspect_ratio(): void
+    {
+        // Rareza inválida a propósito: la validación falla antes de escribir archivos.
+        $post = fn (int $artworkWidth, int $artworkHeight, int $thumbWidth, int $thumbHeight) => $this
+            ->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload([
+                'rarity' => 'no-existe',
+                'artwork_image' => UploadedFile::fake()->image('fondo.png', $artworkWidth, $artworkHeight),
+                'thumbnail_image' => UploadedFile::fake()->image('mini.png', $thumbWidth, $thumbHeight),
+            ]));
+
+        $post(1000, 1000, 80, 60)->assertSessionHasErrors([
+            'artwork_image' => 'La ilustración debe tener proporción 572:1016. Usa "Recortar" antes de guardar.',
+            'thumbnail_image' => 'La miniatura debe tener proporción 1:1. Usa "Recortar" antes de guardar.',
+        ]);
+
+        $post(572, 1016, 80, 80)->assertSessionDoesntHaveErrors(['artwork_image', 'thumbnail_image']);
+        // Tamaño redondeado por el navegador al reducir (2048 de alto).
+        $post(1153, 2048, 800, 800)->assertSessionDoesntHaveErrors(['artwork_image', 'thumbnail_image']);
     }
 
     public function test_generated_card_image_must_be_webp_or_png(): void

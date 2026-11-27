@@ -695,6 +695,21 @@ class CardTransferTest extends TestCase
         $this->assertSame('proprietary', $newGallery->credits->first()->license->slug);
     }
 
+    public function test_species_image_focal_points_travel_with_their_images(): void
+    {
+        $this->dressSpecies();
+        $this->species->images()->where('type', 'main')->update(['focal_x' => 0.25, 'focal_y' => 0.75]);
+
+        $zip = $this->export();
+        $this->deleteSpecies($this->species);
+        $this->confirm($this->upload($zip));
+
+        $species = Species::where('slug', 'jaguar')->with('images')->firstOrFail();
+
+        $this->assertSame(['x' => 0.25, 'y' => 0.75], $species->images->firstWhere('type', 'main')?->focal());
+        $this->assertNull($species->images->firstWhere('type', 'gallery')?->focal());
+    }
+
     public function test_overwriting_a_species_replaces_its_image_credits(): void
     {
         $this->dressSpecies();

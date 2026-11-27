@@ -39,7 +39,7 @@ settings/rarity.json
 settings/duel-messages.json
 cards/<uuid>/card.json       uuid, species{slug, scientific_name, common_name}, attributes, files, questions, qr_codes, credits
 species/<slug>/species.json  CardPackage::SPECIES_FIELDS, category{name, description}, tags[{name, slug}],
-                             images{main, thumbnail, gallery[]} ({file, alt_text, original_bytes, is_active, credits}),
+                             images{main, thumbnail, gallery[]} ({file, alt_text, focal_x, focal_y, original_bytes, is_active, credits}),
                              locations[{name, latitude, longitude, description, is_active, zone}] (solo con include_locations)
 species/<slug>/main.<ext>, thumbnail.<ext>, gallery/NN.<ext>
 cards/<uuid>/<campo>.<ext>   thumbnail_image, artwork_image, generated_image (webp/png/jpg), model_file, model_original_file (glb)
@@ -97,5 +97,9 @@ php artisan cards:import ruta.zip [--overwrite] [--settings] [--dry-run]
 - **QR:** con tokens, el QR impreso sigue sirviendo y, si otra tarjeta ya usa el token, se
   crea con uno nuevo. Sin tokens, solo las tarjetas nuevas reciben QR (con tokens nuevos).
 - **Licencias:** por slug. Una que no existe se crea desactivada (`is_selectable = false`).
+- **Punto focal:** `focal_x`/`focal_y` (0 a 1) de cada imagen son opcionales dentro de la
+  versión 3: los paquetes anteriores se importan con null (centro).
+- **Proporción:** la importación no comprueba la proporción fija de miniaturas e ilustraciones
+  (ver "Recorte y punto focal" en [image-optimization.md](image-optimization.md)).
 - **Archivos:** se copian tal cual (ya vienen optimizados y escalados). Cada tarjeta va en
   su propia transacción: si falla, se borran sus archivos nuevos y las demás siguen.

@@ -371,6 +371,141 @@ class SpeciesAdminTest extends TestCase
             ->assertJsonPath('data.species.conservation_status_code', 'LC');
     }
 
+    public function test_thumbnail_must_be_square(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'thumbnail_image' => UploadedFile::fake()->image('t.jpg', 80, 60),
+            ]))
+            ->assertSessionHasErrors([
+                'thumbnail_image' => 'La miniatura debe tener proporción 1:1. Usa "Recortar" antes de guardar.',
+            ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'thumbnail_image' => UploadedFile::fake()->image('t.jpg', 80, 80),
+                // La principal admite cualquier proporción.
+                'main_image' => UploadedFile::fake()->image('m.jpg', 120, 40),
+            ]))
+            ->assertSessionHasNoErrors();
+    }
+
+    public function test_store_saves_the_focal_point_of_main_and_gallery_images(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'main_image' => UploadedFile::fake()->image('m.jpg', 60, 40),
+                'main_focal_x' => 0.25,
+                'main_focal_y' => 0.8,
+                'gallery_images' => [UploadedFile::fake()->image('a.jpg')],
+                'gallery' => [['file_index' => 0, 'alt_text' => '', 'focal_x' => 0.1, 'focal_y' => 0.2]],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $main = SpeciesImage::where('type', 'main')->firstOrFail();
+        $gallery = SpeciesImage::where('type', 'gallery')->firstOrFail();
+
+        $this->assertSame(['x' => 0.25, 'y' => 0.8], $main->focal());
+        $this->assertSame(['x' => 0.1, 'y' => 0.2], $gallery->focal());
+    }
+
+    public function test_focal_point_needs_both_coordinates_between_0_and_1(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.species.store'), $this->payload([
+                'main_focal_x' => 0.5,
+                'gallery_images' => [UploadedFile::fake()->image('a.jpg')],
+                'gallery' => [['file_index' => 0, 'alt_text' => '', 'focal_x' => 1.5, 'focal_y' => 0.2]],
+            ]))
+            ->assertSessionHasErrors(['main_focal_y', 'gallery.0.focal_x']);
+    }
+
+    public function test_update_keeps_moves_or_resets_the_main_focal_point(): void
+    {
+        $species = $this->species();
+        $main = SpeciesImage::create([
+            'species_id' => $species->id,
+            'type' => 'main',
+            'path' => "species/{$species->id}/main.jpg",
+            'focal_x' => 0.3,
+            'focal_y' => 0.4,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        $gallery = $this->galleryImage($species, 0);
+        $gallery->update(['focal_x' => 0.6, 'focal_y' => 0.7]);
+
+        $update = fn (array $data) => $this->actingAs($this->admin())
+            ->put(route('admin.species.update', $species), $this->payload([
+                'common_name' => $species->common_name,
+                ...$data,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        // Sin las claves (cliente anterior): se conserva.
+        $update(['gallery' => [['id' => $gallery->id, 'alt_text' => 'Foto']]]);
+        $this->assertSame(['x' => 0.3, 'y' => 0.4], $main->refresh()->focal());
+        $this->assertSame(['x' => 0.6, 'y' => 0.7], $gallery->refresh()->focal());
+
+        // Se mueve sin cambiar de foto, o se vuelve al centro.
+        $update([
+            'main_focal_x' => 0.9,
+            'main_focal_y' => 0.1,
+            'gallery' => [['id' => $gallery->id, 'alt_text' => 'Foto', 'focal_x' => null, 'focal_y' => null]],
+        ]);
+        $this->assertSame(['x' => 0.9, 'y' => 0.1], $main->refresh()->focal());
+        $this->assertNull($gallery->refresh()->focal());
+
+        // Foto nueva sin punto: el anterior era de otra foto.
+        $update([
+            'main_image' => UploadedFile::fake()->image('nueva.jpg', 40, 40),
+            'gallery' => [['id' => $gallery->id, 'alt_text' => 'Foto']],
+        ]);
+        $this->assertNull($main->refresh()->focal());
+    }
+
+    public function test_api_list_prefers_the_main_image_and_sends_its_focal_point(): void
+    {
+        $species = $this->species();
+        $this->galleryImage($species, 0);
+        SpeciesImage::create([
+            'species_id' => $species->id,
+            'type' => 'main',
+            'path' => "species/{$species->id}/main.jpg",
+            'focal_x' => 0.25,
+            'focal_y' => 0.75,
+            'is_active' => true,
+            'sort_order' => 5,
+        ]);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/species')
+            ->assertOk()
+            ->assertJsonPath('data.species.0.image', url(Storage::url("species/{$species->id}/main.jpg")))
+            ->assertJsonPath('data.species.0.image_focal', ['x' => 0.25, 'y' => 0.75]);
+
+        $this->getJson("/api/species/{$species->id}")
+            ->assertOk()
+            ->assertJsonPath('data.species.images.0.type', 'gallery')
+            ->assertJsonPath('data.species.images.0.focal_x', null)
+            ->assertJsonPath('data.species.images.1.focal_x', 0.25)
+            ->assertJsonPath('data.species.images.1.focal_y', 0.75);
+    }
+
+    public function test_api_list_without_main_image_falls_back_and_sends_null_focal(): void
+    {
+        $species = $this->species();
+        $this->galleryImage($species, 0);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/species')
+            ->assertOk()
+            ->assertJsonPath('data.species.0.image', url(Storage::url("species/{$species->id}/gallery-0.jpg")))
+            ->assertJsonPath('data.species.0.image_focal', null);
+    }
+
     public function test_migration_converts_free_text_to_codes(): void
     {
         $migration = require database_path('migrations/2026_11_19_120000_use_catalogs_for_species_classification.php');

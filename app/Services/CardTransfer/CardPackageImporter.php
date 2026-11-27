@@ -305,6 +305,8 @@ class CardPackageImporter
                         'path' => $path,
                         'original_bytes' => $image['original_bytes'] ?? null,
                         'alt_text' => $image['alt_text'] ?? $species->common_name,
+                        'focal_x' => isset($image['focal_x'], $image['focal_y']) ? (float) $image['focal_x'] : null,
+                        'focal_y' => isset($image['focal_x'], $image['focal_y']) ? (float) $image['focal_y'] : null,
                         'is_active' => (bool) ($image['is_active'] ?? true),
                         'sort_order' => $sortOrder,
                     ]);

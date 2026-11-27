@@ -260,6 +260,8 @@ class SpeciesController extends Controller
 
                     'alt_text' => $species->common_name,
 
+                    ...$this->mainFocal($validated, true),
+
                     'is_active' => true,
 
                     'sort_order' => 0,
@@ -628,6 +630,8 @@ class SpeciesController extends Controller
 
                         'alt_text' => $species->common_name,
 
+                        ...$this->mainFocal($validated, true),
+
                         'is_active' => true,
                     ]);
                 } else {
@@ -642,11 +646,18 @@ class SpeciesController extends Controller
 
                         'alt_text' => $species->common_name,
 
+                        ...$this->mainFocal($validated, true),
+
                         'is_active' => true,
 
                         'sort_order' => 0,
                     ]);
                 }
+            } elseif ($focal = $this->mainFocal($validated, false)) {
+                $species->images()
+                    ->where('type', 'main')
+                    ->first()
+                    ?->update($focal);
             }
 
             /*
@@ -1101,7 +1112,7 @@ class SpeciesController extends Controller
             ]);
         }
 
-        /** @var array<int, array{0: SpeciesImage, 1: string|null}> $ordered */
+        /** @var array<int, array{0: SpeciesImage, 1: string|null, 2: array{focal_x?: mixed, focal_y?: mixed}}> $ordered */
         $ordered = [];
 
         // validated() arma los elementos anidados regla por regla, así que
@@ -1118,22 +1129,50 @@ class SpeciesController extends Controller
                 $ordered[$image->id] = [
                     $image,
                     trim((string) ($item['alt_text'] ?? '')) ?: $species->common_name,
+                    // Sin las claves (clientes anteriores) se conserva el guardado.
+                    array_key_exists('focal_x', $item)
+                        ? ['focal_x' => $item['focal_x'], 'focal_y' => $item['focal_y'] ?? null]
+                        : [],
                 ];
             }
         }
 
         foreach ([...$existing->values(), ...array_values($uploaded)] as $image) {
-            $ordered[$image->id] ??= [$image, $image->alt_text];
+            $ordered[$image->id] ??= [$image, $image->alt_text, []];
         }
 
-        foreach (array_values($ordered) as $position => [$image, $altText]) {
+        foreach (array_values($ordered) as $position => [$image, $altText, $focal]) {
             $image->update([
                 'sort_order' => $position,
                 'alt_text' => $altText,
+                ...$focal,
             ]);
         }
 
         return $deletedPaths;
+    }
+
+    /**
+     * Punto focal enviado para la imagen principal. Una imagen nueva sin él
+     * vuelve al centro, porque el punto anterior era de otra foto; sin
+     * imagen nueva solo cambia si el formulario lo envía.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array{focal_x?: float|null, focal_y?: float|null}
+     */
+    private function mainFocal(array $validated, bool $newImage): array
+    {
+        if (! array_key_exists('main_focal_x', $validated) && ! $newImage) {
+            return [];
+        }
+
+        $x = $validated['main_focal_x'] ?? null;
+        $y = $validated['main_focal_y'] ?? null;
+
+        return [
+            'focal_x' => $x === null ? null : (float) $x,
+            'focal_y' => $y === null ? null : (float) $y,
+        ];
     }
 
     /**

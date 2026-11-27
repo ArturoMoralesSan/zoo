@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin\Card;
 use App\Concerns\CardDesignValidationRules;
 use App\Concerns\CardMessagesValidationRules;
 use App\Concerns\CardModelValidationRules;
+use App\Concerns\ImageAspectRules;
 use App\Enums\CardRarity;
 use App\Models\Card;
 use Illuminate\Foundation\Http\FormRequest;
@@ -15,6 +16,7 @@ class UpdateCardRequest extends FormRequest
     use CardDesignValidationRules;
     use CardMessagesValidationRules;
     use CardModelValidationRules;
+    use ImageAspectRules;
 
     public function authorize(): bool
     {
@@ -51,6 +53,7 @@ class UpdateCardRequest extends FormRequest
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
+                $this->aspectRule('cards', 'thumbnail'),
             ],
 
             'artwork_image' => [
@@ -58,6 +61,7 @@ class UpdateCardRequest extends FormRequest
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
+                $this->aspectRule('cards', 'artwork'),
             ],
 
             /*
@@ -156,6 +160,18 @@ class UpdateCardRequest extends FormRequest
 
     public function attributes(): array
     {
-        return $this->cardModelAttributes();
+        return [
+            ...$this->cardModelAttributes(),
+            'thumbnail_image' => 'miniatura',
+            'artwork_image' => 'ilustración',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            ...$this->aspectMessages('cards', 'thumbnail_image', 'thumbnail'),
+            ...$this->aspectMessages('cards', 'artwork_image', 'artwork'),
+        ];
     }
 }

@@ -3,6 +3,8 @@ import {
     ChevronLeft,
     ChevronRight,
     CircleUser,
+    Crop,
+    Crosshair,
     GripVertical,
     ImagePlus,
     LoaderCircle,
@@ -13,7 +15,18 @@ import {
 } from 'lucide-vue-next';
 import { computed, markRaw, onBeforeUnmount, ref, useId, watch } from 'vue';
 
+import AdminButton from '@/components/admin/AdminButton.vue';
+import ImageCropDialog from '@/components/admin/ImageCropDialog.vue';
+import FocalPointPicker from '@/components/admin/species/FocalPointPicker.vue';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { objectPosition } from '@/lib/focalPoint';
 import { formatBytes } from '@/lib/glb/modelSize';
+import { cropSource } from '@/lib/imageCrop';
 import { optimizeImage, SPECIES_IMAGE_PROFILES } from '@/lib/imageOptimize';
 import { cn } from '@/lib/utils';
 
@@ -23,11 +36,15 @@ import { cn } from '@/lib/utils';
 // y las eliminadas en `deletedIds` (ver SpeciesController::syncGallery).
 // Cada foto nueva se comprime a WebP al agregarla para mostrar su peso; el
 // formulario reutiliza ese resultado al guardar (optimizeImage lo guarda).
+// Las fotos nuevas se pueden recortar (proporción libre) y todas llevan punto
+// focal: la app las recorta en la tira de la galería.
 
 export interface SavedGalleryImage {
     id: number;
     url: string;
     alt_text: string | null;
+    focal_x?: number | null;
+    focal_y?: number | null;
     // Peso actual y antes de comprimir (null si se desconoce).
     bytes?: number | null;
     original_bytes?: number | null;
@@ -37,6 +54,9 @@ export interface GalleryLayoutItem {
     id?: number;
     file_index?: number;
     alt_text: string;
+    // Punto focal (0 a 1); null = centro.
+    focal_x: number | null;
+    focal_y: number | null;
 }
 
 interface Tile {
@@ -45,6 +65,8 @@ interface Tile {
     file?: File;
     url: string;
     alt: string;
+    focalX: number | null;
+    focalY: number | null;
     deleted: boolean;
     bytes: number | null;
     originalBytes: number | null;
@@ -83,6 +105,8 @@ const tiles = ref<Tile[]>(
         id: image.id,
         url: image.url,
         alt: image.alt_text ?? '',
+        focalX: image.focal_x ?? null,
+        focalY: image.focal_y ?? null,
         deleted: false,
         bytes: image.bytes ?? null,
         originalBytes: image.original_bytes ?? null,
@@ -109,14 +133,17 @@ watch(
             .filter((tile) => tile.file)
             .map((tile) => tile.file as File);
 
-        layout.value = liveTiles.value.map((tile) =>
-            tile.file
-                ? {
-                      file_index: fileIndexByKey.value.get(tile.key),
-                      alt_text: tile.alt.trim(),
-                  }
-                : { id: tile.id, alt_text: tile.alt.trim() },
-        );
+        layout.value = liveTiles.value.map((tile) => {
+            const common = {
+                alt_text: tile.alt.trim(),
+                focal_x: tile.focalX,
+                focal_y: tile.focalY,
+            };
+
+            return tile.file
+                ? { file_index: fileIndexByKey.value.get(tile.key), ...common }
+                : { id: tile.id, ...common };
+        });
 
         deletedIds.value = tiles.value
             .filter((tile) => tile.deleted && tile.id !== undefined)
@@ -180,6 +207,8 @@ const addFiles = (list: FileList | null | undefined) => {
             file: markRaw(file),
             url: URL.createObjectURL(file),
             alt: '',
+            focalX: null,
+            focalY: null,
             deleted: false,
             bytes: null,
             originalBytes: file.size,
@@ -354,6 +383,48 @@ const useAs = async (tile: Tile, target: 'main' | 'thumbnail') => {
     }
 };
 
+/*
+ * Recorte de una foto nueva (las guardadas se reemplazan quitándolas y
+ * agregando la recortada). Parte siempre de la foto original.
+ */
+const cropOpen = ref(false);
+const cropTile = ref<Tile | null>(null);
+
+const openCrop = (tile: Tile) => {
+    cropTile.value = tile;
+    cropOpen.value = true;
+};
+
+const onCropped = (file: File) => {
+    const tile = cropTile.value;
+
+    if (!tile?.file || !tiles.value.includes(tile)) {
+        return;
+    }
+
+    URL.revokeObjectURL(tile.url);
+    tile.file = markRaw(file);
+    tile.url = URL.createObjectURL(file);
+    tile.originalBytes = cropSource(file).size;
+    // El punto anterior era de otro encuadre.
+    tile.focalX = null;
+    tile.focalY = null;
+    tile.bytes = null;
+    tile.estimating = true;
+    void estimate(tile);
+};
+
+// Punto focal de una foto, en un diálogo con las vistas previas de la app.
+const focalTile = ref<Tile | null>(null);
+const focalOpen = computed({
+    get: () => focalTile.value !== null,
+    set: (open: boolean) => {
+        if (!open) {
+            focalTile.value = null;
+        }
+    },
+});
+
 onBeforeUnmount(() => {
     clearTimeout(noticeTimer);
     tiles.value.forEach((tile) => tile.file && URL.revokeObjectURL(tile.url));
@@ -463,6 +534,12 @@ const iconButton =
                                 tile.deleted && 'opacity-30 grayscale',
                             )
                         "
+                        :style="{
+                            objectPosition: objectPosition(
+                                tile.focalX,
+                                tile.focalY,
+                            ),
+                        }"
                     />
 
                     <div
@@ -479,6 +556,14 @@ const iconButton =
                             class="rounded-md bg-[#187744] px-1.5 py-0.5 text-xs font-semibold text-white"
                         >
                             Nueva
+                        </span>
+                        <span
+                            v-if="tile.focalX !== null"
+                            title="Tiene punto focal"
+                            class="flex items-center rounded-md bg-white/95 px-1 text-[#187744] shadow-sm"
+                        >
+                            <Crosshair class="h-3.5 w-3.5" />
+                            <span class="sr-only">Tiene punto focal</span>
                         </span>
                     </div>
 
@@ -514,6 +599,27 @@ const iconButton =
                                 class="h-4 w-4 animate-spin"
                             />
                             <CircleUser v-else class="h-4 w-4" />
+                        </button>
+
+                        <button
+                            v-if="tile.file"
+                            type="button"
+                            title="Recortar"
+                            aria-label="Recortar"
+                            :class="iconButton"
+                            @click="openCrop(tile)"
+                        >
+                            <Crop class="h-4 w-4" />
+                        </button>
+
+                        <button
+                            type="button"
+                            title="Punto focal"
+                            aria-label="Punto focal"
+                            :class="iconButton"
+                            @click="focalTile = tile"
+                        >
+                            <Crosshair class="h-4 w-4" />
                         </button>
 
                         <button
@@ -652,5 +758,40 @@ const iconButton =
         <p v-if="errors.deleted_gallery_ids" class="form-error">
             {{ errors.deleted_gallery_ids }}
         </p>
+
+        <ImageCropDialog
+            v-model:open="cropOpen"
+            :source="cropTile?.file ? cropSource(cropTile.file) : null"
+            :profile="SPECIES_IMAGE_PROFILES.gallery"
+            title="Recortar foto de la galería"
+            reason="La app muestra la galería completa al tocar una foto; en la tira de fotos usa el punto focal."
+            @cropped="onCropped"
+        />
+
+        <Dialog v-model:open="focalOpen">
+            <DialogContent
+                class="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl"
+            >
+                <DialogTitle class="text-lg font-semibold text-[#244334]">
+                    Punto focal de la foto
+                    {{ focalTile ? position(focalTile) : '' }}
+                </DialogTitle>
+                <DialogDescription class="sr-only">
+                    Elige qué parte de la foto debe quedar a la vista en la app.
+                </DialogDescription>
+
+                <FocalPointPicker
+                    v-if="focalTile"
+                    v-model:x="focalTile.focalX"
+                    v-model:y="focalTile.focalY"
+                    :src="focalTile.url"
+                    :alt="focalTile.alt"
+                />
+
+                <div class="flex justify-end">
+                    <AdminButton @click="focalOpen = false">Listo</AdminButton>
+                </div>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>

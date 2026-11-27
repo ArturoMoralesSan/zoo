@@ -132,6 +132,40 @@ php artisan species:images:optimize --dry-run
 php artisan species:images:optimize [--species=ID] [--image=main|thumbnail|gallery] [--limit=N]
 ```
 
+## Recorte y punto focal
+
+Antes de comprimir, cada imagen elegida en el panel pasa por un diálogo de recorte
+(`components/admin/ImageCropDialog.vue`, cropperjs 1). La proporción viene de la clave
+`aspect` de los perfiles:
+
+| Imagen | Proporción | Por qué |
+| --- | --- | --- |
+| Tarjeta `artwork` | **572:1016, fija** | fondo de la plantilla; la guía marca el logo y los textos |
+| Tarjeta `thumbnail` | **1:1, fija** | cuadros y círculos de la app; guía circular |
+| Especie `thumbnail` | **1:1, fija** | listas y marcadores redondos del mapa |
+| Especie `main`, `gallery` | libre | se usa el punto focal (abajo) |
+
+- **Fija:** no se puede saltar; cancelar deja el campo como estaba. El servidor lo vuelve a
+  comprobar con `dimensions:ratio` (`App\Concerns\ImageAspectRules`), solo al subir un archivo
+  nuevo, así que editar sin cambiar la imagen sigue funcionando con las imágenes antiguas.
+- **Tolerancia:** la de Laravel es de menos de un píxel en imágenes grandes (801 × 800 ya falla).
+  Por eso `cropOutputSize()` (`lib/imageCrop.ts`) calcula el tamaño final redondeando una sola vez
+  y ya dentro del perfil, y la compresión no vuelve a cambiarlo.
+- **Original:** el recorte es un PNG; `cropOrigin()` recuerda la foto completa (archivo o URL
+  guardada) para volver a recortar desde ella, y `cropSource()` el archivo elegido para guardar su
+  peso en `original_bytes`. «Recortar de nuevo» abre el último recuadro aplicado (posición, giro y
+  proporción), guardado en memoria con `rememberCrop()`; se pierde al recargar la página.
+- **Sin comprobar:** la importación de paquetes y la conversión de Recursos → Optimización copian
+  o recodifican sin mirar la proporción.
+
+**Punto focal** (`species_images.focal_x`, `focal_y`, de 0 a 1 desde la esquina superior
+izquierda; null = centro), solo en `main` y `gallery`. La app recorta esas fotos con `cover` en
+marcos verticales y horizontales; el punto se aplica como `object-position` (en la app,
+`contentPosition` de expo-image) y queda a la vista, no centrado. `FocalPointPicker.vue` muestra
+las vistas previas con las medidas de la app (`APP_FRAMES` en `lib/focalPoint.ts`). Una imagen
+principal nueva sin punto vuelve al centro; sin enviar `main_focal_x` se conserva el guardado.
+Contrato para la app: [species-focal-app.md](species-focal-app.md).
+
 ## Página "Recursos"
 
 Administración → Recursos (`admin/assets`, permiso `assets.view`). La pestaña

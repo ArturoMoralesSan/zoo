@@ -12,6 +12,11 @@ class SpeciesController extends Controller
 {
     /**
      * Listado de especies.
+     *
+     * `image` es la imagen principal (si no hay, la miniatura y después la
+     * primera activa). `image_focal` es su punto focal `{ x, y }` (0 a 1,
+     * desde la esquina superior izquierda) o null para usar el centro: al
+     * recortar con cover, la app alinea ese punto como `object-position`.
      */
     public function index(): JsonResponse
     {
@@ -26,6 +31,8 @@ class SpeciesController extends Controller
                             'type',
                             'path',
                             'alt_text',
+                            'focal_x',
+                            'focal_y',
                             'sort_order'
                         )
                         ->where('is_active', true)
@@ -36,7 +43,9 @@ class SpeciesController extends Controller
             ->orderBy('common_name')
             ->get()
             ->map(function (Species $species) {
-                $image = $species->images->first();
+                $image = $species->images->firstWhere('type', 'main')
+                    ?? $species->images->firstWhere('type', 'thumbnail')
+                    ?? $species->images->first();
 
                 return [
                     'id' => $species->id,
@@ -53,6 +62,7 @@ class SpeciesController extends Controller
                     'image' => $image
                         ? url(Storage::url($image->path))
                         : null,
+                    'image_focal' => $image?->focal(),
                 ];
             });
 
@@ -66,6 +76,9 @@ class SpeciesController extends Controller
 
     /**
      * Detalle de una especie.
+     *
+     * Cada imagen lleva `focal_x` y `focal_y` (0 a 1, o null = centro). Solo
+     * las de tipo main y gallery los usan; ver el listado.
      */
     public function show(Species $species): JsonResponse
     {
@@ -96,6 +109,8 @@ class SpeciesController extends Controller
                         'type',
                         'path',
                         'alt_text',
+                        'focal_x',
+                        'focal_y',
                         'sort_order'
                     )
                     ->where('is_active', true)
@@ -152,6 +167,8 @@ class SpeciesController extends Controller
                                 'type' => $image->type,
                                 'url' => url(Storage::url($image->path)),
                                 'alt_text' => $image->alt_text,
+                                'focal_x' => $image->focal_x,
+                                'focal_y' => $image->focal_y,
                                 'sort_order' => $image->sort_order,
                             ];
                         })
