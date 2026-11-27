@@ -15,23 +15,10 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref, useTemplateRef, watch } from 'vue';
 
-import { useCardModelSize } from '@/composables/useCardModelSize';
-import type { ModelFormFields } from '@/composables/useCardModelSize';
-import { useObjectUrl } from '@/composables/useObjectUrl';
-import { usePreviewTab } from '@/composables/usePreviewTab';
-import type { GlbSizeConfig } from '@/lib/glb/modelSize';
-import { rarityOptions } from '@/lib/cardRarity';
-import { DEFAULT_FADE_COLOR } from '@/lib/cardColors';
-import type { AccentColor } from '@/lib/cardColors';
-import { DEFAULT_TITLE_FONT } from '@/lib/cardFonts';
-import type { CardFontId, TitleSize } from '@/lib/cardFonts';
-import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
-import admin from '@/routes/admin';
-import PageHeader from '@/components/admin/PageHeader.vue';
-import AdminCard from '@/components/admin/AdminCard.vue';
-import AdminButton from '@/components/admin/AdminButton.vue';
-import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
 import CardDesignFields from '@/components/admin/cards/CardDesignFields.vue';
 import CardImageField from '@/components/admin/cards/CardImageField.vue';
 import CardMessagesFields from '@/components/admin/cards/CardMessagesFields.vue';
@@ -41,9 +28,22 @@ import CardStatField from '@/components/admin/cards/CardStatField.vue';
 import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue';
 import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import type { ModelFormFields } from '@/composables/useCardModelSize';
+import { useCardModelSize } from '@/composables/useCardModelSize';
+import { useObjectUrl } from '@/composables/useObjectUrl';
+import { usePreviewTab } from '@/composables/usePreviewTab';
+import type { AccentColor } from '@/lib/cardColors';
+import { DEFAULT_FADE_COLOR } from '@/lib/cardColors';
+import type { CardFontId, TitleSize } from '@/lib/cardFonts';
+import { DEFAULT_TITLE_FONT } from '@/lib/cardFonts';
+import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
+import { rarityOptions } from '@/lib/cardRarity';
 import { cardStat } from '@/lib/cardStats';
-import { optimizeUpload } from '@/lib/imageOptimize';
 import type { DuelMessages } from '@/lib/duelMessages';
+import type { GlbSizeConfig } from '@/lib/glb/modelSize';
+import { optimizeUpload } from '@/lib/imageOptimize';
+import admin from '@/routes/admin';
 
 interface Species {
     id: number;
@@ -183,7 +183,6 @@ watch(hasUploads, (uploads) => {
     }
 });
 
-
 const handleModelFile = (event: Event) => {
     const target = event.target as HTMLInputElement;
     modelFile.value = target.files?.[0] ?? null;
@@ -195,11 +194,7 @@ const modelSize = useCardModelSize(props.glbConfig, modelFile);
  * Vista previa lateral (Tarjeta | Modelo 3D): cambia sola según la sección
  * que se edita. Al elegir un modelo se muestra su vista previa.
  */
-const {
-    tab: previewTab,
-    isWide,
-    onFormInteraction,
-} = usePreviewTab();
+const { tab: previewTab, isWide, onFormInteraction } = usePreviewTab();
 
 watch(modelFile, (file) => {
     if (file) {
@@ -275,7 +270,6 @@ const savingText = computed(() => {
     return SAVING_TEXT;
 });
 
-
 defineOptions({
     layout: {
         breadcrumbs: [
@@ -334,7 +328,9 @@ defineOptions({
                             ref="preview"
                             embedded
                             :title="form.name"
-                            :scientific-name="selectedSpecies?.scientific_name ?? ''"
+                            :scientific-name="
+                                selectedSpecies?.scientific_name ?? ''
+                            "
                             :astucia="form.astucia"
                             :rapidez="form.rapidez"
                             :fuerza="form.fuerza"
@@ -402,7 +398,8 @@ defineOptions({
                                     v-model="form.species_id"
                                     class="form-select appearance-none"
                                     :class="{
-                                        'form-input-error': form.errors.species_id,
+                                        'form-input-error':
+                                            form.errors.species_id,
                                     }"
                                 >
                                     <option value="">
@@ -414,7 +411,8 @@ defineOptions({
                                         :key="item.id"
                                         :value="String(item.id)"
                                     >
-                                        {{ item.common_name }} — {{ item.scientific_name }}
+                                        {{ item.common_name }} —
+                                        {{ item.scientific_name }}
                                         <template v-if="item.category">
                                             ({{ item.category.name }})
                                         </template>
@@ -427,10 +425,7 @@ defineOptions({
                                 />
                             </div>
 
-                            <p
-                                v-if="form.errors.species_id"
-                                class="form-error"
-                            >
+                            <p v-if="form.errors.species_id" class="form-error">
                                 {{ form.errors.species_id }}
                             </p>
                         </div>
@@ -513,7 +508,10 @@ defineOptions({
                         :error="form.errors.artwork_image"
                     />
 
-                    <p v-if="form.errors.generated_image" class="form-error mt-3">
+                    <p
+                        v-if="form.errors.generated_image"
+                        class="form-error mt-3"
+                    >
                         {{ form.errors.generated_image }}
                     </p>
                 </AdminCard>
@@ -557,7 +555,8 @@ defineOptions({
                                         v-model="form.rarity"
                                         class="form-select appearance-none"
                                         :class="{
-                                            'form-input-error': form.errors.rarity,
+                                            'form-input-error':
+                                                form.errors.rarity,
                                         }"
                                     >
                                         <option
@@ -594,7 +593,8 @@ defineOptions({
                                     placeholder="0"
                                     class="form-input"
                                     :class="{
-                                        'form-input-error': form.errors.sort_order,
+                                        'form-input-error':
+                                            form.errors.sort_order,
                                     }"
                                 />
 
@@ -672,8 +672,13 @@ defineOptions({
                                 </div>
 
                                 <div class="min-w-0 flex-1">
-                                    <p class="break-words text-sm font-medium text-[#244334]">
-                                        {{ modelFile?.name || 'Seleccionar archivo 3D' }}
+                                    <p
+                                        class="text-sm font-medium break-words text-[#244334]"
+                                    >
+                                        {{
+                                            modelFile?.name ||
+                                            'Seleccionar archivo 3D'
+                                        }}
                                     </p>
 
                                     <p class="form-upload-description mt-1">
@@ -698,30 +703,25 @@ defineOptions({
                             </label>
 
                             <p
-
-                                v-if="modelErrors.model_file || modelErrors.model_original_file"
-
+                                v-if="
+                                    modelErrors.model_file ||
+                                    modelErrors.model_original_file
+                                "
                                 class="form-error"
-
                             >
-
-                                {{ modelErrors.model_file ?? modelErrors.model_original_file }}
-
+                                {{
+                                    modelErrors.model_file ??
+                                    modelErrors.model_original_file
+                                }}
                             </p>
-
                         </div>
-
 
                         <!-- Tamaño real -->
 
                         <ModelSizeField
-
                             v-if="modelSize.hasModel"
-
                             :model="modelSize"
-
                             :errors="modelErrors"
-
                         />
 
                         <!--
@@ -794,10 +794,13 @@ defineOptions({
                             />
                         </div>
 
-                        <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+                        <div
+                            class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+                        >
                             <p class="form-help sm:mr-auto">
                                 <span class="text-red-500">*</span>
-                                Campos obligatorios según la validación del formulario.
+                                Campos obligatorios según la validación del
+                                formulario.
                             </p>
 
                             <CancelButton

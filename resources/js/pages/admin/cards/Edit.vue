@@ -19,25 +19,10 @@ import {
 import Swal from 'sweetalert2';
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
 
-import { useCardModelSize } from '@/composables/useCardModelSize';
-import type { ModelFormFields } from '@/composables/useCardModelSize';
-import { useObjectUrl } from '@/composables/useObjectUrl';
-import { usePreviewTab } from '@/composables/usePreviewTab';
-import { formatMeters } from '@/lib/glb/modelSize';
-import type { GlbSizeConfig } from '@/lib/glb/modelSize';
-import { rarityOptions } from '@/lib/cardRarity';
-import { DEFAULT_FADE_COLOR } from '@/lib/cardColors';
-import type { AccentColor } from '@/lib/cardColors';
-import { DEFAULT_TITLE_FONT } from '@/lib/cardFonts';
-import type { CardFontId, TitleSize } from '@/lib/cardFonts';
-import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
-import { storageUrl } from '@/lib/modelPreview';
-import admin from '@/routes/admin';
-import PageHeader from '@/components/admin/PageHeader.vue';
-import AdminCard from '@/components/admin/AdminCard.vue';
-import AdminButton from '@/components/admin/AdminButton.vue';
-import CancelButton from '@/components/admin/CancelButton.vue';
 import ActiveSwitch from '@/components/admin/ActiveSwitch.vue';
+import AdminButton from '@/components/admin/AdminButton.vue';
+import AdminCard from '@/components/admin/AdminCard.vue';
+import CancelButton from '@/components/admin/CancelButton.vue';
 import CardDesignFields from '@/components/admin/cards/CardDesignFields.vue';
 import CardImageField from '@/components/admin/cards/CardImageField.vue';
 import CardMessagesFields from '@/components/admin/cards/CardMessagesFields.vue';
@@ -49,10 +34,25 @@ import DuelSettingsFields from '@/components/admin/cards/DuelSettingsFields.vue'
 import ModelSizeField from '@/components/admin/cards/ModelSizeField.vue';
 import ModelViewer from '@/components/admin/cards/ModelViewer.vue';
 import SizeSavings from '@/components/admin/cards/SizeSavings.vue';
+import PageHeader from '@/components/admin/PageHeader.vue';
+import type { ModelFormFields } from '@/composables/useCardModelSize';
+import { useCardModelSize } from '@/composables/useCardModelSize';
+import { useObjectUrl } from '@/composables/useObjectUrl';
+import { usePreviewTab } from '@/composables/usePreviewTab';
+import type { AccentColor } from '@/lib/cardColors';
+import { DEFAULT_FADE_COLOR } from '@/lib/cardColors';
+import { DEFAULT_TITLE_FONT } from '@/lib/cardFonts';
+import type { CardFontId, TitleSize } from '@/lib/cardFonts';
+import { rarityOptions } from '@/lib/cardRarity';
+import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
 import { cardStat } from '@/lib/cardStats';
-import { optimizeUpload } from '@/lib/imageOptimize';
 import type { CreditAsset, CreditSummaryItem } from '@/lib/credits/types';
 import type { DuelMessages } from '@/lib/duelMessages';
+import type { GlbSizeConfig } from '@/lib/glb/modelSize';
+import { formatMeters } from '@/lib/glb/modelSize';
+import { optimizeUpload } from '@/lib/imageOptimize';
+import { storageUrl } from '@/lib/modelPreview';
+import admin from '@/routes/admin';
 
 interface Species {
     id: number;
@@ -122,8 +122,10 @@ const form = useForm({
     generated_image: null as File | null,
     fade_color: props.card.fade_color ?? DEFAULT_FADE_COLOR,
     accent_color: props.card.accent_color ?? null,
-    title_font_family: props.card.title_font_family ?? DEFAULT_TITLE_FONT.family,
-    title_font_weight: props.card.title_font_weight ?? DEFAULT_TITLE_FONT.weight,
+    title_font_family:
+        props.card.title_font_family ?? DEFAULT_TITLE_FONT.family,
+    title_font_weight:
+        props.card.title_font_weight ?? DEFAULT_TITLE_FONT.weight,
     title_font_size: props.card.title_font_size ?? DEFAULT_TITLE_FONT.size,
     is_active: props.card.is_active,
     sort_order: props.card.sort_order ?? 0,
@@ -263,11 +265,7 @@ const modelSize = useCardModelSize(props.glbConfig, modelFile, {
  * Vista previa lateral (Tarjeta | Modelo 3D): cambia sola según la sección
  * que se edita. Al elegir un modelo se muestra su vista previa.
  */
-const {
-    tab: previewTab,
-    isWide,
-    onFormInteraction,
-} = usePreviewTab();
+const { tab: previewTab, isWide, onFormInteraction } = usePreviewTab();
 
 watch(modelFile, (file) => {
     if (file) {
@@ -369,7 +367,9 @@ const deleteImage = (image: 'thumbnail' | 'artwork') => {
         confirmButtonColor: '#187744',
         cancelButtonColor: '#84958a',
     }).then((result) => {
-        if (!result.isConfirmed) return;
+        if (!result.isConfirmed) {
+            return;
+        }
 
         form.delete(admin.cards.image.destroy([props.card.id, image]).url, {
             preserveScroll: true,
@@ -392,7 +392,9 @@ const deleteModel = () => {
         confirmButtonColor: '#187744',
         cancelButtonColor: '#84958a',
     }).then((result) => {
-        if (!result.isConfirmed) return;
+        if (!result.isConfirmed) {
+            return;
+        }
 
         form.delete(admin.cards.model.destroy(props.card.id).url, {
             preserveScroll: true,
@@ -473,7 +475,9 @@ defineOptions({
                             ref="preview"
                             embedded
                             :title="form.name"
-                            :scientific-name="selectedSpecies?.scientific_name ?? ''"
+                            :scientific-name="
+                                selectedSpecies?.scientific_name ?? ''
+                            "
                             :astucia="form.astucia"
                             :rapidez="form.rapidez"
                             :fuerza="form.fuerza"
@@ -563,10 +567,7 @@ defineOptions({
                                 />
                             </div>
 
-                            <p
-                                v-if="form.errors.species_id"
-                                class="form-error"
-                            >
+                            <p v-if="form.errors.species_id" class="form-error">
                                 {{ form.errors.species_id }}
                             </p>
                         </div>
@@ -666,7 +667,10 @@ defineOptions({
                         </p>
                     </div>
 
-                    <p v-if="form.errors.generated_image" class="form-error mt-3">
+                    <p
+                        v-if="form.errors.generated_image"
+                        class="form-error mt-3"
+                    >
                         {{ form.errors.generated_image }}
                     </p>
                 </AdminCard>
@@ -724,10 +728,7 @@ defineOptions({
                                     />
                                 </div>
 
-                                <p
-                                    v-if="form.errors.rarity"
-                                    class="form-error"
-                                >
+                                <p v-if="form.errors.rarity" class="form-error">
                                     {{ form.errors.rarity }}
                                 </p>
                             </div>
@@ -838,7 +839,11 @@ defineOptions({
                                         v-if="card.model_final_height"
                                         class="inline-flex items-center rounded-lg border border-[#C8DCCF] bg-[#EAF5EE] px-2.5 py-1 text-xs font-semibold text-[#187744]"
                                     >
-                                        {{ formatMeters(card.model_final_height) }}
+                                        {{
+                                            formatMeters(
+                                                card.model_final_height,
+                                            )
+                                        }}
                                         de alto
                                     </span>
 
@@ -860,10 +865,12 @@ defineOptions({
                                     </p>
 
                                     <a
-                                        :href="storageUrl(card.model_file) ?? ''"
+                                        :href="
+                                            storageUrl(card.model_file) ?? ''
+                                        "
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="mt-1 flex items-start gap-1 break-all text-sm font-medium text-[#187744] hover:underline"
+                                        class="mt-1 flex items-start gap-1 text-sm font-medium break-all text-[#187744] hover:underline"
                                     >
                                         <span>{{ card.model_file }}</span>
                                         <ExternalLink
@@ -906,7 +913,7 @@ defineOptions({
 
                                 <div class="min-w-0 flex-1">
                                     <p
-                                        class="break-all text-sm font-medium text-[#244334]"
+                                        class="text-sm font-medium break-all text-[#244334]"
                                     >
                                         {{
                                             modelFile?.name ||
@@ -1000,7 +1007,7 @@ defineOptions({
 
                 <!-- Acciones -->
                 <div
-                    class="sticky bottom-0 z-10 flex flex-col gap-3 overflow-hidden rounded-2xl border border-[#DCE7DF] bg-white p-4 border-t-2 border-t-[#DCE7DF] sm:flex-row sm:items-center sm:justify-end sm:px-6"
+                    class="sticky bottom-0 z-10 flex flex-col gap-3 overflow-hidden rounded-2xl border border-t-2 border-[#DCE7DF] border-t-[#DCE7DF] bg-white p-4 sm:flex-row sm:items-center sm:justify-end sm:px-6"
                 >
                     <!-- Progreso de la subida -->
                     <div
