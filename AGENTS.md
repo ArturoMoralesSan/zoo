@@ -33,7 +33,7 @@ names. If something here is wrong, fix this file in the same change.
 
 ## Stack
 
-PHP 8.3+, Laravel 13, Inertia 3, Vue 3 (`<script setup lang="ts">`), TypeScript,
+PHP 8.4+, Laravel 13, Inertia 3, Vue 3 (`<script setup lang="ts">`), TypeScript,
 Tailwind 4, reka-ui/shadcn-style components, Vite 8. Fortify (web auth, 2FA,
 passkeys), Sanctum (API tokens), spatie/laravel-permission, Wayfinder (typed routes
 for the frontend), Scramble (API docs at `/docs/api`), Leaflet (maps), Babylon.js and
@@ -64,18 +64,23 @@ php artisan cards:packs:build                  # encrypted offline-pack copies (
 php artisan cards:export | cards:import x.zip --dry-run   # card+species .zip packages without the panel
 ```
 
-**Baseline on 2026-11-10.** Do not chase these failures unless asked; just add none.
+**Baseline on 2026-11-26.** Do not chase the existing debt unless asked; just add none.
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 489 tests, 9 stale failures: `ExampleTest` expects 200 at `/`, and 8 starter-kit Auth/Dashboard tests call `route('dashboard')`, which does not exist (checked 2026-11-26) |
+| `php artisan test` | 491 tests, all passing |
 | `npx vitest run` | 131 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
-| phpstan (level 7) / vue-tsc | 551 errors / 37 errors (vue-tsc checked 2026-11-18) |
+| phpstan (level 7) / vue-tsc | 483 errors, all in `phpstan-baseline.neon` / 37 errors |
 
-`composer test` and `composer ci:check` stop at the lint step because of this, so
-use the targeted commands. CI runs on pull requests only: its push trigger says
-`main`, but the default branch is `master`.
+**CI** (`.github/workflows/tests.yml`, PHP 8.4, on pull requests and pushes to `master`) runs the
+frontend build, PHPStan with the baseline (only new errors fail), `php artisan test` and vitest.
+On pull requests, `.github/scripts/check-changed-files.sh` runs pint, eslint, prettier and vue-tsc
+on the changed files only, so **a file you touch must end up clean**, including its old debt. Run
+`bash .github/scripts/check-changed-files.sh` before pushing (commit first: it diffs against
+`origin/master`). When you fix PHPStan errors, regenerate the baseline with
+`vendor/bin/phpstan analyse --memory-limit=2G --generate-baseline=phpstan-baseline.neon`; never add
+new errors to it. `composer test` and `composer ci:check` still stop at the repo-wide lint step.
 
 ## Where things are
 
