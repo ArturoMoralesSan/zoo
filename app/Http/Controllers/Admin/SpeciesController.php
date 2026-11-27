@@ -904,20 +904,18 @@ class SpeciesController extends Controller
          * Como en la tarjeta, los créditos de una imagen reemplazada se
          * conservan (suele ser la misma foto recortada), pero hay que revisarlos.
          */
-        if ($replacedWithCredits) {
-            Inertia::flash('toast', [
+        Inertia::flash('toast', $replacedWithCredits
+            ? [
                 'type' => 'warning',
                 'message' => 'Especie actualizada. La '.implode(' y la ', $replacedWithCredits)
                     .(count($replacedWithCredits) > 1 ? ' cambiaron' : ' cambió').': revisa sus créditos.',
+            ]
+            : [
+                'type' => 'success',
+                'message' => 'Especie actualizada correctamente.',
             ]);
-        }
 
-        return redirect()
-            ->route('admin.species.index')
-            ->with(
-                'success',
-                'Especie actualizada correctamente.'
-            );
+        return redirect()->route('admin.species.index');
     }
 
     /*

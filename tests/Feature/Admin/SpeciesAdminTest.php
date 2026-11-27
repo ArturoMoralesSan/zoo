@@ -213,7 +213,8 @@ class SpeciesAdminTest extends TestCase
                 'gallery' => [['id' => $second->id, 'alt_text' => 'Segunda']],
             ]))
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('admin.species.index'));
+            ->assertRedirect(route('admin.species.index'))
+            ->assertInertiaFlash('toast.message', 'Especie actualizada correctamente.');
 
         $this->assertSame(
             [$second->id, $first->id],
