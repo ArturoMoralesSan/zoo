@@ -131,7 +131,7 @@ class SpeciesAdminTest extends TestCase
 
         $this->assertSame(Diet::Carnivore, $species->diet);
         $this->assertSame(ConservationStatus::NearThreatened, $species->conservation_status);
-        $this->assertSame('Selva tropical, Humedal', $species->habitatLabel());
+        $this->assertSame('Selva o bosque tropical húmedo, Humedal', $species->habitatLabel());
     }
 
     public function test_rejects_values_outside_the_catalogs(): void
@@ -404,12 +404,30 @@ class SpeciesAdminTest extends TestCase
 
         $this->getJson("/api/species/{$species->id}")
             ->assertOk()
-            ->assertJsonPath('data.species.habitat', 'Selva tropical, Manglar')
+            ->assertJsonPath('data.species.habitat', 'Selva o bosque tropical húmedo, Manglar')
             ->assertJsonPath('data.species.diet', 'Herbívoro')
             ->assertJsonPath('data.species.conservation_status', 'Preocupación menor')
             ->assertJsonPath('data.species.habitats.0.code', 'tropical_rainforest')
             ->assertJsonPath('data.species.diet_code', 'herbivore')
             ->assertJsonPath('data.species.conservation_status_code', 'LC');
+    }
+
+    public function test_api_sends_domesticated_status_and_rural_habitat(): void
+    {
+        $species = $this->species([
+            'habitats' => [Habitat::Rural],
+            'conservation_status' => ConservationStatus::Domesticated,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson("/api/species/{$species->id}")
+            ->assertOk()
+            ->assertJsonPath('data.species.habitat', 'Zonas rurales y de pastoreo')
+            ->assertJsonPath('data.species.habitats.0.code', 'rural')
+            ->assertJsonPath('data.species.conservation_status', 'Domesticado')
+            ->assertJsonPath('data.species.conservation_status_code', 'DOM');
     }
 
     public function test_thumbnail_must_be_square(): void

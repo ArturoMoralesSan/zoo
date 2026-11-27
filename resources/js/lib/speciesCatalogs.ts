@@ -9,9 +9,10 @@ export interface CatalogOption<T extends string> {
 /*
  * Lista Roja de la UICN, de mayor a menor riesgo. Los colores siguen la
  * escala oficial; el texto oscuro sobre los tonos claros mantiene el contraste.
+ * DOM no es de la UICN: la UICN no evalúa animales domésticos.
  */
 export type ConservationStatusCode =
-    'EX' | 'EW' | 'CR' | 'EN' | 'VU' | 'NT' | 'LC' | 'DD' | 'NE';
+    'EX' | 'EW' | 'CR' | 'EN' | 'VU' | 'NT' | 'LC' | 'DD' | 'NE' | 'DOM';
 
 export interface ConservationStatusOption extends CatalogOption<ConservationStatusCode> {
     // Categorías "amenazadas" según la UICN (CR, EN, VU).
@@ -74,6 +75,12 @@ export const conservationStatusOptions: ConservationStatusOption[] = [
         threatened: false,
         badgeClass: 'border-[#c8dccf] bg-white text-[#52685a]',
     },
+    {
+        value: 'DOM',
+        label: 'Domesticado',
+        threatened: false,
+        badgeClass: 'border-[#c8a97e] bg-[#f3e9da] text-[#5a4325]',
+    },
 ];
 
 export type DietCode =
@@ -114,15 +121,18 @@ export type HabitatCode =
     | 'scrubland'
     | 'desert'
     | 'mountain'
+    | 'rocky'
     | 'polar'
     | 'wetland'
     | 'mangrove'
     | 'freshwater'
+    | 'estuary'
     | 'coast'
     | 'ocean'
     | 'coral_reef'
     | 'cave'
-    | 'urban';
+    | 'urban'
+    | 'rural';
 
 // Agrupados para que el selector sea fácil de recorrer.
 export const habitatGroups: {
@@ -132,8 +142,11 @@ export const habitatGroups: {
     {
         name: 'Bosques y selvas',
         options: [
-            { value: 'tropical_rainforest', label: 'Selva tropical' },
-            { value: 'dry_forest', label: 'Selva seca' },
+            {
+                value: 'tropical_rainforest',
+                label: 'Selva o bosque tropical húmedo',
+            },
+            { value: 'dry_forest', label: 'Selva o bosque tropical seco' },
             { value: 'temperate_forest', label: 'Bosque templado' },
             { value: 'coniferous_forest', label: 'Bosque de coníferas' },
             { value: 'cloud_forest', label: 'Bosque de niebla' },
@@ -147,6 +160,7 @@ export const habitatGroups: {
             { value: 'scrubland', label: 'Matorral' },
             { value: 'desert', label: 'Desierto' },
             { value: 'mountain', label: 'Montaña' },
+            { value: 'rocky', label: 'Zonas rocosas y acantilados' },
             { value: 'polar', label: 'Tundra y regiones polares' },
         ],
     },
@@ -156,6 +170,7 @@ export const habitatGroups: {
             { value: 'wetland', label: 'Humedal' },
             { value: 'mangrove', label: 'Manglar' },
             { value: 'freshwater', label: 'Ríos y lagos' },
+            { value: 'estuary', label: 'Estuarios y lagunas costeras' },
             { value: 'coast', label: 'Costa' },
             { value: 'ocean', label: 'Océano' },
             { value: 'coral_reef', label: 'Arrecife de coral' },
@@ -166,6 +181,7 @@ export const habitatGroups: {
         options: [
             { value: 'cave', label: 'Cuevas' },
             { value: 'urban', label: 'Zonas urbanas' },
+            { value: 'rural', label: 'Zonas rurales y de pastoreo' },
         ],
     },
 ];
