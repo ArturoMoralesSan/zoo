@@ -507,10 +507,9 @@ watch(
                                     ? 'La imagen de la especie hecha'
                                     : 'El recurso de la tarjeta hecho'
                             }}
-                            con esta obra es una obra derivada: debe
-                            compartirse con la misma licencia ({{
-                                license.short_name
-                            }}) y con atribución.
+                            con esta obra es una obra derivada: debe compartirse
+                            con la misma licencia ({{ license.short_name }}) y
+                            con atribución.
                         </p>
 
                         <label
