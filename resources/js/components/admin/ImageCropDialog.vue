@@ -198,11 +198,71 @@ const onImageLoad = async () => {
         background: false,
         toggleDragModeOnDblclick: false,
         ready: () => {
+            fitWithMargin();
             restoreCrop();
             addGuide();
             updateOutput();
         },
         crop: updateOutput,
+    });
+};
+
+// Margen (px) entre la foto y el borde del área: con la foto a ras del borde
+// no se pueden agarrar los lados del recuadro que la cubre entera.
+const FRAME_MARGIN = 20;
+
+/**
+ * Encoge la foto para dejar ese margen y vuelve a poner el recuadro más
+ * grande que cabe, centrado (lo mismo que autoCropArea: 1).
+ */
+const fitWithMargin = () => {
+    if (!cropper) {
+        return;
+    }
+
+    const container = cropper.getContainerData();
+    const canvas = cropper.getCanvasData();
+    const scale = Math.min(
+        1,
+        (container.width - 2 * FRAME_MARGIN) / canvas.width,
+        (container.height - 2 * FRAME_MARGIN) / canvas.height,
+    );
+
+    if (scale <= 0) {
+        return;
+    }
+
+    const width = canvas.width * scale;
+    const height = canvas.height * scale;
+    const left = (container.width - width) / 2;
+    const top = (container.height - height) / 2;
+
+    // En viewMode 1 la foto no puede ser menor que el recuadro: primero se encoge éste.
+    cropper.setCropBoxData({
+        left: container.width / 2,
+        top: container.height / 2,
+        width: 1,
+        height: 1,
+    });
+    cropper.setCanvasData({ left, top, width, height });
+
+    const ratio = aspect.value ?? preset.value;
+    let boxWidth = width;
+    let boxHeight = height;
+
+    if (!Number.isNaN(ratio)) {
+        if (width / height > ratio) {
+            boxWidth = height * ratio;
+        } else {
+            boxHeight = width / ratio;
+        }
+    }
+
+    cropper.setCropBoxData({
+        left: left + (width - boxWidth) / 2,
+        top: top + (height - boxHeight) / 2,
+        width: boxWidth,
+        height: boxHeight,
     });
 };
 
@@ -239,6 +299,8 @@ const reset = () => {
     if (!locked.value) {
         choosePreset(NaN);
     }
+
+    fitWithMargin();
 };
 
 const apply = async () => {
