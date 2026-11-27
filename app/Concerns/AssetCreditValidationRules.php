@@ -20,11 +20,12 @@ use Illuminate\Validation\Validator;
  * Reglas de los créditos de los recursos de una tarjeta o de una imagen de
  * especie (App\Contracts\Creditable).
  *
- * - Un crédito (sección "Créditos" de la tarjeta o de la especie):
- *   creditRules() y creditChecks(). Una imagen de especie solo tiene el
- *   recurso "image" y no se hace a partir de otro recurso.
- * - Formulario de la tarjeta: assetCreditsCheck(), que no deja activar una
- *   tarjeta con recursos sin licencia.
+ * Un crédito (sección "Créditos" de la tarjeta o de la especie):
+ * creditRules() y creditChecks(). Una imagen de especie solo tiene el
+ * recurso "image" y no se hace a partir de otro recurso.
+ *
+ * Los créditos que faltan no impiden activar una tarjeta ni una especie: el
+ * panel avisa (ver Card::missingCreditsText()).
  */
 trait AssetCreditValidationRules
 {
@@ -191,39 +192,6 @@ trait AssetCreditValidationRules
     }
 
     /**
-     * Una tarjeta no se activa (ni se crea activa) si algún recurso subido no
-     * tiene licencia completa. Una tarjeta ya activa sigue activa.
-     */
-    protected function assetCreditsCheck(?Card $card = null): Closure
-    {
-        return function (Validator $validator) use ($card) {
-            if (! $this->boolean('is_active') || $card?->is_active) {
-                return;
-            }
-
-            $missing = array_filter(
-                CreditAsset::forCards(),
-                fn (CreditAsset $asset) => $this->creditAssetWillExist($asset, $card)
-                    && ! $card?->hasCompleteCredits($asset)
-            );
-
-            if (! $missing) {
-                return;
-            }
-
-            $labels = array_map(fn (CreditAsset $asset) => $asset->label(), $missing);
-
-            $validator->errors()->add(
-                'is_active',
-                'No se puede activar la tarjeta: falta la licencia de '.self::joinLabels($labels).'. '.
-                ($card
-                    ? 'Regístrala en la sección Créditos de la tarjeta.'
-                    : 'Crea la tarjeta inactiva, registra los créditos y después actívala.')
-            );
-        };
-    }
-
-    /**
      * @return array<string, string>
      */
     protected function creditMessages(): array
@@ -260,30 +228,5 @@ trait AssetCreditValidationRules
             'ai_prompt' => 'indicación (prompt)',
             'notes' => 'notas',
         ];
-    }
-
-    /**
-     * El recurso existirá después de guardar la tarjeta.
-     */
-    private function creditAssetWillExist(CreditAsset $asset, ?Card $card): bool
-    {
-        $uploaded = $asset === CreditAsset::Model
-            ? $this->hasFile('model_file') || $this->hasFile('model_original_file')
-            : $this->hasFile($asset->column());
-
-        return $uploaded || (bool) $card?->hasAsset($asset);
-    }
-
-    /**
-     * "a", "a y b", "a, b y c".
-     *
-     * @param  array<int, string>  $labels
-     */
-    private static function joinLabels(array $labels): string
-    {
-        $labels = array_values($labels);
-        $last = array_pop($labels);
-
-        return $labels ? implode(', ', $labels).' y '.$last : $last;
     }
 }

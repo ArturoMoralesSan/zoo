@@ -1,22 +1,13 @@
-
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import {
-    Copyright,
-    FilterX,
-    Leaf,
-    Plus,
-} from 'lucide-vue-next';
+import { Copyright, FilterX, Leaf, Plus } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
 
 import DataTable from '@/components/admin/DataTable.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import TableActions from '@/components/admin/TableActions.vue';
-import {
-    conservationStatusOption,
-    habitatLabels,
-} from '@/lib/speciesCatalogs';
+import { conservationStatusOption, habitatLabels } from '@/lib/speciesCatalogs';
 import admin from '@/routes/admin';
 
 interface Category {
@@ -69,9 +60,7 @@ const props = defineProps<{
 const search = ref(props.filters?.search ?? '');
 
 const categoryId = ref(
-    props.filters?.category_id
-        ? String(props.filters.category_id)
-        : '',
+    props.filters?.category_id ? String(props.filters.category_id) : '',
 );
 
 const hasFilters = (): boolean => {
@@ -175,12 +164,10 @@ defineOptions({
                 <select
                     v-model="categoryId"
                     aria-label="Filtrar por categoría"
-                    class="w-full rounded-lg border border-[#DCE7DF] bg-white px-3 py-2.5 text-sm text-[#244334] outline-none transition focus:border-[#187744] focus:ring-2 focus:ring-[#187744]/15 sm:w-auto"
+                    class="w-full rounded-lg border border-[#DCE7DF] bg-white px-3 py-2.5 text-sm text-[#244334] transition outline-none focus:border-[#187744] focus:ring-2 focus:ring-[#187744]/15 sm:w-auto"
                     @change="submitSearch"
                 >
-                    <option value="">
-                        Todas las categorías
-                    </option>
+                    <option value="">Todas las categorías</option>
 
                     <option
                         v-for="category in categories"
@@ -208,8 +195,7 @@ defineOptions({
                     Categoría:
                     {{
                         categories.find(
-                            (category) =>
-                                String(category.id) === categoryId,
+                            (category) => String(category.id) === categoryId,
                         )?.name ?? 'Seleccionada'
                     }}
                 </span>
@@ -221,21 +207,15 @@ defineOptions({
                         Especie
                     </th>
 
-                    <th class="px-5 py-4 font-semibold sm:px-6">
-                        Categoría
-                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">Categoría</th>
 
-                    <th class="px-5 py-4 font-semibold sm:px-6">
-                        Hábitat
-                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">Hábitat</th>
 
                     <th class="px-5 py-4 font-semibold sm:px-6">
                         Conservación
                     </th>
 
-                    <th class="px-5 py-4 font-semibold sm:px-6">
-                        Estado
-                    </th>
+                    <th class="px-5 py-4 font-semibold sm:px-6">Estado</th>
 
                     <th class="px-5 py-4 text-right font-semibold sm:px-6">
                         Acciones
@@ -262,7 +242,7 @@ defineOptions({
                                     {{ item.common_name }}
                                 </p>
 
-                                <p class="text-xs italic text-[#718477]">
+                                <p class="text-xs text-[#718477] italic">
                                     {{ item.scientific_name }}
                                 </p>
 
@@ -272,11 +252,24 @@ defineOptions({
 
                                 <span
                                     v-if="item.images_missing_credits_count > 0"
-                                    class="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
-                                    title="Hay imágenes sin licencia"
+                                    class="mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
+                                    :class="
+                                        item.is_active
+                                            ? 'border-red-200 bg-red-50 text-red-700'
+                                            : 'border-amber-200 bg-amber-50 text-amber-800'
+                                    "
+                                    :title="
+                                        item.is_active
+                                            ? 'Activa: la app muestra sus imágenes sin licencia'
+                                            : 'Hay imágenes sin licencia'
+                                    "
                                 >
                                     <Copyright :size="12" />
-                                    Falta licencia
+                                    {{
+                                        item.is_active
+                                            ? 'Activa sin licencia'
+                                            : 'Falta licencia'
+                                    }}
                                 </span>
                             </div>
                         </div>
@@ -298,34 +291,38 @@ defineOptions({
                             {{ habitatLabels(item.habitats).join(', ') }}
                         </span>
 
-                        <span
-                            v-else
-                            class="text-sm italic text-[#91A096]"
-                        >
+                        <span v-else class="text-sm text-[#91A096] italic">
                             Sin especificar
                         </span>
                     </td>
 
                     <td class="px-5 py-4 sm:px-6">
                         <span
-                            v-if="conservationStatusOption(item.conservation_status)"
+                            v-if="
+                                conservationStatusOption(
+                                    item.conservation_status,
+                                )
+                            "
                             class="inline-flex items-center gap-1.5 rounded-full border border-[#DCE7DF] bg-[#F5F9F6] py-1 pr-2.5 pl-1 text-xs font-medium text-[#42604C]"
                         >
                             <span
                                 :class="[
                                     'rounded-full border px-1.5 text-[10px] font-bold',
-                                    conservationStatusOption(item.conservation_status)?.badgeClass,
+                                    conservationStatusOption(
+                                        item.conservation_status,
+                                    )?.badgeClass,
                                 ]"
                             >
                                 {{ item.conservation_status }}
                             </span>
-                            {{ conservationStatusOption(item.conservation_status)?.label }}
+                            {{
+                                conservationStatusOption(
+                                    item.conservation_status,
+                                )?.label
+                            }}
                         </span>
 
-                        <span
-                            v-else
-                            class="text-sm italic text-[#91A096]"
-                        >
+                        <span v-else class="text-sm text-[#91A096] italic">
                             Sin especificar
                         </span>
                     </td>
@@ -335,7 +332,9 @@ defineOptions({
                             v-if="item.is_active"
                             class="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700"
                         >
-                            <span class="h-1.5 w-1.5 rounded-full bg-green-500" />
+                            <span
+                                class="h-1.5 w-1.5 rounded-full bg-green-500"
+                            />
                             Activa
                         </span>
 
@@ -361,7 +360,9 @@ defineOptions({
             </template>
 
             <template #empty>
-                <div class="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+                <div
+                    class="flex min-h-[260px] flex-col items-center justify-center p-8 text-center"
+                >
                     <div
                         class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF2EC] text-[#66816F]"
                     >

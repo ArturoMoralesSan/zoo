@@ -242,9 +242,13 @@ defineOptions({
                         </Link>
                         y después registra aquí su licencia.
                     </template>
+                    <template v-else-if="missing.length && species.is_active">
+                        <strong>La especie está activa:</strong> la app muestra
+                        las imágenes sin licencia sin sus créditos.
+                    </template>
                     <template v-else-if="missing.length">
-                        Las imágenes sin licencia no aparecen en la pantalla de
-                        créditos de la app.
+                        Regístralas antes de activar la especie: si no, la app
+                        mostrará esas imágenes sin sus créditos.
                     </template>
                     <template v-else>
                         Todo listo: los créditos aparecen en la app cuando la

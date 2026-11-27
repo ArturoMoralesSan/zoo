@@ -254,10 +254,17 @@ defineOptions({
                         </Link>
                         y después registra aquí su licencia.
                     </template>
+                    <template
+                        v-else-if="progress.missing.length && card.is_active"
+                    >
+                        Falta registrar {{ missingText }}.
+                        <strong>La tarjeta está activa:</strong> la app muestra
+                        esos archivos sin sus créditos.
+                    </template>
                     <template v-else-if="progress.missing.length">
-                        Falta registrar {{ missingText }}. La tarjeta no se
-                        puede activar hasta que todos sus archivos tengan
-                        licencia.
+                        Falta registrar {{ missingText }}. Regístralos antes de
+                        activar la tarjeta: si no, la app mostrará esos archivos
+                        sin sus créditos.
                     </template>
                     <template v-else>
                         Todo listo: los créditos aparecen en la app cuando la
@@ -403,8 +410,8 @@ defineOptions({
                                 </p>
                                 <p class="text-xs text-[#718477]">
                                     Indica el autor o el sitio de donde salió y
-                                    su licencia. Sin esto, la tarjeta no se
-                                    puede activar.
+                                    su licencia. Sin esto, la app muestra el
+                                    archivo sin crédito.
                                 </p>
                             </div>
 

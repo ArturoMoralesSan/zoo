@@ -309,11 +309,19 @@ class CardController extends Controller
         }
 
         /*
-         * Con archivos, el siguiente paso es registrar sus créditos (sin ellos
-         * la tarjeta no se puede activar).
+         * Con archivos, el siguiente paso es registrar sus créditos. Una
+         * tarjeta activa sin ellos se permite, pero se avisa: la app la
+         * muestra sin esos créditos.
          */
-        if ($card->missingCredits()) {
-            $this->flashSaved('Tarjeta creada. Registra los créditos de sus archivos para poder activarla.', $inspection, $sizeNote);
+        if ($missing = $card->missingCreditsText()) {
+            $this->flashSaved(
+                $card->is_active
+                    ? "Tarjeta creada y activa, pero falta la licencia de {$missing}: la app la muestra sin esos créditos. Regístralos aquí."
+                    : 'Tarjeta creada. Registra los créditos de sus archivos.',
+                $inspection,
+                $sizeNote,
+                warning: $card->is_active
+            );
 
             return redirect()->route('admin.cards.credits.index', $card);
         }
@@ -420,12 +428,17 @@ class CardController extends Controller
          */
         $this->deleteStoredFiles($obsolete);
 
+        $missing = $card->is_active ? $card->load('credits')->missingCreditsText() : null;
+
         $this->flashSaved(
             'Tarjeta actualizada correctamente.'.($replaced
                 ? ' El archivo cambió: revisa los créditos de '.implode(', ', array_map(fn (CreditAsset $asset) => mb_strtolower($asset->label()), $replaced)).'.'
+                : '').($missing
+                ? " Está activa sin la licencia de {$missing}: la app la muestra sin esos créditos."
                 : ''),
             $inspection,
-            $sizeNote
+            $sizeNote,
+            warning: $replaced || $missing
         );
 
         return redirect()->route('admin.cards.index');
@@ -964,10 +977,11 @@ class CardController extends Controller
     private function flashSaved(
         string $message,
         ?GlbInspection $inspection,
-        string $sizeNote
+        string $sizeNote,
+        bool $warning = false
     ): void {
         Inertia::flash('toast', [
-            'type' => 'success',
+            'type' => $warning ? 'warning' : 'success',
             'message' => $message.$sizeNote,
         ]);
 

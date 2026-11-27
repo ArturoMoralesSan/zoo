@@ -568,7 +568,7 @@ class CardCreditSectionTest extends TestCase
     // Tarjeta: activación, archivos y eliminación
     // ---------------------------------------------------------------------
 
-    public function test_activation_requires_complete_credits_for_every_uploaded_asset(): void
+    public function test_activating_with_complete_credits_is_a_plain_success(): void
     {
         $card = $this->createCard(['model_file' => null]);
         $this->addCredit($card, 'artwork', 'origin', 'proprietary');
@@ -578,22 +578,39 @@ class CardCreditSectionTest extends TestCase
 
         $this->actingAs($this->admin)
             ->put(route('admin.cards.update', $card), $this->cardPayload(['is_active' => true]))
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast.type', 'success');
 
         $this->assertTrue($card->fresh()->is_active);
     }
 
-    public function test_activation_is_blocked_while_an_origin_is_missing(): void
+    public function test_activating_with_a_missing_origin_is_allowed_with_a_warning(): void
     {
-        $card = $this->createCard(['model_file' => null]);
+        $card = $this->createCard();
         $this->addCredit($card, 'artwork', 'origin', 'proprietary');
+        // Un "Incluye" no sustituye al origen.
         $this->addCredit($card, 'thumbnail', 'component', 'cc0-1.0', ['source_name' => 'poly_haven']);
 
         $this->actingAs($this->admin)
             ->put(route('admin.cards.update', $card), $this->cardPayload(['is_active' => true]))
-            ->assertSessionHasErrors([
-                'is_active' => 'No se puede activar la tarjeta: falta la licencia de Miniatura. Regístrala en la sección Créditos de la tarjeta.',
-            ]);
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast.type', 'warning')
+            ->assertInertiaFlash(
+                'toast.message',
+                'Tarjeta actualizada correctamente. Está activa sin la licencia de la miniatura y el modelo 3D: la app la muestra sin esos créditos.'
+            );
+
+        $this->assertTrue($card->fresh()->is_active);
+    }
+
+    public function test_inactive_card_with_missing_credits_saves_without_warning(): void
+    {
+        $card = $this->createCard();
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cards.update', $card), $this->cardPayload(['is_active' => false]))
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast.type', 'success');
     }
 
     public function test_active_card_with_missing_credits_can_still_be_edited(): void
@@ -607,24 +624,37 @@ class CardCreditSectionTest extends TestCase
         $this->assertSame('Renombrada', $card->fresh()->name);
     }
 
-    public function test_new_card_with_files_is_created_inactive_and_opens_its_credits(): void
+    public function test_new_card_with_files_opens_its_credits_and_warns_if_active(): void
     {
         $image = fn () => UploadedFile::fake()->createWithContent('fondo.png', base64_decode(self::PNG));
 
-        $this->actingAs($this->admin)
-            ->post(route('admin.cards.store'), $this->cardPayload(['is_active' => true, 'artwork_image' => $image()]))
-            ->assertSessionHasErrors('is_active');
-
         $response = $this->actingAs($this->admin)
             ->post(route('admin.cards.store'), $this->cardPayload(['artwork_image' => $image()]))
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast.type', 'success')
+            ->assertInertiaFlash('toast.message', 'Tarjeta creada. Registra los créditos de sus archivos.');
 
-        $card = Card::firstOrFail();
+        $inactive = Card::firstOrFail();
+        $response->assertRedirect(route('admin.cards.credits.index', $inactive));
+        $this->assertFalse($inactive->is_active);
 
-        $response->assertRedirect(route('admin.cards.credits.index', $card));
+        $response = $this->actingAs($this->admin)
+            ->post(route('admin.cards.store'), $this->cardPayload(['name' => 'Activa', 'is_active' => true, 'artwork_image' => $image()]))
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast.type', 'warning')
+            ->assertInertiaFlash(
+                'toast.message',
+                'Tarjeta creada y activa, pero falta la licencia de la ilustración: la app la muestra sin esos créditos. Regístralos aquí.'
+            );
 
-        Storage::disk('public')->delete($card->artwork_image);
-        @unlink(storage_path('app/public/'.$card->artwork_image));
+        $active = Card::where('name', 'Activa')->firstOrFail();
+        $response->assertRedirect(route('admin.cards.credits.index', $active));
+        $this->assertTrue($active->is_active);
+
+        foreach ([$inactive, $active] as $card) {
+            Storage::disk('public')->delete($card->artwork_image);
+            @unlink(storage_path('app/public/'.$card->artwork_image));
+        }
     }
 
     public function test_removing_an_asset_removes_its_credits_and_links(): void

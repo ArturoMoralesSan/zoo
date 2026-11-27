@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
@@ -178,10 +177,9 @@ const deleteCard = (card: Card) => {
         cancelButtonColor: '#84958a',
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(
-                admin.cards.destroy(card.id).url,
-                { preserveScroll: true },
-            );
+            router.delete(admin.cards.destroy(card.id).url, {
+                preserveScroll: true,
+            });
         }
     });
 };
@@ -203,10 +201,10 @@ const revokeCapture = (capture: Capture) => {
         cancelButtonColor: '#84958a',
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(
-                admin.cards.captures.destroy(capture.id).url,
-                { preserveScroll: true, preserveState: true },
-            );
+            router.delete(admin.cards.captures.destroy(capture.id).url, {
+                preserveScroll: true,
+                preserveState: true,
+            });
         }
     });
 };
@@ -228,10 +226,10 @@ const resetQuizState = (state: QuizState) => {
         cancelButtonColor: '#84958a',
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(
-                admin.cards.quizStates.destroy(state.id).url,
-                { preserveScroll: true, preserveState: true },
-            );
+            router.delete(admin.cards.quizStates.destroy(state.id).url, {
+                preserveScroll: true,
+                preserveState: true,
+            });
         }
     });
 };
@@ -296,8 +294,7 @@ onMounted(() => {
 
         if (
             saved === 'settings' ||
-            (props.devTools &&
-                (saved === 'captures' || saved === 'attempts'))
+            (props.devTools && (saved === 'captures' || saved === 'attempts'))
         ) {
             tab.value = saved;
         }
@@ -511,7 +508,12 @@ defineOptions({
                 <thead>
                     <tr>
                         <th
-                            v-for="column in ['Usuario', 'Tarjeta', 'Obtenida', 'Acciones']"
+                            v-for="column in [
+                                'Usuario',
+                                'Tarjeta',
+                                'Obtenida',
+                                'Acciones',
+                            ]"
                             :key="column"
                             class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold tracking-wide text-[#435d4c] uppercase sm:px-6"
                             :class="{ 'text-right': column === 'Acciones' }"
@@ -549,7 +551,9 @@ defineOptions({
                             </span>
                         </td>
 
-                        <td class="px-5 py-3 whitespace-nowrap text-[#435d4c] sm:px-6">
+                        <td
+                            class="px-5 py-3 whitespace-nowrap text-[#435d4c] sm:px-6"
+                        >
                             {{ formatDate(capture.captured_at) }}
                         </td>
 
@@ -586,7 +590,13 @@ defineOptions({
                 <thead>
                     <tr>
                         <th
-                            v-for="column in ['Usuario', 'Tarjeta', 'Intentos usados', 'Estado', 'Acciones']"
+                            v-for="column in [
+                                'Usuario',
+                                'Tarjeta',
+                                'Intentos usados',
+                                'Estado',
+                                'Acciones',
+                            ]"
                             :key="column"
                             class="border-b border-[#dce7df] bg-[#edf4ef] px-5 py-3.5 text-left text-xs font-bold tracking-wide text-[#435d4c] uppercase sm:px-6"
                             :class="{ 'text-right': column === 'Acciones' }"
@@ -624,8 +634,12 @@ defineOptions({
                             </span>
                         </td>
 
-                        <td class="px-5 py-3 whitespace-nowrap text-[#435d4c] sm:px-6">
-                            {{ state.failed_attempts }}/{{ state.max_attempts ?? '—' }}
+                        <td
+                            class="px-5 py-3 whitespace-nowrap text-[#435d4c] sm:px-6"
+                        >
+                            {{ state.failed_attempts }}/{{
+                                state.max_attempts ?? '—'
+                            }}
                         </td>
 
                         <td class="px-5 py-3 whitespace-nowrap sm:px-6">
@@ -633,7 +647,8 @@ defineOptions({
                                 v-if="state.locked_until"
                                 class="text-xs font-semibold text-amber-700"
                             >
-                                Bloqueada hasta {{ formatDate(state.locked_until) }}
+                                Bloqueada hasta
+                                {{ formatDate(state.locked_until) }}
                             </span>
                             <span v-else class="text-xs text-[#718477]">
                                 Sin bloqueo
@@ -681,7 +696,7 @@ defineOptions({
                 <select
                     v-model="speciesId"
                     aria-label="Filtrar por especie"
-                    class="h-[42px] w-full min-w-0 rounded-lg border border-[#bfcfc6] bg-white px-3 text-sm text-[#244334] outline-none transition focus:border-[#187744] focus:ring-2 focus:ring-[#187744]/10 sm:w-auto sm:min-w-[180px]"
+                    class="h-[42px] w-full min-w-0 rounded-lg border border-[#bfcfc6] bg-white px-3 text-sm text-[#244334] transition outline-none focus:border-[#187744] focus:ring-2 focus:ring-[#187744]/10 sm:w-auto sm:min-w-[180px]"
                     @change="applyFilters"
                 >
                     <option value="">Todas las especies</option>
@@ -698,7 +713,7 @@ defineOptions({
                 <select
                     v-model="rarity"
                     aria-label="Filtrar por rareza"
-                    class="h-[42px] w-full min-w-0 rounded-lg border border-[#bfcfc6] bg-white px-3 text-sm text-[#244334] outline-none transition focus:border-[#187744] focus:ring-2 focus:ring-[#187744]/10 sm:w-auto sm:min-w-[170px]"
+                    class="h-[42px] w-full min-w-0 rounded-lg border border-[#bfcfc6] bg-white px-3 text-sm text-[#244334] transition outline-none focus:border-[#187744] focus:ring-2 focus:ring-[#187744]/10 sm:w-auto sm:min-w-[170px]"
                     @change="applyFilters"
                 >
                     <option value="">Todas las rarezas</option>
@@ -727,9 +742,8 @@ defineOptions({
                 >
                     Especie:
                     {{
-                        species.find(
-                            (item) => String(item.id) === speciesId,
-                        )?.common_name ?? 'Seleccionada'
+                        species.find((item) => String(item.id) === speciesId)
+                            ?.common_name ?? 'Seleccionada'
                     }}
                 </span>
 
@@ -770,7 +784,9 @@ defineOptions({
                         >
                             <div
                                 class="h-16 w-9 shrink-0 overflow-hidden rounded-md border border-[#e1e9e3] bg-[#f2f7f4]"
-                                :class="{ 'opacity-50 grayscale': !card.is_active }"
+                                :class="{
+                                    'opacity-50 grayscale': !card.is_active,
+                                }"
                             >
                                 <img
                                     v-if="cardImageUrl(card)"
@@ -797,7 +813,10 @@ defineOptions({
                                 </div>
 
                                 <div class="mt-0.5 text-xs text-[#435d4c]">
-                                    {{ card.species?.common_name ?? 'Sin especie' }}
+                                    {{
+                                        card.species?.common_name ??
+                                        'Sin especie'
+                                    }}
                                     <span
                                         v-if="card.species?.scientific_name"
                                         class="text-[#84958a] italic"
@@ -808,11 +827,24 @@ defineOptions({
 
                                 <span
                                     v-if="card.missing_credits?.length"
-                                    class="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
-                                    title="Hay recursos subidos sin licencia"
+                                    class="mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
+                                    :class="
+                                        card.is_active
+                                            ? 'border-red-200 bg-red-50 text-red-700'
+                                            : 'border-amber-200 bg-amber-50 text-amber-800'
+                                    "
+                                    :title="
+                                        card.is_active
+                                            ? 'Activa: la app muestra sus archivos sin licencia'
+                                            : 'Hay recursos subidos sin licencia'
+                                    "
                                 >
                                     <Copyright :size="12" />
-                                    Falta licencia
+                                    {{
+                                        card.is_active
+                                            ? 'Activa sin licencia'
+                                            : 'Falta licencia'
+                                    }}
                                 </span>
                             </div>
                         </Link>
@@ -833,14 +865,21 @@ defineOptions({
                         <div class="min-w-57.5 space-y-2">
                             <p
                                 class="inline-flex items-center gap-1.5 text-xs font-semibold"
-                                :class="readinessClasses[duelReadiness(card).status]"
+                                :class="
+                                    readinessClasses[duelReadiness(card).status]
+                                "
                             >
                                 <CircleCheck
-                                    v-if="duelReadiness(card).status === 'ready'"
+                                    v-if="
+                                        duelReadiness(card).status === 'ready'
+                                    "
                                     :size="14"
                                 />
                                 <CircleOff
-                                    v-else-if="duelReadiness(card).status === 'inactive'"
+                                    v-else-if="
+                                        duelReadiness(card).status ===
+                                        'inactive'
+                                    "
                                     :size="14"
                                 />
                                 <TriangleAlert v-else :size="14" />
@@ -852,14 +891,18 @@ defineOptions({
                                     class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium"
                                     :class="
                                         chipClass(
-                                            (card.active_quiz_questions_count ?? 0) <
-                                                (card.effective_questions_per_duel ?? 3),
+                                            (card.active_quiz_questions_count ??
+                                                0) <
+                                                (card.effective_questions_per_duel ??
+                                                    3),
                                         )
                                     "
                                     title="Preguntas activas / preguntas por duelo"
                                 >
                                     <HelpCircle :size="12" />
-                                    {{ card.active_quiz_questions_count ?? 0 }}/{{
+                                    {{
+                                        card.active_quiz_questions_count ?? 0
+                                    }}/{{
                                         card.effective_questions_per_duel ?? 3
                                     }}
                                     preguntas
@@ -867,7 +910,11 @@ defineOptions({
 
                                 <span
                                     class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium"
-                                    :class="chipClass((card.qr_codes_count ?? 0) === 0)"
+                                    :class="
+                                        chipClass(
+                                            (card.qr_codes_count ?? 0) === 0,
+                                        )
+                                    "
                                 >
                                     <QrCode :size="12" />
                                     {{ card.qr_codes_count ?? 0 }} QR
@@ -878,7 +925,11 @@ defineOptions({
                                     :class="chipClass(false)"
                                 >
                                     <Box :size="12" />
-                                    {{ card.model_file ? 'Modelo 3D' : 'Sin modelo' }}
+                                    {{
+                                        card.model_file
+                                            ? 'Modelo 3D'
+                                            : 'Sin modelo'
+                                    }}
                                 </span>
                             </div>
                         </div>
@@ -903,8 +954,12 @@ defineOptions({
 
             <!-- Estado vacío -->
             <template #empty>
-                <div class="mx-auto flex max-w-md flex-col items-center justify-center py-6 text-center">
-                    <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#edf4ef] text-[#187744]">
+                <div
+                    class="mx-auto flex max-w-md flex-col items-center justify-center py-6 text-center"
+                >
+                    <div
+                        class="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#edf4ef] text-[#187744]"
+                    >
                         <FilterX v-if="hasFilters()" :size="27" />
                         <ImageOff v-else :size="27" />
                     </div>

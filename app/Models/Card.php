@@ -211,4 +211,22 @@ class Card extends Model implements Creditable
             fn (CreditAsset $asset) => $this->hasAsset($asset) && ! $this->hasCompleteCredits($asset)
         ));
     }
+
+    /**
+     * "la ilustración", "la miniatura y el modelo 3D"… o null si no falta nada.
+     * Para los avisos del panel: una tarjeta activa sin licencia se muestra en
+     * la app sin esos créditos.
+     */
+    public function missingCreditsText(): ?string
+    {
+        $names = array_map(fn (CreditAsset $asset) => $asset->withArticle(), $this->missingCredits());
+
+        if (! $names) {
+            return null;
+        }
+
+        $last = array_pop($names);
+
+        return $names ? implode(', ', $names).' y '.$last : $last;
+    }
 }

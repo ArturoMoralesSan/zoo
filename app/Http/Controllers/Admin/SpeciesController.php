@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\CreditRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Species\StoreSpeciesRequest;
 use App\Http\Requests\Admin\Species\UpdateSpeciesRequest;
@@ -44,10 +43,7 @@ class SpeciesController extends Controller
                 'locations',
                 'tags',
                 // Imágenes con archivo y sin crédito de origen (sección Créditos).
-                'images as images_missing_credits_count' => fn ($query) => $query
-                    ->credited()
-                    ->where('path', '!=', '')
-                    ->whereDoesntHave('credits', fn ($query) => $query->where('role', CreditRole::Origin->value)),
+                'imagesMissingCredits as images_missing_credits_count',
             ])
             ->when(request('search'), function ($query, $search) {
                 $query->where(function ($query) use ($search) {
@@ -186,10 +182,14 @@ class SpeciesController extends Controller
 
         $deletedPaths = [];
 
+        /** @var Species|null $species */
+        $species = null;
+
         DB::transaction(function () use (
             $request,
             $validated,
-            &$deletedPaths
+            &$deletedPaths,
+            &$species
         ) {
             /*
             |--------------------------------------------------------------------------
@@ -425,12 +425,31 @@ class SpeciesController extends Controller
         // la transacción falla.
         Storage::disk('public')->delete($deletedPaths);
 
-        return redirect()
-            ->route('admin.species.index')
-            ->with(
-                'success',
-                'Especie creada correctamente.'
-            );
+        /*
+         * Con imágenes, el siguiente paso es registrar sus créditos. Una
+         * especie activa sin ellos se permite, pero se avisa: la app muestra
+         * esas imágenes sin sus créditos.
+         */
+        if ($missing = $species?->missingCreditsText()) {
+            Inertia::flash('toast', $species->is_active
+                ? [
+                    'type' => 'warning',
+                    'message' => "Especie creada y activa, pero falta la licencia de {$missing}: la app las muestra sin sus créditos. Regístralos aquí.",
+                ]
+                : [
+                    'type' => 'success',
+                    'message' => 'Especie creada. Registra los créditos de sus imágenes.',
+                ]);
+
+            return redirect()->route('admin.species.credits.index', $species);
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Especie creada correctamente.',
+        ]);
+
+        return redirect()->route('admin.species.index');
     }
 
     /*
@@ -455,6 +474,9 @@ class SpeciesController extends Controller
             'admin/species/Edit',
             [
                 'species' => $species,
+
+                // Imágenes sin crédito de origen: aviso junto a "Especie activa".
+                'uncreditedImageIds' => $species->imagesMissingCredits()->pluck('id'),
 
                 'categories' => SpeciesCategory::query()
                     ->where('is_active', true)
@@ -904,16 +926,21 @@ class SpeciesController extends Controller
          * Como en la tarjeta, los créditos de una imagen reemplazada se
          * conservan (suele ser la misma foto recortada), pero hay que revisarlos.
          */
-        Inertia::flash('toast', $replacedWithCredits
-            ? [
-                'type' => 'warning',
-                'message' => 'Especie actualizada. La '.implode(' y la ', $replacedWithCredits)
-                    .(count($replacedWithCredits) > 1 ? ' cambiaron' : ' cambió').': revisa sus créditos.',
-            ]
-            : [
-                'type' => 'success',
-                'message' => 'Especie actualizada correctamente.',
-            ]);
+        $missing = $species->is_active ? $species->missingCreditsText() : null;
+
+        $message = $replacedWithCredits
+            ? 'Especie actualizada. La '.implode(' y la ', $replacedWithCredits)
+                .(count($replacedWithCredits) > 1 ? ' cambiaron' : ' cambió').': revisa sus créditos.'
+            : 'Especie actualizada correctamente.';
+
+        if ($missing) {
+            $message .= " Está activa sin la licencia de {$missing}: la app las muestra sin sus créditos.";
+        }
+
+        Inertia::flash('toast', [
+            'type' => $replacedWithCredits || $missing ? 'warning' : 'success',
+            'message' => $message,
+        ]);
 
         return redirect()->route('admin.species.index');
     }

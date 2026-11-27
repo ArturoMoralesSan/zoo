@@ -160,7 +160,13 @@ class SpeciesAdminTest extends TestCase
                 ],
             ]))
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('admin.species.index'));
+            // Fotos nuevas sin créditos: se abre su sección Créditos, con aviso porque está activa.
+            ->assertRedirect(route('admin.species.credits.index', Species::firstOrFail()))
+            ->assertInertiaFlash('toast.type', 'warning')
+            ->assertInertiaFlash(
+                'toast.message',
+                'Especie creada y activa, pero falta la licencia de 2 imágenes: la app las muestra sin sus créditos. Regístralos aquí.'
+            );
 
         $images = SpeciesImage::where('type', 'gallery')->orderBy('sort_order')->get();
 
@@ -214,7 +220,12 @@ class SpeciesAdminTest extends TestCase
             ]))
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('admin.species.index'))
-            ->assertInertiaFlash('toast.message', 'Especie actualizada correctamente.');
+            // Sus fotos no tienen créditos y la especie está activa.
+            ->assertInertiaFlash('toast.type', 'warning')
+            ->assertInertiaFlash(
+                'toast.message',
+                'Especie actualizada correctamente. Está activa sin la licencia de 2 imágenes: la app las muestra sin sus créditos.'
+            );
 
         $this->assertSame(
             [$second->id, $first->id],
@@ -253,7 +264,38 @@ class SpeciesAdminTest extends TestCase
         $this->assertNotSame("species/{$species->id}/main.jpg", $main->fresh()->path);
         $this->assertNotNull($credit->fresh());
         $response->assertInertiaFlash('toast.type', 'warning');
-        $response->assertInertiaFlash('toast.message', 'Especie actualizada. La imagen principal cambió: revisa sus créditos.');
+        // La foto de la galería no tiene créditos y la especie está activa.
+        $response->assertInertiaFlash(
+            'toast.message',
+            'Especie actualizada. La imagen principal cambió: revisa sus créditos. Está activa sin la licencia de 1 imagen: la app las muestra sin sus créditos.'
+        );
+    }
+
+    public function test_inactive_species_without_credits_saves_without_warning(): void
+    {
+        $species = $this->species(['is_active' => false]);
+        $gallery = $this->galleryImage($species, 0);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.species.update', $species), $this->payload([
+                'is_active' => false,
+                'gallery' => [['id' => $gallery->id, 'alt_text' => 'Foto']],
+            ]))
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast.type', 'success')
+            ->assertInertiaFlash('toast.message', 'Especie actualizada correctamente.');
+    }
+
+    public function test_edit_lists_the_images_without_credits(): void
+    {
+        $this->withoutVite();
+        $species = $this->species();
+        $gallery = $this->galleryImage($species, 0);
+
+        $this->actingAs($this->admin())
+            ->get(route('admin.species.edit', $species))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('uncreditedImageIds', [$gallery->id]));
     }
 
     public function test_update_cannot_touch_another_species_gallery(): void
