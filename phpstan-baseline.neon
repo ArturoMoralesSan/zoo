@@ -1,0 +1,2479 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Method App\\Exceptions\\DuelException\:\:__construct\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Exceptions/DuelException.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$effective_retries\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/CardController.php
+
+		-
+			message: '#^Cannot call method toJSON\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Admin/CardController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\CardController\:\:cardAttributes\(\) has parameter \$validated with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Admin/CardController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\CardController\:\:cardAttributes\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Admin/CardController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\CardController\:\:raritySettings\(\) return type with generic class Illuminate\\Database\\Eloquent\\Collection does not specify its types\: TKey, TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/Admin/CardController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\CardQuizState\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Admin/CardController.php
+
+		-
+			message: '#^Parameter &\$written by\-ref type of method App\\Http\\Controllers\\Admin\\CardController\:\:keepLegacyOriginal\(\) expects array\<int, array\{string, string\}\>, non\-empty\-array\<int, array\{mixed, string\}\> given\.$#'
+			identifier: parameterByRef.type
+			count: 1
+			path: app/Http/Controllers/Admin/CardController.php
+
+		-
+			message: '#^Parameter &\$written by\-ref type of method App\\Http\\Controllers\\Admin\\CardController\:\:storeModelFiles\(\) expects array\<int, array\{string, string\}\>, non\-empty\-array\<int, array\{mixed, string\}\> given\.$#'
+			identifier: parameterByRef.type
+			count: 2
+			path: app/Http/Controllers/Admin/CardController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\CardQuizState\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Admin/CardController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\CardCreditController\:\:cardSummary\(\) should return array\{id\: int, name\: string, species\: array\{common_name\: string\}\|null\} but returns array\{id\: int, name\: string, species\: array\{common_name\: null\}\|null\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Admin/CardCreditController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\CardQrCodeController\:\:cardSummary\(\) should return array\{id\: int, name\: string, species\: array\{common_name\: string\}\|null\} but returns array\{id\: int, name\: string, species\: array\{common_name\: null\}\|null\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Admin/CardQrCodeController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: App\\Models\\CardQrCode, Closure\(App\\Models\\CardQrCode\)\: App\\Models\\CardQrCode given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/CardQrCodeController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/Admin/CreditController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Donation\:\:\$date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Donation\:\:\$donations\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\TicketOrder\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\TicketOrder\:\:\$date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\TicketOrder\:\:\$sales\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Donation\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\TicketOrder\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Donation\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\TicketOrder\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\PaymentMethod\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\PaymentMethod\>\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/DonationController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/DonationController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/DonationController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/DonationController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\DonationController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/DonationController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\LevelController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/LevelController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\LevelController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/LevelController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\LevelController\:\:edit\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/LevelController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\LevelController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/LevelController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\LevelController\:\:show\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/LevelController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\LevelController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/LevelController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\LevelController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/LevelController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ZooZone\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\ZooZone\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\MapPathController\:\:calculateDistance\(\) has parameter \$coordinates with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\MapPathController\:\:pointInGeometry\(\) has parameter \$geometry with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\MapPathController\:\:pointInGeometry\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\MapPathController\:\:pointInRing\(\) has parameter \$ring with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\MapPathController\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\MapPathController\:\:validateGraph\(\) has parameter \$coordinates with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\MapPathController\:\:validateGraph\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\MapPathController\:\:validateNodesInsideZone\(\) has parameter \$nodes with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Parameter \#2 \$zone of method App\\Http\\Controllers\\Admin\\MapPathController\:\:validateNodesInsideZone\(\) expects App\\Models\\ZooZone, App\\Models\\ZooZone\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\ZooZone\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Variable \$geometry in empty\(\) is never defined\.$#'
+			identifier: empty.variable
+			count: 1
+			path: app/Http/Controllers/Admin/MapPathController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\PermissionController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/PermissionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\PermissionController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/PermissionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\PermissionController\:\:edit\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/PermissionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\PermissionController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/PermissionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\PermissionController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/PermissionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\PermissionController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/PermissionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/QuizQuestionController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:answers\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/QuizQuestionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\QuizQuestionController\:\:validateCorrectAnswer\(\) has parameter \$answers with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Admin/QuizQuestionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Reward\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Reward\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/RewardRedemptionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Reward\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Reward\>\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/RewardRedemptionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Reward\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Reward\>\:\:\$points\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/RewardRedemptionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Reward\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Reward\>\:\:\$stock\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/RewardRedemptionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/RewardRedemptionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$points\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/RewardRedemptionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/RewardRedemptionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/RewardRedemptionController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\Reward\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Reward\>\:\:decrement\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/RewardRedemptionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\RoleController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/RoleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\RoleController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/RoleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\RoleController\:\:edit\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/RoleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\RoleController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/RoleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\RoleController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/RoleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\RoleController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/RoleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesCategoryController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesCategoryController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesCategoryController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesCategoryController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesCategoryController\:\:edit\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesCategoryController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesCategoryController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesCategoryController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesCategoryController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesCategoryController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesCategoryController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesCategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$path\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesTagController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesTagController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesTagController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesTagController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesTagController\:\:edit\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesTagController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesTagController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesTagController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesTagController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesTagController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\SpeciesTagController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/SpeciesTagController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\TicketType\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\TicketType\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/TicketOrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\TicketType\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\TicketType\>\:\:\$price\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/TicketOrderController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/TicketOrderController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/TicketOrderController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\TicketOrderController\:\:userByQr\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/TicketOrderController.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Admin/TicketOrderController.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Admin/TicketOrderController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\TicketTypeController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/TicketTypeController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\TicketTypeController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/TicketTypeController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\TicketTypeController\:\:edit\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/TicketTypeController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\TicketTypeController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/TicketTypeController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\TicketTypeController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/TicketTypeController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\TicketTypeController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/TicketTypeController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\UserController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\UserController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\UserController\:\:edit\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\UserController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\UserController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\UserController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Laravel\\Sanctum\\PersonalAccessToken\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Api/AuthController.php
+
+		-
+			message: '#^Parameter \#2 \$state of method App\\Services\\CardDuelService\:\:attemptsFor\(\) expects App\\Models\\CardQuizState\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/CardController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ExploreController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ExploreController.php
+
+		-
+			message: '#^Cannot call method toISOString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Api/ExploreController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Event\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Api/ExploreController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Event\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Api/ExploreController.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Api/ExploreController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cards\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/MapController.php
+
+		-
+			message: '#^Anonymous function should return Illuminate\\Support\\Collection\<int, array\<string, App\\Http\\Resources\\Duel\\DuelAttemptsResource\|bool\|Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\|int\|string\|null\>\> but returns Illuminate\\Support\\Collection\<int, array\<string, App\\Http\\Resources\\Duel\\DuelAttemptsResource\|bool\|Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\|int\|string\|null\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Api/MapController.php
+
+		-
+			message: '#^Anonymous function should return array\{species_id\: int\<0, max\>, id\: int, name\: string, rarity\: string, thumbnail_image\: string\|null, status\: ''available''\|''locked''\|''owned'', attempts\: App\\Http\\Resources\\Duel\\DuelAttemptsResource, can_duel\: bool, \.\.\.\} but returns array\{species_id\: int\<0, max\>, id\: int, name\: string, rarity\: string, thumbnail_image\: string\|null, status\: ''available''\|''locked''\|''owned'', attempts\: App\\Http\\Resources\\Duel\\DuelAttemptsResource, can_duel\: bool, \.\.\.\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Api/MapController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:usable\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Api/MapController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\MapController\:\:duelCards\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>\> but returns Illuminate\\Support\\Collection\<\(int\|string\), Illuminate\\Support\\Collection\<int, array\<string, App\\Http\\Resources\\Duel\\DuelAttemptsResource\|bool\|Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\|int\|string\|null\>\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Api/MapController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\MapController\:\:mapZones\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, array\{id\: int, name\: string, description\: string\|null, type\: string\|null, geometry\: string\|null, map_image\: string\|null, map_image_bounds\: string\|null, markers\: Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\MapMarker\>, \.\.\.\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Api/MapController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Card\>\:\:map\(\) expects callable\(App\\Models\\Card, int\)\: array\{species_id\: int\<0, max\>, id\: int, name\: string, rarity\: string, thumbnail_image\: string\|null, status\: ''available''\|''locked''\|''owned'', attempts\: App\\Http\\Resources\\Duel\\DuelAttemptsResource, can_duel\: bool, reason\: string\|null, qr_codes\: Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\}, Closure\(App\\Models\\Card\)\: array\{species_id\: int\<0, max\>, id\: int, name\: string, rarity\: string, thumbnail_image\: string\|null, status\: ''available''\|''locked''\|''owned'', attempts\: App\\Http\\Resources\\Duel\\DuelAttemptsResource, can_duel\: bool, reason\: string\|null, qr_codes\: Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/MapController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}, Closure\(App\\Models\\CardQrCode\)\: array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/MapController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),Illuminate\\Support\\Collection\<int, array\<string, App\\Http\\Resources\\Duel\\DuelAttemptsResource\|bool\|Illuminate\\Support\\Collection\<int, array\<string, int\|string\|null\>\>\|int\|string\|null\>\>\>\:\:map\(\) expects callable\(Illuminate\\Support\\Collection\<int, array\{species_id\: int\<0, max\>, id\: int, name\: string, rarity\: string, thumbnail_image\: string\|null, status\: ''available''\|''locked''\|''owned'', attempts\: App\\Http\\Resources\\Duel\\DuelAttemptsResource, can_duel\: bool, reason\: string\|null, qr_codes\: Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\}\>, int\|string\)\: Illuminate\\Support\\Collection\<int, array\<string, App\\Http\\Resources\\Duel\\DuelAttemptsResource\|bool\|Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\|int\|string\|null\>\>, Closure\(Illuminate\\Support\\Collection\)\: Illuminate\\Support\\Collection\<int, array\<string, App\\Http\\Resources\\Duel\\DuelAttemptsResource\|bool\|Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\|int\|string\|null\>\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/MapController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, App\\Http\\Resources\\Duel\\DuelAttemptsResource\|bool\|Illuminate\\Support\\Collection\<int, array\<string, int\|string\|null\>\>\|int\|string\|null\>\>\:\:map\(\) expects callable\(array\{species_id\: int\<0, max\>, id\: int, name\: string, rarity\: string, thumbnail_image\: string\|null, status\: ''available''\|''locked''\|''owned'', attempts\: App\\Http\\Resources\\Duel\\DuelAttemptsResource, can_duel\: bool, reason\: string\|null, qr_codes\: Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\}, int\)\: array\<string, App\\Http\\Resources\\Duel\\DuelAttemptsResource\|bool\|Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\|int\|string\|null\>, Closure\(array\)\: array\<string, App\\Http\\Resources\\Duel\\DuelAttemptsResource\|bool\|Illuminate\\Support\\Collection\<int, array\{id\: int, label\: string\|null, expires_at\: string\|null, scans_count\: int\<0, max\>, last_scanned_at\: string\|null\}\>\|int\|string\|null\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/MapController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$avatar\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$birth_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$city\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$country\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$max_points\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$min_points\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\ProfileController\:\:userData\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$discount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$folio\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 7
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$paid_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$paymentMethod\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$price\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qr_token\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$reference\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$subtotal\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$ticketType\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$ticket_type_id\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$total\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit_price\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$used_at\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Ticket\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 4
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Ticket\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 4
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Api/TicketController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$avatar\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Settings/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$birth_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Settings/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$city\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Settings/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$country\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Settings/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Settings/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$max_points\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Settings/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$min_points\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Settings/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Settings/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Settings/ProfileController.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\ImportQuizQuestionsRequest\:\:after\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/ImportQuizQuestionsRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\ImportQuizQuestionsRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/ImportQuizQuestionsRequest.php
+
+		-
+			message: '#^Access to an undefined property \(object\|string\)\:\:\$ai_checked_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardCreditRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$attribution_template\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardCreditRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$requires_attribution\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardCreditRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$share_alike\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardCreditRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\StoreCardCreditRequest\:\:after\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardCreditRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\StoreCardCreditRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardCreditRequest.php
+
+		-
+			message: '#^Parameter \#1 \$owner of method App\\Http\\Requests\\Admin\\Card\\StoreCardCreditRequest\:\:creditChecks\(\) expects App\\Contracts\\Creditable, \(object\|string\|null\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardCreditRequest.php
+
+		-
+			message: '#^Parameter \#1 \$owner of method App\\Http\\Requests\\Admin\\Card\\StoreCardCreditRequest\:\:creditRules\(\) expects App\\Contracts\\Creditable, \(object\|string\|null\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardCreditRequest.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>ai_checked_at" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardCreditRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\StoreCardQrCodeRequest\:\:qrCodeAttributes\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardQrCodeRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\StoreCardQrCodeRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardQrCodeRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$attribution_template\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$requires_attribution\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$share_alike\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\StoreCardRequest\:\:after\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\StoreCardRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardRequest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Requests/Admin/Card/StoreCardRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\UpdateCardRaritySettingsRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/UpdateCardRaritySettingsRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$attribution_template\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Requests/Admin/Card/UpdateCardRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$requires_attribution\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Requests/Admin/Card/UpdateCardRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$share_alike\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Requests/Admin/Card/UpdateCardRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\UpdateCardRequest\:\:after\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/UpdateCardRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\UpdateCardRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/UpdateCardRequest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Requests/Admin/Card/UpdateCardRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Card\\UpdateDuelMessageSettingsRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Card/UpdateDuelMessageSettingsRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Event\\StoreEventRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Event/StoreEventRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Event\\UpdateEventRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Event/UpdateEventRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\MapMarker\\StoreMapMarkerRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/MapMarker/StoreMapMarkerRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\MapMarker\\UpdateMapMarkerRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/MapMarker/UpdateMapMarkerRequest.php
+
+		-
+			message: '#^Parameter \#1 \$owner of method App\\Http\\Requests\\Admin\\Card\\StoreCardCreditRequest\:\:creditChecks\(\) expects App\\Contracts\\Creditable, \(object\|string\|null\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Requests/Admin/Species/StoreSpeciesImageCreditRequest.php
+
+		-
+			message: '#^Parameter \#1 \$owner of method App\\Http\\Requests\\Admin\\Card\\StoreCardCreditRequest\:\:creditRules\(\) expects App\\Contracts\\Creditable, \(object\|string\|null\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Requests/Admin/Species/StoreSpeciesImageCreditRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Species\\StoreSpeciesRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Species/StoreSpeciesRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\Species\\UpdateSpeciesRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/Species/UpdateSpeciesRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\ZooZone\\StoreZooZoneRequest\:\:after\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/ZooZone/StoreZooZoneRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\ZooZone\\StoreZooZoneRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/ZooZone/StoreZooZoneRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\ZooZone\\UpdateZooZoneRequest\:\:after\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/ZooZone/UpdateZooZoneRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Admin\\ZooZone\\UpdateZooZoneRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Admin/ZooZone/UpdateZooZoneRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Api\\StartDuelRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Api/StartDuelRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Api\\SubmitDuelRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Api/SubmitDuelRequest.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$category\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/CardResource.php
+
+		-
+			message: '#^Method App\\Http\\Resources\\CardResource\:\:toArray\(\) should return array\<string, mixed\> but returns array\<int\|string, mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Resources/CardResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$common_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Credits/CreditSectionResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$category\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Duel/DuelStartResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cooldown_minutes\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$questions_per_duel\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$retries\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Class App\\Models\\Card uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Method App\\Models\\Card\:\:captures\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Method App\\Models\\Card\:\:effectiveCooldownMinutes\(\) return type with generic class Illuminate\\Database\\Eloquent\\Casts\\Attribute does not specify its types\: TGet, TSet$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Method App\\Models\\Card\:\:effectiveQuestionsPerDuel\(\) return type with generic class Illuminate\\Database\\Eloquent\\Casts\\Attribute does not specify its types\: TGet, TSet$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Method App\\Models\\Card\:\:effectiveRetries\(\) return type with generic class Illuminate\\Database\\Eloquent\\Casts\\Attribute does not specify its types\: TGet, TSet$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Method App\\Models\\Card\:\:qrCodes\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Method App\\Models\\Card\:\:quizAttempts\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Method App\\Models\\Card\:\:quizQuestions\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Method App\\Models\\Card\:\:raritySetting\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Method App\\Models\\Card\:\:species\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Card.php
+
+		-
+			message: '#^Class App\\Models\\CardCapture uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/CardCapture.php
+
+		-
+			message: '#^Method App\\Models\\CardCapture\:\:card\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/CardCapture.php
+
+		-
+			message: '#^Method App\\Models\\CardCapture\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/CardCapture.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/CardQrCode.php
+
+		-
+			message: '#^Method App\\Models\\CardQrCode\:\:card\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/CardQrCode.php
+
+		-
+			message: '#^Method App\\Models\\CardQrCode\:\:usable\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/CardQrCode.php
+
+		-
+			message: '#^Cannot call method isFuture\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/CardQuizState.php
+
+		-
+			message: '#^Method App\\Models\\CardQuizState\:\:card\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/CardQuizState.php
+
+		-
+			message: '#^Method App\\Models\\CardQuizState\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/CardQuizState.php
+
+		-
+			message: '#^Method App\\Models\\CardRaritySetting\:\:cards\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/CardRaritySetting.php
+
+		-
+			message: '#^Method App\\Models\\Credit\:\:attribution\(\) return type with generic class Illuminate\\Database\\Eloquent\\Casts\\Attribute does not specify its types\: TGet, TSet$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Credit.php
+
+		-
+			message: '#^Method App\\Models\\Credit\:\:creditable\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\MorphTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Credit.php
+
+		-
+			message: '#^Method App\\Models\\Credit\:\:license\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Credit.php
+
+		-
+			message: '#^Method App\\Models\\Credit\:\:scopeOrdered\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Credit.php
+
+		-
+			message: '#^Method App\\Models\\Credit\:\:scopeOrdered\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Credit.php
+
+		-
+			message: '#^Class App\\Models\\Donation uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Donation.php
+
+		-
+			message: '#^Method App\\Models\\Donation\:\:paymentMethod\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Donation.php
+
+		-
+			message: '#^Method App\\Models\\Donation\:\:seller\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Donation.php
+
+		-
+			message: '#^Method App\\Models\\Donation\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Donation.php
+
+		-
+			message: '#^Method App\\Models\\DuelMessageSetting\:\:effective\(\) should return array\{win_message\: string, retry_message\: string, locked_message\: string\} but returns array\<string, mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/DuelMessageSetting.php
+
+		-
+			message: '#^Class App\\Models\\Event uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Event.php
+
+		-
+			message: '#^Method App\\Models\\Event\:\:zone\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Event.php
+
+		-
+			message: '#^Method App\\Models\\Level\:\:users\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Level.php
+
+		-
+			message: '#^Method App\\Models\\License\:\:credits\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/License.php
+
+		-
+			message: '#^Method App\\Models\\License\:\:scopeOrdered\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/License.php
+
+		-
+			message: '#^Method App\\Models\\License\:\:scopeOrdered\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/License.php
+
+		-
+			message: '#^Method App\\Models\\Link\:\:menu\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Link.php
+
+		-
+			message: '#^Method App\\Models\\Link\:\:permission\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Link.php
+
+		-
+			message: '#^Class App\\Models\\MapMarker uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/MapMarker.php
+
+		-
+			message: '#^Method App\\Models\\MapMarker\:\:zone\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/MapMarker.php
+
+		-
+			message: '#^Method App\\Models\\MapPath\:\:zone\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/MapPath.php
+
+		-
+			message: '#^Method App\\Models\\Menu\:\:links\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Menu.php
+
+		-
+			message: '#^Class App\\Models\\PaymentMethod uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/PaymentMethod.php
+
+		-
+			message: '#^Method App\\Models\\PaymentMethod\:\:ticketOrders\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/PaymentMethod.php
+
+		-
+			message: '#^Class App\\Models\\PointMovement uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/PointMovement.php
+
+		-
+			message: '#^Method App\\Models\\PointMovement\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/PointMovement.php
+
+		-
+			message: '#^Class App\\Models\\PointRule uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/PointRule.php
+
+		-
+			message: '#^Method App\\Models\\Profile\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Profile.php
+
+		-
+			message: '#^Class App\\Models\\QuizAnswer uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/QuizAnswer.php
+
+		-
+			message: '#^Method App\\Models\\QuizAnswer\:\:question\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/QuizAnswer.php
+
+		-
+			message: '#^Method App\\Models\\QuizAttempt\:\:card\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/QuizAttempt.php
+
+		-
+			message: '#^Method App\\Models\\QuizAttempt\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/QuizAttempt.php
+
+		-
+			message: '#^Class App\\Models\\QuizQuestion uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/QuizQuestion.php
+
+		-
+			message: '#^Method App\\Models\\QuizQuestion\:\:answers\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/QuizQuestion.php
+
+		-
+			message: '#^Method App\\Models\\QuizQuestion\:\:card\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/QuizQuestion.php
+
+		-
+			message: '#^Class App\\Models\\Reward uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Reward.php
+
+		-
+			message: '#^Method App\\Models\\Reward\:\:redemptions\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Reward.php
+
+		-
+			message: '#^Class App\\Models\\RewardRedemption uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/RewardRedemption.php
+
+		-
+			message: '#^Method App\\Models\\RewardRedemption\:\:reward\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/RewardRedemption.php
+
+		-
+			message: '#^Method App\\Models\\RewardRedemption\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/RewardRedemption.php
+
+		-
+			message: '#^Method App\\Models\\Species\:\:cards\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Models/Species.php
+
+		-
+			message: '#^Method App\\Models\\Species\:\:models\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Species.php
+
+		-
+			message: '#^Method App\\Models\\SpeciesCategory\:\:species\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/SpeciesCategory.php
+
+		-
+			message: '#^Class App\\Models\\SpeciesLocation uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/SpeciesLocation.php
+
+		-
+			message: '#^Method App\\Models\\SpeciesLocation\:\:species\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/SpeciesLocation.php
+
+		-
+			message: '#^Method App\\Models\\SpeciesModel\:\:species\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/SpeciesModel.php
+
+		-
+			message: '#^Method App\\Models\\SpeciesTag\:\:species\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany does not specify its types\: TRelatedModel, TDeclaringModel, TPivotModel, TAccessor \(2\-4 required\)$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/SpeciesTag.php
+
+		-
+			message: '#^Class App\\Models\\Ticket uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Ticket.php
+
+		-
+			message: '#^Method App\\Models\\Ticket\:\:order\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Ticket.php
+
+		-
+			message: '#^Method App\\Models\\Ticket\:\:orderItem\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Ticket.php
+
+		-
+			message: '#^Method App\\Models\\Ticket\:\:ticketType\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Ticket.php
+
+		-
+			message: '#^Method App\\Models\\Ticket\:\:validatedBy\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Ticket.php
+
+		-
+			message: '#^Class App\\Models\\TicketOrder uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrder.php
+
+		-
+			message: '#^Method App\\Models\\TicketOrder\:\:items\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrder.php
+
+		-
+			message: '#^Method App\\Models\\TicketOrder\:\:payments\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrder.php
+
+		-
+			message: '#^Method App\\Models\\TicketOrder\:\:seller\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrder.php
+
+		-
+			message: '#^Method App\\Models\\TicketOrder\:\:tickets\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrder.php
+
+		-
+			message: '#^Method App\\Models\\TicketOrder\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrder.php
+
+		-
+			message: '#^Class App\\Models\\TicketOrderItem uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrderItem.php
+
+		-
+			message: '#^Method App\\Models\\TicketOrderItem\:\:order\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrderItem.php
+
+		-
+			message: '#^Method App\\Models\\TicketOrderItem\:\:ticketType\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrderItem.php
+
+		-
+			message: '#^Method App\\Models\\TicketOrderItem\:\:tickets\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrderItem.php
+
+		-
+			message: '#^Class App\\Models\\TicketOrderPayment uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrderPayment.php
+
+		-
+			message: '#^Method App\\Models\\TicketOrderPayment\:\:order\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrderPayment.php
+
+		-
+			message: '#^Method App\\Models\\TicketOrderPayment\:\:paymentMethod\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketOrderPayment.php
+
+		-
+			message: '#^Class App\\Models\\TicketType uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketType.php
+
+		-
+			message: '#^Method App\\Models\\TicketType\:\:tickets\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/TicketType.php
+
+		-
+			message: '#^Class App\\Models\\User uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:cardCaptures\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:cardQuizStates\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:level\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:pointMovements\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:profile\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOne does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:quizAttempts\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:rewardRedemptions\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Class App\\Models\\ZooZone uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ZooZone.php
+
+		-
+			message: '#^Method App\\Models\\ZooZone\:\:events\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ZooZone.php
+
+		-
+			message: '#^Method App\\Models\\ZooZone\:\:mapMarkers\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ZooZone.php
+
+		-
+			message: '#^Method App\\Models\\ZooZone\:\:mapPaths\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ZooZone.php
+
+		-
+			message: '#^Method App\\Models\\ZooZone\:\:speciesLocations\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ZooZone.php
+
+		-
+			message: '#^Cannot access offset 1 on array\|false\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Rules/GlbFile.php
+
+		-
+			message: '#^Parameter \#1 \$license of method App\\Enums\\AssetSource\:\:allowsLicense\(\) expects App\\Models\\License, App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Rules/LicenseMatchesSource.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$allows_commercial\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Rules/SelectableLicense.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$allows_modification\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Rules/SelectableLicense.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Rules/SelectableLicense.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$is_selectable\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Rules/SelectableLicense.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\License\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\License\>\:\:\$short_name\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Rules/SelectableLicense.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Card\:\:\$effective_cooldown_minutes\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Card\:\:\$effective_questions_per_duel\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Card\:\:\$effective_retries\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_correct\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pointRule\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$reveal_answers_on_lockout\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Method App\\Services\\CardDuelService\:\:retriesLeft\(\) should return int but returns float\|int\<0, max\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Method App\\Services\\CardDuelService\:\:review\(\) should return list\<App\\Services\\Duel\\DuelReviewItem\>\|null but returns array\<int, App\\Services\\Duel\\DuelReviewItem\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$attempt of method App\\Services\\CardDuelService\:\:presentQuestions\(\) expects App\\Models\\QuizAttempt, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$attempt of method App\\Services\\CardDuelService\:\:servedQuestions\(\) expects App\\Models\\QuizAttempt, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,string\>\:\:filter\(\) expects \(callable\(string, 0\)\: bool\)\|null, Closure\(int\)\: bool given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,string\>\:\:map\(\) expects callable\(string, 0\)\: App\\Models\\QuizQuestion, Closure\(int\)\: App\\Models\\QuizQuestion given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,string\>\:\:map\(\) expects callable\(string, 0\)\: array\{int, Illuminate\\Database\\Eloquent\\Model\|null\}, Closure\(int\)\: array\{int, Illuminate\\Database\\Eloquent\\Model\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$card of method App\\Services\\CardDuelService\:\:attempts\(\) expects App\\Models\\Card, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$card of method App\\Services\\CardDuelService\:\:ensureCardIsAvailable\(\) expects App\\Models\\Card, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$card of method App\\Services\\CardDuelService\:\:registerFailure\(\) expects App\\Models\\Card, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$card of method App\\Services\\CardDuelService\:\:resultMessage\(\) expects App\\Models\\Card, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$card of method App\\Services\\CardDuelService\:\:review\(\) expects App\\Models\\Card, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<\(int\|string\), mixed\>\|iterable\<\(int\|string\), mixed\>\|null, string given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#2 \$card of method App\\Services\\CardDuelService\:\:awardCapturePoints\(\) expects App\\Models\\Card, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#2 \$card of method App\\Services\\CardDuelService\:\:lockState\(\) expects App\\Models\\Card, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \#2 \$card of method App\\Services\\CardDuelService\:\:start\(\) expects App\\Models\\Card, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \$attempt of class App\\Services\\Duel\\DuelStart constructor expects App\\Models\\QuizAttempt, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \$card of class App\\Services\\Duel\\DuelResult constructor expects App\\Models\\Card\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \$lockedUntil of class App\\Services\\Duel\\DuelAttempts constructor expects Carbon\\CarbonInterface\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Parameter \$questionId of class App\\Services\\Duel\\DuelQuestionResult constructor expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 3
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 3
+			path: app/Services/CardDuelService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$common_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$scientific_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$slug\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Method App\\Services\\CardTransfer\\CardPackageExporter\:\:creditItems\(\) should return list\<array\<string, mixed\>\> but returns array\<int, non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Method App\\Services\\CardTransfer\\CardPackageExporter\:\:raritySettings\(\) should return list\<array\<string, mixed\>\> but returns array\<int, array\{rarity\: mixed, questions_per_duel\: int\<0, max\>, retries\: int\<0, max\>, cooldown_minutes\: int\<0, max\>, reveal_answers_on_lockout\: bool, point_rule_type\: string\|null\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\CardRaritySetting\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{answer\: string, is_correct\: bool, sort_order\: int\}, Closure\(App\\Models\\QuizAnswer\)\: array\{answer\: string, is_correct\: bool, sort_order\: int\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{label\: string\|null, is_active\: bool, expires_at\: mixed, token\: string\|null\}, Closure\(App\\Models\\CardQrCode\)\: array\{label\: string\|null, is_active\: bool, expires_at\: mixed, token\: string\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{question\: string, is_active\: bool, answers\: array\<int, array\{answer\: string, is_correct\: bool, sort_order\: int\}\>\}, Closure\(App\\Models\\QuizQuestion\)\: array\{question\: string, is_active\: bool, answers\: array\<int, array\{answer\: string, is_correct\: bool, sort_order\: int\}\>\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\CardRaritySetting\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:all\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 2
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:values\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 2
+			path: app/Services/CardTransfer/CardPackageExporter.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$answer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_correct\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sort_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:answers\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<string,Illuminate\\Database\\Eloquent\\Model\>\:\:each\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, string\)\: mixed, Closure\(App\\Models\\QuizQuestion\)\: bool given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<string,Illuminate\\Database\\Eloquent\\Model\>\:\:reject\(\) expects bool\|\(callable\(Illuminate\\Database\\Eloquent\\Model, string\)\: bool\)\|Illuminate\\Database\\Eloquent\\Model, Closure\(App\\Models\\QuizQuestion, string\)\: bool given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Parameter \#1 \$keyBy of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:keyBy\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: string\)\|list\<Closure\|string\>\|string, Closure\(App\\Models\\QuizQuestion\)\: string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/CardTransfer/CardPackageImporter.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$uuid\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CardTransfer/CardPackageReader.php
+
+		-
+			message: '#^Cannot use array destructuring on array\|false\.$#'
+			identifier: offsetAccess.nonArray
+			count: 2
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:array\(\) has parameter \$gltf with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:assertScaleRoot\(\) has parameter \$node with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:extensionWarnings\(\) has parameter \$gltf with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:isAxisAligned\(\) has parameter \$matrix with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:localMatrix\(\) has parameter \$node with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:meshCorners\(\) has parameter \$gltf with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:multiply\(\) has parameter \$a with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:multiply\(\) has parameter \$b with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:scaleRootIndex\(\) has parameter \$gltf with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:transformPoint\(\) has parameter \$m with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\GlbInspector\:\:transformPoint\(\) has parameter \$p with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Parameter \#1 \.\.\.\$arg1 of function max expects non\-empty\-array, array\<float\|int\<0, max\>\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Parameter \#2 \$length of function fread expects int\<1, max\>, \(float\|int\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/GlbInspector.php
+
+		-
+			message: '#^Method App\\Services\\Licensing\\CommonsMetadataFetcher\:\:fetch\(\) should return array\{title\: string\|null, author_name\: string\|null, author_url\: string\|null, license_id\: int\|null, license_slug\: string\|null, source_url\: string\|null, warnings\: array\<int, string\>\} but returns array\<string, mixed\>\.$#'
+			identifier: return.type
+			count: 5
+			path: app/Services/Licensing/CommonsMetadataFetcher.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/Licensing/CommonsMetadataFetcher.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/Licensing/CommonsMetadataFetcher.php
+
+		-
+			message: '#^Parameter \#1 \$string of function sha1 expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Licensing/CreditsCatalog.php
+
+		-
+			message: '#^Method App\\Services\\PointService\:\:apply\(\) should return App\\Models\\PointMovement\|null but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/PointService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Menu\:\:\$url\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/View/Composers/MenuComposer.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$permission\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/View/Composers/MenuComposer.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$permission_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/View/Composers/MenuComposer.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$route\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/View/Composers/MenuComposer.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$url\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/View/Composers/MenuComposer.php
+
+		-
+			message: '#^Method App\\View\\Composers\\MenuComposer\:\:compose\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/View/Composers/MenuComposer.php
+
+		-
+			message: '#^Method App\\View\\Composers\\MenuComposer\:\:getMenus\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/View/Composers/MenuComposer.php
+
+		-
+			message: '#^Property App\\Models\\Menu\:\:\$links is not writable\.$#'
+			identifier: assign.propertyReadOnly
+			count: 1
+			path: app/View/Composers/MenuComposer.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 2
+			path: config/images.php
+
+		-
+			message: '#^Parameter \#2 \$string of function explode expects string, bool\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: config/sanctum.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\SpeciesCategory\:\:factory\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: database/factories/SpeciesFactory.php
+
+		-
+			message: '#^Class Database\\Factories\\SpeciesFactory extends generic class Illuminate\\Database\\Eloquent\\Factories\\Factory but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: database/factories/SpeciesFactory.php
+
+		-
+			message: '#^Parameter \#1 \$string of function ucfirst expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: database/factories/SpeciesFactory.php
+
+		-
+			message: '#^Parameter \#1 \$title of static method Illuminate\\Support\\Str\:\:slug\(\) expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: database/factories/SpeciesFactory.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:givePermissionTo\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: database/migrations/2026_11_21_110000_rename_card_transfer_permissions_to_assets.php

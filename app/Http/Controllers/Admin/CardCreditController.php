@@ -216,7 +216,7 @@ class CardCreditController extends Controller
                     'license_id' => $credit->license_id,
                     'license_short_name' => $credit->license->short_name,
                     'attribution' => $credit->attribution,
-                ]),
+                ])->all(),
             ], CreditAsset::forCards()),
         ];
     }
