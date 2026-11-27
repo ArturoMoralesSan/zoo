@@ -9,18 +9,19 @@ namespace App\Services\CardTransfer;
  * por slug, las licencias por slug y las reglas de puntos por tipo.
  *
  * Versión 2: agrega species/<slug>/ con los datos e imágenes de cada especie.
- * La versión 1 (solo tarjetas) se sigue leyendo.
+ * Versión 3: cada imagen de especie lleva sus créditos (`credits`).
+ * Las versiones 1 (solo tarjetas) y 2 se siguen leyendo.
  */
 final class CardPackage
 {
     public const FORMAT = 'zoodeck-cards';
 
-    public const VERSION = 2;
+    public const VERSION = 3;
 
     /**
      * Versiones que este servidor sabe leer.
      */
-    public const SUPPORTED_VERSIONS = [1, 2];
+    public const SUPPORTED_VERSIONS = [1, 2, 3];
 
     public const MANIFEST = 'manifest.json';
 

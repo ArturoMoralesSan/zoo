@@ -9,9 +9,11 @@ use App\Enums\Habitat;
 use App\Models\Card;
 use App\Models\CardQrCode;
 use App\Models\CardTransfer;
+use App\Models\Credit;
 use App\Models\License;
 use App\Models\Species;
 use App\Models\SpeciesCategory;
+use App\Models\SpeciesImage;
 use App\Models\SpeciesTag;
 use App\Models\User;
 use App\Models\ZooZone;
@@ -201,7 +203,8 @@ class CardTransferTest extends TestCase
 
     private function deleteSpecies(Species $species): void
     {
-        $species->images()->delete();
+        // Una por una, para que también se borren sus créditos.
+        $species->images->each->delete();
         $species->locations()->delete();
         $species->tags()->detach();
         $species->delete();
@@ -646,6 +649,149 @@ class CardTransferTest extends TestCase
         Storage::disk('public')->assertMissing($oldMain);
         // El paquete no trae ubicaciones: la de este servidor se conserva.
         $this->assertCount(1, $species->locations);
+    }
+
+    public function test_species_image_credits_travel_with_their_images(): void
+    {
+        $this->dressSpecies();
+        $main = $this->species->images()->where('type', 'main')->firstOrFail();
+        $gallery = $this->species->images()->where('type', 'gallery')->firstOrFail();
+
+        $main->credits()->create([
+            'asset' => 'image',
+            'role' => 'origin',
+            'license_id' => License::where('slug', 'cc-by-4.0')->value('id'),
+            'title' => 'Jaguar',
+            'author_name' => 'Jane Doe',
+            'source_name' => 'wikimedia_commons',
+            'source_url' => 'https://commons.wikimedia.org/wiki/File:Jaguar.jpg',
+        ]);
+        $gallery->credits()->create([
+            'asset' => 'image',
+            'role' => 'origin',
+            'license_id' => License::where('slug', 'proprietary')->value('id'),
+            'source_name' => 'own',
+        ]);
+
+        $zip = $this->export();
+
+        $this->deleteSpecies($this->species);
+        $this->assertSame(0, Credit::count());
+
+        $transfer = $this->upload($zip);
+        $this->assertSame(CardPackage::VERSION, $transfer->summary['preview']['manifest']['version']);
+        $this->assertSame([], $transfer->summary['preview']['licenses']['missing']);
+
+        $this->confirm($transfer);
+
+        $species = Species::where('slug', 'jaguar')->with('images.credits.license')->firstOrFail();
+        $newMain = $species->images->firstWhere('type', 'main');
+        $newGallery = $species->images->firstWhere('type', 'gallery');
+
+        $this->assertCount(1, $newMain->credits);
+        $this->assertSame('cc-by-4.0', $newMain->credits->first()->license->slug);
+        $this->assertSame('Jane Doe', $newMain->credits->first()->author_name);
+        $this->assertSame('image', $newMain->credits->first()->asset->value);
+        $this->assertSame('proprietary', $newGallery->credits->first()->license->slug);
+    }
+
+    public function test_overwriting_a_species_replaces_its_image_credits(): void
+    {
+        $this->dressSpecies();
+        $main = $this->species->images()->where('type', 'main')->firstOrFail();
+        $main->credits()->create([
+            'asset' => 'image',
+            'role' => 'origin',
+            'license_id' => License::where('slug', 'proprietary')->value('id'),
+            'source_name' => 'own',
+        ]);
+
+        $zip = $this->export();
+        $this->confirm($this->upload($zip), ['mode' => 'overwrite']);
+
+        // Las imágenes se recrean: un solo crédito, en la imagen nueva.
+        $this->assertSame(1, Credit::count());
+        $this->assertNotSame($main->id, Credit::first()->creditable_id);
+        $this->assertNull(SpeciesImage::find($main->id));
+    }
+
+    public function test_species_image_credits_cannot_claim_another_asset(): void
+    {
+        $this->dressSpecies();
+        $this->species->images()->where('type', 'main')->firstOrFail()->credits()->create([
+            'asset' => 'image',
+            'role' => 'origin',
+            'license_id' => License::where('slug', 'proprietary')->value('id'),
+            'source_name' => 'own',
+        ]);
+
+        $zip = $this->rewriteSpeciesJson($this->export(), function (array $data) {
+            $data['images']['main']['credits'][0]['asset'] = 'artwork';
+
+            return $data;
+        });
+
+        $preview = $this->upload($zip)->summary['preview'];
+
+        $this->assertSame(1, $preview['species']['counts']['invalid']);
+    }
+
+    public function test_version_two_packages_without_credits_still_import(): void
+    {
+        $this->dressSpecies();
+        $zip = $this->rewriteSpeciesJson($this->export(), function (array $data) {
+            unset($data['images']['main']['credits'], $data['images']['gallery'][0]['credits']);
+
+            return $data;
+        }, version: 2);
+
+        $this->deleteSpecies($this->species);
+
+        $transfer = $this->upload($zip);
+        $this->assertSame(2, $transfer->summary['preview']['manifest']['version']);
+
+        $transfer = $this->confirm($transfer);
+
+        $this->assertSame(1, $transfer->summary['result']['species']['created']);
+        $this->assertSame(0, Credit::count());
+    }
+
+    /**
+     * Cambia el species.json del jaguar (y su huella en el manifiesto).
+     *
+     * @param  callable(array<string, mixed>): array<string, mixed>  $change
+     */
+    private function rewriteSpeciesJson(string $path, callable $change, ?int $version = null): string
+    {
+        $source = new ZipArchive;
+        $source->open($path);
+        $manifest = json_decode($source->getFromName(CardPackage::MANIFEST), true);
+        $entry = CardPackage::speciesJson('jaguar');
+
+        $copy = tempnam(sys_get_temp_dir(), 'pkg').'.zip';
+        $target = new ZipArchive;
+        $target->open($copy, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+        foreach (array_keys($manifest['files']) as $name) {
+            $contents = $source->getFromName($name);
+
+            if ($name === $entry) {
+                $contents = CardPackage::encode($change(json_decode($contents, true)));
+                $manifest['files'][$name] = ['sha256' => hash('sha256', $contents), 'bytes' => strlen($contents)];
+            }
+
+            $target->addFromString($name, $contents);
+        }
+
+        if ($version !== null) {
+            $manifest['version'] = $version;
+        }
+
+        $target->addFromString(CardPackage::MANIFEST, json_encode($manifest));
+        $target->close();
+        $source->close();
+
+        return $copy;
     }
 
     public function test_version_one_packages_still_import(): void
