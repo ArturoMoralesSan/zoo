@@ -307,6 +307,47 @@ class SpeciesAdminTest extends TestCase
         );
     }
 
+    public function test_recropping_a_saved_gallery_photo_replaces_its_file_and_keeps_credits(): void
+    {
+        $this->seed(LicenseSeeder::class);
+
+        $species = $this->species(['is_active' => false]);
+        $first = $this->galleryImage($species, 0);
+        $second = $this->galleryImage($species, 1);
+        $oldPath = $second->path;
+        $credit = $second->credits()->create([
+            'asset' => 'image',
+            'role' => 'origin',
+            'source_name' => 'own',
+            'license_id' => License::where('slug', 'proprietary')->value('id'),
+        ]);
+
+        $response = $this->actingAs($this->admin())
+            ->put(route('admin.species.update', $species), $this->payload([
+                'common_name' => $species->common_name,
+                'is_active' => false,
+                'gallery_images' => [UploadedFile::fake()->image('recorte.png', 60, 40)],
+                'gallery' => [
+                    ['id' => $second->id, 'file_index' => 0, 'alt_text' => 'Recortada', 'focal_x' => 0.4, 'focal_y' => 0.5],
+                    ['id' => $first->id, 'alt_text' => 'Primera'],
+                ],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $second->refresh();
+
+        // Misma foto (mismo id y créditos), archivo nuevo y primera en el orden.
+        $this->assertSame(2, $species->images()->where('type', 'gallery')->count());
+        $this->assertNotSame($oldPath, $second->path);
+        Storage::disk('public')->assertMissing($oldPath);
+        $this->assertSame(0, $second->sort_order);
+        $this->assertSame('Recortada', $second->alt_text);
+        $this->assertSame(['x' => 0.4, 'y' => 0.5], $second->focal());
+        $this->assertNotNull($credit->fresh());
+        $response->assertInertiaFlash('toast.type', 'warning');
+        $response->assertInertiaFlash('toast.message', 'Especie actualizada. La galería cambió: revisa sus créditos.');
+    }
+
     public function test_inactive_species_without_credits_saves_without_warning(): void
     {
         $species = $this->species(['is_active' => false]);

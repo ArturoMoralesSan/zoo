@@ -68,7 +68,7 @@ php artisan cards:export | cards:import x.zip --dry-run   # card+species .zip pa
 
 | Check | State |
 | --- | --- |
-| `php artisan test` | 528 tests, all passing (28 skipped) |
+| `php artisan test` | 529 tests, all passing (28 skipped) |
 | `npx vitest run` | 156 passing |
 | pint / eslint / prettier | 16 files / 193 errors / 127 files |
 | phpstan (level 7) / vue-tsc | 483 errors, all in `phpstan-baseline.neon` / 37 errors |
@@ -255,8 +255,9 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
 - **Species catalogs:** `conservation_status` (IUCN code), `diet` and `habitats` (JSON, several)
   store enum codes, never free text. The API keeps the old Spanish strings in `habitat`, `diet`
   and `conservation_status` and adds `habitats`, `diet_code`, `conservation_status_code`. The
-  species gallery is saved with the form (`SpeciesController::syncGallery`: order, alt text and
-  deletes in one request); `SpeciesGalleryField.vue` builds that payload.
+  species gallery is saved with the form (`SpeciesController::syncGallery`: order, alt text, focal
+  points, deletes and re-cropped saved photos in one request; an item with both `id` and
+  `file_index` replaces that photo's file and keeps its credits); `SpeciesGalleryField.vue` builds that payload.
 - **Credits:** licences and attribution are legally relevant, and restricted licences
   are off by default. `CreditsCacheObserver` invalidates the public `/api/v1/credits`
   cache. Owners implement `Contracts/Creditable` through `Models/Concerns/HasCredits`: `Card`

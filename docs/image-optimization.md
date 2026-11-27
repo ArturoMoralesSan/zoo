@@ -167,6 +167,11 @@ Antes de comprimir, cada imagen elegida en el panel pasa por un diálogo de reco
   imagen (y la tarjeta), y la importación de paquetes la quita si reemplaza la ilustración: las
   copias **no viajan** en los paquetes. El recorte no lee la orientación EXIF (`checkOrientation:
   false`): el navegador ya la aplica, igual que `createImageBitmap` al hacer la copia.
+- **Toda imagen con punto focal se puede recortar:** principal de especie y miniatura de tarjeta
+  («Recortar imagen actual»), y cada foto de la galería, nueva o guardada. Recortar una foto
+  guardada de la galería reemplaza su archivo al guardar (elemento con `id` y `file_index` en
+  `gallery`): conserva id, orden y créditos, avisa que hay que revisarlos y se puede deshacer
+  antes de guardar.
 - **Sin comprobar:** la importación de paquetes y la conversión de Recursos → Optimización copian
   o recodifican sin mirar la proporción.
 

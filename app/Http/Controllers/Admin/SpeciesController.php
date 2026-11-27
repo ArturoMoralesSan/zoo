@@ -818,7 +818,8 @@ class SpeciesController extends Controller
             $deletedPaths = $this->syncGallery(
                 $request,
                 $species,
-                $validated
+                $validated,
+                $replacedWithCredits
             );
 
             /*
@@ -969,6 +970,8 @@ class SpeciesController extends Controller
          */
         $missing = $species->is_active ? $species->missingCreditsText() : null;
 
+        $replacedWithCredits = array_values(array_unique($replacedWithCredits));
+
         $message = $replacedWithCredits
             ? 'Especie actualizada. La '.implode(' y la ', $replacedWithCredits)
                 .(count($replacedWithCredits) > 1 ? ' cambiaron' : ' cambió').': revisa sus créditos.'
@@ -1081,12 +1084,14 @@ class SpeciesController extends Controller
      * su orden relativo al final.
      *
      * @param  array<string, mixed>  $validated
+     * @param  list<string>  $replacedWithCredits  Recibe la galería si una foto con créditos se reemplazó.
      * @return list<string> Rutas a borrar del disco después del commit.
      */
     private function syncGallery(
         Request $request,
         Species $species,
-        array $validated
+        array $validated,
+        array &$replacedWithCredits = []
     ): array {
         $deletedPaths = [];
 
@@ -1113,11 +1118,49 @@ class SpeciesController extends Controller
             ->get()
             ->keyBy('id');
 
+        /*
+         * Un elemento con id y file_index es una foto guardada que se volvió a
+         * recortar: el archivo nuevo reemplaza el suyo y conserva sus créditos.
+         */
+        $replacing = [];
+
+        foreach ($validated['gallery'] ?? [] as $item) {
+            if (isset($item['id'], $item['file_index']) && $existing->has($item['id'])) {
+                $replacing[(int) $item['file_index']] ??= $existing->get($item['id']);
+            }
+        }
+
         // Archivos nuevos, por su índice en gallery_images.
         $uploaded = [];
 
         foreach ($request->file('gallery_images', []) as $index => $file) {
             if (! $file->isValid()) {
+                continue;
+            }
+
+            if ($image = $replacing[$index] ?? null) {
+                if ($image->path) {
+                    $deletedPaths[] = $image->path;
+                }
+
+                if ($image->credits()->exists()) {
+                    $replacedWithCredits[] = mb_strtolower($image->typeLabel());
+                }
+
+                $image->update([
+                    'original_bytes' => $this->imageOptimizer->originalBytes(
+                        $request,
+                        'gallery_original_bytes.'.$index,
+                        $file
+                    ),
+                    'path' => $this->moveUploadedFile(
+                        $this->imageOptimizer->prepareUpload($file, 'gallery'),
+                        'species/'.$species->id
+                    ),
+                ]);
+
+                $uploaded[$index] = $image;
+
                 continue;
             }
 

@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import { objectPosition } from '@/lib/focalPoint';
 import { formatBytes } from '@/lib/glb/modelSize';
-import { cropSource } from '@/lib/imageCrop';
+import { cropOrigin, cropSource } from '@/lib/imageCrop';
 import { optimizeImage, SPECIES_IMAGE_PROFILES } from '@/lib/imageOptimize';
 import { cn } from '@/lib/utils';
 
@@ -62,8 +62,11 @@ export interface GalleryLayoutItem {
 interface Tile {
     key: string;
     id?: number;
+    // Archivo nuevo, o el recorte que reemplaza una foto guardada (con id).
     file?: File;
     url: string;
+    // URL de la foto guardada, para recortarla y para deshacer el reemplazo.
+    savedUrl?: string;
     alt: string;
     focalX: number | null;
     focalY: number | null;
@@ -104,6 +107,7 @@ const tiles = ref<Tile[]>(
         key: `saved-${image.id}`,
         id: image.id,
         url: image.url,
+        savedUrl: image.url,
         alt: image.alt_text ?? '',
         focalX: image.focal_x ?? null,
         focalY: image.focal_y ?? null,
@@ -140,8 +144,14 @@ watch(
                 focal_y: tile.focalY,
             };
 
+            // Con id y archivo: el recorte reemplaza el archivo de la foto
+            // guardada, que conserva sus créditos.
             return tile.file
-                ? { file_index: fileIndexByKey.value.get(tile.key), ...common }
+                ? {
+                      ...(tile.id !== undefined ? { id: tile.id } : {}),
+                      file_index: fileIndexByKey.value.get(tile.key),
+                      ...common,
+                  }
                 : { id: tile.id, ...common };
         });
 
@@ -154,12 +164,20 @@ watch(
 
 const summary = computed(() => {
     const total = liveTiles.value.length;
-    const added = fileIndexByKey.value.size;
+    const changed = liveTiles.value.filter((tile) => tile.file);
+    const added = changed.filter((tile) => tile.id === undefined).length;
+    const recropped = changed.length - added;
     const removed = deletedIds.value.length;
     const parts = [`${total} ${total === 1 ? 'foto' : 'fotos'}`];
 
     if (added) {
         parts.push(`${added} ${added === 1 ? 'nueva' : 'nuevas'}`);
+    }
+
+    if (recropped) {
+        parts.push(
+            `${recropped} ${recropped === 1 ? 'recortada' : 'recortadas'}`,
+        );
     }
 
     if (removed) {
@@ -233,7 +251,12 @@ const estimate = async (tile: Tile) => {
         rejected.value.push(
             `${tile.file?.name}: pesa más de 5 MB aun comprimida`,
         );
-        remove(tile);
+
+        if (tile.id === undefined) {
+            remove(tile);
+        } else {
+            restoreSaved(tile);
+        }
     }
 };
 
@@ -249,11 +272,22 @@ const onInputChange = (event: Event) => {
     input.value = '';
 };
 
-const remove = (tile: Tile) => {
+// Descarta el recorte de una foto guardada y vuelve a la del servidor.
+const restoreSaved = (tile: Tile) => {
     if (tile.file) {
+        URL.revokeObjectURL(tile.url);
+    }
+
+    tile.file = undefined;
+    tile.url = tile.savedUrl ?? tile.url;
+};
+
+const remove = (tile: Tile) => {
+    if (tile.id === undefined) {
         URL.revokeObjectURL(tile.url);
         tiles.value = tiles.value.filter((item) => item !== tile);
     } else {
+        restoreSaved(tile);
         tile.deleted = true;
     }
 };
@@ -384,8 +418,8 @@ const useAs = async (tile: Tile, target: 'main' | 'thumbnail') => {
 };
 
 /*
- * Recorte de una foto nueva (las guardadas se reemplazan quitándolas y
- * agregando la recortada). Parte siempre de la foto original.
+ * Recorte de cualquier foto. En una guardada, el recorte reemplaza su archivo
+ * al guardar y conserva sus créditos. Parte siempre de la foto completa.
  */
 const cropOpen = ref(false);
 const cropTile = ref<Tile | null>(null);
@@ -395,14 +429,36 @@ const openCrop = (tile: Tile) => {
     cropOpen.value = true;
 };
 
+// Siempre desde la foto completa: la elegida, o la guardada en el servidor.
+const cropFrom = computed(() => {
+    const tile = cropTile.value;
+
+    if (!tile) {
+        return null;
+    }
+
+    return tile.file ? cropOrigin(tile.file) : (tile.savedUrl ?? null);
+});
+
+const cropFilename = computed(() => {
+    const from = cropFrom.value;
+
+    return typeof from === 'string'
+        ? (from.split('/').pop() ?? 'galeria.png')
+        : (from?.name ?? 'galeria.png');
+});
+
 const onCropped = (file: File) => {
     const tile = cropTile.value;
 
-    if (!tile?.file || !tiles.value.includes(tile)) {
+    if (!tile || !tiles.value.includes(tile)) {
         return;
     }
 
-    URL.revokeObjectURL(tile.url);
+    if (tile.file) {
+        URL.revokeObjectURL(tile.url);
+    }
+
     tile.file = markRaw(file);
     tile.url = URL.createObjectURL(file);
     tile.originalBytes = cropSource(file).size;
@@ -555,7 +611,7 @@ const iconButton =
                             v-if="tile.file"
                             class="rounded-md bg-[#187744] px-1.5 py-0.5 text-xs font-semibold text-white"
                         >
-                            Nueva
+                            {{ tile.id === undefined ? 'Nueva' : 'Recortada' }}
                         </span>
                         <span
                             v-if="tile.focalX !== null"
@@ -602,7 +658,6 @@ const iconButton =
                         </button>
 
                         <button
-                            v-if="tile.file"
                             type="button"
                             title="Recortar"
                             aria-label="Recortar"
@@ -610,6 +665,17 @@ const iconButton =
                             @click="openCrop(tile)"
                         >
                             <Crop class="h-4 w-4" />
+                        </button>
+
+                        <button
+                            v-if="tile.file && tile.id !== undefined"
+                            type="button"
+                            title="Deshacer recorte"
+                            aria-label="Deshacer recorte"
+                            :class="iconButton"
+                            @click="restoreSaved(tile)"
+                        >
+                            <Undo2 class="h-4 w-4" />
                         </button>
 
                         <button
@@ -624,9 +690,15 @@ const iconButton =
 
                         <button
                             type="button"
-                            :title="tile.file ? 'Quitar foto' : 'Eliminar foto'"
+                            :title="
+                                tile.id === undefined
+                                    ? 'Quitar foto'
+                                    : 'Eliminar foto'
+                            "
                             :aria-label="
-                                tile.file ? 'Quitar foto' : 'Eliminar foto'
+                                tile.id === undefined
+                                    ? 'Quitar foto'
+                                    : 'Eliminar foto'
                             "
                             :class="
                                 cn(iconButton, 'text-red-600 hover:bg-red-50')
@@ -761,7 +833,8 @@ const iconButton =
 
         <ImageCropDialog
             v-model:open="cropOpen"
-            :source="cropTile?.file ? cropSource(cropTile.file) : null"
+            :source="cropFrom"
+            :filename="cropFilename"
             :profile="SPECIES_IMAGE_PROFILES.gallery"
             title="Recortar foto de la galería"
             reason="La app muestra la galería completa al tocar una foto; en la tira de fotos usa el punto focal."
