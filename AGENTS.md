@@ -92,7 +92,7 @@ app/Http/Controllers/Admin/      Inertia controllers, one per resource
 app/Http/Controllers/Api/        JSON controllers for the mobile app
 app/Http/Requests/{Admin,Api}/   Form requests (Admin/<Resource>/{Store,Update}…Request)
 app/Http/Resources/              API resources (CardResource, Duel/*, Credits/*)
-app/Services/                    CardDuelService, PointService, Points/*, GlbInspector, CardImageOptimizer, ImageEncoding/*, Licensing/*, CardPack/*, CardTransfer/*
+app/Services/                    CardDuelService, PointService, Ai/GeminiClient, Points/*, GlbInspector, CardImageOptimizer, ImageEncoding/*, Licensing/*, CardPack/*, CardTransfer/*
 app/Concerns/                    Validation rule traits shared by form requests
 app/Enums/ app/Rules/ app/Observers/ app/Policies/ app/Exceptions/
 config/glb.php config/licensing.php config/images.php config/cards.php config/points.php   Project-specific settings
@@ -229,7 +229,11 @@ form request, toast, `middlewareFor`). Do not start from cards, species or map-p
   `.env`, settings in `config/services.php`). It never saves: an admin reviews the
   questions and they are stored through the JSON import endpoint. The manual route
   remains as the advanced option: `lib/quizImport.ts` builds a prompt for an external
-  LLM, then the JSON is imported.
+  LLM, then the JSON is imported. Both this and species "Completar con IA"
+  (`SpeciesInfoGeneratorService`, `POST admin/species/ai-fill`, `SpeciesAiFillDialog.vue`) call
+  Gemini through `Services/Ai/GeminiClient`, with errors from `AiGenerationException` subclasses.
+  Species fill only suggests into the form; category and tags are opt-in and picked only from
+  active ones, never created.
 - **3D models:** the browser resizes the GLB and the server re-verifies it, and 1 unit
   equals 1 metre. Never rescale an already scaled file. On every resize the browser also
   shrinks textures to 1024 px JPEG q85 (`lib/glb/glbTextures.ts`, `config('glb.textures')`),

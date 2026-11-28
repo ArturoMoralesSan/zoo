@@ -26,6 +26,8 @@ import MissingCreditsAlert from '@/components/admin/MissingCreditsAlert.vue';
 import PageHeader from '@/components/admin/PageHeader.vue';
 import PageHeaderLink from '@/components/admin/PageHeaderLink.vue';
 import FocalPointPicker from '@/components/admin/species/FocalPointPicker.vue';
+import SpeciesAiFillDialog from '@/components/admin/species/SpeciesAiFillDialog.vue';
+import type { SpeciesAiValues } from '@/components/admin/species/SpeciesAiFillDialog.vue';
 import SpeciesClassificationFields from '@/components/admin/species/SpeciesClassificationFields.vue';
 import SpeciesGalleryField from '@/components/admin/species/SpeciesGalleryField.vue';
 import type { GalleryLayoutItem } from '@/components/admin/species/SpeciesGalleryField.vue';
@@ -126,6 +128,7 @@ const props = defineProps<{
     zones: Zone[];
     // Imágenes guardadas sin crédito de origen.
     uncreditedImageIds: number[];
+    aiEnabled: boolean;
 }>();
 
 const activeTab = ref('information');
@@ -560,6 +563,19 @@ onBeforeUnmount(() => {
                                     </p>
                                 </div>
                             </div>
+
+                            <SpeciesAiFillDialog
+                                :common-name="form.common_name"
+                                :scientific-name="form.scientific_name"
+                                :values="form"
+                                :categories="props.categories"
+                                :tags="props.tags"
+                                :ai-enabled="props.aiEnabled"
+                                @apply="
+                                    (patch: Partial<SpeciesAiValues>) =>
+                                        Object.assign(form, patch)
+                                "
+                            />
 
                             <div class="form-field">
                                 <label for="description" class="form-label"
