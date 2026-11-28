@@ -3,10 +3,6 @@
         "family": "Noto Sans",
         "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
     },
-    "noto-serif": {
-        "family": "Noto Serif",
-        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
-    },
     "barlow": {
         "family": "Barlow",
         "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
@@ -14,14 +10,6 @@
     "open-sans": {
         "family": "Open Sans",
         "weights": [300, 400, 500, 600, 700, 800]
-    },
-    "roboto": {
-        "family": "Roboto",
-        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
-    },
-    "roboto-serif": {
-        "family": "Roboto Serif",
-        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
     },
     "rubik": {
         "family": "Rubik",
@@ -35,10 +23,6 @@
         "family": "Montserrat",
         "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
     },
-    "montserrat-alternates": {
-        "family": "Montserrat Alternates",
-        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
-    },
     "signika": {
         "family": "Signika",
         "weights": [300, 400, 500, 600, 700]
@@ -46,5 +30,57 @@
     "cinzel": {
         "family": "Cinzel",
         "weights": [400, 500, 600, 700, 800, 900]
+    },
+    "fredoka": {
+        "family": "Fredoka",
+        "weights": [300, 400, 500, 600, 700]
+    },
+    "oswald": {
+        "family": "Oswald",
+        "weights": [200, 300, 400, 500, 600, 700]
+    },
+    "playfair-display": {
+        "family": "Playfair Display",
+        "weights": [400, 500, 600, 700, 800, 900]
+    },
+    "caveat": {
+        "family": "Caveat",
+        "weights": [400, 500, 600, 700]
+    },
+    "zilla-slab": {
+        "family": "Zilla Slab",
+        "weights": [300, 400, 500, 600, 700]
+    },
+    "comfortaa": {
+        "family": "Comfortaa",
+        "weights": [300, 400, 500, 600, 700]
+    },
+    "cormorant-garamond": {
+        "family": "Cormorant Garamond",
+        "weights": [300, 400, 500, 600, 700]
+    },
+    "kaushan-script": {
+        "family": "Kaushan Script",
+        "weights": [400]
+    },
+    "josefin-sans": {
+        "family": "Josefin Sans",
+        "weights": [100, 200, 300, 400, 500, 600, 700]
+    },
+    "gluten": {
+        "family": "Gluten",
+        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "grandstander": {
+        "family": "Grandstander",
+        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "grenze-gotisch": {
+        "family": "Grenze Gotisch",
+        "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "bricolage-grotesque": {
+        "family": "Bricolage Grotesque",
+        "weights": [200, 300, 400, 500, 600, 700, 800]
     }
 }

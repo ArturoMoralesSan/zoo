@@ -607,7 +607,7 @@ class CardAdminTest extends TestCase
         $payload = $this->cardPayload([
             'fade_color' => '#F2E8D5',
             'accent_color' => 'black',
-            'title_font_family' => 'montserrat-alternates',
+            'title_font_family' => 'josefin-sans',
             'title_font_weight' => 300,
             'title_font_size' => '5xl',
         ]);
@@ -620,7 +620,7 @@ class CardAdminTest extends TestCase
             'name' => $payload['name'],
             'fade_color' => '#f2e8d5',
             'accent_color' => 'black',
-            'title_font_family' => 'montserrat-alternates',
+            'title_font_family' => 'josefin-sans',
             'title_font_weight' => 300,
             'title_font_size' => '5xl',
         ]);

@@ -42,8 +42,8 @@ import { useObjectUrl } from '@/composables/useObjectUrl';
 import { usePreviewTab } from '@/composables/usePreviewTab';
 import type { AccentColor } from '@/lib/cardColors';
 import { DEFAULT_FADE_COLOR } from '@/lib/cardColors';
-import type { CardFontId, TitleSize } from '@/lib/cardFonts';
-import { DEFAULT_TITLE_FONT } from '@/lib/cardFonts';
+import type { TitleSize } from '@/lib/cardFonts';
+import { DEFAULT_TITLE_FONT, resolveCardFont } from '@/lib/cardFonts';
 import type { CardRaritySetting, DuelSettingsSource } from '@/lib/cardRarity';
 import { rarityOptions } from '@/lib/cardRarity';
 import { cardStat } from '@/lib/cardStats';
@@ -80,7 +80,7 @@ interface Card {
     generated_image: string | null;
     fade_color: string;
     accent_color: AccentColor | null;
-    title_font_family: CardFontId;
+    title_font_family: string | null;
     title_font_weight: number;
     title_font_size: TitleSize;
     model_file: string | null;
@@ -121,6 +121,12 @@ const props = defineProps<{
     creditSummary: CreditSummaryItem[];
 }>();
 
+// Una fuente que ya no está en el catálogo pasa a la predeterminada.
+const savedTitleFont = resolveCardFont(
+    props.card.title_font_family,
+    props.card.title_font_weight,
+);
+
 const form = useForm({
     species_id: String(props.card.species_id),
     name: props.card.name ?? '',
@@ -133,10 +139,8 @@ const form = useForm({
     generated_image: null as File | null,
     fade_color: props.card.fade_color ?? DEFAULT_FADE_COLOR,
     accent_color: props.card.accent_color ?? null,
-    title_font_family:
-        props.card.title_font_family ?? DEFAULT_TITLE_FONT.family,
-    title_font_weight:
-        props.card.title_font_weight ?? DEFAULT_TITLE_FONT.weight,
+    title_font_family: savedTitleFont.family,
+    title_font_weight: savedTitleFont.weight,
     title_font_size: props.card.title_font_size ?? DEFAULT_TITLE_FONT.size,
     is_active: props.card.is_active,
     sort_order: props.card.sort_order ?? 0,
@@ -721,6 +725,9 @@ defineOptions({
                     v-model:title-font-family="form.title_font_family"
                     v-model:title-font-weight="form.title_font_weight"
                     v-model:title-font-size="form.title_font_size"
+                    :missing-font="
+                        savedTitleFont.missing ? card.title_font_family : null
+                    "
                     :errors="form.errors"
                 />
 

@@ -81,6 +81,34 @@ export const nearestWeight = (id: CardFontId, weight: number): number =>
             : best,
     );
 
+export interface ResolvedCardFont {
+    family: CardFontId;
+    weight: number;
+    /** La fuente guardada ya no está en el catálogo y se usa la predeterminada. */
+    missing: boolean;
+}
+
+/**
+ * Fuente guardada de una tarjeta, lista para mostrarse. Si ya no está en el
+ * catálogo (se quitó, o la trajo un paquete .zip de otro servidor) se usa la
+ * predeterminada; sin esto la vista y el editor de la tarjeta no cargarían.
+ */
+export const resolveCardFont = (
+    family: string | null | undefined,
+    weight: number | null | undefined,
+): ResolvedCardFont => {
+    const known =
+        family != null &&
+        Object.prototype.hasOwnProperty.call(CARD_FONTS, family);
+    const id = known ? (family as CardFontId) : DEFAULT_TITLE_FONT.family;
+
+    return {
+        family: id,
+        weight: nearestWeight(id, weight ?? DEFAULT_TITLE_FONT.weight),
+        missing: family != null && !known,
+    };
+};
+
 export type CardFontStyle = 'normal' | 'italic';
 
 /*
