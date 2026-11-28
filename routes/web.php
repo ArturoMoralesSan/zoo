@@ -187,6 +187,11 @@ Route::middleware(['auth', 'verified', 'panel'])
         )->middleware(['permission:assets.optimize', 'throttle:60,1'])
             ->name('species.images.optimize');
 
+        // Sugerencias de la IA; nunca guarda, así que basta con poder crear o editar.
+        Route::post('species/ai-fill', [SpeciesController::class, 'generateInfo'])
+            ->middleware(['permission:species.create|species.edit', 'throttle:10,1'])
+            ->name('species.ai-fill');
+
         Route::resource('species', SpeciesController::class)
             ->middleware([
                 'index' => 'permission:species.view',

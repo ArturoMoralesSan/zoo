@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Species\GenerateSpeciesInfoRequest;
 use App\Http\Requests\Admin\Species\StoreSpeciesRequest;
 use App\Http\Requests\Admin\Species\UpdateSpeciesRequest;
 use App\Models\Species;
@@ -14,7 +15,9 @@ use App\Models\SpeciesTag;
 use App\Models\ZooZone;
 use App\Services\ImageCropSource;
 use App\Services\SpeciesImageOptimizer;
+use App\Services\SpeciesInfoGeneratorService;
 use App\Support\UploadExtension;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -126,11 +129,13 @@ class SpeciesController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function create(): Response
+    public function create(SpeciesInfoGeneratorService $generator): Response
     {
         return Inertia::render(
             'admin/species/Create',
             [
+                'aiEnabled' => $generator->isConfigured(),
+
                 'categories' => SpeciesCategory::query()
                     ->where('is_active', true)
                     ->orderBy('name')
@@ -169,6 +174,28 @@ class SpeciesController extends Controller
                     ]),
             ]
         );
+    }
+
+    /**
+     * Sugerencias de la IA para el formulario de crear o editar. No guarda nada:
+     * la persona las revisa y las guarda con el formulario.
+     */
+    public function generateInfo(
+        GenerateSpeciesInfoRequest $request,
+        SpeciesInfoGeneratorService $generator
+    ): JsonResponse {
+        $validated = $request->validated();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'suggestions' => (object) $generator->generate(
+                    $validated['common_name'],
+                    $validated['scientific_name'],
+                    $validated['fields']
+                ),
+            ],
+        ]);
     }
 
     /*
@@ -474,7 +501,7 @@ class SpeciesController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function edit(Species $species): Response
+    public function edit(Species $species, SpeciesInfoGeneratorService $generator): Response
     {
         $species->load([
             'category',
@@ -493,6 +520,8 @@ class SpeciesController extends Controller
 
                 // Imágenes sin crédito de origen: aviso junto a "Especie activa".
                 'uncreditedImageIds' => $species->imagesMissingCredits()->pluck('id'),
+
+                'aiEnabled' => $generator->isConfigured(),
 
                 'categories' => SpeciesCategory::query()
                     ->where('is_active', true)

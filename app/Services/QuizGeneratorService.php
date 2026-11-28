@@ -5,11 +5,7 @@ namespace App\Services;
 use App\Exceptions\QuizGenerationException;
 use App\Models\Card;
 use App\Models\Species;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
-use Throwable;
+use App\Services\Ai\GeminiClient;
 
 /**
  * Genera preguntas de quiz con Gemini.
@@ -33,13 +29,13 @@ class QuizGeneratorService
         'conservacion' => ['label' => 'Conservación', 'focus' => 'su conservación y amenazas'],
     ];
 
-    private const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent';
-
     private const MAX_EXCLUDED_QUESTIONS = 100;
+
+    public function __construct(private GeminiClient $gemini) {}
 
     public function isConfigured(): bool
     {
-        return filled(config('services.gemini.key'));
+        return $this->gemini->isConfigured();
     }
 
     /**
@@ -54,9 +50,13 @@ class QuizGeneratorService
             throw QuizGenerationException::notConfigured();
         }
 
-        $response = $this->request($this->buildPrompt($card, $count, $topic, $exclude));
+        $json = $this->gemini->generateJson(
+            $this->buildPrompt($card, $count, $topic, $exclude),
+            $this->responseSchema(),
+            QuizGenerationException::class
+        );
 
-        return array_slice($this->parseQuestions($response), 0, $count);
+        return array_slice($this->parseQuestions($json), 0, $count);
     }
 
     /**
@@ -124,37 +124,6 @@ class QuizGeneratorService
         return implode("\n", $lines);
     }
 
-    private function request(string $prompt): Response
-    {
-        $config = config('services.gemini');
-
-        try {
-            $response = Http::timeout((int) $config['timeout'])
-                ->connectTimeout(10)
-                ->acceptJson()
-                // Solo se reintenta la saturación momentánea: repetir un timeout dejaría a la persona esperando el doble.
-                ->retry(2, 500, fn (Throwable $e) => $e instanceof RequestException && $e->response->status() === 503, throw: false)
-                ->withHeaders(['x-goog-api-key' => $config['key']])
-                ->post(sprintf(self::API_URL, $config['model']), [
-                    'contents' => [
-                        ['role' => 'user', 'parts' => [['text' => $prompt]]],
-                    ],
-                    'generationConfig' => [
-                        'responseMimeType' => 'application/json',
-                        'responseJsonSchema' => $this->responseSchema(),
-                    ],
-                ]);
-        } catch (ConnectionException $exception) {
-            throw QuizGenerationException::unavailable($exception);
-        }
-
-        if ($response->failed()) {
-            throw QuizGenerationException::fromResponse($response);
-        }
-
-        return $response;
-    }
-
     /**
      * Mismo formato que la importación por JSON (ImportQuizQuestionsRequest).
      *
@@ -188,33 +157,12 @@ class QuizGeneratorService
     }
 
     /**
+     * @param  array<mixed>|null  $json
      * @return list<array{question: string, correct_answer: string, wrong_answers: list<string>}>
      */
-    private function parseQuestions(Response $response): array
+    private function parseQuestions(?array $json): array
     {
-        if ($response->json('promptFeedback.blockReason')) {
-            throw QuizGenerationException::blocked();
-        }
-
-        $finishReason = $response->json('candidates.0.finishReason');
-
-        if ($finishReason === 'MAX_TOKENS') {
-            throw QuizGenerationException::truncated();
-        }
-
-        if ($finishReason !== null && $finishReason !== 'STOP') {
-            throw QuizGenerationException::blocked();
-        }
-
-        /** @var array<int, array<string, mixed>> $parts */
-        $parts = $response->json('candidates.0.content.parts', []);
-
-        $text = collect($parts)
-            ->reject(fn ($part) => $part['thought'] ?? false)
-            ->pluck('text')
-            ->implode('');
-
-        $items = json_decode($text, true)['questions'] ?? null;
+        $items = $json['questions'] ?? null;
 
         $questions = is_array($items)
             ? array_values(array_filter(array_map($this->normalizeItem(...), $items)))
