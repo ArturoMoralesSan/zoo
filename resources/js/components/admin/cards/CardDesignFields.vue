@@ -23,6 +23,8 @@ import {
 import type { CardFontId, TitleSize } from '@/lib/cardFonts';
 
 defineProps<{
+    // Fuente guardada que ya no está en el catálogo (se muestra la predeterminada).
+    missingFont?: string | null;
     errors: Partial<
         Record<
             | 'fade_color'
@@ -121,9 +123,14 @@ const applyFont = async (family: CardFontId, weight: number) => {
     }
 };
 
+// El aviso de fuente no disponible desaparece al elegir otra.
+const fontChanged = ref(false);
+
 // Al cambiar de familia se conserva el peso más cercano disponible.
 const selectFamily = (family: unknown) => {
     const id = family as CardFontId;
+
+    fontChanged.value = true;
 
     void applyFont(id, nearestWeight(id, titleFontWeight.value));
 };
@@ -287,6 +294,16 @@ const itemClass =
                             </SelectItem>
                         </SelectContent>
                     </Select>
+
+                    <p
+                        v-if="missingFont && !fontChanged"
+                        class="form-help text-amber-700"
+                    >
+                        La fuente guardada («{{ missingFont }}») ya no está
+                        disponible. Se muestra
+                        {{ CARD_FONTS[titleFontFamily].family }}, que se usará
+                        al guardar.
+                    </p>
 
                     <p v-if="errors.title_font_family" class="form-error">
                         {{ errors.title_font_family }}

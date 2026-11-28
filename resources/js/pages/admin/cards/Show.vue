@@ -41,8 +41,9 @@ import {
     TITLE_SIZES,
     WEIGHT_LABELS,
     ensureCardFont,
+    resolveCardFont,
 } from '@/lib/cardFonts';
-import type { CardFontId, TitleSize } from '@/lib/cardFonts';
+import type { TitleSize } from '@/lib/cardFonts';
 import { getRarityLabel } from '@/lib/cardRarity';
 import type { DuelSettingsSource } from '@/lib/cardRarity';
 import { CARD_STATS } from '@/lib/cardStats';
@@ -74,7 +75,7 @@ interface Card {
     generated_image: string | null;
     fade_color: string;
     accent_color: AccentColor | null;
-    title_font_family: CardFontId;
+    title_font_family: string | null;
     title_font_weight: number;
     title_font_size: TitleSize;
     model_file: string | null;
@@ -208,11 +209,7 @@ const modelPreviewSource = computed(() => storageUrl(props.card.model_file));
  * Vista previa lateral (Tarjeta | Modelo 3D): cambia sola al hacer clic en
  * las secciones de la tarjeta o del modelo.
  */
-const {
-    tab: previewTab,
-    isWide,
-    onFormInteraction,
-} = usePreviewTab();
+const { tab: previewTab, isWide, onFormInteraction } = usePreviewTab();
 
 const SIDEBAR_VIEWER_HEIGHT = 'min(520px, calc(100dvh - 16rem))';
 
@@ -246,18 +243,23 @@ const accentLabel = computed(() =>
         : `Automático (${accentLabels[autoAccent(props.card.fade_color)]})`,
 );
 
-const titleFont = computed(() => CARD_FONTS[props.card.title_font_family]);
+// Una fuente que ya no está en el catálogo se muestra con la predeterminada.
+const resolvedTitleFont = computed(() =>
+    resolveCardFont(props.card.title_font_family, props.card.title_font_weight),
+);
+
+const titleFont = computed(() => CARD_FONTS[resolvedTitleFont.value.family]);
 
 const titleFontStyle = computed(() => ({
     fontFamily: `"${titleFont.value.family}"`,
-    fontWeight: props.card.title_font_weight,
+    fontWeight: resolvedTitleFont.value.weight,
 }));
 
 // El nombre de la fuente se muestra con la propia fuente.
 onMounted(() => {
     void ensureCardFont(
-        props.card.title_font_family,
-        props.card.title_font_weight,
+        resolvedTitleFont.value.family,
+        resolvedTitleFont.value.weight,
     );
 });
 
@@ -381,8 +383,8 @@ defineOptions({
                             :artwork-url="storageUrl(card.artwork_image)"
                             :fade-color="card.fade_color"
                             :accent-color="card.accent_color"
-                            :title-font-family="card.title_font_family"
-                            :title-font-weight="card.title_font_weight"
+                            :title-font-family="resolvedTitleFont.family"
+                            :title-font-weight="resolvedTitleFont.weight"
                             :title-font-size="card.title_font_size"
                         />
                     </template>
@@ -410,8 +412,8 @@ defineOptions({
                     :artwork-url="storageUrl(card.artwork_image)"
                     :fade-color="card.fade_color"
                     :accent-color="card.accent_color"
-                    :title-font-family="card.title_font_family"
-                    :title-font-weight="card.title_font_weight"
+                    :title-font-family="resolvedTitleFont.family"
+                    :title-font-weight="resolvedTitleFont.weight"
                     :title-font-size="card.title_font_size"
                 />
             </div>
@@ -574,11 +576,19 @@ defineOptions({
                             <span class="text-base" :style="titleFontStyle">
                                 {{ titleFont.family }}
                             </span>
+                            <span
+                                v-if="resolvedTitleFont.missing"
+                                class="mt-1 block text-xs font-normal text-amber-700"
+                            >
+                                La fuente guardada («{{
+                                    card.title_font_family
+                                }}») ya no está disponible.
+                            </span>
                         </CardDetailField>
 
                         <CardDetailField label="Peso y tamaño">
-                            {{ card.title_font_weight }} ·
-                            {{ WEIGHT_LABELS[card.title_font_weight] }}
+                            {{ resolvedTitleFont.weight }} ·
+                            {{ WEIGHT_LABELS[resolvedTitleFont.weight] }}
                             <span class="font-normal text-[#718477]">
                                 — {{ TITLE_SIZES[card.title_font_size].label }}
                             </span>
@@ -810,7 +820,9 @@ defineOptions({
                             :height="card.model_final_height ?? null"
                             :width="card.model_final_width ?? null"
                             :depth="card.model_final_depth ?? null"
-                            :original-height="card.model_original_height ?? null"
+                            :original-height="
+                                card.model_original_height ?? null
+                            "
                             :edit-url="admin.cards.edit(card.id).url"
                         />
 
